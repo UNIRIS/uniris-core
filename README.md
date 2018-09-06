@@ -15,4 +15,5 @@ The services communicates with Advanced Message Queue Protocol as RabbitMQ
 ## Contribution
 
 We use the GitFlow methodology
+
 When your work is finished, please to create a pull-request otherwise your work will be not merged
