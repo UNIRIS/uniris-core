@@ -1,4 +1,4 @@
-# robot-miner
+# uniris-core
 This repository concerns the UNIRIS software core for miners
 
 ## Composition
