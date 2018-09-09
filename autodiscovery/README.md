@@ -34,7 +34,7 @@ To gossip with another peer and to perform an autodiscovery exchange, the servic
 - Peer X receives the SYN request and returns the list of peers and theire details (IP, Heartbeat, AppState) than Peer1 does not know and ask the same from Peer 1 -> this step is called an ACK request.
 - Peer 1 receives the ACK request and send to Peer X the requested informations (IP, Heartbeat, AppState) -> this step is called ACK2 request.
 
-Eeach cycle every peer repeat this process with a defined number of peers.
+Each cycle every peer repeat this process with a defined number of peers.
 
 ## Inter communication services
 
