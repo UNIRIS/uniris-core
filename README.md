@@ -3,7 +3,7 @@ This repository concerns the UNIRIS software core for miners
 
 ## Composition
 
-It's composed by 5 micro services:
+It's composed from 5 micro services:
 - API: Handle REST endpoints for clients and SDKs
 - Autodiscovery: P2P discovery
 - Replication: Ledger storage and data replication
