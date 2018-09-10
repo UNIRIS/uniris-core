@@ -15,7 +15,7 @@ Scenario: List known peers
 	Then an empty list is returned
 */
 func TestListKnownPeers_Empty(t *testing.T) {
-	repoPeer := &PeerRepository{}
+	repoPeer := new(PeerRepository)
 	peers, err := usecases.ListKnownPeers(repoPeer)
 	assert.Nil(t, err)
 	assert.Empty(t, peers, "Peers should be empty")

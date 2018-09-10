@@ -6,14 +6,14 @@ import (
 )
 
 //ListKnownPeers returns list of known peers
-func ListKnownPeers(peerRepo repositories.PeerRepository) ([]entities.Peer, error) {
+func ListKnownPeers(peerRepo repositories.PeerRepository) ([]*entities.Peer, error) {
 	mapPeer, err := peerRepo.GetPeers()
 	if err != nil {
 		return nil, err
 	}
 
 	//Convert map to slices
-	peers := make([]entities.Peer, 0)
+	peers := make([]*entities.Peer, 0)
 	for _, peer := range mapPeer {
 		peers = append(peers, peer)
 	}

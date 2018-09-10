@@ -2,7 +2,6 @@ package tests
 
 import (
 	"fmt"
-	"net"
 	"testing"
 	"time"
 
@@ -19,12 +18,12 @@ Scenerio: Set new peers
 	Then the repository contains the new peers
 */
 func TestSetNewPeers(t *testing.T) {
-	repo := &PeerRepository{}
-	peers := make([]entities.Peer, 0)
+	repo := GetRepo()
+	peers := make([]*entities.Peer, 0)
 	for i := 0; i < 10; i++ {
-		newPeer := entities.Peer{
-			IP: net.ParseIP(fmt.Sprintf("35.165.78.20%d", i)),
-		}
+		newPeer := usecases.CreateNewPeer(
+			[]byte(fmt.Sprintf("%s%d", GetValidPublicKey(), i)),
+			fmt.Sprintf("35.165.78.20%d", i))
 		peers = append(peers, newPeer)
 	}
 	err := usecases.SetNewPeers(repo, peers)
@@ -43,17 +42,18 @@ Scenario: Update an older peer with a yougest peer
 	Then the peer is updated in the database
 */
 func TestUpdatePeerWithYoungestPeer(t *testing.T) {
-	repo := &PeerRepository{}
+	repo := GetRepo()
 
-	peer := usecases.CreateNewPeer(net.ParseIP("127.0.0.1"), GetValidPublicKey())
-	err := usecases.SetNewPeers(repo, []entities.Peer{peer})
+	peer := usecases.CreateNewPeer(GetValidPublicKey(), "127.0.0.1")
+	err := usecases.SetNewPeers(repo, []*entities.Peer{peer})
 	assert.Nil(t, err)
 
 	time.Sleep(time.Second * 2)
-	peer.RefreshHearbeat()
-	peer.Details.State = entities.FaultyState
 
-	err = usecases.SetNewPeers(repo, []entities.Peer{peer})
+	newPeer := usecases.CreateNewPeer(GetValidPublicKey(), "127.0.0.1")
+	newPeer.Details.State = entities.FaultyState
+
+	err = usecases.SetNewPeers(repo, []*entities.Peer{newPeer})
 	assert.Nil(t, err)
 	peers, err := usecases.ListKnownPeers(repo)
 	assert.Nil(t, err)
@@ -68,17 +68,17 @@ Scenario: Update an peer with an older peer
 	Then the peer is not updated in the database
 */
 func TestUpdatePeerWithOlderPeer(t *testing.T) {
-	repo := &PeerRepository{}
+	repo := GetRepo()
 
-	olderPeer := usecases.CreateNewPeer(net.ParseIP("127.0.0.1"), GetValidPublicKey())
+	olderPeer := usecases.CreateNewPeer(GetValidPublicKey(), "127.0.0.1")
 	olderPeer.Details.State = entities.FaultyState
 	time.Sleep(time.Second * 2)
 
-	peer := usecases.CreateNewPeer(net.ParseIP("127.0.0.1"), GetValidPublicKey())
-	err := usecases.SetNewPeers(repo, []entities.Peer{peer})
+	peer := usecases.CreateNewPeer(GetValidPublicKey(), "127.0.0.1")
+	err := usecases.SetNewPeers(repo, []*entities.Peer{peer})
 	assert.Nil(t, err)
 
-	err = usecases.SetNewPeers(repo, []entities.Peer{olderPeer})
+	err = usecases.SetNewPeers(repo, []*entities.Peer{olderPeer})
 	assert.Nil(t, err)
 	peers, err := usecases.ListKnownPeers(repo)
 	assert.Nil(t, err)

@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+service GossipService {
+    rpc DiscoverPeers (DiscoveryRequest) returns (DiscoveryResponse) {}
+}
+
+message DiscoveryRequest {
+    repeated Peer knownPeers = 1;
+}
+
+message DiscoveryResponse {
+    repeated Peer peers = 1;
+}
+
+message Peer {
+     string IP = 1;
+     bytes PublicKey = 2;
+     Heartbeat HeartbeatState = 3;
+     PeerDetail Details = 4;
+}
+
+message Heartbeat {
+     int64 GenerationTime = 1;
+     int64 ElapsedBeats = 2;
+}
+
+message PeerDetail {
+     PeerState State = 1;
+     string CPULoad = 2;
+     float IOWaitRate = 3;
+     float FreeDiskSpace = 4;
+     string Version = 5;
+     Coordinates GeoCoordinates = 6;
+     int32 P2PFactor = 7;
+
+    message Coordinates {
+         float Lat = 1;
+         float Lon = 2;
+    };
+
+    enum PeerState {
+        Fault = 0;
+        Bootstraping = 1;
+        Ok = 2;
+        StorageOnly = 3;
+    };
+}
+
+

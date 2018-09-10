@@ -6,7 +6,7 @@ import (
 )
 
 //SetNewPeers handles insert or update of new peers
-func SetNewPeers(peerRepo repositories.PeerRepository, newPeers []entities.Peer) error {
+func SetNewPeers(peerRepo repositories.PeerRepository, newPeers []*entities.Peer) error {
 
 	//Retrieve the stored peers
 	knownPeers, err := peerRepo.GetPeers()
@@ -15,10 +15,10 @@ func SetNewPeers(peerRepo repositories.PeerRepository, newPeers []entities.Peer)
 	}
 
 	//Fetch the peer to update or to add
-	peerToUpdate := []entities.Peer{}
-	peerToInsert := []entities.Peer{}
+	peerToUpdate := []*entities.Peer{}
+	peerToInsert := []*entities.Peer{}
 	for _, newPeer := range newPeers {
-		knownPeer, exist := knownPeers[newPeer.IP.String()]
+		knownPeer, exist := knownPeers[string(newPeer.PublicKey)]
 		if exist {
 			if newPeer.GetElapsedHeartbeats() < knownPeer.GetElapsedHeartbeats() {
 				peerToUpdate = append(peerToUpdate, newPeer)

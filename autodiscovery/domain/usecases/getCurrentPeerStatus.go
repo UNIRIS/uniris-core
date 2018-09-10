@@ -16,10 +16,13 @@ func GetCurrentPeerStatus(geo services.GeolocService) (*entities.Peer, error) {
 	peer := &entities.Peer{
 		IP: geoLoc.IP,
 		Details: entities.PeerDetails{
-			GeoCoordinates: []float64{geoLoc.Lat, geoLoc.Lon},
+			GeoCoordinates: entities.Coordinates{
+				Lat: geoLoc.Lat,
+				Lon: geoLoc.Lon,
+			},
 		},
 		//TODO: define others details properties
 	}
-	peer.RefreshHearbeat()
+	peer.SetElapsedHeartbeats()
 	return peer, nil
 }

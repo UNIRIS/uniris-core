@@ -4,5 +4,6 @@ import "time"
 
 //PeerHeartbeat represents how fresh is the peer information
 type PeerHeartbeat struct {
-	GenerationTime time.Time `json:"generationTime"`
+	GenerationTime time.Time
+	ElapsedBeats   int64
 }
