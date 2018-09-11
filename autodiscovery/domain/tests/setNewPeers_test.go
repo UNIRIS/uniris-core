@@ -2,6 +2,7 @@ package tests
 
 import (
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
@@ -21,16 +22,15 @@ func TestSetNewPeers(t *testing.T) {
 	repo := GetRepo()
 	peers := make([]*entities.Peer, 0)
 	for i := 0; i < 10; i++ {
-		newPeer := usecases.CreateNewPeer(
-			[]byte(fmt.Sprintf("%s%d", GetValidPublicKey(), i)),
-			fmt.Sprintf("35.165.78.20%d", i))
-		peers = append(peers, newPeer)
+		peers = append(peers, &entities.Peer{
+			IP:        net.ParseIP(fmt.Sprintf("35.165.78.20%d", i)),
+			PublicKey: []byte(fmt.Sprintf("%s%d", GetValidPublicKey(), i)),
+		})
 	}
 	err := usecases.SetNewPeers(repo, peers)
 	assert.Nil(t, err)
 
-	knownPeers, err := usecases.ListKnownPeers(repo)
-	assert.Nil(t, err)
+	knownPeers, _ := repo.ListPeers()
 	assert.NotEmpty(t, knownPeers)
 	assert.Equal(t, 10, len(knownPeers))
 }
@@ -44,21 +44,31 @@ Scenario: Update an older peer with a yougest peer
 func TestUpdatePeerWithYoungestPeer(t *testing.T) {
 	repo := GetRepo()
 
-	peer := usecases.CreateNewPeer(GetValidPublicKey(), "127.0.0.1")
+	peer := &entities.Peer{
+		IP:        net.ParseIP("127.0.0.1"),
+		PublicKey: GetValidPublicKey(),
+		Heartbeat: entities.PeerHeartbeat{
+			GenerationTime: time.Now(),
+		},
+	}
 	err := usecases.SetNewPeers(repo, []*entities.Peer{peer})
 	assert.Nil(t, err)
 
 	time.Sleep(time.Second * 2)
 
-	newPeer := usecases.CreateNewPeer(GetValidPublicKey(), "127.0.0.1")
-	newPeer.Details.State = entities.FaultyState
+	newPeer := &entities.Peer{
+		IP:        net.ParseIP("127.0.0.1"),
+		PublicKey: GetValidPublicKey(),
+		Heartbeat: entities.PeerHeartbeat{
+			GenerationTime: time.Now(),
+		},
+	}
+	newPeer.AppState.State = entities.FaultyState
 
 	err = usecases.SetNewPeers(repo, []*entities.Peer{newPeer})
 	assert.Nil(t, err)
-	peers, err := usecases.ListKnownPeers(repo)
-	assert.Nil(t, err)
-
-	assert.Equal(t, entities.FaultyState, peers[0].Details.State)
+	peers, _ := repo.ListPeers()
+	assert.Equal(t, entities.FaultyState, peers[0].AppState.State)
 }
 
 /*
@@ -70,18 +80,35 @@ Scenario: Update an peer with an older peer
 func TestUpdatePeerWithOlderPeer(t *testing.T) {
 	repo := GetRepo()
 
-	olderPeer := usecases.CreateNewPeer(GetValidPublicKey(), "127.0.0.1")
-	olderPeer.Details.State = entities.FaultyState
+	olderPeer := &entities.Peer{
+		IP:        net.ParseIP("127.0.0.1"),
+		PublicKey: GetValidPublicKey(),
+		Heartbeat: entities.PeerHeartbeat{
+			GenerationTime: time.Now(),
+		},
+		AppState: entities.PeerAppState{
+			State: entities.FaultyState,
+		},
+	}
+
 	time.Sleep(time.Second * 2)
 
-	peer := usecases.CreateNewPeer(GetValidPublicKey(), "127.0.0.1")
+	peer := &entities.Peer{
+		IP:        net.ParseIP("127.0.0.1"),
+		PublicKey: GetValidPublicKey(),
+		Heartbeat: entities.PeerHeartbeat{
+			GenerationTime: time.Now(),
+		},
+		AppState: entities.PeerAppState{
+			State: entities.OkState,
+		},
+	}
+
 	err := usecases.SetNewPeers(repo, []*entities.Peer{peer})
 	assert.Nil(t, err)
 
 	err = usecases.SetNewPeers(repo, []*entities.Peer{olderPeer})
 	assert.Nil(t, err)
-	peers, err := usecases.ListKnownPeers(repo)
-	assert.Nil(t, err)
-
-	assert.Equal(t, entities.BootstrapingState, peers[0].Details.State)
+	peers, _ := repo.ListPeers()
+	assert.Equal(t, entities.OkState, peers[0].AppState.State)
 }

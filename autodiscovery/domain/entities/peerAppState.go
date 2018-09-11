@@ -1,7 +1,7 @@
 package entities
 
-//PeerDetails defines peer caracteristics
-type PeerDetails struct {
+//PeerAppState defines peer caracteristics
+type PeerAppState struct {
 	State          PeerState
 	CPULoad        string
 	IOWaitRate     float64

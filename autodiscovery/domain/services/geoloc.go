@@ -13,5 +13,5 @@ type GeoLoc struct {
 
 //GeolocService represents the interface for peer geolocalization operations
 type GeolocService interface {
-	Lookup() (GeoLoc, error)
+	Lookup() (*GeoLoc, error)
 }

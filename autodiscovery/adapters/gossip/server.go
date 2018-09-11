@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/uniris/uniris-core/autodiscovery/domain/entities"
+	"github.com/uniris/uniris-core/autodiscovery/domain/usecases"
 
 	"github.com/uniris/uniris-core/autodiscovery/domain/repositories"
-	"github.com/uniris/uniris-core/autodiscovery/domain/usecases"
 )
 
 //Server implements the GRPC server
@@ -14,22 +14,30 @@ type Server struct {
 	PeerRepo repositories.PeerRepository
 }
 
-func (s *Server) DiscoverPeers(ctx context.Context, req *DiscoveryRequest) (*DiscoveryResponse, error) {
-	newPeers := make([]*entities.Peer, 0)
+//Synchronize implements the GRPC Synchronize handler
+func (s *Server) Synchronize(ctx context.Context, req *SynchronizeRequest) (*AcknowledgeResponse, error) {
+	initiatorPeers := make([]*entities.Peer, 0)
 	for _, peer := range req.GetKnownPeers() {
-		newPeers = append(newPeers, FormatPeerToDomain(*peer))
+		initiatorPeers = append(initiatorPeers, FormatPeerToDomain(*peer))
 	}
-	unknownPeers, err := usecases.GetUnknownPeers(s.PeerRepo, newPeers)
+
+	ack, err := usecases.AcknowledgeRequest(s.PeerRepo, initiatorPeers)
 	if err != nil {
 		return nil, err
 	}
 
-	grpcPeers := make([]*Peer, 0)
-	for _, peer := range unknownPeers {
-		grpcPeers = append(grpcPeers, FormatPeerToGrpc(peer))
+	unknownInitiatorPeers := make([]*Peer, 0)
+	wishedUnknownPeers := make([]*Peer, 0)
+
+	for _, peer := range ack.UnknownInitiatorPeers {
+		unknownInitiatorPeers = append(unknownInitiatorPeers, FormatPeerToGrpc(peer))
+	}
+	for _, peer := range ack.WishedUnknownPeers {
+		wishedUnknownPeers = append(wishedUnknownPeers, FormatPeerToGrpc(peer))
 	}
 
-	return &DiscoveryResponse{
-		Peers: grpcPeers,
+	return &AcknowledgeResponse{
+		UnknownInitiatorPeers: unknownInitiatorPeers,
+		WishedUnknownPeers:    wishedUnknownPeers,
 	}, nil
 }

@@ -25,7 +25,7 @@ func (s SeedLoader) GetSeedPeers() ([]*entities.Peer, error) {
 	}
 	defer jsonFile.Close()
 
-	seedPeerList := make([]entities.Peer, 0)
+	seedPeerList := make([]*entities.Peer, 0)
 
 	//Deserialize the seed peers
 	byteValue, err := ioutil.ReadAll(jsonFile)

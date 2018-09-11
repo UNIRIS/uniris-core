@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"fmt"
+	"log"
 	"net"
 
 	"github.com/uniris/uniris-core/autodiscovery/adapters/gossip"
@@ -10,13 +11,9 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
-	GrpcPort = 3545
-)
-
-//StartServer initiate an HTTP server with GRPC service
-func StartServer(peerRepo repositories.PeerRepository) error {
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", GrpcPort))
+//StartServer initiates an HTTP server with GRPC service
+func StartServer(peerRepo repositories.PeerRepository, port int) error {
+	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		return err
 	}
@@ -24,6 +21,10 @@ func StartServer(peerRepo repositories.PeerRepository) error {
 	gossip.RegisterGossipServiceServer(grpcServer, &gossip.Server{
 		PeerRepo: peerRepo,
 	})
-	grpcServer.Serve(lis)
+	log.Println(fmt.Sprintf("Server listening on port %d", port))
+	err = grpcServer.Serve(lis)
+	if err != nil {
+		return err
+	}
 	return nil
 }

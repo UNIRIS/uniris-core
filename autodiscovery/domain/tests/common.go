@@ -6,7 +6,6 @@ import (
 	"github.com/uniris/uniris-core/autodiscovery/domain/entities"
 	"github.com/uniris/uniris-core/autodiscovery/domain/repositories"
 	"github.com/uniris/uniris-core/autodiscovery/domain/services"
-	"github.com/uniris/uniris-core/autodiscovery/domain/usecases"
 )
 
 func GetValidPublicKey() []byte {
@@ -28,14 +27,21 @@ type SeedLoader struct{}
 
 func (s SeedLoader) GetSeedPeers() ([]*entities.Peer, error) {
 	seeds := make([]*entities.Peer, 0)
-	seeds = append(seeds, usecases.CreateNewPeer(GetValidPublicKey(), "127.0.0.1"))
+
+	peer := &entities.Peer{
+		IP:        net.ParseIP("127.0.0.1"),
+		PublicKey: GetValidPublicKey(),
+		Port:      3545,
+	}
+
+	seeds = append(seeds, peer)
 	return seeds, nil
 }
 
 type GeolocService struct{}
 
-func (geo *GeolocService) Lookup() (services.GeoLoc, error) {
-	return services.GeoLoc{
+func (geo *GeolocService) Lookup() (*services.GeoLoc, error) {
+	return &services.GeoLoc{
 		IP:  net.ParseIP("127.0.0.1"),
 		Lat: 2.33,
 		Lon: 64.20,
@@ -44,17 +50,15 @@ func (geo *GeolocService) Lookup() (services.GeoLoc, error) {
 
 type FullGossipService struct{}
 
-func (s *FullGossipService) DiscoverPeers(destPeer entities.Peer, knownPeers []*entities.Peer) ([]*entities.Peer, error) {
-	return []*entities.Peer{
-		usecases.CreateNewPeer(GetSecondValidPublicKey(), "30.10.200.50"),
-		usecases.CreateNewPeer(GetThirdValidPublicKey(), "50.250.111.32"),
-	}, nil
-}
+func (s *FullGossipService) Synchronize(destPeer *entities.Peer, knownPeers []*entities.Peer) (*entities.Acknowledge, error) {
 
-type SameGossipService struct{}
-
-func (s *SameGossipService) DiscoverPeers(destPeer entities.Peer, knownPeers []*entities.Peer) ([]*entities.Peer, error) {
-	return []*entities.Peer{
-		usecases.CreateNewPeer(GetValidPublicKey(), "127.0.0.1"),
+	return &entities.Acknowledge{
+		UnknownInitiatorPeers: []*entities.Peer{
+			&entities.Peer{
+				IP:        net.ParseIP("10.100.50.25"),
+				PublicKey: GetThirdValidPublicKey(),
+				Port:      3545,
+			},
+		},
 	}, nil
 }
