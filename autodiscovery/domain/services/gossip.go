@@ -6,5 +6,5 @@ import (
 
 //GossipService represents the autodiscovery requests
 type GossipService interface {
-	Synchronize(destPeer *entities.Peer, knownPeers []*entities.Peer) (*entities.Acknowledge, error)
+	Synchronize(request *entities.SynchronizationRequest) (*entities.AcknowledgeResponse, error)
 }

@@ -4,32 +4,19 @@ import (
 	"github.com/uniris/uniris-core/autodiscovery/domain/entities"
 )
 
-//InMemoryPeerRepository implements the PeerRepository interface in memory
+//InMemoryPeerRepository implements the PeerRepository interface on memory
 type InMemoryPeerRepository struct {
-	peers     []*entities.Peer
-	localPeer *entities.Peer
+	peers []*entities.Peer
 }
 
-//ListSeedPeers retrieves the seed peers
-func (ps *InMemoryPeerRepository) ListSeedPeers() ([]*entities.Peer, error) {
-	seeds := make([]*entities.Peer, 0)
+//GetOwnPeer returns the owned peer
+func (ps *InMemoryPeerRepository) GetOwnPeer() (*entities.Peer, error) {
 	for _, peer := range ps.peers {
-		if peer.Category == entities.SeedCategory {
-			seeds = append(seeds, peer)
+		if peer.IsSelf {
+			return peer, nil
 		}
 	}
-	return seeds, nil
-}
-
-//ListDiscoveredPeers retrieves the discovered peers
-func (ps *InMemoryPeerRepository) ListDiscoveredPeers() ([]*entities.Peer, error) {
-	discovered := make([]*entities.Peer, 0)
-	for _, peer := range ps.peers {
-		if peer.Category == entities.DiscoveredCategory {
-			discovered = append(discovered, peer)
-		}
-	}
-	return discovered, nil
+	return nil, nil
 }
 
 //ListPeers get all peers
@@ -55,15 +42,4 @@ func (ps *InMemoryPeerRepository) UpdatePeer(newPeer *entities.Peer) error {
 	}
 	ps.peers = peers
 	return nil
-}
-
-//SetLocalPeer stores the peer starting
-func (ps *InMemoryPeerRepository) SetLocalPeer(p *entities.Peer) error {
-	ps.localPeer = p
-	return nil
-}
-
-//GetLocalPeer returns the local stored peer
-func (ps *InMemoryPeerRepository) GetLocalPeer() (*entities.Peer, error) {
-	return ps.localPeer, nil
 }

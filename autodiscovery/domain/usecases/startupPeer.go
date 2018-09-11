@@ -19,10 +19,10 @@ func StartupPeer(repo repositories.PeerRepository, geo services.GeolocService, p
 		PublicKey: publicKey,
 		IP:        geoLoc.IP,
 		Port:      port,
+		IsSelf:    true,
 		Heartbeat: entities.PeerHeartbeat{
 			GenerationTime: time.Now(),
 		},
-		Category: entities.DiscoveredCategory,
 		AppState: entities.PeerAppState{
 			GeoCoordinates: entities.Coordinates{
 				Lat: geoLoc.Lat,
@@ -31,7 +31,7 @@ func StartupPeer(repo repositories.PeerRepository, geo services.GeolocService, p
 			State: entities.BootstrapingState,
 		},
 	}
-	if err := repo.SetLocalPeer(peer); err != nil {
+	if err := repo.AddPeer(peer); err != nil {
 		return err
 	}
 

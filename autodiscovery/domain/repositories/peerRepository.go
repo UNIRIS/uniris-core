@@ -6,13 +6,8 @@ import (
 
 //PeerRepository represents the interface for peer storage operations
 type PeerRepository interface {
+	GetOwnPeer() (*entities.Peer, error)
 	ListPeers() ([]*entities.Peer, error)
-	ListSeedPeers() ([]*entities.Peer, error)
-	ListDiscoveredPeers() ([]*entities.Peer, error)
-
 	AddPeer(p *entities.Peer) error
 	UpdatePeer(p *entities.Peer) error
-
-	SetLocalPeer(p *entities.Peer) error
-	GetLocalPeer() (*entities.Peer, error)
 }

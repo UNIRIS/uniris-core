@@ -50,13 +50,12 @@ func (geo *GeolocService) Lookup() (*services.GeoLoc, error) {
 
 type FullGossipService struct{}
 
-func (s *FullGossipService) Synchronize(destPeer *entities.Peer, knownPeers []*entities.Peer) (*entities.Acknowledge, error) {
-
-	return &entities.Acknowledge{
-		UnknownInitiatorPeers: []*entities.Peer{
+func (s *FullGossipService) Synchronize(req *entities.SynchronizationRequest) (*entities.AcknowledgeResponse, error) {
+	return &entities.AcknowledgeResponse{
+		UnknownSenderPeers: []*entities.Peer{
 			&entities.Peer{
 				IP:        net.ParseIP("10.100.50.25"),
-				PublicKey: GetThirdValidPublicKey(),
+				PublicKey: GetValidPublicKey(),
 				Port:      3545,
 			},
 		},

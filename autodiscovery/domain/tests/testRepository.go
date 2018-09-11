@@ -6,30 +6,17 @@ import (
 
 //PeerRepository implements the IPeerRepository on memory
 type PeerRepository struct {
-	peers     []*entities.Peer
-	localPeer *entities.Peer
+	peers []*entities.Peer
 }
 
-//ListSeedPeers retrieves the seed peers
-func (ps *PeerRepository) ListSeedPeers() ([]*entities.Peer, error) {
-	seeds := make([]*entities.Peer, 0)
+//GetOwnPeer returns the owned peer
+func (ps *PeerRepository) GetOwnPeer() (*entities.Peer, error) {
 	for _, peer := range ps.peers {
-		if peer.Category == entities.SeedCategory {
-			seeds = append(seeds, peer)
+		if peer.IsSelf {
+			return peer, nil
 		}
 	}
-	return seeds, nil
-}
-
-//ListDiscoveredPeers retrieves the discovered peers
-func (ps *PeerRepository) ListDiscoveredPeers() ([]*entities.Peer, error) {
-	discovered := make([]*entities.Peer, 0)
-	for _, peer := range ps.peers {
-		if peer.Category == entities.DiscoveredCategory {
-			discovered = append(discovered, peer)
-		}
-	}
-	return discovered, nil
+	return nil, nil
 }
 
 //ListPeers get all peers
@@ -55,15 +42,4 @@ func (ps *PeerRepository) UpdatePeer(newPeer *entities.Peer) error {
 	}
 	ps.peers = peers
 	return nil
-}
-
-//SetLocalPeer stores the peer starting
-func (ps *PeerRepository) SetLocalPeer(p *entities.Peer) error {
-	ps.localPeer = p
-	return nil
-}
-
-//GetLocalPeer returns the local stored peer
-func (ps *PeerRepository) GetLocalPeer() (*entities.Peer, error) {
-	return ps.localPeer, nil
 }

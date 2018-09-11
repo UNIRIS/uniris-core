@@ -2,7 +2,9 @@ syntax = "proto3";
 
 import "google/protobuf/empty.proto";
 
-service GossipService {
+package transport;
+
+service GossipGrpcService {
     rpc Synchronize (SynchronizeRequest) returns (AcknowledgeResponse) {}
 }
 
@@ -11,8 +13,8 @@ message SynchronizeRequest {
 }
 
 message AcknowledgeResponse {
-    repeated Peer UnknownInitiatorPeers = 1;
-    repeated Peer WishedUnknownPeers = 2;
+    repeated Peer UnknownSenderPeers = 1;
+    repeated Peer UnknownReceiverPeers = 2;
 }
 
 message Peer {
