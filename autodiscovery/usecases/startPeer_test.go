@@ -17,7 +17,7 @@ Scenario: Starts a peer
 */
 func TestStartPeer(t *testing.T) {
 	repo := new(StartPeerTestPeerRepository)
-	geo := new(mockGeo)
+	geo := new(StartPeerMockGeo)
 
 	err := StartPeer(repo, geo, domain.NewPeerConfiguration("1.0", []byte("key"), 3545, 1))
 	assert.Nil(t, err)
@@ -36,9 +36,9 @@ func TestStartPeer(t *testing.T) {
 //INTERFACE IMPLEMENTATIONS
 //=========================
 
-type mockGeo struct{}
+type StartPeerMockGeo struct{}
 
-func (geo mockGeo) Lookup() (domain.GeoPosition, error) {
+func (geo StartPeerMockGeo) Lookup() (domain.GeoPosition, error) {
 	return domain.GeoPosition{Lat: 10, Lon: 50, IP: net.ParseIP("127.0.0.1")}, nil
 }
 

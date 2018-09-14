@@ -5,18 +5,13 @@ import (
 	"log"
 
 	"github.com/uniris/uniris-core/autodiscovery/domain"
-	"github.com/uniris/uniris-core/autodiscovery/usecases/ports"
 	"github.com/uniris/uniris-core/autodiscovery/usecases/repositories"
 )
 
 //Gossip etablishes connection with the peers to reach and send them discovery requests
-func Gossip(repo repositories.PeerRepository, messenger ports.GossipMessenger, peersToReach []domain.Peer) error {
+func Gossip(repo repositories.PeerRepository, conf GossipConfiguration, peersToReach []domain.Peer) error {
 	if len(peersToReach) == 0 {
 		return errors.New("Cannot gossip without peers to reach")
-	}
-	knownPeers, err := repo.ListPeers()
-	if err != nil {
-		return err
 	}
 
 	ownedPeer, err := repo.GetOwnedPeer()
@@ -24,13 +19,20 @@ func Gossip(repo repositories.PeerRepository, messenger ports.GossipMessenger, p
 		return err
 	}
 
+	if err := RefreshPeer(repo, &ownedPeer, conf.Geolocalizer); err != nil {
+		return err
+	}
+
+	knownPeers, err := repo.ListPeers()
+	if err != nil {
+		return err
+	}
+
 	for _, peer := range peersToReach {
 		log.Printf("Reaching peer %s...", peer.GetDiscoveryEndpoint())
 
-		//TODO: refresh owned state
-
 		synReq := domain.NewSynRequest(ownedPeer, peer.IP, peer.Port, knownPeers)
-		ackRes, err := messenger.SendSynchro(synReq)
+		ackRes, err := conf.Messenger.SendSynchro(synReq)
 		if err != nil {
 			return err
 		}
@@ -58,7 +60,7 @@ func Gossip(repo repositories.PeerRepository, messenger ports.GossipMessenger, p
 
 			if len(detailedPeers) > 0 {
 				ackReq := domain.NewAckRequest(detailedPeers)
-				if err := messenger.SendAcknowledgement(ackReq); err != nil {
+				if err := conf.Messenger.SendAcknowledgement(ackReq); err != nil {
 					return err
 				}
 			}

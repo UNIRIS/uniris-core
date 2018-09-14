@@ -42,6 +42,7 @@ func StartServer(peerRepo repositories.PeerRepository, port int) error {
 type GrpcServer struct {
 	PeerRepo        repositories.PeerRepository
 	IdentityChecker ports.PeerIdentityChecker
+	Geolocalizer    ports.Geolocalizer
 }
 
 //Synchronize implements the protobuf Synchronize request handler
@@ -68,9 +69,9 @@ func (s GrpcServer) Synchronize(ctx context.Context, req *proto.SynRequest) (*pr
 
 //Acknowledge implements the protobuf Acknowledge request handler
 func (s GrpcServer) Acknowledge(ctx context.Context, req *proto.AckRequest) (*empty.Empty, error) {
-	//Store the peers received
+	//Refresh or store the new peers received
 	for _, peer := range req.DetailedKnownPeers {
-		if err := usecases.StorePeer(s.PeerRepo, adapters.ToDomain(peer)); err != nil {
+		if err := usecases.RefreshPeer(s.PeerRepo, adapters.ToDomain(peer), s.Geolocalizer); err != nil {
 			return nil, err
 		}
 	}

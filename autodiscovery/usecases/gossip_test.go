@@ -17,9 +17,12 @@ Scenario: Gossip with an empty targets
 func TestGossipWithoutPeers(t *testing.T) {
 	repo := new(GossipTestPeerRepository)
 	messenger := new(GosssipTestMessenger)
+	geo := new(GosssipTestGeo)
+
+	conf := GossipConfiguration{Messenger: messenger, Geolocalizer: geo}
 
 	peersToReach := make([]domain.Peer, 0)
-	err := Gossip(repo, messenger, peersToReach)
+	err := Gossip(repo, conf, peersToReach)
 	assert.Error(t, err, "Cannot gossip without peers to reach")
 }
 
@@ -32,15 +35,24 @@ Scenario: Execute the gossip with gossip targets
 func TestExecuteGossip(t *testing.T) {
 	repo := new(GossipTestPeerRepository)
 	messenger := new(GosssipTestMessenger)
+	geo := new(GosssipTestGeo)
+
+	conf := GossipConfiguration{Messenger: messenger, Geolocalizer: geo}
 
 	gossipTargets := make([]domain.Peer, 0)
-	err := Gossip(repo, messenger, gossipTargets)
+	err := Gossip(repo, conf, gossipTargets)
 	assert.Error(t, err, "Cannot gossip without peers to reach")
 }
 
 //=========================
 //INTERFACE IMPLEMENTATIONS
 //=========================
+
+type GosssipTestGeo struct{}
+
+func (geo GosssipTestGeo) Lookup() (domain.GeoPosition, error) {
+	return domain.GeoPosition{Lat: 10, Lon: 50, IP: net.ParseIP("127.0.0.1")}, nil
+}
 
 type GosssipTestMessenger struct{}
 

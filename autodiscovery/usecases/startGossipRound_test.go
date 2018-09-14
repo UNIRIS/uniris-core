@@ -19,8 +19,10 @@ func TestStartGossipRoundWithoutSeeds(t *testing.T) {
 	repo := new(StartGossipTestRepository)
 	seedLoader := new(StartGossipTestSeedReader)
 	messenger := new(StartGossipTestMessenger)
+	geo := new(StartGossipRoundTestGeo)
+	conf := GossipConfiguration{SeedReader: seedLoader, Messenger: messenger, Geolocalizer: geo}
 
-	err := StartGossipRound(repo, seedLoader, messenger)
+	err := StartGossipRound(repo, conf)
 	assert.Error(t, err, "Cannot gossip without seed peers")
 }
 
@@ -34,10 +36,12 @@ func TestExecuteGossipRounder(t *testing.T) {
 	repo := new(StartGossipTestRepository)
 	seedLoader := new(StartGossipTestSeedReader)
 	messenger := new(StartGossipTestMessenger)
+	geo := new(StartGossipRoundTestGeo)
+	conf := GossipConfiguration{SeedReader: seedLoader, Messenger: messenger, Geolocalizer: geo}
 
 	seedLoader.InitSeed()
 
-	err := StartGossipRound(repo, seedLoader, messenger)
+	err := StartGossipRound(repo, conf)
 	assert.Nil(t, err)
 
 	peers, _ := repo.ListPeers()
@@ -47,6 +51,12 @@ func TestExecuteGossipRounder(t *testing.T) {
 //=========================
 //INTERFACE IMPLEMENTATIONS
 //=========================
+
+type StartGossipRoundTestGeo struct{}
+
+func (geo StartGossipRoundTestGeo) Lookup() (domain.GeoPosition, error) {
+	return domain.GeoPosition{Lat: 10, Lon: 50, IP: net.ParseIP("127.0.0.1")}, nil
+}
 
 type StartGossipTestSeedReader struct {
 	seeds []domain.Peer

@@ -9,9 +9,15 @@ import (
 	"github.com/uniris/uniris-core/autodiscovery/usecases/repositories"
 )
 
+type GossipConfiguration struct {
+	SeedReader   ports.SeedReader
+	Messenger    ports.GossipMessenger
+	Geolocalizer ports.Geolocalizer
+}
+
 //StartGossipRound initiates a gossip round
-func StartGossipRound(repo repositories.PeerRepository, seedReader ports.SeedReader, messenger ports.GossipMessenger) error {
-	seeds, err := seedReader.GetSeeds()
+func StartGossipRound(repo repositories.PeerRepository, conf GossipConfiguration) error {
+	seeds, err := conf.SeedReader.GetSeeds()
 	if err != nil {
 		return err
 	}
@@ -33,7 +39,7 @@ func StartGossipRound(repo repositories.PeerRepository, seedReader ports.SeedRea
 		gossipTargets = append(gossipTargets, getRandomPeer(filterKnownPeers))
 	}
 
-	if err := Gossip(repo, messenger, gossipTargets); err != nil {
+	if err := Gossip(repo, conf, gossipTargets); err != nil {
 		return err
 	}
 
