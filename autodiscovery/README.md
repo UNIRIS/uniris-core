@@ -7,20 +7,11 @@ This service follow the clean architecture pattern and its composed by the layer
 
 ```
 ---------------------------------------------------------------------------------------------------------------------
---domain            # Peer business layer
------entities       # Peer entities design
------usecases       # Services which create and transform peers, store them through repositories and services
------repositories   # Storage repositories interfaces 
------services       # Services interfaces which add values to the peers (i.e. Geolocalization)
---adapters          # Transformation layer for infrastructure and domain layer
------repositories   # Implements the storage repositories interfaces
------services       # Implements the services interfaces
------controllers    # Implements the API controllers which call the usecases
+--domain            # Peer entities and buiness related
+--adapters          # Transformation layer for infrastructure and domain layer (i.e repository implementation, DTO adapters)
+--usecases          # Handles business interactions (manipulates domain entities, define interfaces for infrastructure or adapter layer implementations)
 --infrastructure    # Manages thirdparty integrations (i.e. HTTP server, database, message bus)
---tests             # Service tests
------usecases       # Use cases unit tests
------entities       # Entities unit tests
-main.go             # Service entry point
+main.go             # MAIN entry point
 ---------------------------------------------------------------------------------------------------------------------
 ```
 
