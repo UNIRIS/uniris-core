@@ -1,19 +1,21 @@
 # Autodiscovery
 Micro-service which manage autodiscovery system using a Gossip implementation.
 
-## Architecture
+## Domain
 
-This service follow the clean architecture pattern and its composed by the layers belows:
-
-```
----------------------------------------------------------------------------------------------------------------------
---domain            # Peer entities and buiness related
---adapters          # Transformation layer for infrastructure and domain layer (i.e repository implementation, DTO adapters)
---usecases          # Handles business interactions (manipulates domain entities, define interfaces for infrastructure or adapter layer implementations)
---infrastructure    # Manages thirdparty integrations (i.e. HTTP server, database, message bus)
-main.go             # MAIN entry point
----------------------------------------------------------------------------------------------------------------------
-```
+Context: P2P discovery
+Entities: 
+- Discovered peer
+- Seed peer
+- Startup peer
+Aggregates: Peer
+Services: 
+- Peer bootstrap
+- Seed loading
+- Peer gossiping
+Repository:
+- Peer repository
+- Seed repository
 
 ## Gossip implementation
 
