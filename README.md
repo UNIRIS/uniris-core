@@ -6,7 +6,7 @@ This repository concerns the UNIRIS software core for miners
 It's composed from 5 micro services:
 - API: Handle REST endpoints for clients and SDKs
 - Autodiscovery: P2P discovery
-- Replication: Ledger storage and data replication
+- Data: Ledger storage and data replication
 - Mining: Transaction mining and approvals
 - AI: Artifical Inteligence
 
