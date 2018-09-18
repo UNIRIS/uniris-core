@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/uniris/uniris-core/autodiscovery/pkg/discovery/gossip"
+	api "github.com/uniris/uniris-core/autodiscovery/api/protobuf-spec"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
 	"google.golang.org/grpc"
 )
 
@@ -12,7 +13,7 @@ type GrpcClient struct{}
 
 //SendSyn callS the Synchronize protobuf method to retrieve unknown peers (SYN handshake)
 func (g GrpcClient) SendSyn(synReq gossip.SynRequest) (synAck gossip.SynAck, err error) {
-	serverAddr := fmt.Sprintf("%s:%d", synReq.Receiver.IP.String(), synReq.Receiver.Port)
+	serverAddr := fmt.Sprintf("%s:%d", synReq.Receiver.IP().String(), synReq.Receiver.Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -20,19 +21,19 @@ func (g GrpcClient) SendSyn(synReq gossip.SynRequest) (synAck gossip.SynAck, err
 		return
 	}
 
-	client := protobuf.NewGossipClient(conn)
+	client := api.NewDiscoveryClient(conn)
 	resp, err := client.Synchronize(context.Background(), BuildSynRequest(synReq))
 	if err != nil {
 		return
 	}
 
-	synAck = protobuf.BuildDomainSynAckResponse(resp)
+	synAck = BuildDomainSynAckResponse(resp)
 	return
 }
 
 //SendAck calls the Acknoweledge protobuf method to send detailed peers requested
 func (g GrpcClient) SendAck(ackReq gossip.AckRequest) error {
-	serverAddr := fmt.Sprintf("%s:%d", ackReq.Receiver.IP.String(), ackReq.Receiver.Port)
+	serverAddr := fmt.Sprintf("%s:%d", ackReq.Receiver.IP().String(), ackReq.Receiver.Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		return err
@@ -40,7 +41,7 @@ func (g GrpcClient) SendAck(ackReq gossip.AckRequest) error {
 
 	defer conn.Close()
 
-	client := protobuf.NewGossipClient(conn)
+	client := api.NewDiscoveryClient(conn)
 	_, err = client.Acknowledge(context.Background(), BuildAckRequest(ackReq))
 	if err != nil {
 		return err

@@ -1,22 +1,6 @@
 # Autodiscovery
 Micro-service which manage autodiscovery system using a Gossip implementation.
 
-## Domain
-
-Context: P2P discovery
-Entities: 
-- Discovered peer
-- Seed peer
-- Startup peer
-Aggregates: Peer
-Services: 
-- Peer bootstrap
-- Seed loading
-- Peer gossiping
-Repository:
-- Peer repository
-- Seed repository
-
 ## Gossip implementation
 
 To gossip with another peer and to perform an autodiscovery exchange, the service use multiple messages to send and receive peer's informations:
@@ -28,11 +12,3 @@ To gossip with another peer and to perform an autodiscovery exchange, the servic
 - Peer 1 receives the ACK request and send to Peer X the requested informations (IP, Heartbeat, AppState) -> this step is called ACK2 request.
 
 Each cycle every peer repeat this process with a defined number of peers.
-
-## Inter communication services
-
-Once the peers received information from others peers (so after gossip rounds), it publish on the message bus queue the peers discovered or the updated informations.
-Using that, other services which subscribe to the discovered peers queue receive the new discovered data and can process them.
-
-For example:
-- AI service which will compute to rank peers

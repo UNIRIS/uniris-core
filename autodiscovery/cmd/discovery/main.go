@@ -1,24 +1,29 @@
-package discovery
+package main
 
 import (
-	"flag"
-	"io/ioutil"
 	"log"
+	"time"
 
-	"github.com/uniris/uniris-core/autodiscovery/pkg/discovery/gossip"
-
-	"github.com/uniris/uniris-core/autodiscovery/pkg/discovery/boostraping"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/discovery/file"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/discovery/mock"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/discovery/seeding"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/boostraping"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/mock"
 )
 
 func main() {
-	pbKey, port, ver, p2pfactor := loadConfiguration()
+
+	pbKey, port, p2pfactor := loadConfiguration()
 	repo := mock.NewRepository()
 	loc := mock.NewPeerLocalizer()
 
-	if err := boostraping.NewService(repo, loc).Startup(pbKey, port, ver, p2pfactor); err != nil {
+	go func() {
+		if err := startServer(port); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	boot := boostraping.NewService(repo, loc)
+	startPeer, err := boot.Startup(pbKey, port, p2pfactor)
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -30,61 +35,12 @@ func main() {
 	msg := mock.NewGossipMessenger()
 	notif := mock.NewGossipNotifier()
 
-	gossip.NewService(repo, msg, notif)
+	gs := gossip.NewService(repo, msg, notif)
 
-}
-
-// func startGossip(peer discovery.Peer, repo discovery.PeerRepository) {
-// 	msg := mock.NewGossipMessenger()
-// 	notif := mock.NewGossipNotifier()
-// 	gs := discovery.NewGossiper(repo, msg, notif)
-
-// 	ticker := time.NewTicker(1 * time.Second)
-// 	for range ticker.C {
-// 		knownPeers, err := repo.ListPeers()
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-// 		round := discovery.NewGossipRound(peer, seeds, knownPeers)
-// 		if err := gs.Gossip(round); err != nil {
-// 			log.Print("Gossip failure: %s", err.Error())
-// 		}
-// 	}
-// }
-
-func loadConfiguration() ([]byte, int, string, int) {
-	port := flag.Int("port", 3545, "Discovery port")
-	p2pFactor := flag.Int("p2p-factor", 1, "P2P replication factor")
-	pbKeyFile := flag.String("public-key-file", "id.pub", "Public key file")
-
-	version, err := getVersion()
-	if err != nil {
-		log.Panic(err)
+	ticker := time.NewTicker(1 * time.Second)
+	for range ticker.C {
+		if err := gs.Run(startPeer); err != nil {
+			log.Printf("Gossip failure: %s", err)
+		}
 	}
-
-	pbKey, err := getPublicKey(*pbKeyFile)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	flag.Parse()
-
-	return pbKey, *port, version, *p2pFactor
-}
-
-func getVersion() (string, error) {
-	bytes, err := ioutil.ReadFile("version")
-	if err != nil {
-		return "", err
-	}
-	return string(bytes), nil
-}
-
-func getPublicKey(file string) ([]byte, error) {
-
-	bytes, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-	return bytes, nil
 }

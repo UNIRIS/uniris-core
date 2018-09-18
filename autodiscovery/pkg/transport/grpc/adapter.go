@@ -5,8 +5,8 @@ import (
 	"time"
 
 	api "github.com/uniris/uniris-core/autodiscovery/api/protobuf-spec"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/discovery"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/discovery/gossip"
+	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
 )
 
 //ToDomainBulk adapts a list of protobuf peer into a list of domain peer
@@ -29,25 +29,26 @@ func FromDomainBulk(domainPeers []discovery.Peer) []*api.Peer {
 
 //FromDomain adapts a domain peer into a protobuf peer
 func FromDomain(peer discovery.Peer) *api.Peer {
+
 	p := &api.Peer{
 		PublicKey:      peer.PublicKey(),
 		IP:             peer.IP().String(),
 		Port:           int32(peer.Port()),
-		GenerationTime: peer.GenerationTime(),
+		GenerationTime: peer.GenerationTime().Unix(),
 	}
 
 	if p.State != nil {
 		p.State = &api.Peer_PeerState{
-			CPULoad:       peer.State.CPULoad,
-			FreeDiskSpace: float32(peer.State.FreeDiskSpace),
+			CPULoad:       peer.CPULoad(),
+			FreeDiskSpace: float32(peer.FreeDiskSpace()),
 			GeoPosition: &api.Peer_PeerState_GeoCoordinates{
-				Lat: float32(peer.State.GeoPosition.Lat),
-				Lon: float32(peer.State.GeoPosition.Lon),
+				Lat: float32(peer.GeoPosition().Lat),
+				Lon: float32(peer.GeoPosition().Lon),
 			},
-			IOWaitRate: float32(peer.State.IOWaitRate),
-			P2PFactor:  int32(peer.State.P2PFactor),
-			Version:    peer.State.Version,
-			Status:     api.Peer_PeerState_PeerStatus(peer.State.Status),
+			IOWaitRate: float32(peer.IOWaitRate()),
+			P2PFactor:  int32(peer.P2PFactor()),
+			Version:    peer.Version(),
+			Status:     api.Peer_PeerState_PeerStatus(peer.Status()),
 		}
 	}
 	return p
@@ -55,33 +56,25 @@ func FromDomain(peer discovery.Peer) *api.Peer {
 
 //ToDomain adapts a probotuf peer into a domain peer
 func ToDomain(peer *api.Peer) discovery.Peer {
-	p := discovery.Peer{
-		PublicKey:      []byte(peer.PublicKey),
-		IP:             net.ParseIP(peer.IP),
-		Port:           int(peer.Port),
-		GenerationTime: time.Unix(peer.GenerationTime, 0),
-	}
+	s := discovery.NewState(
+		peer.State.Version,
+		discovery.PeerStatus(peer.State.Status),
+		discovery.PeerPosition{
+			Lat: float64(peer.State.GeoPosition.Lat),
+			Lon: float64(peer.State.GeoPosition.Lon),
+		},
+		peer.State.CPULoad,
+		float64(peer.State.FreeDiskSpace),
+		float64(peer.State.IOWaitRate),
+		int(peer.State.P2PFactor),
+	)
 
-	if peer.State != nil {
-		p.State = &discovery.PeerState{
-			CPULoad:       peer.State.CPULoad,
-			FreeDiskSpace: float64(peer.State.FreeDiskSpace),
-			GeoPosition: p2p.GeoPosition{
-				Lat: float64(peer.State.GeoPosition.Lat),
-				Lon: float64(peer.State.GeoPosition.Lon),
-			},
-			IOWaitRate: float64(peer.State.IOWaitRate),
-			P2PFactor:  int(peer.State.P2PFactor),
-			Version:    peer.State.Version,
-			Status:     p2p.PeerStatus(peer.State.Status),
-		}
-	}
-	return p
+	return discovery.NewDiscoveredPeer(peer.PublicKey, net.ParseIP(peer.IP), int(peer.Port), time.Unix(peer.GenerationTime, 0), s)
 }
 
 //BuildSynRequest formats a protobuf SynRequest
 func BuildSynRequest(req gossip.SynRequest) *api.SynRequest {
-	return &SynRequest{
+	return &api.SynRequest{
 		Initiator:  FromDomain(req.Initiator),
 		Receiver:   FromDomain(req.Receiver),
 		KnownPeers: FromDomainBulk(req.KnownPeers),
@@ -90,7 +83,7 @@ func BuildSynRequest(req gossip.SynRequest) *api.SynRequest {
 
 //BuildAckRequest formats a protobuf AckRequest
 func BuildAckRequest(req gossip.AckRequest) *api.AckRequest {
-	return &AckRequest{
+	return &api.AckRequest{
 		Initiator:      FromDomain(req.Initiator),
 		Receiver:       FromDomain(req.Receiver),
 		RequestedPeers: FromDomainBulk(req.RequestedPeers),
@@ -99,7 +92,7 @@ func BuildAckRequest(req gossip.AckRequest) *api.AckRequest {
 
 //BuildProtoSynAckResponse formats SynAck response for protobuf
 func BuildProtoSynAckResponse(res gossip.SynAck) *api.SynAck {
-	return &SynAck{
+	return &api.SynAck{
 		Initiator:    FromDomain(res.Initiator),
 		Receiver:     FromDomain(res.Receiver),
 		NewPeers:     FromDomainBulk(res.NewPeers),
@@ -108,7 +101,7 @@ func BuildProtoSynAckResponse(res gossip.SynAck) *api.SynAck {
 }
 
 //BuildDomainSynAckResponse formats SynAck response for domain
-func BuildDomainSynAckResponse(res *gossip.SynAck) api.SynAck {
+func BuildDomainSynAckResponse(res *api.SynAck) gossip.SynAck {
 	return gossip.SynAck{
 		Initiator:    ToDomain(res.Initiator),
 		Receiver:     ToDomain(res.Receiver),
