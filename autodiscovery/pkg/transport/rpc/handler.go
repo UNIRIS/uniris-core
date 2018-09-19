@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"log"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 
@@ -21,6 +20,7 @@ type handler struct {
 	repo         discovery.Repository
 	domainFormat PeerDomainFormater
 	apiFormat    PeerAPIFormater
+	notif        gossip.Notifier
 }
 
 //Synchronize implements the protobuf Synchronize request handler
@@ -52,17 +52,19 @@ func (h handler) Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.E
 	// log.Printf("Ack request received from %s", init.GetEndpoint())
 
 	//Store the peers requested
-	for _, p := range req.RequestedPeers {
-		log.Printf("New peer discovered %s", h.domainFormat.BuildPeerDetailed(p).GetEndpoint())
-		h.repo.AddPeer(h.domainFormat.BuildPeerDetailed(p))
+	for _, rp := range req.RequestedPeers {
+		p := h.domainFormat.BuildPeerDetailed(rp)
+		h.notif.Notify(p)
+		h.repo.AddPeer(p)
 	}
 	return new(empty.Empty), nil
 }
 
 //NewHandler create a new GRPC handler
-func NewHandler(repo discovery.Repository) Handler {
+func NewHandler(repo discovery.Repository, notif gossip.Notifier) Handler {
 	return handler{
 		repo:         repo,
+		notif:        notif,
 		domainFormat: PeerDomainFormater{},
 		apiFormat:    PeerAPIFormater{},
 	}

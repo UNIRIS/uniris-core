@@ -17,7 +17,7 @@ type gossipMessenger struct {
 	apiFormat    PeerAPIFormater
 }
 
-//SendSyn callS the Synchronize protobuf method to retrieve unknown peers (SYN handshake)
+//SendSyn calls the Synchronize grpc method to retrieve unknown peers (SYN handshake)
 func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, err error) {
 	serverAddr := fmt.Sprintf("%s", req.Receiver.GetEndpoint())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
@@ -49,7 +49,7 @@ func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, 
 	}, nil
 }
 
-//SendAck calls the Acknoweledge protobuf method to send detailed peers requested
+//SendAck calls the Acknoweledge grpc method to send detailed peers requested
 func (g gossipMessenger) SendAck(req gossip.AckRequest) error {
 	serverAddr := fmt.Sprintf("%s", req.Receiver.GetEndpoint())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
@@ -71,8 +71,8 @@ func (g gossipMessenger) SendAck(req gossip.AckRequest) error {
 	return nil
 }
 
-//NewGossipMessenger creates a new gossip messenger client
-func NewGossipMessenger() gossip.Messenger {
+//NewMessenger creates a new gossip messenger using GRPC
+func NewMessenger() gossip.Messenger {
 	return gossipMessenger{
 		apiFormat:    PeerAPIFormater{},
 		domainFormat: PeerDomainFormater{},

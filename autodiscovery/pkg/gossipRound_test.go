@@ -72,7 +72,8 @@ func TestSelectPeers(t *testing.T) {
 
 	r, _ := NewGossipRound(Peer{}, []Peer{p1, p2}, []Seed{s1})
 
-	peers := r.SelectPeers()
+	peers, err := r.SelectPeers()
+	assert.Nil(t, err)
 	assert.NotNil(t, peers)
 	assert.NotEmpty(t, peers)
 	assert.Equal(t, 2, len(peers))

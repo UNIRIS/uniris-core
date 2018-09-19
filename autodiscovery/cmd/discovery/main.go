@@ -59,8 +59,8 @@ func main() {
 	}
 	pos := new(http.PeerPositioner)
 	insp := inspecting.NewService(repo, new(system.PeerMonitor))
-	notif := new(rabbitmq.GossipNotifier)
-	msg := rpc.NewGossipMessenger()
+	notif := rabbitmq.NewNotifier()
+	msg := rpc.NewMessenger()
 
 	//Store the startup peer
 	boot := bootstraping.NewService(repo, pos, np)
@@ -74,7 +74,7 @@ func main() {
 
 	//Starts server
 	go func() {
-		if err := startServer(port, repo); err != nil {
+		if err := startServer(port, repo, notif); err != nil {
 			log.Fatal(err)
 		}
 	}()
@@ -129,13 +129,13 @@ func loadConfiguration() (string, []byte, int, string, int, string, error) {
 	return *network, pbKey, *port, version, *p2pFactor, *seedsFile, nil
 }
 
-func startServer(port int, r discovery.Repository) error {
+func startServer(port int, repo discovery.Repository, notif gossip.Notifier) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		return err
 	}
 	grpcServer := grpc.NewServer()
-	api.RegisterDiscoveryServer(grpcServer, rpc.NewHandler(r))
+	api.RegisterDiscoveryServer(grpcServer, rpc.NewHandler(repo, notif))
 	log.Printf("Server listening on %d", port)
 	if err := grpcServer.Serve(lis); err != nil {
 		return err

@@ -5,8 +5,10 @@ import (
 	"net"
 )
 
+//PeerNetworker implements the PeerNetworker interface which provides the methods to get network peer's details
 type PeerNetworker struct{}
 
+//IP lookups the peer's IP
 func (pn PeerNetworker) IP() (net.IP, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {

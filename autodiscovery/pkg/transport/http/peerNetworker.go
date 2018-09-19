@@ -7,10 +7,13 @@ import (
 	"net/http"
 )
 
+//ErrFailToGetIP is returned when the service to get IP does not respond
 var ErrFailToGetIP = errors.New("Cannot get the peer IP. IP providers may failed")
 
+//PeerNetworker implements the PeerNetworker interface which provides the methods to get network peer's details
 type PeerNetworker struct{}
 
+//IP lookups the peer's IP
 func (pn PeerNetworker) IP() (net.IP, error) {
 	var ip net.IP
 	ip, err := pn.ipify()
