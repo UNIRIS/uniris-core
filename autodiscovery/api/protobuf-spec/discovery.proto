@@ -10,25 +10,31 @@ service Discovery {
 }
 
 message SynRequest {
-    Peer Initiator = 1;
-    Peer Receiver = 2;
-    repeated Peer KnownPeers = 3;
+    PeerDigest Initiator = 1;
+    PeerDigest Receiver = 2;
+    repeated PeerDigest KnownPeers = 3;
 }
 
 message AckRequest {
-    Peer Initiator = 1;
-    Peer Receiver = 2;
-    repeated Peer RequestedPeers = 3;
+    PeerDigest Initiator = 1;
+    PeerDigest Receiver = 2;
+    repeated PeerDetailed RequestedPeers = 3;
 }
 
 message SynAck {
-    Peer Initiator = 1;
-    Peer Receiver = 2;
-    repeated Peer NewPeers = 3;
-    repeated Peer UnknownPeers = 4;
+    PeerDigest Initiator = 1;
+    PeerDigest Receiver = 2;
+    repeated PeerDetailed NewPeers = 3;
+    repeated PeerDigest UnknownPeers = 4;
 }
 
-message Peer {
+message PeerDigest {
+    bytes PublicKey = 1;
+    string IP = 2;
+    int32 Port = 3;
+}
+
+message PeerDetailed {
     bytes PublicKey = 1;
     string IP = 2;
     int32 Port = 3;

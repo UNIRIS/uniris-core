@@ -61,13 +61,3 @@ func NewAckRequest(initiator discovery.Peer, receiver discovery.Peer, requestedP
 		RequestedPeers: requestedPeers,
 	}
 }
-
-//NewSynAck builds a new response from a SYN request (aka SYN-ACK)
-func NewSynAck(initiator discovery.Peer, receiver discovery.Peer, newPeers []discovery.Peer, unknownPeers []discovery.Peer) SynAck {
-	return SynAck{
-		Initiator:    initiator,
-		Receiver:     receiver,
-		UnknownPeers: newPeers,
-		NewPeers:     unknownPeers,
-	}
-}

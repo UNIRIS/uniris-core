@@ -5,8 +5,11 @@ import (
 	"math/rand"
 )
 
-//ErrEmptySeed is returnes when no seeds has been provided
+//ErrEmptySeed is returns when no seeds has been provided
 var ErrEmptySeed = errors.New("Cannot start a gossip round without a list seeds")
+
+//ErrNoOwnedPeer is returnes when no owned peers has been stored
+var ErrNoOwnedPeer = errors.New("Cannot start a gossip round without a startuping peer")
 
 //GossipRound describes a round in a gossip protocol
 type GossipRound struct {
@@ -16,23 +19,44 @@ type GossipRound struct {
 }
 
 //SelectPeers returns a seed and a known peer randomly
-func (r GossipRound) SelectPeers() []Peer {
+func (r GossipRound) SelectPeers() ([]Peer, error) {
 	peers := make([]Peer, 0)
-	peers = append(peers, r.randomSeed().ToPeer())
 
-	//We exclude the owned peer, to not dial with ourself
+	//We pick a random seed peer
+	s := r.randomSeed().ToPeer()
+
+	//Exclude ourself if we are of inside our list seed (impossible in reality, useful for testing)
+	owned := r.getOwnedPeer()
+	if owned == nil {
+		return nil, ErrNoOwnedPeer
+	}
+	if s.GetEndpoint() != owned.GetEndpoint() {
+		peers = append(peers, s)
+	}
+
+	//Filter ourself (we don't want gossip with ourself)
 	filtered := make([]Peer, 0)
-	for _, peer := range r.knownPeers {
-		if !peer.IsOwned() {
-			filtered = append(filtered, peer)
+	for _, p := range r.knownPeers {
+		if !p.IsOwned() {
+			filtered = append(filtered, p)
 		}
 	}
 	r.knownPeers = filtered
 
+	//We pick a random known peer
 	if len(r.knownPeers) > 0 {
 		peers = append(peers, r.randomPeer())
 	}
-	return peers
+	return peers, nil
+}
+
+func (r GossipRound) getOwnedPeer() *Peer {
+	for _, p := range r.knownPeers {
+		if p.IsOwned() {
+			return &p
+		}
+	}
+	return nil
 }
 
 func (r GossipRound) randomPeer() Peer {

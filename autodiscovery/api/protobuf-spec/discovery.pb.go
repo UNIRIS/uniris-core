@@ -24,49 +24,49 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type Peer_PeerState_PeerStatus int32
+type PeerDetailed_PeerState_PeerStatus int32
 
 const (
-	Peer_PeerState_Fault        Peer_PeerState_PeerStatus = 0
-	Peer_PeerState_Bootstraping Peer_PeerState_PeerStatus = 1
-	Peer_PeerState_Ok           Peer_PeerState_PeerStatus = 2
-	Peer_PeerState_StorageOnly  Peer_PeerState_PeerStatus = 3
+	PeerDetailed_PeerState_Fault        PeerDetailed_PeerState_PeerStatus = 0
+	PeerDetailed_PeerState_Bootstraping PeerDetailed_PeerState_PeerStatus = 1
+	PeerDetailed_PeerState_Ok           PeerDetailed_PeerState_PeerStatus = 2
+	PeerDetailed_PeerState_StorageOnly  PeerDetailed_PeerState_PeerStatus = 3
 )
 
-var Peer_PeerState_PeerStatus_name = map[int32]string{
+var PeerDetailed_PeerState_PeerStatus_name = map[int32]string{
 	0: "Fault",
 	1: "Bootstraping",
 	2: "Ok",
 	3: "StorageOnly",
 }
-var Peer_PeerState_PeerStatus_value = map[string]int32{
+var PeerDetailed_PeerState_PeerStatus_value = map[string]int32{
 	"Fault":        0,
 	"Bootstraping": 1,
 	"Ok":           2,
 	"StorageOnly":  3,
 }
 
-func (x Peer_PeerState_PeerStatus) String() string {
-	return proto.EnumName(Peer_PeerState_PeerStatus_name, int32(x))
+func (x PeerDetailed_PeerState_PeerStatus) String() string {
+	return proto.EnumName(PeerDetailed_PeerState_PeerStatus_name, int32(x))
 }
-func (Peer_PeerState_PeerStatus) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_0de7fd570d83af8e, []int{3, 0, 0}
+func (PeerDetailed_PeerState_PeerStatus) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_discovery_f5c1be01a5edbe4f, []int{4, 0, 0}
 }
 
 type SynRequest struct {
-	Initiator            *Peer    `protobuf:"bytes,1,opt,name=Initiator,proto3" json:"Initiator,omitempty"`
-	Receiver             *Peer    `protobuf:"bytes,2,opt,name=Receiver,proto3" json:"Receiver,omitempty"`
-	KnownPeers           []*Peer  `protobuf:"bytes,3,rep,name=KnownPeers,proto3" json:"KnownPeers,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Initiator            *PeerDigest   `protobuf:"bytes,1,opt,name=Initiator,proto3" json:"Initiator,omitempty"`
+	Receiver             *PeerDigest   `protobuf:"bytes,2,opt,name=Receiver,proto3" json:"Receiver,omitempty"`
+	KnownPeers           []*PeerDigest `protobuf:"bytes,3,rep,name=KnownPeers,proto3" json:"KnownPeers,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
+	XXX_unrecognized     []byte        `json:"-"`
+	XXX_sizecache        int32         `json:"-"`
 }
 
 func (m *SynRequest) Reset()         { *m = SynRequest{} }
 func (m *SynRequest) String() string { return proto.CompactTextString(m) }
 func (*SynRequest) ProtoMessage()    {}
 func (*SynRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_0de7fd570d83af8e, []int{0}
+	return fileDescriptor_discovery_f5c1be01a5edbe4f, []int{0}
 }
 func (m *SynRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SynRequest.Unmarshal(m, b)
@@ -86,21 +86,21 @@ func (m *SynRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_SynRequest proto.InternalMessageInfo
 
-func (m *SynRequest) GetInitiator() *Peer {
+func (m *SynRequest) GetInitiator() *PeerDigest {
 	if m != nil {
 		return m.Initiator
 	}
 	return nil
 }
 
-func (m *SynRequest) GetReceiver() *Peer {
+func (m *SynRequest) GetReceiver() *PeerDigest {
 	if m != nil {
 		return m.Receiver
 	}
 	return nil
 }
 
-func (m *SynRequest) GetKnownPeers() []*Peer {
+func (m *SynRequest) GetKnownPeers() []*PeerDigest {
 	if m != nil {
 		return m.KnownPeers
 	}
@@ -108,19 +108,19 @@ func (m *SynRequest) GetKnownPeers() []*Peer {
 }
 
 type AckRequest struct {
-	Initiator            *Peer    `protobuf:"bytes,1,opt,name=Initiator,proto3" json:"Initiator,omitempty"`
-	Receiver             *Peer    `protobuf:"bytes,2,opt,name=Receiver,proto3" json:"Receiver,omitempty"`
-	RequestedPeers       []*Peer  `protobuf:"bytes,3,rep,name=RequestedPeers,proto3" json:"RequestedPeers,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Initiator            *PeerDigest     `protobuf:"bytes,1,opt,name=Initiator,proto3" json:"Initiator,omitempty"`
+	Receiver             *PeerDigest     `protobuf:"bytes,2,opt,name=Receiver,proto3" json:"Receiver,omitempty"`
+	RequestedPeers       []*PeerDetailed `protobuf:"bytes,3,rep,name=RequestedPeers,proto3" json:"RequestedPeers,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
 }
 
 func (m *AckRequest) Reset()         { *m = AckRequest{} }
 func (m *AckRequest) String() string { return proto.CompactTextString(m) }
 func (*AckRequest) ProtoMessage()    {}
 func (*AckRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_0de7fd570d83af8e, []int{1}
+	return fileDescriptor_discovery_f5c1be01a5edbe4f, []int{1}
 }
 func (m *AckRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AckRequest.Unmarshal(m, b)
@@ -140,21 +140,21 @@ func (m *AckRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AckRequest proto.InternalMessageInfo
 
-func (m *AckRequest) GetInitiator() *Peer {
+func (m *AckRequest) GetInitiator() *PeerDigest {
 	if m != nil {
 		return m.Initiator
 	}
 	return nil
 }
 
-func (m *AckRequest) GetReceiver() *Peer {
+func (m *AckRequest) GetReceiver() *PeerDigest {
 	if m != nil {
 		return m.Receiver
 	}
 	return nil
 }
 
-func (m *AckRequest) GetRequestedPeers() []*Peer {
+func (m *AckRequest) GetRequestedPeers() []*PeerDetailed {
 	if m != nil {
 		return m.RequestedPeers
 	}
@@ -162,20 +162,20 @@ func (m *AckRequest) GetRequestedPeers() []*Peer {
 }
 
 type SynAck struct {
-	Initiator            *Peer    `protobuf:"bytes,1,opt,name=Initiator,proto3" json:"Initiator,omitempty"`
-	Receiver             *Peer    `protobuf:"bytes,2,opt,name=Receiver,proto3" json:"Receiver,omitempty"`
-	NewPeers             []*Peer  `protobuf:"bytes,3,rep,name=NewPeers,proto3" json:"NewPeers,omitempty"`
-	UnknownPeers         []*Peer  `protobuf:"bytes,4,rep,name=UnknownPeers,proto3" json:"UnknownPeers,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Initiator            *PeerDigest     `protobuf:"bytes,1,opt,name=Initiator,proto3" json:"Initiator,omitempty"`
+	Receiver             *PeerDigest     `protobuf:"bytes,2,opt,name=Receiver,proto3" json:"Receiver,omitempty"`
+	NewPeers             []*PeerDetailed `protobuf:"bytes,3,rep,name=NewPeers,proto3" json:"NewPeers,omitempty"`
+	UnknownPeers         []*PeerDigest   `protobuf:"bytes,4,rep,name=UnknownPeers,proto3" json:"UnknownPeers,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
 }
 
 func (m *SynAck) Reset()         { *m = SynAck{} }
 func (m *SynAck) String() string { return proto.CompactTextString(m) }
 func (*SynAck) ProtoMessage()    {}
 func (*SynAck) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_0de7fd570d83af8e, []int{2}
+	return fileDescriptor_discovery_f5c1be01a5edbe4f, []int{2}
 }
 func (m *SynAck) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SynAck.Unmarshal(m, b)
@@ -195,191 +195,245 @@ func (m *SynAck) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_SynAck proto.InternalMessageInfo
 
-func (m *SynAck) GetInitiator() *Peer {
+func (m *SynAck) GetInitiator() *PeerDigest {
 	if m != nil {
 		return m.Initiator
 	}
 	return nil
 }
 
-func (m *SynAck) GetReceiver() *Peer {
+func (m *SynAck) GetReceiver() *PeerDigest {
 	if m != nil {
 		return m.Receiver
 	}
 	return nil
 }
 
-func (m *SynAck) GetNewPeers() []*Peer {
+func (m *SynAck) GetNewPeers() []*PeerDetailed {
 	if m != nil {
 		return m.NewPeers
 	}
 	return nil
 }
 
-func (m *SynAck) GetUnknownPeers() []*Peer {
+func (m *SynAck) GetUnknownPeers() []*PeerDigest {
 	if m != nil {
 		return m.UnknownPeers
 	}
 	return nil
 }
 
-type Peer struct {
-	PublicKey            []byte          `protobuf:"bytes,1,opt,name=PublicKey,proto3" json:"PublicKey,omitempty"`
-	IP                   string          `protobuf:"bytes,2,opt,name=IP,proto3" json:"IP,omitempty"`
-	Port                 int32           `protobuf:"varint,3,opt,name=Port,proto3" json:"Port,omitempty"`
-	GenerationTime       int64           `protobuf:"varint,4,opt,name=GenerationTime,proto3" json:"GenerationTime,omitempty"`
-	State                *Peer_PeerState `protobuf:"bytes,5,opt,name=State,proto3" json:"State,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
-	XXX_unrecognized     []byte          `json:"-"`
-	XXX_sizecache        int32           `json:"-"`
+type PeerDigest struct {
+	PublicKey            []byte   `protobuf:"bytes,1,opt,name=PublicKey,proto3" json:"PublicKey,omitempty"`
+	IP                   string   `protobuf:"bytes,2,opt,name=IP,proto3" json:"IP,omitempty"`
+	Port                 int32    `protobuf:"varint,3,opt,name=Port,proto3" json:"Port,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Peer) Reset()         { *m = Peer{} }
-func (m *Peer) String() string { return proto.CompactTextString(m) }
-func (*Peer) ProtoMessage()    {}
-func (*Peer) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_0de7fd570d83af8e, []int{3}
+func (m *PeerDigest) Reset()         { *m = PeerDigest{} }
+func (m *PeerDigest) String() string { return proto.CompactTextString(m) }
+func (*PeerDigest) ProtoMessage()    {}
+func (*PeerDigest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_discovery_f5c1be01a5edbe4f, []int{3}
 }
-func (m *Peer) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_Peer.Unmarshal(m, b)
+func (m *PeerDigest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PeerDigest.Unmarshal(m, b)
 }
-func (m *Peer) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_Peer.Marshal(b, m, deterministic)
+func (m *PeerDigest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PeerDigest.Marshal(b, m, deterministic)
 }
-func (dst *Peer) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Peer.Merge(dst, src)
+func (dst *PeerDigest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeerDigest.Merge(dst, src)
 }
-func (m *Peer) XXX_Size() int {
-	return xxx_messageInfo_Peer.Size(m)
+func (m *PeerDigest) XXX_Size() int {
+	return xxx_messageInfo_PeerDigest.Size(m)
 }
-func (m *Peer) XXX_DiscardUnknown() {
-	xxx_messageInfo_Peer.DiscardUnknown(m)
+func (m *PeerDigest) XXX_DiscardUnknown() {
+	xxx_messageInfo_PeerDigest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Peer proto.InternalMessageInfo
+var xxx_messageInfo_PeerDigest proto.InternalMessageInfo
 
-func (m *Peer) GetPublicKey() []byte {
+func (m *PeerDigest) GetPublicKey() []byte {
 	if m != nil {
 		return m.PublicKey
 	}
 	return nil
 }
 
-func (m *Peer) GetIP() string {
+func (m *PeerDigest) GetIP() string {
 	if m != nil {
 		return m.IP
 	}
 	return ""
 }
 
-func (m *Peer) GetPort() int32 {
+func (m *PeerDigest) GetPort() int32 {
 	if m != nil {
 		return m.Port
 	}
 	return 0
 }
 
-func (m *Peer) GetGenerationTime() int64 {
+type PeerDetailed struct {
+	PublicKey            []byte                  `protobuf:"bytes,1,opt,name=PublicKey,proto3" json:"PublicKey,omitempty"`
+	IP                   string                  `protobuf:"bytes,2,opt,name=IP,proto3" json:"IP,omitempty"`
+	Port                 int32                   `protobuf:"varint,3,opt,name=Port,proto3" json:"Port,omitempty"`
+	GenerationTime       int64                   `protobuf:"varint,4,opt,name=GenerationTime,proto3" json:"GenerationTime,omitempty"`
+	State                *PeerDetailed_PeerState `protobuf:"bytes,5,opt,name=State,proto3" json:"State,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                `json:"-"`
+	XXX_unrecognized     []byte                  `json:"-"`
+	XXX_sizecache        int32                   `json:"-"`
+}
+
+func (m *PeerDetailed) Reset()         { *m = PeerDetailed{} }
+func (m *PeerDetailed) String() string { return proto.CompactTextString(m) }
+func (*PeerDetailed) ProtoMessage()    {}
+func (*PeerDetailed) Descriptor() ([]byte, []int) {
+	return fileDescriptor_discovery_f5c1be01a5edbe4f, []int{4}
+}
+func (m *PeerDetailed) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PeerDetailed.Unmarshal(m, b)
+}
+func (m *PeerDetailed) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PeerDetailed.Marshal(b, m, deterministic)
+}
+func (dst *PeerDetailed) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeerDetailed.Merge(dst, src)
+}
+func (m *PeerDetailed) XXX_Size() int {
+	return xxx_messageInfo_PeerDetailed.Size(m)
+}
+func (m *PeerDetailed) XXX_DiscardUnknown() {
+	xxx_messageInfo_PeerDetailed.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PeerDetailed proto.InternalMessageInfo
+
+func (m *PeerDetailed) GetPublicKey() []byte {
+	if m != nil {
+		return m.PublicKey
+	}
+	return nil
+}
+
+func (m *PeerDetailed) GetIP() string {
+	if m != nil {
+		return m.IP
+	}
+	return ""
+}
+
+func (m *PeerDetailed) GetPort() int32 {
+	if m != nil {
+		return m.Port
+	}
+	return 0
+}
+
+func (m *PeerDetailed) GetGenerationTime() int64 {
 	if m != nil {
 		return m.GenerationTime
 	}
 	return 0
 }
 
-func (m *Peer) GetState() *Peer_PeerState {
+func (m *PeerDetailed) GetState() *PeerDetailed_PeerState {
 	if m != nil {
 		return m.State
 	}
 	return nil
 }
 
-type Peer_PeerState struct {
-	Status               Peer_PeerState_PeerStatus      `protobuf:"varint,1,opt,name=Status,proto3,enum=api.Peer_PeerState_PeerStatus" json:"Status,omitempty"`
-	CPULoad              string                         `protobuf:"bytes,2,opt,name=CPULoad,proto3" json:"CPULoad,omitempty"`
-	IOWaitRate           float32                        `protobuf:"fixed32,3,opt,name=IOWaitRate,proto3" json:"IOWaitRate,omitempty"`
-	FreeDiskSpace        float32                        `protobuf:"fixed32,4,opt,name=FreeDiskSpace,proto3" json:"FreeDiskSpace,omitempty"`
-	Version              string                         `protobuf:"bytes,5,opt,name=Version,proto3" json:"Version,omitempty"`
-	GeoPosition          *Peer_PeerState_GeoCoordinates `protobuf:"bytes,6,opt,name=GeoPosition,proto3" json:"GeoPosition,omitempty"`
-	P2PFactor            int32                          `protobuf:"varint,7,opt,name=P2PFactor,proto3" json:"P2PFactor,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                       `json:"-"`
-	XXX_unrecognized     []byte                         `json:"-"`
-	XXX_sizecache        int32                          `json:"-"`
+type PeerDetailed_PeerState struct {
+	Status               PeerDetailed_PeerState_PeerStatus      `protobuf:"varint,1,opt,name=Status,proto3,enum=api.PeerDetailed_PeerState_PeerStatus" json:"Status,omitempty"`
+	CPULoad              string                                 `protobuf:"bytes,2,opt,name=CPULoad,proto3" json:"CPULoad,omitempty"`
+	IOWaitRate           float32                                `protobuf:"fixed32,3,opt,name=IOWaitRate,proto3" json:"IOWaitRate,omitempty"`
+	FreeDiskSpace        float32                                `protobuf:"fixed32,4,opt,name=FreeDiskSpace,proto3" json:"FreeDiskSpace,omitempty"`
+	Version              string                                 `protobuf:"bytes,5,opt,name=Version,proto3" json:"Version,omitempty"`
+	GeoPosition          *PeerDetailed_PeerState_GeoCoordinates `protobuf:"bytes,6,opt,name=GeoPosition,proto3" json:"GeoPosition,omitempty"`
+	P2PFactor            int32                                  `protobuf:"varint,7,opt,name=P2PFactor,proto3" json:"P2PFactor,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                               `json:"-"`
+	XXX_unrecognized     []byte                                 `json:"-"`
+	XXX_sizecache        int32                                  `json:"-"`
 }
 
-func (m *Peer_PeerState) Reset()         { *m = Peer_PeerState{} }
-func (m *Peer_PeerState) String() string { return proto.CompactTextString(m) }
-func (*Peer_PeerState) ProtoMessage()    {}
-func (*Peer_PeerState) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_0de7fd570d83af8e, []int{3, 0}
+func (m *PeerDetailed_PeerState) Reset()         { *m = PeerDetailed_PeerState{} }
+func (m *PeerDetailed_PeerState) String() string { return proto.CompactTextString(m) }
+func (*PeerDetailed_PeerState) ProtoMessage()    {}
+func (*PeerDetailed_PeerState) Descriptor() ([]byte, []int) {
+	return fileDescriptor_discovery_f5c1be01a5edbe4f, []int{4, 0}
 }
-func (m *Peer_PeerState) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_Peer_PeerState.Unmarshal(m, b)
+func (m *PeerDetailed_PeerState) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PeerDetailed_PeerState.Unmarshal(m, b)
 }
-func (m *Peer_PeerState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_Peer_PeerState.Marshal(b, m, deterministic)
+func (m *PeerDetailed_PeerState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PeerDetailed_PeerState.Marshal(b, m, deterministic)
 }
-func (dst *Peer_PeerState) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Peer_PeerState.Merge(dst, src)
+func (dst *PeerDetailed_PeerState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeerDetailed_PeerState.Merge(dst, src)
 }
-func (m *Peer_PeerState) XXX_Size() int {
-	return xxx_messageInfo_Peer_PeerState.Size(m)
+func (m *PeerDetailed_PeerState) XXX_Size() int {
+	return xxx_messageInfo_PeerDetailed_PeerState.Size(m)
 }
-func (m *Peer_PeerState) XXX_DiscardUnknown() {
-	xxx_messageInfo_Peer_PeerState.DiscardUnknown(m)
+func (m *PeerDetailed_PeerState) XXX_DiscardUnknown() {
+	xxx_messageInfo_PeerDetailed_PeerState.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Peer_PeerState proto.InternalMessageInfo
+var xxx_messageInfo_PeerDetailed_PeerState proto.InternalMessageInfo
 
-func (m *Peer_PeerState) GetStatus() Peer_PeerState_PeerStatus {
+func (m *PeerDetailed_PeerState) GetStatus() PeerDetailed_PeerState_PeerStatus {
 	if m != nil {
 		return m.Status
 	}
-	return Peer_PeerState_Fault
+	return PeerDetailed_PeerState_Fault
 }
 
-func (m *Peer_PeerState) GetCPULoad() string {
+func (m *PeerDetailed_PeerState) GetCPULoad() string {
 	if m != nil {
 		return m.CPULoad
 	}
 	return ""
 }
 
-func (m *Peer_PeerState) GetIOWaitRate() float32 {
+func (m *PeerDetailed_PeerState) GetIOWaitRate() float32 {
 	if m != nil {
 		return m.IOWaitRate
 	}
 	return 0
 }
 
-func (m *Peer_PeerState) GetFreeDiskSpace() float32 {
+func (m *PeerDetailed_PeerState) GetFreeDiskSpace() float32 {
 	if m != nil {
 		return m.FreeDiskSpace
 	}
 	return 0
 }
 
-func (m *Peer_PeerState) GetVersion() string {
+func (m *PeerDetailed_PeerState) GetVersion() string {
 	if m != nil {
 		return m.Version
 	}
 	return ""
 }
 
-func (m *Peer_PeerState) GetGeoPosition() *Peer_PeerState_GeoCoordinates {
+func (m *PeerDetailed_PeerState) GetGeoPosition() *PeerDetailed_PeerState_GeoCoordinates {
 	if m != nil {
 		return m.GeoPosition
 	}
 	return nil
 }
 
-func (m *Peer_PeerState) GetP2PFactor() int32 {
+func (m *PeerDetailed_PeerState) GetP2PFactor() int32 {
 	if m != nil {
 		return m.P2PFactor
 	}
 	return 0
 }
 
-type Peer_PeerState_GeoCoordinates struct {
+type PeerDetailed_PeerState_GeoCoordinates struct {
 	Lat                  float32  `protobuf:"fixed32,1,opt,name=Lat,proto3" json:"Lat,omitempty"`
 	Lon                  float32  `protobuf:"fixed32,2,opt,name=Lon,proto3" json:"Lon,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -387,38 +441,38 @@ type Peer_PeerState_GeoCoordinates struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Peer_PeerState_GeoCoordinates) Reset()         { *m = Peer_PeerState_GeoCoordinates{} }
-func (m *Peer_PeerState_GeoCoordinates) String() string { return proto.CompactTextString(m) }
-func (*Peer_PeerState_GeoCoordinates) ProtoMessage()    {}
-func (*Peer_PeerState_GeoCoordinates) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_0de7fd570d83af8e, []int{3, 0, 0}
+func (m *PeerDetailed_PeerState_GeoCoordinates) Reset()         { *m = PeerDetailed_PeerState_GeoCoordinates{} }
+func (m *PeerDetailed_PeerState_GeoCoordinates) String() string { return proto.CompactTextString(m) }
+func (*PeerDetailed_PeerState_GeoCoordinates) ProtoMessage()    {}
+func (*PeerDetailed_PeerState_GeoCoordinates) Descriptor() ([]byte, []int) {
+	return fileDescriptor_discovery_f5c1be01a5edbe4f, []int{4, 0, 0}
 }
-func (m *Peer_PeerState_GeoCoordinates) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_Peer_PeerState_GeoCoordinates.Unmarshal(m, b)
+func (m *PeerDetailed_PeerState_GeoCoordinates) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PeerDetailed_PeerState_GeoCoordinates.Unmarshal(m, b)
 }
-func (m *Peer_PeerState_GeoCoordinates) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_Peer_PeerState_GeoCoordinates.Marshal(b, m, deterministic)
+func (m *PeerDetailed_PeerState_GeoCoordinates) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PeerDetailed_PeerState_GeoCoordinates.Marshal(b, m, deterministic)
 }
-func (dst *Peer_PeerState_GeoCoordinates) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Peer_PeerState_GeoCoordinates.Merge(dst, src)
+func (dst *PeerDetailed_PeerState_GeoCoordinates) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeerDetailed_PeerState_GeoCoordinates.Merge(dst, src)
 }
-func (m *Peer_PeerState_GeoCoordinates) XXX_Size() int {
-	return xxx_messageInfo_Peer_PeerState_GeoCoordinates.Size(m)
+func (m *PeerDetailed_PeerState_GeoCoordinates) XXX_Size() int {
+	return xxx_messageInfo_PeerDetailed_PeerState_GeoCoordinates.Size(m)
 }
-func (m *Peer_PeerState_GeoCoordinates) XXX_DiscardUnknown() {
-	xxx_messageInfo_Peer_PeerState_GeoCoordinates.DiscardUnknown(m)
+func (m *PeerDetailed_PeerState_GeoCoordinates) XXX_DiscardUnknown() {
+	xxx_messageInfo_PeerDetailed_PeerState_GeoCoordinates.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Peer_PeerState_GeoCoordinates proto.InternalMessageInfo
+var xxx_messageInfo_PeerDetailed_PeerState_GeoCoordinates proto.InternalMessageInfo
 
-func (m *Peer_PeerState_GeoCoordinates) GetLat() float32 {
+func (m *PeerDetailed_PeerState_GeoCoordinates) GetLat() float32 {
 	if m != nil {
 		return m.Lat
 	}
 	return 0
 }
 
-func (m *Peer_PeerState_GeoCoordinates) GetLon() float32 {
+func (m *PeerDetailed_PeerState_GeoCoordinates) GetLon() float32 {
 	if m != nil {
 		return m.Lon
 	}
@@ -429,10 +483,11 @@ func init() {
 	proto.RegisterType((*SynRequest)(nil), "api.SynRequest")
 	proto.RegisterType((*AckRequest)(nil), "api.AckRequest")
 	proto.RegisterType((*SynAck)(nil), "api.SynAck")
-	proto.RegisterType((*Peer)(nil), "api.Peer")
-	proto.RegisterType((*Peer_PeerState)(nil), "api.Peer.PeerState")
-	proto.RegisterType((*Peer_PeerState_GeoCoordinates)(nil), "api.Peer.PeerState.GeoCoordinates")
-	proto.RegisterEnum("api.Peer_PeerState_PeerStatus", Peer_PeerState_PeerStatus_name, Peer_PeerState_PeerStatus_value)
+	proto.RegisterType((*PeerDigest)(nil), "api.PeerDigest")
+	proto.RegisterType((*PeerDetailed)(nil), "api.PeerDetailed")
+	proto.RegisterType((*PeerDetailed_PeerState)(nil), "api.PeerDetailed.PeerState")
+	proto.RegisterType((*PeerDetailed_PeerState_GeoCoordinates)(nil), "api.PeerDetailed.PeerState.GeoCoordinates")
+	proto.RegisterEnum("api.PeerDetailed_PeerState_PeerStatus", PeerDetailed_PeerState_PeerStatus_name, PeerDetailed_PeerState_PeerStatus_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -540,45 +595,46 @@ var _Discovery_serviceDesc = grpc.ServiceDesc{
 	Metadata: "discovery.proto",
 }
 
-func init() { proto.RegisterFile("discovery.proto", fileDescriptor_discovery_0de7fd570d83af8e) }
+func init() { proto.RegisterFile("discovery.proto", fileDescriptor_discovery_f5c1be01a5edbe4f) }
 
-var fileDescriptor_discovery_0de7fd570d83af8e = []byte{
-	// 578 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x54, 0xd1, 0x4e, 0x13, 0x41,
-	0x14, 0x65, 0x77, 0xdb, 0xc2, 0xde, 0x62, 0x69, 0xae, 0x89, 0xd9, 0x54, 0x43, 0x9a, 0x8d, 0x28,
-	0x3c, 0x50, 0x62, 0x35, 0xc6, 0xd7, 0x02, 0x42, 0x1a, 0x88, 0x6c, 0xa6, 0xa2, 0xcf, 0xc3, 0xf6,
-	0x5a, 0x27, 0x2d, 0x33, 0x75, 0x76, 0x0a, 0xa9, 0x3f, 0xe0, 0xa3, 0x1f, 0xe0, 0x3f, 0xf8, 0xee,
-	0xdf, 0x99, 0x19, 0xba, 0xdd, 0xb6, 0x81, 0x37, 0x7d, 0x69, 0xee, 0x9c, 0x73, 0xee, 0xe4, 0x9c,
-	0xdb, 0xd9, 0x0b, 0x5b, 0x7d, 0x91, 0xa5, 0xea, 0x86, 0xf4, 0xb4, 0x35, 0xd6, 0xca, 0x28, 0x0c,
-	0xf8, 0x58, 0x34, 0x9e, 0x0e, 0x94, 0x1a, 0x8c, 0xe8, 0xc0, 0x41, 0x57, 0x93, 0x2f, 0x07, 0x74,
-	0x3d, 0x36, 0x33, 0x45, 0xfc, 0xc3, 0x03, 0xe8, 0x4d, 0x25, 0xa3, 0x6f, 0x13, 0xca, 0x0c, 0xbe,
-	0x84, 0xb0, 0x2b, 0x85, 0x11, 0xdc, 0x28, 0x1d, 0x79, 0x4d, 0x6f, 0xb7, 0xda, 0x0e, 0x5b, 0x7c,
-	0x2c, 0x5a, 0x09, 0x91, 0x66, 0x05, 0x87, 0x3b, 0xb0, 0xc1, 0x28, 0x25, 0x71, 0x43, 0x3a, 0xf2,
-	0x57, 0x75, 0x73, 0x0a, 0xf7, 0x00, 0xce, 0xa4, 0xba, 0x95, 0x16, 0xce, 0xa2, 0xa0, 0x19, 0x2c,
-	0x0b, 0x17, 0xc8, 0xf8, 0xa7, 0x07, 0xd0, 0x49, 0x87, 0xff, 0xcb, 0xc9, 0x2b, 0xa8, 0xcd, 0xae,
-	0xa6, 0xfe, 0x03, 0x6e, 0x56, 0x04, 0xf1, 0x6f, 0x0f, 0x2a, 0xbd, 0xa9, 0xec, 0xa4, 0xc3, 0x7f,
-	0xee, 0x66, 0x07, 0x36, 0x3e, 0xd0, 0xed, 0x03, 0x3e, 0xe6, 0x14, 0xee, 0xc3, 0xe6, 0xa5, 0x1c,
-	0x16, 0x03, 0x2c, 0xad, 0x4a, 0x97, 0xe8, 0xf8, 0x4f, 0x09, 0x4a, 0xb6, 0xc2, 0x67, 0x10, 0x26,
-	0x93, 0xab, 0x91, 0x48, 0xcf, 0x68, 0xea, 0xec, 0x6e, 0xb2, 0x02, 0xc0, 0x1a, 0xf8, 0xdd, 0xc4,
-	0xb9, 0x0b, 0x99, 0xdf, 0x4d, 0x10, 0xa1, 0x94, 0x28, 0x6d, 0xa2, 0xa0, 0xe9, 0xed, 0x96, 0x99,
-	0xab, 0xf1, 0x05, 0xd4, 0x4e, 0x49, 0x92, 0xe6, 0x46, 0x28, 0xf9, 0x51, 0x5c, 0x53, 0x54, 0x6a,
-	0x7a, 0xbb, 0x01, 0x5b, 0x41, 0x71, 0x0f, 0xca, 0x3d, 0xc3, 0x0d, 0x45, 0x65, 0x17, 0xf6, 0xf1,
-	0xdc, 0x9a, 0xfb, 0x71, 0x14, 0xbb, 0x53, 0x34, 0x7e, 0x05, 0x10, 0xce, 0x41, 0x7c, 0x0b, 0x15,
-	0x5b, 0x4c, 0x32, 0xe7, 0xaf, 0xd6, 0xde, 0xbe, 0xa7, 0x73, 0x5e, 0x4d, 0x32, 0x36, 0x53, 0x63,
-	0x04, 0xeb, 0x47, 0xc9, 0xe5, 0xb9, 0xe2, 0xfd, 0x59, 0x82, 0xfc, 0x88, 0xdb, 0x00, 0xdd, 0x8b,
-	0xcf, 0x5c, 0x18, 0x66, 0xfd, 0xd8, 0x30, 0x3e, 0x5b, 0x40, 0xf0, 0x39, 0x3c, 0x3a, 0xd1, 0x44,
-	0xc7, 0x22, 0x1b, 0xf6, 0xc6, 0x3c, 0xbd, 0x4b, 0xe4, 0xb3, 0x65, 0xd0, 0xde, 0xff, 0x89, 0x74,
-	0x26, 0x94, 0x74, 0x91, 0x42, 0x96, 0x1f, 0xf1, 0x18, 0xaa, 0xa7, 0xa4, 0x12, 0x95, 0x09, 0x9b,
-	0x3e, 0xaa, 0xb8, 0xc0, 0xf1, 0x7d, 0xb6, 0x4f, 0x49, 0x1d, 0x29, 0xa5, 0xfb, 0x42, 0x72, 0x43,
-	0x19, 0x5b, 0x6c, 0x73, 0x7f, 0x4d, 0x3b, 0x39, 0xe1, 0xa9, 0x7d, 0x49, 0xeb, 0x6e, 0xe2, 0x05,
-	0xd0, 0x78, 0x63, 0xc7, 0xbe, 0xd8, 0x8c, 0x75, 0x08, 0xce, 0xb9, 0x71, 0x43, 0xf2, 0x99, 0x2d,
-	0x1d, 0xa2, 0xa4, 0x4b, 0x6f, 0x11, 0x25, 0xe3, 0x43, 0x80, 0x62, 0x52, 0x18, 0x42, 0xf9, 0x84,
-	0x4f, 0x46, 0xa6, 0xbe, 0x86, 0x75, 0xd8, 0x3c, 0x54, 0xca, 0x64, 0x46, 0xf3, 0xb1, 0x90, 0x83,
-	0xba, 0x87, 0x15, 0xf0, 0x2f, 0x86, 0x75, 0x1f, 0xb7, 0xa0, 0xda, 0x33, 0x4a, 0xf3, 0x01, 0x5d,
-	0xc8, 0xd1, 0xb4, 0x1e, 0xb4, 0x0d, 0x84, 0xc7, 0xf9, 0xf6, 0xc0, 0x7d, 0xa8, 0xf6, 0xa6, 0x32,
-	0xfd, 0xaa, 0x95, 0x14, 0xdf, 0x09, 0xb7, 0x5c, 0xc8, 0x62, 0x4d, 0x34, 0xaa, 0x39, 0xd0, 0x49,
-	0x87, 0xf1, 0x1a, 0xbe, 0x83, 0x6a, 0x27, 0xb5, 0xef, 0x70, 0x44, 0xfd, 0x41, 0x2e, 0x2f, 0xbe,
-	0xe5, 0xc6, 0x93, 0xd6, 0xdd, 0x0a, 0x6a, 0xe5, 0x2b, 0xa8, 0xf5, 0xde, 0xae, 0xa0, 0x78, 0xed,
-	0xaa, 0xe2, 0x90, 0xd7, 0x7f, 0x03, 0x00, 0x00, 0xff, 0xff, 0x96, 0xe4, 0x1a, 0x73, 0xba, 0x04,
-	0x00, 0x00,
+var fileDescriptor_discovery_f5c1be01a5edbe4f = []byte{
+	// 604 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x54, 0xc1, 0x6e, 0xd3, 0x40,
+	0x10, 0xad, 0xed, 0x24, 0xad, 0x27, 0x21, 0x0d, 0x7b, 0x40, 0x56, 0x8a, 0x50, 0x64, 0xa1, 0xaa,
+	0x02, 0x35, 0x15, 0x29, 0x07, 0xb8, 0x20, 0xa5, 0x2d, 0xad, 0xa2, 0x56, 0xad, 0xb5, 0xa1, 0x70,
+	0xde, 0x3a, 0x43, 0x58, 0x25, 0xdd, 0x0d, 0xeb, 0x75, 0x2b, 0xf3, 0x27, 0x9c, 0x39, 0xf2, 0x23,
+	0xfc, 0x02, 0x7f, 0x83, 0x76, 0x13, 0xc7, 0x6e, 0xa9, 0xca, 0x01, 0xc1, 0x6d, 0xf6, 0xf9, 0xcd,
+	0xfa, 0xcd, 0xdb, 0xd1, 0x83, 0xf5, 0x11, 0x4f, 0x62, 0x79, 0x85, 0x2a, 0xeb, 0xce, 0x94, 0xd4,
+	0x92, 0x78, 0x6c, 0xc6, 0xdb, 0x1b, 0x63, 0x29, 0xc7, 0x53, 0xdc, 0xb1, 0xd0, 0x45, 0xfa, 0x71,
+	0x07, 0x2f, 0x67, 0x7a, 0xc1, 0x08, 0xbf, 0x3a, 0x00, 0xc3, 0x4c, 0x50, 0xfc, 0x9c, 0x62, 0xa2,
+	0xc9, 0x36, 0xf8, 0x03, 0xc1, 0x35, 0x67, 0x5a, 0xaa, 0xc0, 0xe9, 0x38, 0x5b, 0xf5, 0xde, 0x7a,
+	0x97, 0xcd, 0x78, 0x37, 0x42, 0x54, 0x07, 0x7c, 0x8c, 0x89, 0xa6, 0x05, 0x83, 0x3c, 0x87, 0x35,
+	0x8a, 0x31, 0xf2, 0x2b, 0x54, 0x81, 0x7b, 0x37, 0x7b, 0x49, 0x20, 0x3b, 0x00, 0xc7, 0x42, 0x5e,
+	0x0b, 0xf3, 0x31, 0x09, 0xbc, 0x8e, 0x77, 0x17, 0xbd, 0x44, 0x09, 0xbf, 0x39, 0x00, 0xfd, 0x78,
+	0xf2, 0x3f, 0xb4, 0xbd, 0x86, 0xe6, 0xe2, 0x37, 0x38, 0x2a, 0xeb, 0x7b, 0x58, 0xb4, 0xa0, 0x66,
+	0x7c, 0x8a, 0x23, 0x7a, 0x8b, 0x18, 0xfe, 0x70, 0xa0, 0x36, 0xcc, 0x44, 0x3f, 0x9e, 0xfc, 0x53,
+	0x85, 0xdb, 0xb0, 0x76, 0x8a, 0xd7, 0x7f, 0xd0, 0xb6, 0xa4, 0x90, 0x5d, 0x68, 0x9c, 0x8b, 0x49,
+	0x61, 0x77, 0xe5, 0x6e, 0xbb, 0x6f, 0x90, 0xc2, 0x53, 0x80, 0xe2, 0x1b, 0x79, 0x0c, 0x7e, 0x94,
+	0x5e, 0x4c, 0x79, 0x7c, 0x8c, 0x99, 0x9d, 0xa6, 0x41, 0x0b, 0x80, 0x34, 0xc1, 0x1d, 0x44, 0x56,
+	0xb6, 0x4f, 0xdd, 0x41, 0x44, 0x08, 0x54, 0x22, 0xa9, 0x74, 0xe0, 0x75, 0x9c, 0xad, 0x2a, 0xb5,
+	0x75, 0xf8, 0xb3, 0x02, 0x8d, 0xb2, 0xbe, 0xbf, 0xbf, 0x92, 0x6c, 0x42, 0xf3, 0x08, 0x05, 0x2a,
+	0xa6, 0xb9, 0x14, 0xef, 0xf8, 0x25, 0x06, 0x95, 0x8e, 0xb3, 0xe5, 0xd1, 0x5b, 0x28, 0x79, 0x01,
+	0xd5, 0xa1, 0x66, 0x1a, 0x83, 0xaa, 0x35, 0x76, 0xe3, 0x37, 0xaf, 0xec, 0xc1, 0x52, 0xe8, 0x9c,
+	0xd9, 0xfe, 0xee, 0x81, 0xbf, 0x04, 0xc9, 0x1b, 0xa8, 0x99, 0x22, 0x4d, 0xac, 0xce, 0x66, 0x6f,
+	0xf3, 0x9e, 0x1b, 0x96, 0x55, 0x9a, 0xd0, 0x45, 0x17, 0x09, 0x60, 0x75, 0x3f, 0x3a, 0x3f, 0x91,
+	0x6c, 0xb4, 0x98, 0x28, 0x3f, 0x92, 0x27, 0x00, 0x83, 0xb3, 0x0f, 0x8c, 0x6b, 0x6a, 0xf4, 0x99,
+	0xe1, 0x5c, 0x5a, 0x42, 0xc8, 0x53, 0x78, 0x70, 0xa8, 0x10, 0x0f, 0x78, 0x32, 0x19, 0xce, 0x58,
+	0x3c, 0x9f, 0xd0, 0xa5, 0x37, 0x41, 0x73, 0xff, 0x7b, 0x54, 0x09, 0x97, 0xc2, 0x8e, 0xe8, 0xd3,
+	0xfc, 0x48, 0x4e, 0xa0, 0x7e, 0x84, 0x32, 0x92, 0x09, 0x37, 0x6e, 0x04, 0x35, 0x6b, 0xc0, 0xb3,
+	0xfb, 0xe4, 0x1f, 0xa1, 0xdc, 0x97, 0x52, 0x8d, 0xb8, 0x60, 0x1a, 0x13, 0x5a, 0x6e, 0xb7, 0x4f,
+	0xd6, 0x8b, 0x0e, 0x59, 0x6c, 0x76, 0x7a, 0xd5, 0xbe, 0x44, 0x01, 0xb4, 0x5f, 0x9a, 0xe7, 0x28,
+	0x37, 0x93, 0x16, 0x78, 0x27, 0x4c, 0x5b, 0xd3, 0x5c, 0x6a, 0x4a, 0x8b, 0x48, 0x61, 0x5d, 0x30,
+	0x88, 0x14, 0xe1, 0xde, 0x7c, 0xcf, 0x16, 0x4e, 0xf9, 0x50, 0x3d, 0x64, 0xe9, 0x54, 0xb7, 0x56,
+	0x48, 0x0b, 0x1a, 0x7b, 0x52, 0xea, 0x44, 0x2b, 0x36, 0xe3, 0x62, 0xdc, 0x72, 0x48, 0x0d, 0xdc,
+	0xb3, 0x49, 0xcb, 0x25, 0xeb, 0x50, 0x1f, 0x6a, 0xa9, 0xd8, 0x18, 0xcf, 0xc4, 0x34, 0x6b, 0x79,
+	0x3d, 0x0d, 0xfe, 0x41, 0x9e, 0x76, 0x64, 0x1b, 0xea, 0xc3, 0x4c, 0xc4, 0x9f, 0x94, 0x14, 0xfc,
+	0x0b, 0x92, 0xf9, 0x9a, 0x17, 0xb1, 0xd6, 0xae, 0xe7, 0x40, 0x3f, 0x9e, 0x84, 0x2b, 0xe4, 0x15,
+	0xd4, 0xfb, 0xb1, 0xd9, 0xfb, 0x29, 0x8e, 0xc6, 0x39, 0xbd, 0x48, 0x9a, 0xf6, 0xa3, 0xee, 0x3c,
+	0x32, 0xbb, 0x79, 0x64, 0x76, 0xdf, 0x9a, 0xc8, 0x0c, 0x57, 0x2e, 0x6a, 0x16, 0xd9, 0xfd, 0x15,
+	0x00, 0x00, 0xff, 0xff, 0x29, 0xe8, 0xea, 0xa7, 0x6a, 0x05, 0x00, 0x00,
 }

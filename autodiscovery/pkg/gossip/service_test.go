@@ -19,7 +19,7 @@ Scenario: Converts a list of peer into a map of peers
 */
 func TestMapPeers(t *testing.T) {
 	p1 := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
-	p2 := discovery.NewDiscoveredPeer([]byte("key2"), net.ParseIP("10.0.0.1"), 3000, time.Now(), nil)
+	p2 := discovery.NewPeerDigest([]byte("key2"), net.ParseIP("10.0.0.1"), 3000)
 
 	g := service{}
 	mPeers := g.mapPeers([]discovery.Peer{p1, p2})
@@ -33,22 +33,22 @@ func TestMapPeers(t *testing.T) {
 }
 
 /*
-Scenario: Dial to a receiver peer by spreading its state
+Scenario: Run cycle
 	Given a initiator peer, a receiver peer and list of known peers
-	When we gossip, we spread a rumor
+	When we start a gossip round, we run a gossip cycle to spread
 	Then we get the new peers discovered
 */
-func TestDial(t *testing.T) {
+func TestRunCycle(t *testing.T) {
 	initP := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
-	recP := discovery.NewDiscoveredPeer([]byte("key2"), net.ParseIP("20.100.4.120"), 3000, time.Now(), nil)
+	recP := discovery.NewPeerDigest([]byte("key2"), net.ParseIP("20.100.4.120"), 3000)
 
-	p1 := discovery.NewDiscoveredPeer([]byte("key3"), net.ParseIP("50.20.100.2"), 3000, time.Now(), nil)
-	p2 := discovery.NewDiscoveredPeer([]byte("uKey1"), net.ParseIP("50.10.30.2"), 3000, time.Now(), nil)
+	p1 := discovery.NewPeerDigest([]byte("key3"), net.ParseIP("50.20.100.2"), 3000)
+	p2 := discovery.NewPeerDigest([]byte("uKey1"), net.ParseIP("50.10.30.2"), 3000)
 
 	g := service{
 		msg: mockMessenger{},
 	}
-	newPeers, err := g.dial(initP, recP, []discovery.Peer{p1, p2})
+	newPeers, err := g.RunCycle(initP, recP, []discovery.Peer{p1, p2})
 	assert.Nil(t, err)
 	assert.NotEmpty(t, newPeers)
 
@@ -68,16 +68,19 @@ func TestGossip(t *testing.T) {
 	repo := new(mockPeerRepository)
 	notif := new(mockNotifier)
 
+	repo.AddPeer(init)
+
 	s := discovery.Seed{IP: net.ParseIP("10.0.0.1"), Port: 3000}
 	repo.AddSeed(s)
 
-	srv := NewService(repo, mockMessenger{}, notif)
+	srv := NewService(repo, mockMessenger{}, notif, new(mockInspect))
 	err := srv.Spread(init)
 	assert.Nil(t, err)
 
 	peers, _ := repo.ListKnownPeers()
-	assert.Equal(t, 1, len(peers))
-	assert.Equal(t, "dKey1", string(peers[0].PublicKey()))
+	assert.Equal(t, 2, len(peers))
+	assert.Equal(t, "key", string(peers[0].PublicKey()))
+	assert.Equal(t, "dKey1", string(peers[1].PublicKey()))
 
 	assert.NotEmpty(t, notif.NotifiedPeers())
 	assert.Equal(t, 1, len(notif.NotifiedPeers()))
@@ -98,10 +101,10 @@ func TestDiffPeersWithDifferentPeers(t *testing.T) {
 	repo.AddPeer(kp)
 	repo.AddPeer(kp2)
 
-	srv := NewService(repo, new(mockMessenger), new(mockNotifier))
+	srv := NewService(repo, new(mockMessenger), new(mockNotifier), new(mockInspect))
 
-	np1 := discovery.NewDiscoveredPeer([]byte("key3"), net.ParseIP("10.0.0.1"), 3000, time.Now(), nil)
-	np2 := discovery.NewDiscoveredPeer([]byte("key4"), net.ParseIP("50.0.0.1"), 3000, time.Now(), nil)
+	np1 := discovery.NewPeerDigest([]byte("key3"), net.ParseIP("10.0.0.1"), 3000)
+	np2 := discovery.NewPeerDigest([]byte("key4"), net.ParseIP("50.0.0.1"), 3000)
 
 	diff, err := srv.DiffPeers([]discovery.Peer{np1, np2})
 	assert.Nil(t, err)
@@ -131,10 +134,10 @@ func TestDiffPeerWithSomeKnownPeers(t *testing.T) {
 	repo.AddPeer(kp)
 	repo.AddPeer(kp2)
 
-	srv := NewService(repo, new(mockMessenger), new(mockNotifier))
+	srv := NewService(repo, new(mockMessenger), new(mockNotifier), new(mockInspect))
 
-	np1 := discovery.NewDiscoveredPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, time.Now(), nil)
-	np2 := discovery.NewDiscoveredPeer([]byte("key4"), net.ParseIP("50.0.0.1"), 3000, time.Now(), nil)
+	np1 := discovery.NewPeerDigest([]byte("key"), net.ParseIP("127.0.0.1"), 3000)
+	np2 := discovery.NewPeerDigest([]byte("key4"), net.ParseIP("50.0.0.1"), 3000)
 
 	diff, err := srv.DiffPeers([]discovery.Peer{np1, np2})
 	assert.Nil(t, err)
@@ -156,12 +159,12 @@ func TestDiffWithEmptyPeers(t *testing.T) {
 	repo := new(mockPeerRepository)
 
 	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
-	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{}, 1)
+	kp2 := discovery.NewPeerDigest([]byte("key2"), net.ParseIP("80.200.100.2"), 3000)
 
 	repo.AddPeer(kp)
 	repo.AddPeer(kp2)
 
-	srv := NewService(repo, new(mockMessenger), new(mockNotifier))
+	srv := NewService(repo, new(mockMessenger), new(mockNotifier), new(mockInspect))
 
 	diff, err := srv.DiffPeers([]discovery.Peer{})
 	assert.Nil(t, err)
@@ -187,10 +190,10 @@ func TestDiffPeerWithSamePeers(t *testing.T) {
 	repo.AddPeer(kp)
 	repo.AddPeer(kp2)
 
-	srv := NewService(repo, new(mockMessenger), new(mockNotifier))
+	srv := NewService(repo, new(mockMessenger), new(mockNotifier), new(mockInspect))
 
-	np1 := discovery.NewDiscoveredPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, time.Now(), nil)
-	np2 := discovery.NewDiscoveredPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, time.Now(), nil)
+	np1 := discovery.NewPeerDetailed([]byte("key"), net.ParseIP("127.0.0.1"), 3000, time.Now(), nil)
+	np2 := discovery.NewPeerDetailed([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, time.Now(), nil)
 
 	diff, err := srv.DiffPeers([]discovery.Peer{np1, np2})
 	assert.Nil(t, err)
@@ -201,20 +204,20 @@ func TestDiffPeerWithSamePeers(t *testing.T) {
 type mockMessenger struct {
 }
 
-func (m mockMessenger) SendSyn(req SynRequest) (SynAck, error) {
+func (m mockMessenger) SendSyn(req SynRequest) (*SynAck, error) {
 	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
 	rec := discovery.NewStartupPeer([]byte("uKey1"), net.ParseIP("200.18.186.39"), 3000, "1.1", discovery.PeerPosition{}, 1)
 
 	t, _ := time.Parse(
 		time.RFC3339,
 		"2012-11-01T22:08:41+00:00")
-	np1 := discovery.NewDiscoveredPeer([]byte("dKey1"), net.ParseIP("35.200.100.2"), 3000, t, nil)
+	np1 := discovery.NewPeerDetailed([]byte("dKey1"), net.ParseIP("35.200.100.2"), 3000, t, nil)
 
 	newPeers := []discovery.Peer{np1}
 
 	unknownPeers := []discovery.Peer{rec}
 
-	return SynAck{
+	return &SynAck{
 		Initiator:    init,
 		Receiver:     rec,
 		NewPeers:     newPeers,
@@ -244,6 +247,9 @@ type mockPeerRepository struct {
 }
 
 func (r *mockPeerRepository) AddPeer(p discovery.Peer) error {
+	if r.containsPeer(p) {
+		return r.UpdatePeer(p)
+	}
 	r.peers = append(r.peers, p)
 	return nil
 }
@@ -259,4 +265,31 @@ func (r *mockPeerRepository) ListKnownPeers() ([]discovery.Peer, error) {
 
 func (r *mockPeerRepository) ListSeedPeers() ([]discovery.Seed, error) {
 	return r.seeds, nil
+}
+
+func (r *mockPeerRepository) UpdatePeer(peer discovery.Peer) error {
+	for _, p := range r.peers {
+		if string(p.PublicKey()) == string(peer.PublicKey()) {
+			p = peer
+			break
+		}
+	}
+	return nil
+}
+
+func (r *mockPeerRepository) containsPeer(p discovery.Peer) bool {
+	mPeers := make(map[string]discovery.Peer, 0)
+	for _, p := range r.peers {
+		mPeers[hex.EncodeToString(p.PublicKey())] = p
+	}
+
+	_, exist := mPeers[hex.EncodeToString(p.PublicKey())]
+	return exist
+}
+
+type mockInspect struct{}
+
+//RefreshPeer updates the peer's metrics retrieved from the peer monitor
+func (s mockInspect) RefreshPeer(p *discovery.Peer) error {
+	return nil
 }

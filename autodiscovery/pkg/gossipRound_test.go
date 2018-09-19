@@ -3,7 +3,6 @@ package discovery
 import (
 	"net"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -15,8 +14,8 @@ Scenario: Picks a random peer
 	Then we get a random peer
 */
 func TestRandomPeer(t *testing.T) {
-	p1 := NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{}, 1)
-	p2 := NewDiscoveredPeer([]byte("key2"), net.ParseIP("10.0.0.1"), 3000, time.Now(), nil)
+	p1 := NewPeerDigest([]byte("key"), net.ParseIP("127.0.0.1"), 3000)
+	p2 := NewPeerDigest([]byte("key2"), net.ParseIP("10.0.0.1"), 3000)
 	peers := []Peer{p1, p2}
 
 	g := &GossipRound{
@@ -69,7 +68,7 @@ func TestSelectPeers(t *testing.T) {
 	s1 := Seed{IP: net.ParseIP("30.0.50.100"), Port: 3000}
 
 	p1 := NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{}, 1)
-	p2 := NewDiscoveredPeer([]byte("key2"), net.ParseIP("10.0.0.1"), 3000, time.Now(), nil)
+	p2 := NewPeerDigest([]byte("key2"), net.ParseIP("10.0.0.1"), 3000)
 
 	r, _ := NewGossipRound(Peer{}, []Peer{p1, p2}, []Seed{s1})
 

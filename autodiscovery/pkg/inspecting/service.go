@@ -6,9 +6,17 @@ import (
 
 //PeerMonitor is the interface that provides methods for the peer monitoring
 type PeerMonitor interface {
+
+	//GetStatus computes the peer's status according to the health state of the system
 	GetStatus() (discovery.PeerStatus, error)
+
+	//GetCPULoad retrieves the load on the peer's CPU
 	GetCPULoad() (string, error)
+
+	//GetFreeDiskSpace retrieves the available free disk space of the peer
 	GetFreeDiskSpace() (float64, error)
+
+	//GetIOWaitRate computes the rate of the I/O operations of the peer
 	GetIOWaitRate() (float64, error)
 }
 

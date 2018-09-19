@@ -197,8 +197,17 @@ func NewStartupPeer(pbKey []byte, ip net.IP, port int, version string, pos PeerP
 	}
 }
 
-//NewDiscoveredPeer creates a peer discovered on the network
-func NewDiscoveredPeer(pbKey []byte, ip net.IP, port int, genTime time.Time, state *PeerState) Peer {
+//NewPeerDigest creates a peer digest
+func NewPeerDigest(pbKey []byte, ip net.IP, port int) Peer {
+	return Peer{
+		ip:        ip,
+		publicKey: pbKey,
+		port:      port,
+	}
+}
+
+//NewPeerDetailed creates a peer detailed
+func NewPeerDetailed(pbKey []byte, ip net.IP, port int, genTime time.Time, state *PeerState) Peer {
 	return Peer{
 		ip:             ip,
 		port:           port,

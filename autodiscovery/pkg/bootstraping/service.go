@@ -6,31 +6,38 @@ import (
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 )
 
-//PeerLocalizer is the interface that provides methods for the peer localization
-type PeerLocalizer interface {
-	GetIP() (net.IP, error)
-	GetGeoPosition() (discovery.PeerPosition, error)
+//PeerPositionner is the interface that provide methods to identity the peer geo position
+type PeerPositionner interface {
+	//Position lookups the peer's geographic position
+	Position() (discovery.PeerPosition, error)
+}
+
+//PeerNetworker is the interface that provides methods to get the peer network information
+type PeerNetworker interface {
+	//IP lookups the peer's IP
+	IP() (net.IP, error)
 }
 
 //Service is the interface that provide methods for the peer's bootstraping
 type Service interface {
 	Startup(pbKey []byte, port int, p2pFactor int, ver string) (discovery.Peer, error)
-	LoadSeeds(ss []discovery.Seed) error
+	LoadSeeds(seeds []discovery.Seed) error
 }
 
 type service struct {
 	repo discovery.Repository
-	loc  PeerLocalizer
+	pp   PeerPositionner
+	pn   PeerNetworker
 }
 
 //Startup creates a new peer initiator, locates and stores it
 func (s service) Startup(pbKey []byte, port int, p2pFactor int, ver string) (p discovery.Peer, err error) {
-	pos, err := s.loc.GetGeoPosition()
+	pos, err := s.pp.Position()
 	if err != nil {
 		return
 	}
 
-	ip, err := s.loc.GetIP()
+	ip, err := s.pn.IP()
 	if err != nil {
 		return
 	}
@@ -39,6 +46,7 @@ func (s service) Startup(pbKey []byte, port int, p2pFactor int, ver string) (p d
 	if err = s.repo.AddPeer(p); err != nil {
 		return
 	}
+
 	return
 }
 
@@ -54,9 +62,10 @@ func (s service) LoadSeeds(ss []discovery.Seed) error {
 }
 
 //NewService creates a bootstraping service its dependencies
-func NewService(repo discovery.Repository, loc PeerLocalizer) Service {
+func NewService(repo discovery.Repository, pp PeerPositionner, pn PeerNetworker) Service {
 	return &service{
 		repo: repo,
-		loc:  loc,
+		pp:   pp,
+		pn:   pn,
 	}
 }
