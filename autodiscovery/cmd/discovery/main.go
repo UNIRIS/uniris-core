@@ -10,8 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/uniris/uniris-core/autodiscovery/pkg/inspecting"
-
+	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/system"
 
 	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
@@ -53,12 +52,12 @@ func main() {
 	repo := new(mem.Repository)
 	var np bootstraping.PeerNetworker
 	if network == "public" {
-		np = new(http.PeerNetworker)
+		np = http.NewPeerNetworker()
 	} else {
-		np = new(system.PeerNetworker)
+		np = system.NewPeerNetworker()
 	}
-	pos := new(http.PeerPositioner)
-	insp := inspecting.NewService(repo, new(system.PeerMonitor))
+	pos := http.NewPeerPositioner()
+	monit := monitoring.NewService(repo, system.NewSystemWatcher())
 	notif := rabbitmq.NewNotifier()
 	msg := rpc.NewMessenger()
 
@@ -88,7 +87,7 @@ func main() {
 
 	//Starts gossiping
 	log.Print("Start gossip...")
-	g := gossip.NewService(repo, msg, notif, insp)
+	g := gossip.NewService(repo, msg, notif, monit)
 	ticker := time.NewTicker(1 * time.Second)
 	for range ticker.C {
 		if err := g.Spread(startPeer); err != nil {

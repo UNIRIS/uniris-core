@@ -17,7 +17,7 @@ func (n notifier) Notify(p discovery.Peer) {
 	//TODO connect with rabbitmq
 }
 
-//NewNotifier creates a gossip notifier instance using RabbitMQ
+//NewNotifier creates an rabbitmq implementation of the gossip Notifier interface
 func NewNotifier() gossip.Notifier {
 	return notifier{}
 }

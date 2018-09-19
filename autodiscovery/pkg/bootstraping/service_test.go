@@ -65,6 +65,15 @@ type mockPeerRepository struct {
 	seeds []discovery.Seed
 }
 
+func (r *mockPeerRepository) GetOwnedPeer() (p discovery.Peer, err error) {
+	for _, p := range r.peers {
+		if p.IsOwned() {
+			return p, nil
+		}
+	}
+	return
+}
+
 func (r *mockPeerRepository) AddPeer(p discovery.Peer) error {
 	if r.containsPeer(p) {
 		return r.UpdatePeer(p)

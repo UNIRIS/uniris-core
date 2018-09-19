@@ -8,6 +8,7 @@ import (
 
 //Repository provides access to the peer repository
 type Repository interface {
+	GetOwnedPeer() (Peer, error)
 	ListSeedPeers() ([]Seed, error)
 	ListKnownPeers() ([]Peer, error)
 	AddPeer(Peer) error

@@ -4,14 +4,15 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/uniris/uniris-core/autodiscovery/pkg/bootstraping"
+
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 )
 
-//PeerPositioner imlplements the PeerPositioner interface which provides methods to get the geo position of the peer
-type PeerPositioner struct{}
+type httpPositioner struct{}
 
 //Position returns the peer's geo position
-func (loc PeerPositioner) Position() (pos discovery.PeerPosition, err error) {
+func (p httpPositioner) Position() (pos discovery.PeerPosition, err error) {
 	resp, err := http.Get("http://ip-api.com/json")
 	if err != nil {
 		return
@@ -24,4 +25,9 @@ func (loc PeerPositioner) Position() (pos discovery.PeerPosition, err error) {
 		return
 	}
 	return
+}
+
+//NewPeerPositioner creates an http implementation of the PeerPositionner interface
+func NewPeerPositioner() bootstraping.PeerPositionner {
+	return httpPositioner{}
 }

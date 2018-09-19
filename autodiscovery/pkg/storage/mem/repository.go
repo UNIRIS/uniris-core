@@ -11,6 +11,15 @@ type Repository struct {
 	seeds []discovery.Seed
 }
 
+func (r *Repository) GetOwnedPeer() (p discovery.Peer, err error) {
+	for _, p := range r.peers {
+		if p.IsOwned() {
+			return p, nil
+		}
+	}
+	return
+}
+
 func (r *Repository) ListSeedPeers() ([]discovery.Seed, error) {
 	return r.seeds, nil
 }

@@ -3,15 +3,15 @@ package gossip
 import (
 	"encoding/hex"
 
-	"github.com/uniris/uniris-core/autodiscovery/pkg/inspecting"
-
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 )
 
 //Service is the interface that provide gossip methods
 type Service interface {
 	Spread(discovery.Peer) error
 	DiffPeers([]discovery.Peer) (*PeerDiff, error)
+	RunCycle(initiator discovery.Peer, receiver discovery.Peer, knownPeers []discovery.Peer) ([]discovery.Peer, error)
 }
 
 //Messenger is the interface that provides methods to send gossip requests
@@ -35,7 +35,7 @@ type service struct {
 	msg   Messenger
 	repo  discovery.Repository
 	notif Notifier
-	insp  inspecting.Service
+	monit monitoring.Service
 }
 
 //PeerDiff describes a diff to identify the unknown peers from the initiator or the receiver a SYN request is received
@@ -113,6 +113,17 @@ func (s service) Spread(init discovery.Peer) error {
 }
 
 func (s service) RunCycle(init discovery.Peer, recpt discovery.Peer, kp []discovery.Peer) ([]discovery.Peer, error) {
+
+	owned, err := s.repo.GetOwnedPeer()
+	if err != nil {
+		return nil, err
+	}
+
+	//Refreshes owned peer state before sending any requests
+	if err := s.monit.RefreshPeer(owned); err != nil {
+		return nil, err
+	}
+
 	synAck, err := s.msg.SendSyn(NewSynRequest(init, recpt, kp))
 	if err != nil {
 		return nil, err
@@ -122,11 +133,6 @@ func (s service) RunCycle(init discovery.Peer, recpt discovery.Peer, kp []discov
 		mapPeers := s.mapPeers(kp)
 		for _, p := range synAck.UnknownPeers {
 			if k, exist := mapPeers[hex.EncodeToString(p.PublicKey())]; exist {
-				if k.IsOwned() {
-					if err := s.insp.RefreshPeer(&k); err != nil {
-						return nil, err
-					}
-				}
 				reqPeers = append(reqPeers, k)
 			}
 		}
@@ -148,11 +154,11 @@ func (s service) mapPeers(pp []discovery.Peer) map[string]discovery.Peer {
 }
 
 //NewService creates a gossiping service its dependencies
-func NewService(repo discovery.Repository, msg Messenger, notif Notifier, insp inspecting.Service) Service {
+func NewService(repo discovery.Repository, msg Messenger, notif Notifier, monit monitoring.Service) Service {
 	return service{
 		repo:  repo,
 		msg:   msg,
 		notif: notif,
-		insp:  insp,
+		monit: monit,
 	}
 }
