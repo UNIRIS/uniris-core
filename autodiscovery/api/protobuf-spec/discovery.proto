@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package api;
+
+service Discovery {
+    rpc Synchronize (SynRequest) returns (SynAck) {}
+    rpc Acknowledge(AckRequest) returns(google.protobuf.Empty) {}
+}
+
+message SynRequest {
+    PeerDigest Initiator = 1;
+    PeerDigest Receiver = 2;
+    repeated PeerDigest KnownPeers = 3;
+}
+
+message AckRequest {
+    PeerDigest Initiator = 1;
+    PeerDigest Receiver = 2;
+    repeated PeerDetailed RequestedPeers = 3;
+}
+
+message SynAck {
+    PeerDigest Initiator = 1;
+    PeerDigest Receiver = 2;
+    repeated PeerDetailed NewPeers = 3;
+    repeated PeerDigest UnknownPeers = 4;
+}
+
+message PeerDigest {
+    bytes PublicKey = 1;
+    string IP = 2;
+    int32 Port = 3;
+}
+
+message PeerDetailed {
+    bytes PublicKey = 1;
+    string IP = 2;
+    int32 Port = 3;
+    int64 GenerationTime = 4;
+    PeerState State = 5; 
+
+   message PeerState {
+        PeerStatus Status = 1;
+        string CPULoad = 2;
+        float IOWaitRate = 3;
+        float FreeDiskSpace = 4;
+        string Version = 5;
+        GeoCoordinates GeoPosition = 6;
+        int32 P2PFactor = 7;
+
+        message GeoCoordinates {
+                float Lat = 1;
+                float Lon = 2;
+        };
+
+        enum PeerStatus {
+            Fault = 0;
+            Bootstraping = 1;
+            Ok = 2;
+            StorageOnly = 3;
+        };
+    }
+}
+
+
+
+
