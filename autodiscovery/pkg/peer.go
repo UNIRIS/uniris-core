@@ -42,13 +42,14 @@ type Peer struct {
 
 //PeerState describes the state of peer and its metrics
 type PeerState struct {
-	status        PeerStatus
-	cpuLoad       string
-	ioWaitRate    float64
-	freeDiskSpace float64
-	version       string
-	geoPosition   PeerPosition
-	p2pFactor     int
+	status          PeerStatus
+	cpuLoad         string
+	ioWaitRate      float64
+	freeDiskSpace   float64
+	version         string
+	geoPosition     PeerPosition
+	p2pFactor       int
+	discoveredNodes int
 }
 
 //PeerStatus defines a peer health analysis
@@ -67,6 +68,9 @@ const (
 	//StorageOnlyStatus defines if the peer only accept storage request
 	StorageOnlyStatus PeerStatus = 3
 )
+
+//BootStrapingMinTime is the necessary minimum time on seconds to finish learning about the network
+const BootStrapingMinTime = 5
 
 //PeerPosition wraps the geo coordinates of a peer
 type PeerPosition struct {
@@ -107,6 +111,14 @@ func (p Peer) GeoPosition() *PeerPosition {
 	return &p.state.geoPosition
 }
 
+//DiscoveredNodes returns the discovered nodes on the peer
+func (p Peer) DiscoveredNodes() int {
+	if p.state == nil {
+		return 0
+	}
+	return p.state.discoveredNodes
+}
+
 //P2PFactor returns the peer's replication factor
 func (p Peer) P2PFactor() int {
 	if p.state == nil {
@@ -134,7 +146,7 @@ func (p Peer) Version() string {
 //CPULoad returns the load on the peer's CPU
 func (p Peer) CPULoad() string {
 	if p.state == nil {
-		return "0.0.0"
+		return "--"
 	}
 	return p.state.cpuLoad
 }

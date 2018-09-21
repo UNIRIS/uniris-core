@@ -57,7 +57,7 @@ func main() {
 		np = system.NewPeerNetworker()
 	}
 	pos := http.NewPeerPositioner()
-	monit := monitoring.NewService(repo, system.NewSystemWatcher())
+	monit := monitoring.NewService(repo, system.NewSystemWatcher(repo))
 	notif := rabbitmq.NewNotifier()
 	msg := rpc.NewMessenger()
 
