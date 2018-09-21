@@ -48,7 +48,7 @@ func (f PeerDomainFormater) BuildPeerDetailed(peer *api.PeerDetailed) discovery.
 		)
 	}
 
-	return discovery.NewPeerDetailed(peer.PublicKey, net.ParseIP(peer.IP), int(peer.Port), time.Unix(peer.GenerationTime, 0), s)
+	return discovery.NewPeerDetailed(peer.PublicKey, net.ParseIP(peer.IP), int(peer.Port), time.Unix(peer.GenerationTime, 0), false, s)
 }
 
 //BuildPeerDetailedCollection converts a list of detailed peer into a list of domain peer detailed

@@ -1,71 +1,93 @@
 package main
 
 import (
-	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
-	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/system"
-
 	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/storage/redis"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/system"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/http"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/rabbitmq"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/rpc"
+	yaml "gopkg.in/yaml.v2"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/bootstraping"
 
 	api "github.com/uniris/uniris-core/autodiscovery/api/protobuf-spec"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/storage/mem"
 	"google.golang.org/grpc"
 )
 
 const (
-	seedsFile        = "../../configs/seeds.json"
-	versionFile      = "../../configs/version"
-	defaultPbKeyFile = "../../configs/id.pub"
+	defaultConfFile = "../../../default-conf.yml"
 )
 
 func main() {
+	if err := runApp(); err != nil {
+		os.Exit(-1)
+	}
+}
 
+func runApp() error {
+	log.Print("Service starting...")
+
+	log.Print("Configuration loading...")
 	//Loads peer's configuration
-	network, pbKey, port, ver, p2pFactor, seedsFile, err := loadConfiguration()
+	conf, err := loadConfiguration()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	log.Print("PEER CONFIGURATION")
 	log.Print("=================================")
-	log.Printf("Network type: %s", network)
-	log.Printf("Key: %s", pbKey)
-	log.Printf("Port: %d", port)
-	log.Printf("Version: %s", ver)
-	log.Printf("P2P Factor: %d", p2pFactor)
+	log.Printf("Network type: %s", conf.Network)
+	log.Printf("Key: %s", conf.PublicKey)
+	log.Printf("Port: %d", conf.Discovery.Port)
+	log.Printf("Version: %s", conf.Version)
+	log.Printf("P2P Factor: %d", conf.Discovery.P2PFactor)
 
 	//Initializes dependencies
-	repo := new(mem.Repository)
+	repo, err := redis.NewRepository(conf.Discovery.Redis.Host, conf.Discovery.Redis.Port, conf.Discovery.Redis.Pwd)
+	if err != nil {
+		log.Print("Cannot connect with redis")
+		return err
+	}
 	var np bootstraping.PeerNetworker
-	if network == "public" {
+	if conf.Network == "public" {
 		np = http.NewPeerNetworker()
 	} else {
-		np = system.NewPeerNetworker()
+		if conf.NetworkInterface == "" {
+			return errors.New("Missing the network interface configuration when using the private network")
+		}
+		np = system.NewPeerNetworker(conf.NetworkInterface)
 	}
 	pos := http.NewPeerPositioner()
-	monit := monitoring.NewService(repo, system.NewSystemWatcher())
 	notif := rabbitmq.NewNotifier()
 	msg := rpc.NewMessenger()
-
-	//Store the startup peer
+	mon := monitoring.NewService(repo, system.NewPeerMonitor())
+	gos := gossip.NewService(repo, msg, notif, mon)
 	boot := bootstraping.NewService(repo, pos, np)
-	startPeer, err := boot.Startup(pbKey, port, p2pFactor, ver)
+
+	//Initializes the seeds
+	if err := boot.LoadSeeds(conf.Discovery.Seeds); err != nil {
+		return err
+	}
+
+	//Stores the startup peer
+	startPeer, err := boot.Startup([]byte(conf.PublicKey), conf.Discovery.Port, conf.Discovery.P2PFactor, conf.Version)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	log.Printf("Endpoint: %s", startPeer.GetEndpoint())
@@ -73,91 +95,127 @@ func main() {
 
 	//Starts server
 	go func() {
-		if err := startServer(port, repo, notif); err != nil {
+		if err := startServer(conf.Discovery.Port, repo, gos, mon); err != nil {
 			log.Fatal(err)
 		}
 	}()
 
-	//Initializes the seeds
-	if err := loadSeeds(seedsFile, boot); err != nil {
-		log.Fatal(err)
-	}
-
-	time.Sleep(1 * time.Second)
-
 	//Starts gossiping
+	time.Sleep(1 * time.Second)
 	log.Print("Start gossip...")
-	g := gossip.NewService(repo, msg, notif, monit)
-	ticker := time.NewTicker(1 * time.Second)
-	for range ticker.C {
-		if err := g.Spread(startPeer); err != nil {
-			log.Printf("Gossip failure: %s", err.Error())
-		}
-	}
-}
-
-func loadConfiguration() (string, []byte, int, string, int, string, error) {
-	network := flag.String("network", "public", "Network type: public, private")
-	port := flag.Int("port", 3545, "Discovery port")
-	p2pFactor := flag.Int("p2p-factor", 1, "P2P replication factor")
-	pbKeyFile := flag.String("key-file", defaultPbKeyFile, "Public key file")
-	seedsFile := flag.String("seeds-file", seedsFile, "Seeds listing file")
-
-	flag.Parse()
-
-	pbKeyPath, err := filepath.Abs(*pbKeyFile)
-	if err != nil {
-		return "", nil, 0, "", 0, "", err
-	}
-
-	pbKey, err := ioutil.ReadFile(pbKeyPath)
-	if err != nil {
-		return "", nil, 0, "", 0, "", err
-	}
-
-	verPath, err := filepath.Abs(versionFile)
-	if err != nil {
-		return "", nil, 0, "", 0, "", err
-	}
-	verBytes, err := ioutil.ReadFile(verPath)
-	if err != nil {
-		return "", nil, 0, "", 0, "", err
-	}
-	version := string(verBytes)
-
-	return *network, pbKey, *port, version, *p2pFactor, *seedsFile, nil
-}
-
-func startServer(port int, repo discovery.Repository, notif gossip.Notifier) error {
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
-	if err != nil {
-		return err
-	}
-	grpcServer := grpc.NewServer()
-	api.RegisterDiscoveryServer(grpcServer, rpc.NewHandler(repo, notif))
-	log.Printf("Server listening on %d", port)
-	if err := grpcServer.Serve(lis); err != nil {
-		return err
+	if err := gos.ScheduleGossip(startPeer); err != nil {
+		log.Print(err)
 	}
 	return nil
 }
 
-func loadSeeds(seedsFile string, boot bootstraping.Service) error {
-	seedPath, err := filepath.Abs(seedsFile)
+type Conf struct {
+	Network          string `yaml:"network"`
+	NetworkInterface string `yaml:"networkInterface"`
+	PublicKey        string `yaml:"publicKey"`
+	Version          string `yaml:"version"`
+	Discovery        ConfDiscovery
+}
+
+type ConfDiscovery struct {
+	Port      int              `yaml:"port"`
+	P2PFactor int              `yaml:"p2pFactor"`
+	Seeds     []discovery.Seed `yaml:"seeds"`
+	Redis     ConfRedis
+}
+
+type ConfRedis struct {
+	Host string `yaml:"host"`
+	Port int    `yaml:"port"`
+	Pwd  string `yaml:"pwd"`
+}
+
+func loadConfiguration() (*Conf, error) {
+
+	ver := os.Getenv("UNIRIS_VERSION")
+	pbKey := os.Getenv("UNIRIS_PUBLICKEY")
+	network := os.Getenv("UNIRIS_NETWORK")
+	netiface := os.Getenv("UNIRIS_NETWORK_INTERFACE")
+	port := os.Getenv("UNIRIS_DISCOVERY_PORT")
+	p2pFactor := os.Getenv("UNIRIS_DISCOVERY_P2PFACTOR")
+	seeds := os.Getenv("UNIRIS_DISCOVERY_SEEDS")
+	redisHost := os.Getenv("UNIRIS_DISCOVERY_REDIS_HOST")
+	redisPort := os.Getenv("UNIRIS_DISCOVERY_REDIS_PORT")
+	redisPwd := os.Getenv("UNIRIS_DISCOVERY_REDIS_PWD")
+
+	//LOAD BY ENV VARIABLE
+	if ver != "" {
+		_seeds := make([]discovery.Seed, 0)
+		ss := strings.Split(seeds, ",")
+		for _, s := range ss {
+			addr := strings.Split(s, ":")
+			sPort, _ := strconv.Atoi(addr[1])
+
+			ips, err := net.LookupIP(addr[0])
+			if err != nil {
+				return nil, err
+			}
+
+			_seeds = append(_seeds, discovery.Seed{
+				IP:   ips[0],
+				Port: sPort,
+			})
+		}
+
+		_port, _ := strconv.Atoi(port)
+		_p2pFactor, _ := strconv.Atoi(p2pFactor)
+		_redisPort, _ := strconv.Atoi(redisPort)
+
+		return &Conf{
+			Version:          ver,
+			PublicKey:        pbKey,
+			Network:          network,
+			NetworkInterface: netiface,
+			Discovery: ConfDiscovery{
+				Port:      _port,
+				P2PFactor: _p2pFactor,
+				Seeds:     _seeds,
+				Redis: ConfRedis{
+					Host: redisHost,
+					Port: _redisPort,
+					Pwd:  redisPwd,
+				},
+			},
+		}, nil
+	}
+
+	//LOAD BY CONFIGURATION FILE
+	confFile := flag.String("conf-file", defaultConfFile, "Configuration file")
+	flag.Parse()
+
+	confFilePath, err := filepath.Abs(*confFile)
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err := ioutil.ReadFile(confFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	var c Conf
+	err = yaml.Unmarshal(bytes, &c)
+	if err != nil {
+		return nil, err
+	}
+
+	return &c, nil
+}
+
+func startServer(port int, repo discovery.Repository, gos gossip.Service, mon monitoring.Service) error {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return err
 	}
-	bytes, err := ioutil.ReadFile(seedPath)
-	if err != nil {
-		return err
-	}
-
-	seeds := make([]discovery.Seed, 0)
-	if err := json.Unmarshal(bytes, &seeds); err != nil {
-		return err
-	}
-
-	if err := boot.LoadSeeds(seeds); err != nil {
+	grpcServer := grpc.NewServer()
+	api.RegisterDiscoveryServer(grpcServer, rpc.NewHandler(repo, gos, mon))
+	log.Printf("Server listening on %d", port)
+	if err := grpcServer.Serve(lis); err != nil {
 		return err
 	}
 	return nil

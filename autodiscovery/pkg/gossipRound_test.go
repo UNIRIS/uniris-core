@@ -3,6 +3,7 @@ package discovery
 import (
 	"net"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -53,7 +54,7 @@ Scenario: Starts a gossip round without seeds
 	Then an error is returned
 */
 func TestGossipWithoutSeeds(t *testing.T) {
-	_, err := NewGossipRound(Peer{}, []Peer{}, []Seed{})
+	_, err := NewGossipRound(Peer{}, []Peer{}, []Seed{}, mockMessenger{})
 	assert.Error(t, err, ErrEmptySeed)
 }
 
@@ -70,13 +71,47 @@ func TestSelectPeers(t *testing.T) {
 	p1 := NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{}, 1)
 	p2 := NewPeerDigest([]byte("key2"), net.ParseIP("10.0.0.1"), 3000)
 
-	r, _ := NewGossipRound(Peer{}, []Peer{p1, p2}, []Seed{s1})
+	r, _ := NewGossipRound(p1, []Peer{p1, p2}, []Seed{s1}, mockMessenger{})
 
-	peers, err := r.SelectPeers()
+	peers, err := r.selectPeers()
 	assert.Nil(t, err)
 	assert.NotNil(t, peers)
 	assert.NotEmpty(t, peers)
 	assert.Equal(t, 2, len(peers))
 	assert.Equal(t, "30.0.50.100", peers[0].IP().String())
 	assert.Equal(t, "10.0.0.1", peers[1].IP().String())
+}
+
+/*
+Scenario: Run a gossip round
+	Given a init peer and a list of known peers
+	When we run a gossip round
+	Then we get some new discovered peers
+*/
+func TestRunGossipRound(t *testing.T) {
+	s1 := Seed{IP: net.ParseIP("30.0.50.100"), Port: 3000}
+
+	p1 := NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{}, 1)
+	p2 := NewPeerDigest([]byte("key2"), net.ParseIP("10.0.0.1"), 3000)
+
+	r, _ := NewGossipRound(Peer{}, []Peer{p1, p2}, []Seed{s1}, mockMessenger{})
+
+	np, err := r.Run(p1, []Peer{p1, p2})
+	assert.Nil(t, err)
+	assert.NotEmpty(t, np)
+	assert.Equal(t, "dkey", string(np[0].PublicKey()))
+}
+
+type mockMessenger struct{}
+
+func (m mockMessenger) SendSyn(r SynRequest) (*SynAck, error) {
+	return &SynAck{
+		NewPeers: []Peer{
+			NewPeerDetailed([]byte("dkey"), net.ParseIP("10.0.0.1"), 3000, time.Now(), false, nil),
+		},
+	}, nil
+}
+
+func (m mockMessenger) SendAck(r AckRequest) error {
+	return nil
 }

@@ -74,44 +74,40 @@ func (r *mockPeerRepository) GetOwnedPeer() (p discovery.Peer, err error) {
 	return
 }
 
-func (r *mockPeerRepository) AddPeer(p discovery.Peer) error {
-	if r.containsPeer(p) {
-		return r.UpdatePeer(p)
-	}
-	r.peers = append(r.peers, p)
-	return nil
-}
-
-func (r *mockPeerRepository) AddSeed(s discovery.Seed) error {
-	r.seeds = append(r.seeds, s)
-	return nil
+func (r *mockPeerRepository) ListSeedPeers() ([]discovery.Seed, error) {
+	return r.seeds, nil
 }
 
 func (r *mockPeerRepository) ListKnownPeers() ([]discovery.Peer, error) {
 	return r.peers, nil
 }
 
-func (r *mockPeerRepository) ListSeedPeers() ([]discovery.Seed, error) {
-	return r.seeds, nil
-}
-
-func (r *mockPeerRepository) UpdatePeer(peer discovery.Peer) error {
-	for _, p := range r.peers {
-		if string(p.PublicKey()) == string(peer.PublicKey()) {
-			p = peer
-			break
+func (r *mockPeerRepository) SetPeer(peer discovery.Peer) error {
+	if r.containsPeer(peer) {
+		for _, p := range r.peers {
+			if string(p.PublicKey()) == string(peer.PublicKey()) {
+				p = peer
+				break
+			}
 		}
+	} else {
+		r.peers = append(r.peers, peer)
 	}
 	return nil
 }
 
-func (r *mockPeerRepository) containsPeer(peer discovery.Peer) bool {
+func (r *mockPeerRepository) SetSeed(s discovery.Seed) error {
+	r.seeds = append(r.seeds, s)
+	return nil
+}
+
+func (r *mockPeerRepository) containsPeer(p discovery.Peer) bool {
 	mPeers := make(map[string]discovery.Peer, 0)
 	for _, p := range r.peers {
-		mPeers[hex.EncodeToString(p.PublicKey())] = peer
+		mPeers[hex.EncodeToString(p.PublicKey())] = p
 	}
 
-	_, exist := mPeers[hex.EncodeToString(peer.PublicKey())]
+	_, exist := mPeers[hex.EncodeToString(p.PublicKey())]
 	return exist
 }
 

@@ -1,13 +1,14 @@
 package rpc
 
 import (
-	"context"
+	"golang.org/x/net/context"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	api "github.com/uniris/uniris-core/autodiscovery/api/protobuf-spec"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 )
 
 //Handler is the interface that provides methods to handle GRPC requests
@@ -20,7 +21,8 @@ type handler struct {
 	repo         discovery.Repository
 	domainFormat PeerDomainFormater
 	apiFormat    PeerAPIFormater
-	notif        gossip.Notifier
+	gos          gossip.Service
+	mon          monitoring.Service
 }
 
 //Synchronize implements the protobuf Synchronize request handler
@@ -31,8 +33,13 @@ func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.Syn
 
 	receivedPeers := h.domainFormat.BuildPeerDigestCollection(req.KnownPeers)
 
-	g := gossip.NewService(h.repo, nil, nil, nil)
-	diff, err := g.DiffPeers(receivedPeers)
+	//Update metrics of own peer before to communicate known peers
+	if err := h.mon.RefreshOwnedPeer(); err != nil {
+		return nil, err
+	}
+
+	//Get the diff between known peers and the received peers
+	diff, err := h.gos.DiffPeers(receivedPeers)
 	if err != nil {
 		return nil, err
 	}
@@ -51,21 +58,22 @@ func (h handler) Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.E
 	// init := h.domainFormat.BuildPeerDigest(req.Initiator)
 	// log.Printf("Ack request received from %s", init.GetEndpoint())
 
-	//Store the peers requested
+	//Store the peers requested and notifies them
 	for _, rp := range req.RequestedPeers {
 		p := h.domainFormat.BuildPeerDetailed(rp)
-		h.notif.Notify(p)
-		h.repo.AddPeer(p)
+		h.gos.NotifyDiscovery(p)
+		h.repo.SetPeer(p)
 	}
 	return new(empty.Empty), nil
 }
 
 //NewHandler create a new GRPC handler
-func NewHandler(repo discovery.Repository, notif gossip.Notifier) Handler {
+func NewHandler(repo discovery.Repository, gos gossip.Service, mon monitoring.Service) Handler {
 	return handler{
 		repo:         repo,
-		notif:        notif,
 		domainFormat: PeerDomainFormater{},
 		apiFormat:    PeerAPIFormater{},
+		gos:          gos,
+		mon:          mon,
 	}
 }

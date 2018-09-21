@@ -6,14 +6,29 @@ import (
 	"time"
 )
 
+//PeerMonitor is the interface that provides methods for the peer monitoring
+type PeerMonitor interface {
+
+	//Status computes the peer's status according to the health state of the system
+	Status() (PeerStatus, error)
+
+	//CPULoad retrieves the load on the peer's CPU
+	CPULoad() (string, error)
+
+	//FreeDiskSpace retrieves the available free disk space of the peer
+	FreeDiskSpace() (float64, error)
+
+	//IOWaitRate computes the rate of the I/O operations of the peer
+	IOWaitRate() (float64, error)
+}
+
 //Repository provides access to the peer repository
 type Repository interface {
 	GetOwnedPeer() (Peer, error)
 	ListSeedPeers() ([]Seed, error)
 	ListKnownPeers() ([]Peer, error)
-	AddPeer(Peer) error
-	AddSeed(Seed) error
-	UpdatePeer(Peer) error
+	SetPeer(Peer) error
+	SetSeed(Seed) error
 }
 
 //Seed is initial peer need to startup the discovery process
@@ -100,11 +115,11 @@ func (p Peer) Port() int {
 }
 
 //GeoPosition returns the peer's geo coordinates
-func (p Peer) GeoPosition() *PeerPosition {
+func (p Peer) GeoPosition() PeerPosition {
 	if p.state == nil {
-		return nil
+		return PeerPosition{}
 	}
-	return &p.state.geoPosition
+	return p.state.geoPosition
 }
 
 //P2PFactor returns the peer's replication factor
@@ -208,14 +223,14 @@ func NewPeerDigest(pbKey []byte, ip net.IP, port int) Peer {
 }
 
 //NewPeerDetailed creates a peer detailed
-func NewPeerDetailed(pbKey []byte, ip net.IP, port int, genTime time.Time, state *PeerState) Peer {
+func NewPeerDetailed(pbKey []byte, ip net.IP, port int, genTime time.Time, isOwned bool, state *PeerState) Peer {
 	return Peer{
 		ip:             ip,
 		port:           port,
 		publicKey:      pbKey,
 		generationTime: genTime,
-		isOwned:        false,
 		state:          state,
+		isOwned:        isOwned,
 	}
 }
 

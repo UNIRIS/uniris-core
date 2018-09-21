@@ -1,6 +1,7 @@
 package bootstraping
 
 import (
+	"log"
 	"net"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
@@ -43,7 +44,7 @@ func (s service) Startup(pbKey []byte, port int, p2pFactor int, ver string) (p d
 	}
 
 	p = discovery.NewStartupPeer(pbKey, ip, port, ver, pos, p2pFactor)
-	if err = s.repo.AddPeer(p); err != nil {
+	if err = s.repo.SetPeer(p); err != nil {
 		return
 	}
 
@@ -53,9 +54,10 @@ func (s service) Startup(pbKey []byte, port int, p2pFactor int, ver string) (p d
 //LoadSeeds stores the provided seed peers
 func (s service) LoadSeeds(ss []discovery.Seed) error {
 	for _, sd := range ss {
-		if err := s.repo.AddSeed(sd); err != nil {
+		if err := s.repo.SetSeed(sd); err != nil {
 			return err
 		}
+		log.Printf("Seed loaded %s", sd.ToPeer().GetEndpoint())
 	}
 
 	return nil

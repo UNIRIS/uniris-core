@@ -74,7 +74,7 @@ Scenario: Returns default values
 	Then we get the default values
 */
 func TestDefaultGetters(t *testing.T) {
-	p := NewPeerDetailed([]byte("key"), net.ParseIP("127.0.0.1"), 3000, time.Now(), nil)
+	p := NewPeerDetailed([]byte("key"), net.ParseIP("127.0.0.1"), 3000, time.Now(), false, nil)
 	assert.Equal(t, 1, p.P2PFactor())
 	assert.Equal(t, "0.0.0", p.CPULoad())
 	assert.Equal(t, 0.0, p.IOWaitRate())

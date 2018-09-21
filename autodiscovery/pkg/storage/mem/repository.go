@@ -28,26 +28,22 @@ func (r *Repository) ListKnownPeers() ([]discovery.Peer, error) {
 	return r.peers, nil
 }
 
-func (r *Repository) AddPeer(p discovery.Peer) error {
-	if r.containsPeer(p) {
-		return r.UpdatePeer(p)
-	}
-	r.peers = append(r.peers, p)
-	return nil
-}
-
-func (r *Repository) AddSeed(s discovery.Seed) error {
-	r.seeds = append(r.seeds, s)
-	return nil
-}
-
-func (r *Repository) UpdatePeer(peer discovery.Peer) error {
-	for _, p := range r.peers {
-		if string(p.PublicKey()) == string(peer.PublicKey()) {
-			p = peer
-			break
+func (r *Repository) SetPeer(peer discovery.Peer) error {
+	if r.containsPeer(peer) {
+		for _, p := range r.peers {
+			if string(p.PublicKey()) == string(peer.PublicKey()) {
+				p = peer
+				break
+			}
 		}
+	} else {
+		r.peers = append(r.peers, peer)
 	}
+	return nil
+}
+
+func (r *Repository) SetSeed(s discovery.Seed) error {
+	r.seeds = append(r.seeds, s)
 	return nil
 }
 

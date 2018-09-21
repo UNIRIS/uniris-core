@@ -1,0 +1,19 @@
+version: 1.0
+network: private
+publicKey: -----BEGIN PUBLIC KEY-----MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEXjQEnfjxr1gHFetBym2C8zcU9n+DGRz3Ip+dLErOjCtQ8PoKzjQei2S9vle70Ano6MdaZlUHT1TLrFIrqYto1Q==-----END PUBLIC KEY-----
+
+discovery:
+  port: 5000
+  p2pFactor: 1
+  seeds:
+    - ip: 127.0.0.1
+      port: 3545
+  redis:
+    host: localhost
+    port: 6379
+    pwd: ""
+
+
+
+
+
