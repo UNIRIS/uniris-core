@@ -19,10 +19,41 @@ const (
 	downmaxoffset = -300
 )
 
-type peerWatcher struct{}
+type peerWatcher struct {
+	rep discovery.Repository
+}
 
 //GetProcessStates check the different state of the differents necessary services running on the peer
 func (Pwatcher *peerWatcher) CheckProcessStates() (bool, error) {
+	_, err := CheckAutodiscoveryProcess(Pwatcher.rep)
+	if err != nil {
+		return false, err
+	}
+	_, err = CheckDataProcess(Pwatcher.rep)
+	if err != nil {
+		return false, err
+	}
+	_, err = CheckMiningProcess(Pwatcher.rep)
+	if err != nil {
+		return false, err
+	}
+	_, err = CheckAIProcess(Pwatcher.rep)
+	if err != nil {
+		return false, err
+	}
+	_, err = CheckScyllaProcess(Pwatcher.rep)
+	if err != nil {
+		return false, err
+	}
+	_, err = CheckRedisProcess(Pwatcher.rep)
+	if err != nil {
+		return false, err
+	}
+	_, err = CheckRabitmqProcess(Pwatcher.rep)
+	if err != nil {
+		return false, err
+	}
+
 	return true, nil
 }
 
@@ -49,11 +80,31 @@ func (Pwatcher *peerWatcher) CheckNtpState() (bool, error) {
 	return true, nil
 }
 
-type seedDiscoverdNodeWatcher struct{}
+type seedDiscoverdNodeWatcher struct {
+	rep discovery.Repository
+}
 
-//GetSeedDiscoveredNode report the average of node detected by the different known seed
+//GetSeedDiscoveredNode report the average of node detected by the differents known seeds
 func (SdnWatcher *seedDiscoverdNodeWatcher) GetSeedDiscoveredNode() (int, error) {
-	return 5, nil
+	listseed, err := SdnWatcher.rep.ListSeedPeers()
+	if err != nil {
+		return 0, err
+	}
+	listpeer, err := SdnWatcher.rep.ListKnownPeers()
+	if err != nil {
+		return 0, err
+	}
+	avg := 0
+	for i := 0; i < len(listseed); i++ {
+		ipseed := listseed[i].IP
+		for j := 0; j < len(listpeer); j++ {
+			if string(ipseed) == string(listpeer[j].IP()) {
+				avg += listpeer[j].DiscoveredNodes()
+			}
+		}
+	}
+	avg = avg / len(listseed)
+	return avg, nil
 }
 
 type watcher struct {
@@ -95,6 +146,12 @@ func (w watcher) Status() (discovery.PeerStatus, error) {
 	}
 
 	seedDn, err := w.SdnWatcher.GetSeedDiscoveredNode()
+	if err != nil {
+		return discovery.FaultStatus, err
+	}
+	if seedDn == 0 {
+		return discovery.BootstrapingStatus, nil
+	}
 
 	if t := selfpeer.GetElapsedHeartbeats(); t < discovery.BootStrapingMinTime && seedDn > selfpeer.DiscoveredNodes() {
 		return discovery.BootstrapingStatus, nil
