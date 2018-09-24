@@ -1,7 +1,6 @@
 package bootstraping
 
 import (
-	"log"
 	"net"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
@@ -57,7 +56,6 @@ func (s service) LoadSeeds(ss []discovery.Seed) error {
 		if err := s.repo.SetSeed(sd); err != nil {
 			return err
 		}
-		log.Printf("Seed loaded %s", sd.ToPeer().GetEndpoint())
 	}
 
 	return nil

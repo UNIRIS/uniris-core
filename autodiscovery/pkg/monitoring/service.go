@@ -1,6 +1,8 @@
 package monitoring
 
-import discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
+import (
+	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
+)
 
 //Service defines the interface for the peer monitoring
 type Service interface {
