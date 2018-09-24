@@ -175,13 +175,13 @@ func (p Peer) IsOk() bool {
 	return p.state.status == OkStatus
 }
 
-//GetElapsedHeartbeats returns the elasted hearbeats from the peer's generation time
-func (p Peer) GetElapsedHeartbeats() int64 {
+//ElapsedHeartbeats returns the elasted hearbeats from the peer's generation time
+func (p Peer) ElapsedHeartbeats() int64 {
 	return time.Now().Unix() - p.generationTime.Unix()
 }
 
-//GetEndpoint returns the peer endpoint
-func (p Peer) GetEndpoint() string {
+//Endpoint returns the peer endpoint
+func (p Peer) Endpoint() string {
 	return fmt.Sprintf("%s:%d", p.ip.String(), p.port)
 }
 

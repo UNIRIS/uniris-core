@@ -1,110 +1,94 @@
 package discovery
 
 import (
-	"encoding/hex"
 	"errors"
+	"math/rand"
 )
 
-var ErrPeerUnreachable = errors.New("Cannot reach the peer %s")
-
-//GossipCycle defines a gossip cycle
+//GossipCycle describes a cycle in a gossip protocol
 type GossipCycle struct {
 	initator   Peer
-	receiver   Peer
 	knownPeers []Peer
-	msg        GossipCycleMessenger
+	seedPeers  []Seed
+	rounds     []*GossipRound
 }
 
-//GossipCycleMessenger is the interface that provides methods to gossip during a cycle
-type GossipCycleMessenger interface {
+//ErrEmptySeed is returns when no seeds has been provided
+var ErrEmptySeed = errors.New("Cannot start a gossip round without a list seeds")
 
-	//Sends a SYN request
-	SendSyn(SynRequest) (*SynAck, error)
-
-	//Sends a ACK request after receipt of the SYN request
-	SendAck(AckRequest) error
-}
-
-//SynRequest describes a SYN gossip request
-type SynRequest struct {
-
-	//Initiator discovery.peer of the request
-	Initiator Peer
-
-	//Receiver discovery.peer of the request
-	Receiver Peer
-
-	//Known peers by the initiator
-	KnownPeers []Peer
-}
-
-//SynAck describes a SYN gossip response
-type SynAck struct {
-
-	//Initiator discovery.peer of the response
-	Initiator Peer
-
-	//Receiver discovery.peer of the response
-	Receiver Peer
-
-	//Peers unknown from the SYN request initator
-	NewPeers []Peer
-
-	//Peers unknown from the SYN request receiver
-	UnknownPeers []Peer
-}
-
-//AckRequest describes an ACK gossip request
-type AckRequest struct {
-
-	//Initiator discovery.peer of the ACK request
-	Initiator Peer
-
-	//Receiver discovery.peer of the ACK request
-	Receiver Peer
-
-	//Detailed peers requested by the SYN request receiver
-	RequestedPeers []Peer
-}
-
-//Run the gossip with the selected peeer
-func (c GossipCycle) Run() ([]Peer, error) {
-
-	//Send SYN request
-	synAck, err := c.msg.SendSyn(SynRequest{c.initator, c.receiver, c.knownPeers})
-	if err != nil {
-		return nil, err
+//NewGossipCycle creates a gossip cucle
+//
+//If an empty list of seeds is provided an error is returned
+func NewGossipCycle(initator Peer, kp []Peer, sp []Seed) (*GossipCycle, error) {
+	if sp == nil || len(sp) == 0 {
+		return nil, ErrEmptySeed
 	}
 
-	//Provide details about the requested peers from the SYN-ACK initator (aka SYN receiver)
-	if len(synAck.UnknownPeers) > 0 {
-		reqPeers := make([]Peer, 0)
-		mapPeers := c.mapPeers(c.knownPeers)
-		for _, p := range synAck.UnknownPeers {
-			if k, exist := mapPeers[hex.EncodeToString(p.PublicKey())]; exist {
-				reqPeers = append(reqPeers, k)
-			}
-		}
+	return &GossipCycle{
+		initator:   initator,
+		knownPeers: kp,
+		seedPeers:  sp,
+	}, nil
+}
 
-		//Send to the SYN receiver an ACK with the peer detailed requested
-		if err := c.msg.SendAck(AckRequest{c.initator, c.receiver, reqPeers}); err != nil {
-			return nil, err
+//SelectPeers chooses random seed and peer from the repository excluding ourself
+func (c GossipCycle) SelectPeers() []Peer {
+	peers := make([]Peer, 0)
+
+	//We pick a random seed peer
+	s := c.randomSeed().ToPeer()
+
+	//Exclude ourself if we are of inside our list seed (impossible in reality, useful for testing)
+	if s.Endpoint() != c.initator.Endpoint() {
+		peers = append(peers, s)
+	}
+
+	//Filter ourself (we don't want gossip with ourself)
+	filtered := make([]Peer, 0)
+	for _, p := range c.knownPeers {
+		if !p.IsOwned() {
+			filtered = append(filtered, p)
 		}
 	}
+	c.knownPeers = filtered
 
-	//We get the new discovered peers to be stored and notified
-	return synAck.NewPeers, nil
-}
-
-func (c GossipCycle) mapPeers(pp []Peer) map[string]Peer {
-	mPeers := make(map[string]Peer, 0)
-	for _, p := range pp {
-		mPeers[hex.EncodeToString(p.PublicKey())] = p
+	//We pick a random known peer
+	if len(c.knownPeers) > 0 {
+		peers = append(peers, c.randomPeer())
 	}
-	return mPeers
+	return peers
 }
 
-//NewGossipCycle creates a new gossip cycle with its dependencies
-func NewGossipCycle(init Peer, rec Peer, kp []Peer, msg GossipCycleMessenger) GossipCycle {
-	return GossipCycle{init, rec, kp, msg}
+//CreateRound creates a gossip round
+func (c *GossipCycle) CreateRound(target Peer) *GossipRound {
+	r := NewGossipRound(c.initator, target)
+	c.rounds = append(c.rounds, r)
+	return r
+}
+
+//Discoveries returns the discovered peers from the related started rounds
+func (c *GossipCycle) Discoveries() []Peer {
+	pp := make([]Peer, 0)
+	for _, r := range c.rounds {
+		for _, p := range r.discoveredPeers {
+			pp = append(pp, p)
+		}
+	}
+	return pp
+}
+
+func (c GossipCycle) randomPeer() Peer {
+	if len(c.knownPeers) > 1 {
+		rnd := rand.Intn(len(c.knownPeers) - 1)
+		return c.knownPeers[rnd]
+	}
+	return c.knownPeers[0]
+}
+
+func (c GossipCycle) randomSeed() Seed {
+	if len(c.seedPeers) > 1 {
+		rnd := rand.Intn(len(c.seedPeers) - 1)
+		return c.seedPeers[rnd]
+	}
+	return c.seedPeers[0]
 }

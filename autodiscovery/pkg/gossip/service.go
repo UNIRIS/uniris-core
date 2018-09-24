@@ -2,84 +2,94 @@ package gossip
 
 import (
 	"encoding/hex"
+	"errors"
 	"time"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 )
 
+//Notifier is the interface that provide methods to notify gossip discoveries
+type Notifier interface {
+	Notify(discovery.Peer)
+}
+
+//ErrPeerUnreachable is returned when the gossip cycle cannot reach a peer
+var ErrPeerUnreachable = errors.New("Cannot reach the peer %s")
+
 //PeerDiff describes a diff to identify the unknown peers from the initiator or the receiver a SYN request is received
 type PeerDiff struct {
-
 	//UnknownLocally describes the peer the SYN request receiver does not know
 	UnknownLocally []discovery.Peer
-
 	//UnknownRemotly describes the peer the SYN request initiator does not know
 	UnknownRemotly []discovery.Peer
 }
 
 //Service is the interface that provide gossip methods
 type Service interface {
-	Gossip(discovery.Peer) error
-	ScheduleGossip(discovery.Peer) error
-	DiffPeers([]discovery.Peer) (*PeerDiff, error)
-	NotifyDiscovery(p discovery.Peer)
+	Spread(discovery.Peer) error
+	ComparePeers([]discovery.Peer) (*PeerDiff, error)
 }
 
 type service struct {
-	msg   discovery.GossipCycleMessenger
+	spr   discovery.GossipSpreader
 	repo  discovery.Repository
-	notif discovery.GossipRoundNotifier
+	notif Notifier
 	mon   monitoring.Service
 }
 
-//Run start the gossip with peers
-func (s service) ScheduleGossip(init discovery.Peer) error {
+//Spread creates gossip cycles and spreads the known peers across the network
+func (s service) Spread(init discovery.Peer) error {
+	seeds, err := s.repo.ListSeedPeers()
+	if err != nil {
+		return err
+	}
 	ticker := time.NewTicker(1 * time.Second)
 	for range ticker.C {
-		if err := s.Gossip(init); err != nil {
+		if err := s.runGossip(init, seeds); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-//Gossip initialize the gossip session by running a gossip round
-func (s service) Gossip(i discovery.Peer) error {
-	sp, err := s.repo.ListSeedPeers()
-	if err != nil {
-		return err
-	}
-
+func (s service) runGossip(init discovery.Peer, seeds []discovery.Seed) error {
 	//Refresh own peer before to gossip and send new information
 	if err := s.mon.RefreshOwnedPeer(); err != nil {
 		return err
 	}
-
 	kp, err := s.repo.ListKnownPeers()
 	if err != nil {
 		return err
 	}
 
-	r, err := discovery.NewGossipRound(i, kp, sp, s.msg)
+	c, err := discovery.NewGossipCycle(init, kp, seeds)
 	if err != nil {
 		return err
 	}
-	newPeers, err := r.Run(i, kp)
-	if err != nil {
-		return err
+	for _, p := range c.SelectPeers() {
+		r := c.CreateRound(p)
+		if err := r.Spread(kp, s.spr); err != nil {
+			//We do not throw an error when the peer is unreachable
+			//Gossip must continue
+			if err == ErrPeerUnreachable {
+				return nil
+			}
+			return err
+		}
 	}
-	for _, p := range newPeers {
+
+	for _, p := range c.Discoveries() {
 		if err := s.repo.SetPeer(p); err != nil {
 			return err
 		}
-		s.NotifyDiscovery(p)
+		s.notif.Notify(p)
 	}
 	return nil
 }
 
-//DiffPeers returns the diff between known peers and given list of peer
-func (s service) DiffPeers(given []discovery.Peer) (*PeerDiff, error) {
+//ComparePeers returns the diff between known peers and given list of peer
+func (s service) ComparePeers(given []discovery.Peer) (*PeerDiff, error) {
 	diff := new(PeerDiff)
 
 	kp, err := s.repo.ListKnownPeers()
@@ -106,10 +116,6 @@ func (s service) DiffPeers(given []discovery.Peer) (*PeerDiff, error) {
 	return diff, nil
 }
 
-func (s service) NotifyDiscovery(p discovery.Peer) {
-	s.notif.DisptachNewPeer(p)
-}
-
 func (s service) mapPeers(pp []discovery.Peer) map[string]discovery.Peer {
 	mPeers := make(map[string]discovery.Peer, 0)
 	for _, p := range pp {
@@ -119,10 +125,10 @@ func (s service) mapPeers(pp []discovery.Peer) map[string]discovery.Peer {
 }
 
 //NewService creates a gossiping service its dependencies
-func NewService(repo discovery.Repository, msg discovery.GossipCycleMessenger, notif discovery.GossipRoundNotifier, mon monitoring.Service) Service {
+func NewService(repo discovery.Repository, spr discovery.GossipSpreader, notif Notifier, mon monitoring.Service) Service {
 	return service{
 		repo:  repo,
-		msg:   msg,
+		spr:   spr,
 		notif: notif,
 		mon:   mon,
 	}

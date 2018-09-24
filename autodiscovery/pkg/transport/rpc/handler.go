@@ -23,13 +23,14 @@ type handler struct {
 	apiFormat    PeerAPIFormater
 	gos          gossip.Service
 	mon          monitoring.Service
+	notif        gossip.Notifier
 }
 
 //Synchronize implements the protobuf Synchronize request handler
 func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.SynAck, error) {
 	// FOR DEBUG
 	// init := h.domainFormat.BuildPeerDigest(req.Initiator)
-	// log.Printf("Syn request received from %s", init.GetEndpoint())
+	// log.Printf("Syn request received from %s", init.Endpoint())
 
 	receivedPeers := h.domainFormat.BuildPeerDigestCollection(req.KnownPeers)
 
@@ -39,14 +40,14 @@ func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.Syn
 	}
 
 	//Get the diff between known peers and the received peers
-	diff, err := h.gos.DiffPeers(receivedPeers)
+	diff, err := h.gos.ComparePeers(receivedPeers)
 	if err != nil {
 		return nil, err
 	}
 
 	return &api.SynAck{
-		Initiator:    req.Receiver,
-		Receiver:     req.Initiator,
+		Initiator:    req.Target,
+		Target:       req.Initiator,
 		NewPeers:     h.apiFormat.BuildPeerDetailedCollection(diff.UnknownRemotly),
 		UnknownPeers: h.apiFormat.BuildPeerDigestCollection(diff.UnknownLocally),
 	}, nil
@@ -61,19 +62,20 @@ func (h handler) Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.E
 	//Store the peers requested and notifies them
 	for _, rp := range req.RequestedPeers {
 		p := h.domainFormat.BuildPeerDetailed(rp)
-		h.gos.NotifyDiscovery(p)
+		h.notif.Notify(p)
 		h.repo.SetPeer(p)
 	}
 	return new(empty.Empty), nil
 }
 
 //NewHandler create a new GRPC handler
-func NewHandler(repo discovery.Repository, gos gossip.Service, mon monitoring.Service) Handler {
+func NewHandler(repo discovery.Repository, gos gossip.Service, mon monitoring.Service, notif gossip.Notifier) Handler {
 	return handler{
 		repo:         repo,
 		domainFormat: PeerDomainFormater{},
 		apiFormat:    PeerAPIFormater{},
 		gos:          gos,
 		mon:          mon,
+		notif:        notif,
 	}
 }

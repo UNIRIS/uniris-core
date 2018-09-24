@@ -36,7 +36,7 @@ Scenario: Gets the peer's endpoint
 */
 func TestEndpoint(t *testing.T) {
 	p := NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{Lat: 50.0, Lon: 3.0}, 1)
-	assert.Equal(t, "127.0.0.1:3000", p.GetEndpoint())
+	assert.Equal(t, "127.0.0.1:3000", p.Endpoint())
 }
 
 /*
@@ -48,7 +48,7 @@ Scenario: Gets the peer's elasped hearbeats
 func TestElapsedHeartbeats(t *testing.T) {
 	p := NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{Lat: 50.0, Lon: 3.0}, 1)
 	time.Sleep(2 * time.Second)
-	assert.Equal(t, int64(2), p.GetElapsedHeartbeats())
+	assert.Equal(t, int64(2), p.ElapsedHeartbeats())
 }
 
 /*
