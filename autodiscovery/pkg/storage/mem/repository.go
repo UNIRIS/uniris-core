@@ -2,6 +2,7 @@ package mem
 
 import (
 	"encoding/hex"
+	"net"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 )
@@ -56,6 +57,16 @@ func (r *Repository) UpdatePeer(peer discovery.Peer) error {
 		}
 	}
 	return nil
+}
+
+//GetPeerByIP get a peer from the repository using its ip
+func (r *Repository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
+	for i := 0; i < len(r.peers); i++ {
+		if string(ip) == string(r.peers[i].IP()) {
+			return r.peers[i], nil
+		}
+	}
+	return
 }
 
 func (r *Repository) containsPeer(p discovery.Peer) bool {

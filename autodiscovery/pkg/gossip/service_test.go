@@ -289,6 +289,15 @@ func (r *mockPeerRepository) UpdatePeer(peer discovery.Peer) error {
 	return nil
 }
 
+func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
+	for i := 0; i < len(r.peers); i++ {
+		if string(ip) == string(r.peers[i].IP()) {
+			return r.peers[i], nil
+		}
+	}
+	return
+}
+
 func (r *mockPeerRepository) containsPeer(p discovery.Peer) bool {
 	mPeers := make(map[string]discovery.Peer, 0)
 	for _, p := range r.peers {

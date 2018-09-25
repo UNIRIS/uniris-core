@@ -14,6 +14,7 @@ type Repository interface {
 	AddPeer(Peer) error
 	AddSeed(Seed) error
 	UpdatePeer(Peer) error
+	GetPeerByIP(ip net.IP) (Peer, error)
 }
 
 //Seed is initial peer need to startup the discovery process

@@ -20,18 +20,6 @@ type Watcher interface {
 	IOWaitRate() (float64, error)
 }
 
-//PeerWatcher define the interface to retrieve the different state of the process running on a peer
-type PeerWatcher interface {
-	CheckProcessStates() (bool, error)
-	CheckInternetState() (bool, error)
-	CheckNtpState() (bool, error)
-}
-
-//SeedDiscoverdNodeWatcher define the interface to check the number of discovered node by a seed
-type SeedDiscoverdNodeWatcher interface {
-	GetSeedDiscoveredNode() (int, error)
-}
-
 //Service defines the interface for the peer inpsection
 type Service interface {
 	RefreshPeer(discovery.Peer) error

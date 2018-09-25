@@ -19,6 +19,13 @@ const (
 	downmaxoffset = -300
 )
 
+//PeerWatcher define the interface to retrieve the different state of the process running on a peer
+type PeerWatcher interface {
+	CheckProcessStates() (bool, error)
+	CheckInternetState() (bool, error)
+	CheckNtpState() (bool, error)
+}
+
 type peerWatcher struct {
 	rep discovery.Repository
 }
@@ -80,6 +87,11 @@ func (Pwatcher *peerWatcher) CheckNtpState() (bool, error) {
 	return true, nil
 }
 
+//SeedDiscoverdNodeWatcher define the interface to check the number of discovered node by a seed
+type SeedDiscoverdNodeWatcher interface {
+	GetSeedDiscoveredNode() (int, error)
+}
+
 type seedDiscoverdNodeWatcher struct {
 	rep discovery.Repository
 }
@@ -90,17 +102,12 @@ func (SdnWatcher *seedDiscoverdNodeWatcher) GetSeedDiscoveredNode() (int, error)
 	if err != nil {
 		return 0, err
 	}
-	listpeer, err := SdnWatcher.rep.ListKnownPeers()
-	if err != nil {
-		return 0, err
-	}
 	avg := 0
 	for i := 0; i < len(listseed); i++ {
 		ipseed := listseed[i].IP
-		for j := 0; j < len(listpeer); j++ {
-			if string(ipseed) == string(listpeer[j].IP()) {
-				avg += listpeer[j].DiscoveredNodes()
-			}
+		p, err := SdnWatcher.rep.GetPeerByIP(ipseed)
+		if err == nil {
+			avg += p.DiscoveredNodes()
 		}
 	}
 	avg = avg / len(listseed)

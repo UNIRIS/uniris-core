@@ -95,6 +95,15 @@ func (r *mockPeerRepository) ListSeedPeers() ([]discovery.Seed, error) {
 	return r.seeds, nil
 }
 
+func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
+	for i := 0; i < len(r.peers); i++ {
+		if string(ip) == string(r.peers[i].IP()) {
+			return r.peers[i], nil
+		}
+	}
+	return
+}
+
 func (r *mockPeerRepository) UpdatePeer(peer discovery.Peer) error {
 	for _, p := range r.peers {
 		if string(p.PublicKey()) == string(peer.PublicKey()) {
