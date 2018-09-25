@@ -50,7 +50,7 @@ type PeerState struct {
 	version         string
 	geoPosition     PeerPosition
 	p2pFactor       int
-	discoveredNodes int
+	discoveredPeers int
 }
 
 //PeerStatus defines a peer health analysis
@@ -71,7 +71,7 @@ const (
 )
 
 //BootStrapingMinTime is the necessary minimum time on seconds to finish learning about the network
-const BootStrapingMinTime = 5
+const BootStrapingMinTime = 1800
 
 //PeerPosition wraps the geo coordinates of a peer
 type PeerPosition struct {
@@ -112,18 +112,18 @@ func (p Peer) GeoPosition() *PeerPosition {
 	return &p.state.geoPosition
 }
 
-//DiscoveredNodes returns the discovered nodes on the peer
-func (p Peer) DiscoveredNodes() int {
+//DiscoveredPeers returns the discovered nodes on the peer
+func (p Peer) DiscoveredPeers() int {
 	if p.state == nil {
 		return 0
 	}
-	return p.state.discoveredNodes
+	return p.state.discoveredPeers
 }
 
 //P2PFactor returns the peer's replication factor
 func (p Peer) P2PFactor() int {
 	if p.state == nil {
-		return 1
+		return 0
 	}
 	return p.state.p2pFactor
 }
@@ -184,7 +184,7 @@ func (p Peer) GetEndpoint() string {
 }
 
 //Refresh the peer state
-func (p *Peer) Refresh(status PeerStatus, disk float64, cpu string, io float64) {
+func (p *Peer) Refresh(status PeerStatus, disk float64, cpu string, io float64, dp int) {
 	if p.state == nil {
 		p.state = &PeerState{}
 	}
@@ -192,6 +192,7 @@ func (p *Peer) Refresh(status PeerStatus, disk float64, cpu string, io float64) 
 	p.state.status = status
 	p.state.freeDiskSpace = disk
 	p.state.ioWaitRate = io
+	p.state.discoveredPeers = dp
 }
 
 //NewStartupPeer creates a new peer started on the peer's machine (aka owned peer)
@@ -233,14 +234,15 @@ func NewPeerDetailed(pbKey []byte, ip net.IP, port int, genTime time.Time, state
 }
 
 //NewState creates a new peer's state
-func NewState(ver string, stat PeerStatus, geo PeerPosition, cpu string, disk float64, io float64, p2pfactor int) *PeerState {
+func NewState(ver string, stat PeerStatus, geo PeerPosition, cpu string, disk float64, io float64, p2pfactor int, discoveredPeers int) *PeerState {
 	return &PeerState{
-		version:       ver,
-		status:        stat,
-		geoPosition:   geo,
-		cpuLoad:       cpu,
-		freeDiskSpace: disk,
-		ioWaitRate:    io,
-		p2pFactor:     p2pfactor,
+		version:         ver,
+		status:          stat,
+		geoPosition:     geo,
+		cpuLoad:         cpu,
+		freeDiskSpace:   disk,
+		ioWaitRate:      io,
+		p2pFactor:       p2pfactor,
+		discoveredPeers: discoveredPeers,
 	}
 }

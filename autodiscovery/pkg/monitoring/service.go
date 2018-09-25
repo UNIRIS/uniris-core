@@ -18,6 +18,9 @@ type Watcher interface {
 
 	//IOWaitRate computes the rate of the I/O operations of the peer
 	IOWaitRate() (float64, error)
+
+	//DiscoveredPeer computes the number of discovered Peers
+	DiscoveredPeer() (int, error)
 }
 
 //Service defines the interface for the peer inpsection
@@ -52,7 +55,12 @@ func (s service) RefreshPeer(p discovery.Peer) error {
 		return err
 	}
 
-	p.Refresh(status, disk, cpu, io)
+	dp, err := s.w.DiscoveredPeer()
+	if err != nil {
+		return err
+	}
+
+	p.Refresh(status, disk, cpu, io, dp)
 	if err := s.repo.UpdatePeer(p); err != nil {
 		return err
 	}

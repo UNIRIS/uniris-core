@@ -28,6 +28,7 @@ func TestRefresh(t *testing.T) {
 	assert.Equal(t, discovery.OkStatus, p1.Status())
 	assert.Equal(t, float64(212383852), p1.FreeDiskSpace())
 	assert.Equal(t, 0.0, p1.IOWaitRate())
+	assert.Equal(t, 5, p1.DiscoveredPeers())
 }
 
 type mockPeerRepository struct {
@@ -110,4 +111,8 @@ func (w mockWatcher) FreeDiskSpace() (float64, error) {
 
 func (w mockWatcher) IOWaitRate() (float64, error) {
 	return 0.0, nil
+}
+
+func (w mockWatcher) DiscoveredPeer() (int, error) {
+	return 5, nil
 }

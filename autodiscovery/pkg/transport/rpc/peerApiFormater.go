@@ -46,10 +46,11 @@ func (f PeerAPIFormater) BuildPeerDetailed(peer discovery.Peer) *api.PeerDetaile
 				Lat: float32(peer.GeoPosition().Lat),
 				Lon: float32(peer.GeoPosition().Lon),
 			},
-			IOWaitRate: float32(peer.IOWaitRate()),
-			P2PFactor:  int32(peer.P2PFactor()),
-			Version:    peer.Version(),
-			Status:     api.PeerDetailed_PeerState_PeerStatus(peer.Status()),
+			IOWaitRate:      float32(peer.IOWaitRate()),
+			P2PFactor:       int32(peer.P2PFactor()),
+			DiscoveredPeers: int32(peer.DiscoveredPeers()),
+			Version:         peer.Version(),
+			Status:          api.PeerDetailed_PeerState_PeerStatus(peer.Status()),
 		}
 	}
 	return p

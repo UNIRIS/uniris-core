@@ -45,6 +45,7 @@ func (f PeerDomainFormater) BuildPeerDetailed(peer *api.PeerDetailed) discovery.
 			float64(peer.State.FreeDiskSpace),
 			float64(peer.State.IOWaitRate),
 			int(peer.State.P2PFactor),
+			int(peer.State.DiscoveredPeers),
 		)
 	}
 

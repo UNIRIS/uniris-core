@@ -87,17 +87,17 @@ func (Pwatcher *peerWatcher) CheckNtpState() (bool, error) {
 	return true, nil
 }
 
-//SeedDiscoverdNodeWatcher define the interface to check the number of discovered node by a seed
-type SeedDiscoverdNodeWatcher interface {
-	GetSeedDiscoveredNode() (int, error)
+//SeedDiscoverdPeerWatcher define the interface to check the number of discovered node by a seed
+type SeedDiscoverdPeerWatcher interface {
+	GetSeedDiscoveredPeer() (int, error)
 }
 
-type seedDiscoverdNodeWatcher struct {
+type seedDiscoverdPeerWatcher struct {
 	rep discovery.Repository
 }
 
-//GetSeedDiscoveredNode report the average of node detected by the differents known seeds
-func (SdnWatcher *seedDiscoverdNodeWatcher) GetSeedDiscoveredNode() (int, error) {
+//GetSeedDiscoveredPeer report the average of node detected by the differents known seeds
+func (SdnWatcher *seedDiscoverdPeerWatcher) GetSeedDiscoveredPeer() (int, error) {
 	listseed, err := SdnWatcher.rep.ListSeedPeers()
 	if err != nil {
 		return 0, err
@@ -107,7 +107,7 @@ func (SdnWatcher *seedDiscoverdNodeWatcher) GetSeedDiscoveredNode() (int, error)
 		ipseed := listseed[i].IP
 		p, err := SdnWatcher.rep.GetPeerByIP(ipseed)
 		if err == nil {
-			avg += p.DiscoveredNodes()
+			avg += p.DiscoveredPeers()
 		}
 	}
 	avg = avg / len(listseed)
@@ -116,7 +116,7 @@ func (SdnWatcher *seedDiscoverdNodeWatcher) GetSeedDiscoveredNode() (int, error)
 
 type watcher struct {
 	Pwatcher   peerWatcher
-	SdnWatcher seedDiscoverdNodeWatcher
+	SdnWatcher seedDiscoverdPeerWatcher
 	rep        discovery.Repository
 }
 
@@ -152,7 +152,7 @@ func (w watcher) Status() (discovery.PeerStatus, error) {
 		return discovery.StorageOnlyStatus, nil
 	}
 
-	seedDn, err := w.SdnWatcher.GetSeedDiscoveredNode()
+	seedDn, err := w.SdnWatcher.GetSeedDiscoveredPeer()
 	if err != nil {
 		return discovery.FaultStatus, err
 	}
@@ -160,12 +160,10 @@ func (w watcher) Status() (discovery.PeerStatus, error) {
 		return discovery.BootstrapingStatus, nil
 	}
 
-	if t := selfpeer.GetElapsedHeartbeats(); t < discovery.BootStrapingMinTime && seedDn > selfpeer.DiscoveredNodes() {
+	if t := selfpeer.GetElapsedHeartbeats(); t < discovery.BootStrapingMinTime && seedDn > selfpeer.DiscoveredPeers() {
 		return discovery.BootstrapingStatus, nil
-	} else if t < discovery.BootStrapingMinTime && seedDn <= selfpeer.DiscoveredNodes() {
+	} else if t < discovery.BootStrapingMinTime && seedDn <= selfpeer.DiscoveredPeers() {
 		return discovery.OkStatus, nil
-	} else if t > discovery.BootStrapingMinTime && seedDn > selfpeer.DiscoveredNodes() {
-		return discovery.BootstrapingStatus, nil
 	} else {
 		return discovery.OkStatus, nil
 	}
@@ -195,6 +193,15 @@ func (w watcher) FreeDiskSpace() (float64, error) {
 //IOWaitRate computes the rate of the I/O operations of the peer
 func (w watcher) IOWaitRate() (float64, error) {
 	return 0.0, nil
+}
+
+//DiscoverdPeer computes the number of peer discovered by the local peer
+func (w watcher) DiscoveredPeer() (int, error) {
+	l, err := w.rep.ListKnownPeers()
+	if err != nil {
+		return 0, err
+	}
+	return len(l), nil
 }
 
 //NewSystemWatcher creates an instance which implements monitoring.Watcher
