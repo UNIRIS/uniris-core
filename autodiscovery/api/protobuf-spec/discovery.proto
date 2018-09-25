@@ -18,52 +18,56 @@ message SynRequest {
 message AckRequest {
     PeerDigest Initiator = 1;
     PeerDigest Receiver = 2;
-    repeated PeerDetailed RequestedPeers = 3;
+    repeated PeerDiscovered RequestedPeers = 3;
 }
 
 message SynAck {
     PeerDigest Initiator = 1;
     PeerDigest Receiver = 2;
-    repeated PeerDetailed NewPeers = 3;
+    repeated PeerDiscovered NewPeers = 3;
     repeated PeerDigest UnknownPeers = 4;
 }
 
 message PeerDigest {
+    PeerIdentity Identity = 1;
+    PeerHeartbeatState HeartbeatState = 2;
+}
+
+message PeerDiscovered {
+    PeerIdentity Identity = 1;
+    PeerHeartbeatState HeartbeatState = 2;
+    PeerAppState AppState = 3; 
+}
+
+message PeerIdentity {
     bytes PublicKey = 1;
     string IP = 2;
     int32 Port = 3;
 }
 
-message PeerDetailed {
-    bytes PublicKey = 1;
-    string IP = 2;
-    int32 Port = 3;
-    int64 GenerationTime = 4;
-    PeerState State = 5; 
-
-   message PeerState {
-        PeerStatus Status = 1;
-        string CPULoad = 2;
-        float IOWaitRate = 3;
-        float FreeDiskSpace = 4;
-        string Version = 5;
-        GeoCoordinates GeoPosition = 6;
-        int32 P2PFactor = 7;
-
-        message GeoCoordinates {
-                float Lat = 1;
-                float Lon = 2;
-        };
-
-        enum PeerStatus {
-            Fault = 0;
-            Bootstraping = 1;
-            Ok = 2;
-            StorageOnly = 3;
-        };
-    }
+message PeerHeartbeatState {
+    int64 GenerationTime  = 1;
+    int64 ElapsedHeartbeats = 2;
 }
 
+message PeerAppState {
+        
+    PeerStatus Status = 4;
+    string CPULoad = 5;
+    float FreeDiskSpace = 6;
+    string Version = 7;
+    GeoCoordinates GeoPosition = 8;
+    int32 P2PFactor = 9;
 
+    message GeoCoordinates {
+        float Lat = 1;
+        float Lon = 2;
+    };
 
-
+    enum PeerStatus {
+        Bootstraping = 0;
+        Ok = 1;
+        Faulty = 2;
+        StorageOnly = 3;
+    };
+}

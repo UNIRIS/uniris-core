@@ -20,7 +20,7 @@ type PeerNetworker interface {
 
 //Service is the interface that provide methods for the peer's bootstraping
 type Service interface {
-	Startup(pbKey []byte, port int, p2pFactor int, ver string) (discovery.Peer, error)
+	Startup(pbKey []byte, port int, ver string) (discovery.Peer, error)
 	LoadSeeds(seeds []discovery.Seed) error
 }
 
@@ -31,7 +31,7 @@ type service struct {
 }
 
 //Startup creates a new peer initiator, locates and stores it
-func (s service) Startup(pbKey []byte, port int, p2pFactor int, ver string) (p discovery.Peer, err error) {
+func (s service) Startup(pbKey []byte, port int, ver string) (p discovery.Peer, err error) {
 	pos, err := s.pp.Position()
 	if err != nil {
 		return
@@ -42,7 +42,7 @@ func (s service) Startup(pbKey []byte, port int, p2pFactor int, ver string) (p d
 		return
 	}
 
-	p = discovery.NewStartupPeer(pbKey, ip, port, ver, pos, p2pFactor)
+	p = discovery.NewStartupPeer(pbKey, ip, port, ver, pos)
 	if err = s.repo.AddPeer(p); err != nil {
 		return
 	}

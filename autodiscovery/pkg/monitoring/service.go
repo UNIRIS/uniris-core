@@ -16,8 +16,8 @@ type Watcher interface {
 	//FreeDiskSpace retrieves the available free disk space of the peer
 	FreeDiskSpace() (float64, error)
 
-	//IOWaitRate computes the rate of the I/O operations of the peer
-	IOWaitRate() (float64, error)
+	//P2PFactor retrieves the replication factor from the AI service
+	P2PFactor() (int32, error)
 }
 
 //Service defines the interface for the peer inpsection
@@ -47,12 +47,14 @@ func (s service) RefreshPeer(p discovery.Peer) error {
 		return err
 	}
 
-	io, err := s.w.IOWaitRate()
+	p2pFactor, err := s.w.P2PFactor()
 	if err != nil {
 		return err
 	}
 
-	p.Refresh(status, disk, cpu, io)
+	if err := p.Refresh(status, disk, cpu, p2pFactor); err != nil {
+		return err
+	}
 	if err := s.repo.UpdatePeer(p); err != nil {
 		return err
 	}

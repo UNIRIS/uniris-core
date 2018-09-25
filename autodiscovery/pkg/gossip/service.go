@@ -60,7 +60,7 @@ func (s service) DiffPeers(given []discovery.Peer) (*PeerDiff, error) {
 	//Get the peers that the SYN initiator request does not known
 	gpMap := s.mapPeers(given)
 	for _, p := range kp {
-		if _, exist := gpMap[hex.EncodeToString(p.PublicKey())]; exist == false {
+		if _, exist := gpMap[hex.EncodeToString(p.Identity().PublicKey())]; exist == false {
 			diff.UnknownRemotly = append(diff.UnknownRemotly, p)
 		}
 	}
@@ -68,7 +68,7 @@ func (s service) DiffPeers(given []discovery.Peer) (*PeerDiff, error) {
 	//Gets the peers unknown locally
 	knMap := s.mapPeers(kp)
 	for _, p := range given {
-		if _, exist := knMap[hex.EncodeToString(p.PublicKey())]; exist == false {
+		if _, exist := knMap[hex.EncodeToString(p.Identity().PublicKey())]; exist == false {
 			diff.UnknownLocally = append(diff.UnknownLocally, p)
 		}
 	}
@@ -132,7 +132,7 @@ func (s service) RunCycle(init discovery.Peer, recpt discovery.Peer, kp []discov
 		reqPeers := make([]discovery.Peer, 0)
 		mapPeers := s.mapPeers(kp)
 		for _, p := range synAck.UnknownPeers {
-			if k, exist := mapPeers[hex.EncodeToString(p.PublicKey())]; exist {
+			if k, exist := mapPeers[hex.EncodeToString(p.Identity().PublicKey())]; exist {
 				reqPeers = append(reqPeers, k)
 			}
 		}
@@ -148,7 +148,7 @@ func (s service) RunCycle(init discovery.Peer, recpt discovery.Peer, kp []discov
 func (s service) mapPeers(pp []discovery.Peer) map[string]discovery.Peer {
 	mPeers := make(map[string]discovery.Peer, 0)
 	for _, p := range pp {
-		mPeers[hex.EncodeToString(p.PublicKey())] = p
+		mPeers[hex.EncodeToString(p.Identity().PublicKey())] = p
 	}
 	return mPeers
 }

@@ -23,21 +23,21 @@ func (r GossipRound) SelectPeers() ([]Peer, error) {
 	peers := make([]Peer, 0)
 
 	//We pick a random seed peer
-	s := r.randomSeed().ToPeer()
+	s := r.randomSeed().AsPeer()
 
 	//Exclude ourself if we are of inside our list seed (impossible in reality, useful for testing)
 	owned := r.getOwnedPeer()
 	if owned == nil {
 		return nil, ErrNoOwnedPeer
 	}
-	if s.GetEndpoint() != owned.GetEndpoint() {
+	if s.Endpoint() != owned.Endpoint() {
 		peers = append(peers, s)
 	}
 
 	//Filter ourself (we don't want gossip with ourself)
 	filtered := make([]Peer, 0)
 	for _, p := range r.knownPeers {
-		if !p.IsOwned() {
+		if !p.Owned() {
 			filtered = append(filtered, p)
 		}
 	}
@@ -50,10 +50,10 @@ func (r GossipRound) SelectPeers() ([]Peer, error) {
 	return peers, nil
 }
 
-func (r GossipRound) getOwnedPeer() *Peer {
+func (r GossipRound) getOwnedPeer() Peer {
 	for _, p := range r.knownPeers {
-		if p.IsOwned() {
-			return &p
+		if p.Owned() {
+			return p
 		}
 	}
 	return nil

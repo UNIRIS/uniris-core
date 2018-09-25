@@ -17,10 +17,8 @@ type Handler interface {
 }
 
 type handler struct {
-	repo         discovery.Repository
-	domainFormat PeerDomainFormater
-	apiFormat    PeerAPIFormater
-	notif        gossip.Notifier
+	repo  discovery.Repository
+	notif gossip.Notifier
 }
 
 //Synchronize implements the protobuf Synchronize request handler
@@ -29,19 +27,34 @@ func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.Syn
 	// init := h.domainFormat.BuildPeerDigest(req.Initiator)
 	// log.Printf("Syn request received from %s", init.GetEndpoint())
 
-	receivedPeers := h.domainFormat.BuildPeerDigestCollection(req.KnownPeers)
+	builder := PeerBuilder{}
+
+	pp := make([]discovery.Peer, 0)
+	for _, p := range req.KnownPeers {
+		pp = append(pp, builder.FromPeerDigest(p))
+	}
 
 	g := gossip.NewService(h.repo, nil, nil, nil)
-	diff, err := g.DiffPeers(receivedPeers)
+	diff, err := g.DiffPeers(pp)
 	if err != nil {
 		return nil, err
+	}
+
+	newP := make([]*api.PeerDiscovered, 0)
+	unknown := make([]*api.PeerDigest, 0)
+
+	for _, p := range diff.UnknownLocally {
+		newP = append(newP, builder.ToPeerDiscovered(p))
+	}
+	for _, p := range diff.UnknownRemotly {
+		unknown = append(unknown, builder.ToPeerDigest(p))
 	}
 
 	return &api.SynAck{
 		Initiator:    req.Receiver,
 		Receiver:     req.Initiator,
-		NewPeers:     h.apiFormat.BuildPeerDetailedCollection(diff.UnknownRemotly),
-		UnknownPeers: h.apiFormat.BuildPeerDigestCollection(diff.UnknownLocally),
+		NewPeers:     newP,
+		UnknownPeers: unknown,
 	}, nil
 }
 
@@ -51,9 +64,11 @@ func (h handler) Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.E
 	// init := h.domainFormat.BuildPeerDigest(req.Initiator)
 	// log.Printf("Ack request received from %s", init.GetEndpoint())
 
+	builder := PeerBuilder{}
+
 	//Store the peers requested
 	for _, rp := range req.RequestedPeers {
-		p := h.domainFormat.BuildPeerDetailed(rp)
+		p := builder.FromPeerDiscovered(rp)
 		h.notif.Notify(p)
 		h.repo.AddPeer(p)
 	}
@@ -63,9 +78,7 @@ func (h handler) Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.E
 //NewHandler create a new GRPC handler
 func NewHandler(repo discovery.Repository, notif gossip.Notifier) Handler {
 	return handler{
-		repo:         repo,
-		notif:        notif,
-		domainFormat: PeerDomainFormater{},
-		apiFormat:    PeerAPIFormater{},
+		repo:  repo,
+		notif: notif,
 	}
 }
