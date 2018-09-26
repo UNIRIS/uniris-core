@@ -48,7 +48,7 @@ message PeerDetailed {
         string Version = 4;
         GeoCoordinates GeoPosition = 5;
         int32 P2PFactor = 6;
-        int32 DiscoveredPeers = 7;
+        int32 DiscoveredPeersNumber = 7;
 
         message GeoCoordinates {
                 float Lat = 1;

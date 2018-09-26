@@ -43,13 +43,13 @@ type Peer struct {
 
 //PeerState describes the state of peer and its metrics
 type PeerState struct {
-	status          PeerStatus
-	cpuLoad         string
-	freeDiskSpace   float64
-	version         string
-	geoPosition     PeerPosition
-	p2pFactor       int
-	discoveredPeers int
+	status                PeerStatus
+	cpuLoad               string
+	freeDiskSpace         float64
+	version               string
+	geoPosition           PeerPosition
+	p2pFactor             int
+	discoveredPeersNumber int
 }
 
 //PeerStatus defines a peer health analysis
@@ -111,12 +111,12 @@ func (p Peer) GeoPosition() *PeerPosition {
 	return &p.state.geoPosition
 }
 
-//DiscoveredPeers returns the discovered nodes on the peer
-func (p Peer) DiscoveredPeers() int {
+//DiscoveredPeersNumber returns the number of discovered nodes by the peer
+func (p Peer) DiscoveredPeersNumber() int {
 	if p.state == nil {
 		return 0
 	}
-	return p.state.discoveredPeers
+	return p.state.discoveredPeersNumber
 }
 
 //P2PFactor returns the peer's replication factor
@@ -182,7 +182,7 @@ func (p *Peer) Refresh(status PeerStatus, disk float64, cpu string, dp int, p2p 
 	p.state.cpuLoad = cpu
 	p.state.status = status
 	p.state.freeDiskSpace = disk
-	p.state.discoveredPeers = dp
+	p.state.discoveredPeersNumber = dp
 	p.state.p2pFactor = p2p
 }
 
@@ -225,14 +225,14 @@ func NewPeerDetailed(pbKey []byte, ip net.IP, port int, genTime time.Time, state
 }
 
 //NewState creates a new peer's state
-func NewState(ver string, stat PeerStatus, geo PeerPosition, cpu string, disk float64, p2pfactor int, discoveredPeers int) *PeerState {
+func NewState(ver string, stat PeerStatus, geo PeerPosition, cpu string, disk float64, p2pfactor int, dpn int) *PeerState {
 	return &PeerState{
-		version:         ver,
-		status:          stat,
-		geoPosition:     geo,
-		cpuLoad:         cpu,
-		freeDiskSpace:   disk,
-		p2pFactor:       p2pfactor,
-		discoveredPeers: discoveredPeers,
+		version:               ver,
+		status:                stat,
+		geoPosition:           geo,
+		cpuLoad:               cpu,
+		freeDiskSpace:         disk,
+		p2pFactor:             p2pfactor,
+		discoveredPeersNumber: dpn,
 	}
 }

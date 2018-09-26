@@ -64,7 +64,7 @@ func TestRefreshPeer(t *testing.T) {
 	assert.True(t, p.IsOk())
 	assert.Equal(t, 600.10, p.FreeDiskSpace())
 	assert.Equal(t, "300.200.100", p.CPULoad())
-	assert.Equal(t, 5, p.DiscoveredPeers())
+	assert.Equal(t, 5, p.DiscoveredPeersNumber())
 	assert.Equal(t, 1, p.P2PFactor())
 
 }

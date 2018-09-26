@@ -2,6 +2,7 @@ package system
 
 import (
 	"encoding/hex"
+	"errors"
 	"net"
 	"testing"
 	"time"
@@ -13,7 +14,7 @@ import (
 
 /*
 Scenario: check GetSeedDiscoveredPeer
-	Given a repo with 3 seed, seed1 discoveredPeers = 5,seed2 discoveredPeers = 6, seed3 discoveredPeers = 7
+	Given a repo with 3 seed, seed1 discoveredPeersNumber = 5,seed2 discoveredPeersNumber = 6, seed3 discoveredPeersNumber = 7
 	When GetSeedDiscoveredPeer call
 	Then SeedDiscoveredPeer value is 6
 */
@@ -38,7 +39,7 @@ func TestGetSeedDiscoveredPeer(t *testing.T) {
 	repo.AddPeer(p2)
 	repo.AddPeer(p3)
 	assert.Equal(t, 3, len(repo.peers))
-	sdn, _ := sdnw.GetSeedDiscoveredPeer(repo)
+	sdn, _ := sdnw.CountSeedDiscoveredPeer(repo)
 	assert.Equal(t, 6, sdn)
 
 }
@@ -74,7 +75,7 @@ func TestDiscoveredPeer(t *testing.T) {
 	repo.AddPeer(p4)
 	assert.Equal(t, 5, len(repo.peers))
 	sw := NewSystemWatcher(repo)
-	dn, err := sw.DiscoveredPeer(repo)
+	dn, err := sw.CountDiscoveredPeer()
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 5, dn)
 
@@ -82,7 +83,7 @@ func TestDiscoveredPeer(t *testing.T) {
 
 /*
 Scenario: check state1
-	Given a peer with 3 seed (discoveredPeers=5 for all seed) / 5 peers on the repo
+	Given a peer with 3 seed (discoveredPeersNumber=5 for all seed) / 5 peers on the repo
 	When DiscoveredPeer=5 and elapsedheartbeats < Bootstrapingmintime
 	Then state is OkStatus
 */
@@ -119,14 +120,14 @@ func TestState1(t *testing.T) {
 	assert.Equal(t, 5, len(repo.peers))
 	selfpeer, err := repo.GetOwnedPeer()
 	selfpeer.Refresh(discovery.BootstrapingStatus, 0.0, "0.0.0", 5, 0)
-	s, err := w.Status(selfpeer, repo)
+	s, err := w.Status(selfpeer)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, discovery.OkStatus, s)
 }
 
 /*
 Scenario: check state2
-	Given a peer with 3 seed (discoveredPeers=5 for all seeds) / 5 peers on the repo / ntp offset is not fine
+	Given a peer with 3 seed (discoveredPeersNumber=5 for all seeds) / 5 peers on the repo / ntp offset is not fine
 	When check state
 	Then state is StorageOnlystate
 */
@@ -161,16 +162,15 @@ func TestState2(t *testing.T) {
 	p4 := discovery.NewPeerDetailed([]byte("key4"), net.ParseIP("185.123.4.9"), 4000, time.Now(), st1)
 	repo.AddPeer(p4)
 	assert.Equal(t, 5, len(repo.peers))
-	selfpeer, err := repo.GetOwnedPeer()
+	selfpeer, _ := repo.GetOwnedPeer()
 	selfpeer.Refresh(discovery.BootstrapingStatus, 0.0, "0.0.0", 5, 0)
-	s, err := w.Status(selfpeer, repo)
-	assert.Equal(t, nil, err)
+	s, _ := w.Status(selfpeer)
 	assert.Equal(t, discovery.StorageOnlyStatus, s)
 }
 
 /*
 Scenario: check state3
-	Given a peer with 3 seed (discoveredPEers=5 for all seeds) / 5 peers on the repo / processstate is KO
+	Given a peer with 3 seed (discoveredPeersNumber=5 for all seeds) / 5 peers on the repo / processstate is KO
 	When check state
 	Then state is FaultyState
 */
@@ -205,10 +205,9 @@ func TestState3(t *testing.T) {
 	p4 := discovery.NewPeerDetailed([]byte("key4"), net.ParseIP("185.123.4.9"), 4000, time.Now(), st1)
 	repo.AddPeer(p4)
 	assert.Equal(t, 5, len(repo.peers))
-	selfpeer, err := repo.GetOwnedPeer()
+	selfpeer, _ := repo.GetOwnedPeer()
 	selfpeer.Refresh(discovery.BootstrapingStatus, 0.0, "0.0.0", 5, 0)
-	s, err := w.Status(selfpeer, repo)
-	assert.Equal(t, nil, err)
+	s, _ := w.Status(selfpeer)
 	assert.Equal(t, discovery.FaultStatus, s)
 }
 
@@ -279,53 +278,53 @@ func (r *mockPeerRepository) containsPeer(peer discovery.Peer) bool {
 type mockpeerWatcher struct {
 }
 
-func (pw mockpeerWatcher) CheckProcessStates(peer discovery.Peer) (bool, error) {
-	return true, nil
+func (pw mockpeerWatcher) CheckProcessStates(peer discovery.Peer) error {
+	return nil
 }
 
-func (pw mockpeerWatcher) CheckInternetState() (bool, error) {
-	return true, nil
+func (pw mockpeerWatcher) CheckInternetState() error {
+	return nil
 }
 
-func (pw mockpeerWatcher) CheckNtpState() (bool, error) {
-	return true, nil
+func (pw mockpeerWatcher) CheckNtpState() error {
+	return nil
 }
 
 type mockpeerWatcher2 struct {
 }
 
-func (pw mockpeerWatcher2) CheckProcessStates(peer discovery.Peer) (bool, error) {
-	return true, nil
+func (pw mockpeerWatcher2) CheckProcessStates(peer discovery.Peer) error {
+	return nil
 }
 
-func (pw mockpeerWatcher2) CheckInternetState() (bool, error) {
-	return true, nil
+func (pw mockpeerWatcher2) CheckInternetState() error {
+	return nil
 }
 
-func (pw mockpeerWatcher2) CheckNtpState() (bool, error) {
-	return false, nil
+func (pw mockpeerWatcher2) CheckNtpState() error {
+	return errors.New("System Clock have a big Offset check the ntp configuration of the system")
 }
 
 type mockpeerWatcher3 struct {
 	rep discovery.Repository
 }
 
-func (pw mockpeerWatcher3) CheckProcessStates(peer discovery.Peer) (bool, error) {
-	return false, nil
+func (pw mockpeerWatcher3) CheckProcessStates(peer discovery.Peer) error {
+	return errors.New("required processes are not running")
 }
 
-func (pw mockpeerWatcher3) CheckInternetState() (bool, error) {
-	return true, nil
+func (pw mockpeerWatcher3) CheckInternetState() error {
+	return nil
 }
 
-func (pw mockpeerWatcher3) CheckNtpState() (bool, error) {
-	return true, nil
+func (pw mockpeerWatcher3) CheckNtpState() error {
+	return nil
 }
 
 type mockseedDiscoverdPeerWatcher struct {
 }
 
-func (sdnw mockseedDiscoverdPeerWatcher) GetSeedDiscoveredPeer(rep discovery.Repository) (int, error) {
+func (sdnw mockseedDiscoverdPeerWatcher) CountSeedDiscoveredPeer(rep discovery.Repository) (int, error) {
 	listseed, err := rep.ListSeedPeers()
 	if err != nil {
 		return 0, err
@@ -335,7 +334,7 @@ func (sdnw mockseedDiscoverdPeerWatcher) GetSeedDiscoveredPeer(rep discovery.Rep
 		ipseed := listseed[i].IP
 		p, err := rep.GetPeerByIP(ipseed)
 		if err == nil {
-			avg += p.DiscoveredPeers()
+			avg += p.DiscoveredPeersNumber()
 		}
 	}
 	avg = avg / len(listseed)
@@ -348,43 +347,29 @@ type mockwatcher struct {
 	rep        discovery.Repository
 }
 
-func (w mockwatcher) Status(p discovery.Peer, repo discovery.Repository) (discovery.PeerStatus, error) {
-
-	procState, err := w.Pwatcher.CheckProcessStates(p)
+func (w mockwatcher) Status(p discovery.Peer) (discovery.PeerStatus, error) {
+	err := w.Pwatcher.CheckProcessStates(p)
 	if err != nil {
 		return discovery.FaultStatus, err
 	}
-	if !procState {
-		return discovery.FaultStatus, nil
-	}
-
-	internetState, err := w.Pwatcher.CheckInternetState()
+	err = w.Pwatcher.CheckInternetState()
 	if err != nil {
 		return discovery.FaultStatus, err
 	}
-	if !internetState {
-		return discovery.FaultStatus, nil
-	}
-
-	ntpState, err := w.Pwatcher.CheckNtpState()
+	err = w.Pwatcher.CheckNtpState()
 	if err != nil {
-		return discovery.FaultStatus, err
+		return discovery.StorageOnlyStatus, err
 	}
-	if !ntpState {
-		return discovery.StorageOnlyStatus, nil
-	}
-
-	seedDn, err := w.SdnWatcher.GetSeedDiscoveredPeer(repo)
+	seedDn, err := w.SdnWatcher.CountSeedDiscoveredPeer(w.rep)
 	if err != nil {
 		return discovery.FaultStatus, err
 	}
 	if seedDn == 0 {
 		return discovery.BootstrapingStatus, nil
 	}
-
-	if t := p.GetElapsedHeartbeats(); t < discovery.BootStrapingMinTime && seedDn > p.DiscoveredPeers() {
+	if t := p.GetElapsedHeartbeats(); t < discovery.BootStrapingMinTime && seedDn > p.DiscoveredPeersNumber() {
 		return discovery.BootstrapingStatus, nil
-	} else if t < discovery.BootStrapingMinTime && seedDn <= p.DiscoveredPeers() {
+	} else if t < discovery.BootStrapingMinTime && seedDn <= p.DiscoveredPeersNumber() {
 		return discovery.OkStatus, nil
 	} else {
 		return discovery.OkStatus, nil
@@ -397,43 +382,29 @@ type mockwatcher2 struct {
 	rep        discovery.Repository
 }
 
-func (w mockwatcher2) Status(p discovery.Peer, repo discovery.Repository) (discovery.PeerStatus, error) {
-
-	procState, err := w.Pwatcher.CheckProcessStates(p)
+func (w mockwatcher2) Status(p discovery.Peer) (discovery.PeerStatus, error) {
+	err := w.Pwatcher.CheckProcessStates(p)
 	if err != nil {
 		return discovery.FaultStatus, err
 	}
-	if !procState {
-		return discovery.FaultStatus, nil
-	}
-
-	internetState, err := w.Pwatcher.CheckInternetState()
+	err = w.Pwatcher.CheckInternetState()
 	if err != nil {
 		return discovery.FaultStatus, err
 	}
-	if !internetState {
-		return discovery.FaultStatus, nil
-	}
-
-	ntpState, err := w.Pwatcher.CheckNtpState()
+	err = w.Pwatcher.CheckNtpState()
 	if err != nil {
-		return discovery.FaultStatus, err
+		return discovery.StorageOnlyStatus, err
 	}
-	if !ntpState {
-		return discovery.StorageOnlyStatus, nil
-	}
-
-	seedDn, err := w.SdnWatcher.GetSeedDiscoveredPeer(repo)
+	seedDn, err := w.SdnWatcher.CountSeedDiscoveredPeer(w.rep)
 	if err != nil {
 		return discovery.FaultStatus, err
 	}
 	if seedDn == 0 {
 		return discovery.BootstrapingStatus, nil
 	}
-
-	if t := p.GetElapsedHeartbeats(); t < discovery.BootStrapingMinTime && seedDn > p.DiscoveredPeers() {
+	if t := p.GetElapsedHeartbeats(); t < discovery.BootStrapingMinTime && seedDn > p.DiscoveredPeersNumber() {
 		return discovery.BootstrapingStatus, nil
-	} else if t < discovery.BootStrapingMinTime && seedDn <= p.DiscoveredPeers() {
+	} else if t < discovery.BootStrapingMinTime && seedDn <= p.DiscoveredPeersNumber() {
 		return discovery.OkStatus, nil
 	} else {
 		return discovery.OkStatus, nil
@@ -446,43 +417,29 @@ type mockwatcher3 struct {
 	rep        discovery.Repository
 }
 
-func (w mockwatcher3) Status(p discovery.Peer, repo discovery.Repository) (discovery.PeerStatus, error) {
-
-	procState, err := w.Pwatcher.CheckProcessStates(p)
+func (w mockwatcher3) Status(p discovery.Peer) (discovery.PeerStatus, error) {
+	err := w.Pwatcher.CheckProcessStates(p)
 	if err != nil {
 		return discovery.FaultStatus, err
 	}
-	if !procState {
-		return discovery.FaultStatus, nil
-	}
-
-	internetState, err := w.Pwatcher.CheckInternetState()
+	err = w.Pwatcher.CheckInternetState()
 	if err != nil {
 		return discovery.FaultStatus, err
 	}
-	if !internetState {
-		return discovery.FaultStatus, nil
-	}
-
-	ntpState, err := w.Pwatcher.CheckNtpState()
+	err = w.Pwatcher.CheckNtpState()
 	if err != nil {
-		return discovery.FaultStatus, err
+		return discovery.StorageOnlyStatus, err
 	}
-	if !ntpState {
-		return discovery.StorageOnlyStatus, nil
-	}
-
-	seedDn, err := w.SdnWatcher.GetSeedDiscoveredPeer(repo)
+	seedDn, err := w.SdnWatcher.CountSeedDiscoveredPeer(w.rep)
 	if err != nil {
 		return discovery.FaultStatus, err
 	}
 	if seedDn == 0 {
 		return discovery.BootstrapingStatus, nil
 	}
-
-	if t := p.GetElapsedHeartbeats(); t < discovery.BootStrapingMinTime && seedDn > p.DiscoveredPeers() {
+	if t := p.GetElapsedHeartbeats(); t < discovery.BootStrapingMinTime && seedDn > p.DiscoveredPeersNumber() {
 		return discovery.BootstrapingStatus, nil
-	} else if t < discovery.BootStrapingMinTime && seedDn <= p.DiscoveredPeers() {
+	} else if t < discovery.BootStrapingMinTime && seedDn <= p.DiscoveredPeersNumber() {
 		return discovery.OkStatus, nil
 	} else {
 		return discovery.OkStatus, nil

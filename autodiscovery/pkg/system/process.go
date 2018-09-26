@@ -8,47 +8,47 @@ import (
 )
 
 //CheckAutodiscoveryProcess check that the autodiscovery daemon is running
-func CheckAutodiscoveryProcess(p discovery.Peer) (bool, error) {
+func CheckAutodiscoveryProcess(p discovery.Peer) error {
 	selfport := p.Port()
 	_, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", selfport))
 	if err != nil {
-		return false, err
+		return err
 	}
-	return true, nil
+	return nil
 }
 
 //CheckDataProcess check that the autodiscovery daemon is running
-func CheckDataProcess() (bool, error) {
+func CheckDataProcess() error {
 	// TBD
-	return true, nil
+	return nil
 }
 
 //CheckMiningProcess check that the autodiscovery daemon is running
-func CheckMiningProcess() (bool, error) {
+func CheckMiningProcess() error {
 	//TBD
-	return true, nil
+	return nil
 }
 
 //CheckAIProcess check that the autodiscovery daemon is running
-func CheckAIProcess() (bool, error) {
+func CheckAIProcess() error {
 	//TBD
-	return true, nil
+	return nil
 }
 
 //CheckScyllaProcess check that the autodiscovery daemon is running
-func CheckScyllaProcess() (bool, error) {
+func CheckScyllaProcess() error {
 	//TBD
-	return true, nil
+	return nil
 }
 
 //CheckRedisProcess check that the autodiscovery daemon is running
-func CheckRedisProcess() (bool, error) {
+func CheckRedisProcess() error {
 	//TBD
-	return true, nil
+	return nil
 }
 
 //CheckRabitmqProcess check that the autodiscovery daemon is running
-func CheckRabitmqProcess() (bool, error) {
+func CheckRabitmqProcess() error {
 	//TBD
-	return true, nil
+	return nil
 }

@@ -15,6 +15,7 @@ import (
 
 const (
 	cdns          = "uniris.io"
+	ntpretry      = 3
 	upmaxoffset   = 300
 	downmaxoffset = -300
 )
@@ -25,82 +26,89 @@ var (
 
 //PeerWatcher define the interface to retrieve the different state of the process running on a peer
 type PeerWatcher interface {
-	CheckProcessStates(p discovery.Peer) (bool, error)
-	CheckInternetState() (bool, error)
-	CheckNtpState() (bool, error)
+	CheckProcessStates(p discovery.Peer) error
+	CheckInternetState() error
+	CheckNtpState() error
 }
 
 type peerWatcher struct {
 }
 
 //GetProcessStates check the different state of the differents necessary services running on the peer
-func (Pwatcher *peerWatcher) CheckProcessStates(p discovery.Peer) (bool, error) {
-	_, err := CheckAutodiscoveryProcess(p)
+func (Pwatcher *peerWatcher) CheckProcessStates(p discovery.Peer) error {
+	err := CheckAutodiscoveryProcess(p)
 	if err != nil {
-		return false, err
+		return err
 	}
-	_, err = CheckDataProcess()
+	err = CheckDataProcess()
 	if err != nil {
-		return false, err
+		return err
 	}
-	_, err = CheckMiningProcess()
+	err = CheckMiningProcess()
 	if err != nil {
-		return false, err
+		return err
 	}
-	_, err = CheckAIProcess()
+	err = CheckAIProcess()
 	if err != nil {
-		return false, err
+		return err
 	}
-	_, err = CheckScyllaProcess()
+	err = CheckScyllaProcess()
 	if err != nil {
-		return false, err
+		return err
 	}
-	_, err = CheckRedisProcess()
+	err = CheckRedisProcess()
 	if err != nil {
-		return false, err
+		return err
 	}
-	_, err = CheckRabitmqProcess()
+	err = CheckRabitmqProcess()
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	return true, nil
+	return nil
 }
 
 //CheckInternetConfig check internet configuration on the node
-func (Pwatcher *peerWatcher) CheckInternetState() (bool, error) {
+func (Pwatcher *peerWatcher) CheckInternetState() error {
 	_, err := net.LookupIP(cdns)
 	if err != nil {
-		return false, err
+		return err
 	}
-	return true, nil
+	return nil
 }
 
 //CheckNtp check time synchonization on the node
-func (Pwatcher *peerWatcher) CheckNtpState() (bool, error) {
+func (Pwatcher *peerWatcher) CheckNtpState() error {
 	for _, ntps := range cntp {
 		r, err := ntp.QueryWithOptions(ntps, ntp.QueryOptions{Version: 4})
 		if err == nil {
 			if (int64(r.ClockOffset/time.Second) < downmaxoffset) || (int64(r.ClockOffset/time.Second) > upmaxoffset) {
-				return false, nil
+				for i := 0; i < ntpretry; i++ {
+					r, err := ntp.QueryWithOptions(ntps, ntp.QueryOptions{Version: 4})
+					if err == nil {
+						if (int64(r.ClockOffset/time.Second) > downmaxoffset) || (int64(r.ClockOffset/time.Second) < upmaxoffset) {
+							return nil
+						}
+					}
+				}
+				return errors.New("System Clock have a big Offset check the ntp configuration of the system")
 			}
-			return true, nil
+			return nil
 		}
-		//log.Print(err)
 	}
-	return false, errors.New("Could not get reply from ntp servers")
+	return errors.New("Could not get reply from ntp servers")
 }
 
 //SeedDiscoverdPeerWatcher define the interface to check the number of discovered node by a seed
 type SeedDiscoverdPeerWatcher interface {
-	GetSeedDiscoveredPeer(rep discovery.Repository) (int, error)
+	CountSeedDiscoveredPeer(rep discovery.Repository) (int, error)
 }
 
 type seedDiscoverdPeerWatcher struct {
 }
 
 //GetSeedDiscoveredPeer report the average of node detected by the differents known seeds
-func (SdnWatcher *seedDiscoverdPeerWatcher) GetSeedDiscoveredPeer(rep discovery.Repository) (int, error) {
+func (SdnWatcher *seedDiscoverdPeerWatcher) CountSeedDiscoveredPeer(rep discovery.Repository) (int, error) {
 	listseed, err := rep.ListSeedPeers()
 	if err != nil {
 		return 0, err
@@ -110,7 +118,7 @@ func (SdnWatcher *seedDiscoverdPeerWatcher) GetSeedDiscoveredPeer(rep discovery.
 		ipseed := listseed[i].IP
 		p, err := rep.GetPeerByIP(ipseed)
 		if err == nil {
-			avg += p.DiscoveredPeers()
+			avg += p.DiscoveredPeersNumber()
 		}
 	}
 	avg = avg / len(listseed)
@@ -124,39 +132,30 @@ type watcher struct {
 }
 
 //Status computes the peer's status according to the health state of the system
-func (w watcher) Status(p discovery.Peer, repo discovery.Repository) (discovery.PeerStatus, error) {
+func (w watcher) Status(p discovery.Peer) (discovery.PeerStatus, error) {
 
-	procState, err := w.Pwatcher.CheckProcessStates(p)
+	err := w.Pwatcher.CheckProcessStates(p)
 	if err != nil {
 		return discovery.FaultStatus, err
 	}
-	if !procState {
-		return discovery.FaultStatus, nil
-	}
-	internetState, err := w.Pwatcher.CheckInternetState()
+	err = w.Pwatcher.CheckInternetState()
 	if err != nil {
 		return discovery.FaultStatus, err
 	}
-	if !internetState {
-		return discovery.FaultStatus, nil
-	}
-	ntpState, err := w.Pwatcher.CheckNtpState()
+	err = w.Pwatcher.CheckNtpState()
 	if err != nil {
-		return discovery.FaultStatus, err
+		return discovery.StorageOnlyStatus, err
 	}
-	if !ntpState {
-		return discovery.StorageOnlyStatus, nil
-	}
-	seedDn, err := w.SdnWatcher.GetSeedDiscoveredPeer(repo)
+	seedDn, err := w.SdnWatcher.CountSeedDiscoveredPeer(w.rep)
 	if err != nil {
 		return discovery.FaultStatus, err
 	}
 	if seedDn == 0 {
 		return discovery.BootstrapingStatus, nil
 	}
-	if t := p.GetElapsedHeartbeats(); t < discovery.BootStrapingMinTime && seedDn > p.DiscoveredPeers() {
+	if t := p.GetElapsedHeartbeats(); t < discovery.BootStrapingMinTime && seedDn > p.DiscoveredPeersNumber() {
 		return discovery.BootstrapingStatus, nil
-	} else if t < discovery.BootStrapingMinTime && seedDn <= p.DiscoveredPeers() {
+	} else if t < discovery.BootStrapingMinTime && seedDn <= p.DiscoveredPeersNumber() {
 		return discovery.OkStatus, nil
 	} else {
 		return discovery.OkStatus, nil
@@ -185,8 +184,8 @@ func (w watcher) FreeDiskSpace() (float64, error) {
 }
 
 //DiscoverdPeer computes the number of peer discovered by the local peer
-func (w watcher) DiscoveredPeer(rep discovery.Repository) (int, error) {
-	l, err := rep.ListKnownPeers()
+func (w watcher) CountDiscoveredPeer() (int, error) {
+	l, err := w.rep.ListKnownPeers()
 	if err != nil {
 		return 0, err
 	}

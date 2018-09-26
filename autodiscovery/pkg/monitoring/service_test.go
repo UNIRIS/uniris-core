@@ -27,7 +27,7 @@ func TestRefresh(t *testing.T) {
 	assert.Equal(t, "0.62 0.77 0.71 4/972 26361", p1.CPULoad())
 	assert.Equal(t, discovery.OkStatus, p1.Status())
 	assert.Equal(t, float64(212383852), p1.FreeDiskSpace())
-	assert.Equal(t, 5, p1.DiscoveredPeers())
+	assert.Equal(t, 5, p1.DiscoveredPeersNumber())
 	assert.Equal(t, 1, p1.P2PFactor())
 
 }
@@ -98,7 +98,7 @@ func (r *mockPeerRepository) containsPeer(peer discovery.Peer) bool {
 
 type mockWatcher struct{}
 
-func (w mockWatcher) Status(p discovery.Peer, repo discovery.Repository) (discovery.PeerStatus, error) {
+func (w mockWatcher) Status(p discovery.Peer) (discovery.PeerStatus, error) {
 	return discovery.OkStatus, nil
 }
 
@@ -110,7 +110,7 @@ func (w mockWatcher) FreeDiskSpace() (float64, error) {
 	return 212383852, nil
 }
 
-func (w mockWatcher) DiscoveredPeer(repo discovery.Repository) (int, error) {
+func (w mockWatcher) CountDiscoveredPeer() (int, error) {
 	return 5, nil
 }
 
