@@ -8,7 +8,7 @@ import (
 type Watcher interface {
 
 	//Status computes the peer's status according to the health state of the system
-	Status() (discovery.PeerStatus, error)
+	Status(p discovery.Peer, repo discovery.Repository) (discovery.PeerStatus, error)
 
 	//CPULoad retrieves the load on the peer's CPU
 	CPULoad() (string, error)
@@ -16,11 +16,11 @@ type Watcher interface {
 	//FreeDiskSpace retrieves the available free disk space of the peer
 	FreeDiskSpace() (float64, error)
 
-	//IOWaitRate computes the rate of the I/O operations of the peer
-	IOWaitRate() (float64, error)
-
 	//DiscoveredPeer computes the number of discovered Peers
-	DiscoveredPeer() (int, error)
+	DiscoveredPeer(repo discovery.Repository) (int, error)
+
+	//P2PFactor get the P2PFactor from the AI Daemon
+	P2PFactor() (int, error)
 }
 
 //Service defines the interface for the peer inpsection
@@ -35,11 +35,10 @@ type service struct {
 
 //RefreshPeer updates the peer's metrics retrieved from the peer monitor
 func (s service) RefreshPeer(p discovery.Peer) error {
-	status, err := s.w.Status()
+	status, err := s.w.Status(p, s.repo)
 	if err != nil {
 		return err
 	}
-
 	cpu, err := s.w.CPULoad()
 	if err != nil {
 		return err
@@ -50,17 +49,17 @@ func (s service) RefreshPeer(p discovery.Peer) error {
 		return err
 	}
 
-	io, err := s.w.IOWaitRate()
+	dp, err := s.w.DiscoveredPeer(s.repo)
 	if err != nil {
 		return err
 	}
 
-	dp, err := s.w.DiscoveredPeer()
+	p2p, err := s.w.P2PFactor()
 	if err != nil {
 		return err
 	}
 
-	p.Refresh(status, disk, cpu, io, dp)
+	p.Refresh(status, disk, cpu, dp, p2p)
 	if err := s.repo.UpdatePeer(p); err != nil {
 		return err
 	}

@@ -20,15 +20,16 @@ Scenario: check refresh
 func TestRefresh(t *testing.T) {
 	repo := new(mockPeerRepository)
 	watch := new(mockWatcher)
-	p1 := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
+	p1 := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	srv := NewService(repo, watch)
 	err := srv.RefreshPeer(p1)
 	assert.Nil(t, err)
 	assert.Equal(t, "0.62 0.77 0.71 4/972 26361", p1.CPULoad())
 	assert.Equal(t, discovery.OkStatus, p1.Status())
 	assert.Equal(t, float64(212383852), p1.FreeDiskSpace())
-	assert.Equal(t, 0.0, p1.IOWaitRate())
 	assert.Equal(t, 5, p1.DiscoveredPeers())
+	assert.Equal(t, 1, p1.P2PFactor())
+
 }
 
 type mockPeerRepository struct {
@@ -97,7 +98,7 @@ func (r *mockPeerRepository) containsPeer(peer discovery.Peer) bool {
 
 type mockWatcher struct{}
 
-func (w mockWatcher) Status() (discovery.PeerStatus, error) {
+func (w mockWatcher) Status(p discovery.Peer, repo discovery.Repository) (discovery.PeerStatus, error) {
 	return discovery.OkStatus, nil
 }
 
@@ -109,10 +110,10 @@ func (w mockWatcher) FreeDiskSpace() (float64, error) {
 	return 212383852, nil
 }
 
-func (w mockWatcher) IOWaitRate() (float64, error) {
-	return 0.0, nil
+func (w mockWatcher) DiscoveredPeer(repo discovery.Repository) (int, error) {
+	return 5, nil
 }
 
-func (w mockWatcher) DiscoveredPeer() (int, error) {
-	return 5, nil
+func (w mockWatcher) P2PFactor() (int, error) {
+	return 1, nil
 }

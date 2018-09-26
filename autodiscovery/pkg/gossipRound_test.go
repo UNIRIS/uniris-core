@@ -67,7 +67,7 @@ func TestSelectPeers(t *testing.T) {
 
 	s1 := Seed{IP: net.ParseIP("30.0.50.100"), Port: 3000}
 
-	p1 := NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{}, 1)
+	p1 := NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{})
 	p2 := NewPeerDigest([]byte("key2"), net.ParseIP("10.0.0.1"), 3000)
 
 	r, _ := NewGossipRound(Peer{}, []Peer{p1, p2}, []Seed{s1})

@@ -18,7 +18,7 @@ Scenario: Converts a list of peer into a map of peers
 	Then we get a map of peer identified by their public key
 */
 func TestMapPeers(t *testing.T) {
-	p1 := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
+	p1 := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	p2 := discovery.NewPeerDigest([]byte("key2"), net.ParseIP("10.0.0.1"), 3000)
 
 	g := service{}
@@ -39,7 +39,7 @@ Scenario: Run cycle
 	Then we get the new peers discovered
 */
 func TestRunCycle(t *testing.T) {
-	initP := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
+	initP := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 
 	repo := new(mockPeerRepository)
 	repo.AddPeer(initP)
@@ -66,7 +66,7 @@ Scenario: Gossip across a selection of peers
 	Then the new peers are stored and notified
 */
 func TestGossip(t *testing.T) {
-	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
+	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 
 	repo := new(mockPeerRepository)
 	notif := new(mockNotifier)
@@ -98,8 +98,8 @@ Scenario: Gets diff between our known peers and a list of peers with peers unkno
 func TestDiffPeersWithDifferentPeers(t *testing.T) {
 	repo := new(mockPeerRepository)
 
-	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
-	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{}, 1)
+	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{})
 
 	repo.AddPeer(kp)
 	repo.AddPeer(kp2)
@@ -131,8 +131,8 @@ Scenario: Gets diff between our known peers and a list of peers which include on
 func TestDiffPeerWithSomeKnownPeers(t *testing.T) {
 	repo := new(mockPeerRepository)
 
-	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
-	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{}, 1)
+	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{})
 
 	repo.AddPeer(kp)
 	repo.AddPeer(kp2)
@@ -161,7 +161,7 @@ Scenario: Gets diff between an empty list of peers and known peers
 func TestDiffWithEmptyPeers(t *testing.T) {
 	repo := new(mockPeerRepository)
 
-	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
+	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	kp2 := discovery.NewPeerDigest([]byte("key2"), net.ParseIP("80.200.100.2"), 3000)
 
 	repo.AddPeer(kp)
@@ -187,8 +187,8 @@ Scenario: Gets diff between identically list of peers
 func TestDiffPeerWithSamePeers(t *testing.T) {
 	repo := new(mockPeerRepository)
 
-	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
-	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{}, 1)
+	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{})
 
 	repo.AddPeer(kp)
 	repo.AddPeer(kp2)
@@ -208,8 +208,8 @@ type mockMessenger struct {
 }
 
 func (m mockMessenger) SendSyn(req SynRequest) (*SynAck, error) {
-	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
-	rec := discovery.NewStartupPeer([]byte("uKey1"), net.ParseIP("200.18.186.39"), 3000, "1.1", discovery.PeerPosition{}, 1)
+	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	rec := discovery.NewStartupPeer([]byte("uKey1"), net.ParseIP("200.18.186.39"), 3000, "1.1", discovery.PeerPosition{})
 
 	t, _ := time.Parse(
 		time.RFC3339,

@@ -43,13 +43,13 @@ func TestStartup(t *testing.T) {
 	net := new(mockPeerNetworker)
 
 	srv := NewService(repo, pos, net)
-	p, err := srv.Startup([]byte("key"), 3000, 1, "1.0")
+	p, err := srv.Startup([]byte("key"), 3000, "1.0")
 	assert.NotNil(t, p)
 	assert.Nil(t, err)
 
 	assert.Equal(t, "127.0.0.1", p.IP().String())
 	assert.Equal(t, "key", string(p.PublicKey()))
-	assert.Equal(t, 1, p.P2PFactor())
+	assert.Equal(t, 0, p.P2PFactor())
 	assert.Equal(t, "1.0", p.Version())
 	assert.Equal(t, discovery.BootstrapingStatus, p.Status())
 
