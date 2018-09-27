@@ -70,7 +70,7 @@ func (r *repo) UpdatePeer(peer discovery.Peer) error {
 //GetPeerByIP get a peer from the repository using its ip
 func (r *repo) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
 	for i := 0; i < len(r.peers); i++ {
-		if string(ip) == string(r.peers[i].IP()) {
+		if r.peers[i].Identity().IP().Equal(ip) {
 			return r.peers[i], nil
 		}
 	}

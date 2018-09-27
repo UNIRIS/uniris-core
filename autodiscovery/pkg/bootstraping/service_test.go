@@ -100,7 +100,7 @@ func (r *mockPeerRepository) ListSeedPeers() ([]discovery.Seed, error) {
 
 func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
 	for i := 0; i < len(r.peers); i++ {
-		if string(ip) == string(r.peers[i].IP()) {
+		if ip.Equal(r.peers[i].Identity().IP()) {
 			return r.peers[i], nil
 		}
 	}

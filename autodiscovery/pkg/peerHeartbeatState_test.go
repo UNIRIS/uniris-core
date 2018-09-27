@@ -19,7 +19,7 @@ func TestRefreshElapsedHeartbeats(t *testing.T) {
 	}
 	time.Sleep(2 * time.Second)
 	hb.refreshElapsedHeartbeats()
-	assert.Equal(t, uint64(2), hb.ElapsedHeartbeats())
+	assert.Equal(t, int64(2), hb.ElapsedHeartbeats())
 }
 
 /*
@@ -33,7 +33,7 @@ func TestGetElapsedBeatsWithoutPrevRefresh(t *testing.T) {
 		generationTime: time.Now(),
 	}
 	time.Sleep(2 * time.Second)
-	assert.Equal(t, uint64(2), hb.ElapsedHeartbeats())
+	assert.Equal(t, int64(2), hb.ElapsedHeartbeats())
 }
 
 /*

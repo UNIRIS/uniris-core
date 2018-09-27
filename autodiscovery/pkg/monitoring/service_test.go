@@ -29,12 +29,23 @@ func TestRefresh(t *testing.T) {
 	repo.AddSeed(seed2)
 	repo.AddSeed(seed3)
 
-	st1 := discovery.NewState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	st2 := discovery.NewState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	st3 := discovery.NewState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	p1 := discovery.NewPeerDetailed([]byte("key1"), seed1.IP, seed1.Port, time.Now(), st1)
-	p2 := discovery.NewPeerDetailed([]byte("key2"), seed2.IP, seed1.Port, time.Now(), st2)
-	p3 := discovery.NewPeerDetailed([]byte("key3"), seed3.IP, seed1.Port, time.Now(), st3)
+	// st1 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
+	st2 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
+	st3 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
+
+	p1 := discovery.NewStartupPeer([]byte("key1"), seed1.IP, seed1.Port, "1.0", discovery.PeerPosition{})
+
+	p2 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(seed2.IP, seed2.Port, []byte("key2")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0),
+		st2,
+	)
+
+	p3 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(seed3.IP, seed3.Port, []byte("key3")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0),
+		st3,
+	)
 
 	repo.AddPeer(p1)
 	repo.AddPeer(p2)
@@ -43,11 +54,13 @@ func TestRefresh(t *testing.T) {
 	srv := NewService(repo, new(mockPeerMonitor), new(mockPeerNetworker), new(mockRobotWatcher))
 	err := srv.RefreshPeer(p1)
 	assert.Nil(t, err)
-	assert.Equal(t, "0.62 0.77 0.71 4/972 26361", p1.CPULoad())
-	assert.Equal(t, discovery.OkStatus, p1.Status())
-	assert.Equal(t, float64(212383852), p1.FreeDiskSpace())
-	assert.Equal(t, 3, p1.DiscoveredPeersNumber())
-	assert.Equal(t, 1, p1.P2PFactor())
+
+	p, _ := repo.GetPeerByIP(seed1.IP)
+	assert.Equal(t, "0.62 0.77 0.71 4/972 26361", p.AppState().CPULoad())
+	assert.Equal(t, discovery.BootstrapingStatus, p.AppState().Status())
+	assert.Equal(t, float64(212383852), p.AppState().FreeDiskSpace())
+	assert.Equal(t, 3, p.AppState().DiscoveredPeersNumber())
+	assert.Equal(t, 1, p.AppState().P2PFactor())
 }
 
 /*
@@ -70,16 +83,34 @@ func TestState1(t *testing.T) {
 	repo.AddSeed(seed2)
 	repo.AddSeed(seed3)
 	assert.Equal(t, 3, len(repo.seeds))
-	st1 := discovery.NewState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	st2 := discovery.NewState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	st3 := discovery.NewState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	p1 := discovery.NewPeerDetailed([]byte("key1"), seed1.IP, seed1.Port, time.Now(), st1)
-	p2 := discovery.NewPeerDetailed([]byte("key2"), seed2.IP, seed1.Port, time.Now(), st2)
-	p3 := discovery.NewPeerDetailed([]byte("key3"), seed3.IP, seed1.Port, time.Now(), st3)
+	st1 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
+	st2 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
+	st3 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
+
+	p1 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(seed1.IP, seed1.Port, []byte("key1")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0),
+		st1,
+	)
+
+	p2 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(seed2.IP, seed2.Port, []byte("key2")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0),
+		st2,
+	)
+
+	p3 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(seed3.IP, seed3.Port, []byte("key3")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0),
+		st3,
+	)
 	repo.AddPeer(p1)
 	repo.AddPeer(p2)
 	repo.AddPeer(p3)
-	p4 := discovery.NewPeerDetailed([]byte("key4"), net.ParseIP("185.123.4.9"), 4000, time.Now(), st1)
+	p4 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(net.ParseIP("185.123.4.9"), 4000, []byte("key4")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0),
+		st1)
 	repo.AddPeer(p4)
 	assert.Equal(t, 5, len(repo.peers))
 	selfpeer, err := repo.GetOwnedPeer()
@@ -109,16 +140,35 @@ func TestState2(t *testing.T) {
 	repo.AddSeed(seed2)
 	repo.AddSeed(seed3)
 	assert.Equal(t, 3, len(repo.seeds))
-	st1 := discovery.NewState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	st2 := discovery.NewState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	st3 := discovery.NewState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	p1 := discovery.NewPeerDetailed([]byte("key1"), seed1.IP, seed1.Port, time.Now(), st1)
-	p2 := discovery.NewPeerDetailed([]byte("key2"), seed2.IP, seed1.Port, time.Now(), st2)
-	p3 := discovery.NewPeerDetailed([]byte("key3"), seed3.IP, seed1.Port, time.Now(), st3)
+	st1 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
+	st2 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
+	st3 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
+
+	p1 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(seed1.IP, seed1.Port, []byte("key1")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0),
+		st1,
+	)
+
+	p2 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(seed2.IP, seed2.Port, []byte("key2")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0),
+		st2,
+	)
+
+	p3 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(seed3.IP, seed3.Port, []byte("key3")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0),
+		st3,
+	)
 	repo.AddPeer(p1)
 	repo.AddPeer(p2)
 	repo.AddPeer(p3)
-	p4 := discovery.NewPeerDetailed([]byte("key4"), net.ParseIP("185.123.4.9"), 4000, time.Now(), st1)
+	p4 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(net.ParseIP("185.123.4.9"), 4000, []byte("key4")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0),
+		st1)
+
 	repo.AddPeer(p4)
 	assert.Equal(t, 5, len(repo.peers))
 	selfpeer, _ := repo.GetOwnedPeer()
@@ -147,16 +197,34 @@ func TestState3(t *testing.T) {
 	repo.AddSeed(seed2)
 	repo.AddSeed(seed3)
 	assert.Equal(t, 3, len(repo.seeds))
-	st1 := discovery.NewState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	st2 := discovery.NewState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	st3 := discovery.NewState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	p1 := discovery.NewPeerDetailed([]byte("key1"), seed1.IP, seed1.Port, time.Now(), st1)
-	p2 := discovery.NewPeerDetailed([]byte("key2"), seed2.IP, seed1.Port, time.Now(), st2)
-	p3 := discovery.NewPeerDetailed([]byte("key3"), seed3.IP, seed1.Port, time.Now(), st3)
+	st1 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
+	st2 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
+	st3 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
+
+	p1 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(seed1.IP, seed1.Port, []byte("key1")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0),
+		st1,
+	)
+
+	p2 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(seed2.IP, seed2.Port, []byte("key2")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0),
+		st2,
+	)
+
+	p3 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(seed3.IP, seed3.Port, []byte("key3")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0),
+		st3,
+	)
 	repo.AddPeer(p1)
 	repo.AddPeer(p2)
 	repo.AddPeer(p3)
-	p4 := discovery.NewPeerDetailed([]byte("key4"), net.ParseIP("185.123.4.9"), 4000, time.Now(), st1)
+	p4 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(net.ParseIP("185.123.4.9"), 4000, []byte("key4")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0),
+		st1)
 	repo.AddPeer(p4)
 	assert.Equal(t, 5, len(repo.peers))
 	selfpeer, _ := repo.GetOwnedPeer()
@@ -176,7 +244,7 @@ func (r *mockPeerRepository) CountKnownPeers() (int, error) {
 
 func (r *mockPeerRepository) GetOwnedPeer() (p discovery.Peer, err error) {
 	for _, p := range r.peers {
-		if p.IsOwned() {
+		if p.Owned() {
 			return p, nil
 		}
 	}
@@ -206,7 +274,7 @@ func (r *mockPeerRepository) ListSeedPeers() ([]discovery.Seed, error) {
 
 func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
 	for i := 0; i < len(r.peers); i++ {
-		if string(ip) == string(r.peers[i].IP()) {
+		if r.peers[i].Identity().IP().Equal(ip) {
 			return r.peers[i], nil
 		}
 	}
@@ -215,7 +283,7 @@ func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error
 
 func (r *mockPeerRepository) UpdatePeer(peer discovery.Peer) error {
 	for _, p := range r.peers {
-		if string(p.PublicKey()) == string(peer.PublicKey()) {
+		if p.Identity().PublicKey().Equals(peer.Identity().PublicKey()) {
 			p = peer
 			break
 		}
@@ -226,10 +294,10 @@ func (r *mockPeerRepository) UpdatePeer(peer discovery.Peer) error {
 func (r *mockPeerRepository) containsPeer(peer discovery.Peer) bool {
 	mPeers := make(map[string]discovery.Peer, 0)
 	for _, p := range r.peers {
-		mPeers[hex.EncodeToString(p.PublicKey())] = peer
+		mPeers[hex.EncodeToString(p.Identity().PublicKey())] = peer
 	}
 
-	_, exist := mPeers[hex.EncodeToString(peer.PublicKey())]
+	_, exist := mPeers[hex.EncodeToString(peer.Identity().PublicKey())]
 	return exist
 }
 

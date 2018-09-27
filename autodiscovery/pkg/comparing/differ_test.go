@@ -98,7 +98,7 @@ func TestDiffUnknownRecentPeers(t *testing.T) {
 	assert.NotEmpty(t, up)
 
 	assert.Equal(t, 1, len(up))
-	assert.Equal(t, uint64(1200), up[0].HeartbeatState().ElapsedHeartbeats())
+	assert.Equal(t, int64(1200), up[0].HeartbeatState().ElapsedHeartbeats())
 }
 
 /*
@@ -135,5 +135,5 @@ func TestDiffNewRecentPeers(t *testing.T) {
 	assert.NotEmpty(t, pp)
 
 	assert.Equal(t, 1, len(pp))
-	assert.Equal(t, uint64(1200), pp[0].HeartbeatState().ElapsedHeartbeats())
+	assert.Equal(t, int64(1200), pp[0].HeartbeatState().ElapsedHeartbeats())
 }

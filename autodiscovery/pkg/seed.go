@@ -10,11 +10,13 @@ type Seed struct {
 	Port int
 }
 
-//ToPeer converts a seed into a peer
-func (s Seed) ToPeer() Peer {
-	return Peer{
-		ip:   s.IP,
-		port: s.Port,
+//AsPeer converts a seed into a peer
+func (s Seed) AsPeer() Peer {
+	return &peer{
+		identity: peerIdentity{
+			ip:   s.IP,
+			port: s.Port,
+		},
 	}
 }
 
@@ -43,7 +45,7 @@ func (sdc seedDiscoveryCounter) Average() (int, error) {
 		ipseed := listseed[i].IP
 		p, err := sdc.repo.GetPeerByIP(ipseed)
 		if err == nil {
-			avg += p.DiscoveredPeersNumber()
+			avg += p.AppState().DiscoveredPeersNumber()
 		}
 	}
 	avg = avg / len(listseed)

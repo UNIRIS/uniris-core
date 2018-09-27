@@ -25,7 +25,7 @@ func TestRunCycle(t *testing.T) {
 
 	id1 := discovery.NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, []byte("key2"))
 	hb := discovery.NewPeerHeartbeatState(time.Now(), 0)
-	as := discovery.NewPeerAppState("1.0", discovery.OkStatus, discovery.PeerPosition{}, "", 0, 1)
+	as := discovery.NewPeerAppState("1.0", discovery.OkStatus, discovery.PeerPosition{}, "", 0, 1, 0)
 	recP := discovery.NewDiscoveredPeer(id1, hb, as)
 
 	p1 := discovery.NewDiscoveredPeer(
@@ -86,7 +86,7 @@ func (m mockMessenger) SendSyn(req SynRequest) (*SynAck, error) {
 	rec := discovery.NewStartupPeer([]byte("uKey1"), net.ParseIP("200.18.186.39"), 3000, "1.1", discovery.PeerPosition{})
 
 	hb := discovery.NewPeerHeartbeatState(time.Now(), 0)
-	as := discovery.NewPeerAppState("1.0", discovery.OkStatus, discovery.PeerPosition{}, "", 0, 1)
+	as := discovery.NewPeerAppState("1.0", discovery.OkStatus, discovery.PeerPosition{}, "", 0, 1, 0)
 
 	np1 := discovery.NewDiscoveredPeer(
 		discovery.NewPeerIdentity(net.ParseIP("35.200.100.2"), 3000, []byte("dKey1")),
@@ -172,7 +172,7 @@ func (r *mockPeerRepository) UpdatePeer(peer discovery.Peer) error {
 
 func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
 	for i := 0; i < len(r.peers); i++ {
-		if string(ip) == string(r.peers[i].IP()) {
+		if ip.Equal(r.peers[0].Identity().IP()) {
 			return r.peers[i], nil
 		}
 	}

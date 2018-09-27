@@ -7,8 +7,12 @@ import (
 	"time"
 )
 
+//BootStrapingMinTime is the necessary minimum time on seconds to finish learning about the network
+const BootStrapingMinTime = 1800
+
 //ErrChangeNotOwnedPeer is returned when you try to change the state of peer that you don't own
 var ErrChangeNotOwnedPeer = errors.New("Cannot change a peer that you don't own")
+
 //Repository provides access to the peer repository
 type Repository interface {
 	CountKnownPeers() (int, error)
@@ -36,19 +40,18 @@ func (k PublicKey) Equals(key PublicKey) bool {
 //PeerIdentity describes the peer identification the network
 type PeerIdentity interface {
 	IP() net.IP
-	Port() uint16
+	Port() int
 	PublicKey() PublicKey
-	discoveredPeersNumber int
 }
 
 type peerIdentity struct {
 	ip        net.IP
-	port      uint16
+	port      int
 	publicKey PublicKey
 }
 
 //NewPeerIdentity creates a new peer identity
-func NewPeerIdentity(ip net.IP, port uint16, pbKey PublicKey) PeerIdentity {
+func NewPeerIdentity(ip net.IP, port int, pbKey PublicKey) PeerIdentity {
 	return peerIdentity{
 		ip:        ip,
 		port:      port,
@@ -62,7 +65,7 @@ func (p peerIdentity) IP() net.IP {
 }
 
 //Port returns the peer's port
-func (p peerIdentity) Port() uint16 {
+func (p peerIdentity) Port() int {
 	return p.port
 }
 
@@ -76,33 +79,9 @@ type Peer interface {
 	Identity() PeerIdentity
 	AppState() PeerAppState
 	HeartbeatState() PeerHeartbeatState
-	Refresh(status PeerStatus, disk float64, cpu string, p2pFactor uint8) error
+	Refresh(status PeerStatus, disk float64, cpu string, p2pFactor int, discoveryPeersNb int) error
 	Endpoint() string
 	Owned() bool
-//DiscoveredPeersNumber returns the number of discovered nodes by the peer
-func (p Peer) DiscoveredPeersNumber() int {
-	if p.state == nil {
-		return 0
-	}
-	return p.state.discoveredPeersNumber
-}
-
-//P2PFactor returns the peer's replication factor
-func (p Peer) P2PFactor() int {
-	if p.state == nil {
-		return 0
-	}
-	return p.state.p2pFactor
-}
-
-//Repository provides access to the peer repository
-type Repository interface {
-	GetOwnedPeer() (Peer, error)
-	ListSeedPeers() ([]Seed, error)
-	ListKnownPeers() ([]Peer, error)
-	AddPeer(Peer) error
-	AddSeed(Seed) error
-	UpdatePeer(Peer) error
 }
 
 //Peer describes a member of the P2P network
@@ -113,12 +92,6 @@ type peer struct {
 	isOwned  bool
 }
 
-//CPULoad returns the load on the peer's CPU
-func (p Peer) CPULoad() string {
-	if p.state == nil {
-		return "--"
-	}
-	return p.state.cpuLoad
 //Identity returns the peer's identity
 func (p peer) Identity() PeerIdentity {
 	return p.identity
@@ -145,18 +118,18 @@ func (p peer) Endpoint() string {
 }
 
 //Refresh a peer with metrics and updates the elapsed heartbeats
-func (p *peer) Refresh(status PeerStatus, disk float64, cpu string, p2pFactor uint8) error {
+func (p *peer) Refresh(status PeerStatus, disk float64, cpu string, p2pFactor int, discoveryPeersNb int) error {
 	if !p.isOwned {
 		return ErrChangeNotOwnedPeer
 	}
-	p.appState.refresh(status, disk, cpu, p2pFactor)
+	p.appState.refresh(status, disk, cpu, p2pFactor, discoveryPeersNb)
 	p.hbState.refreshElapsedHeartbeats()
 
 	return nil
 }
 
 //NewStartupPeer creates a new peer started on the peer's machine (aka owned peer)
-func NewStartupPeer(pbKey PublicKey, ip net.IP, port uint16, version string, pos PeerPosition) Peer {
+func NewStartupPeer(pbKey PublicKey, ip net.IP, port int, version string, pos PeerPosition) Peer {
 	return &peer{
 		identity: peerIdentity{
 			ip:        ip,
@@ -191,21 +164,5 @@ func NewPeerDigest(identity PeerIdentity, hbS PeerHeartbeatState) Peer {
 	return &peer{
 		identity: identity,
 		hbState:  hbS.(heartbeatState),
-	}
-}
-
-//Seed is initial peer need to startup the discovery process
-type Seed struct {
-	IP   net.IP
-	Port uint16
-}
-
-//AsPeer converts a seed into a peer
-func (s Seed) AsPeer() Peer {
-	return &peer{
-		identity: peerIdentity{
-			ip:   s.IP,
-			port: s.Port,
-		},
 	}
 }
