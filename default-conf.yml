@@ -5,7 +5,6 @@ publicKey: -----BEGIN PUBLIC KEY-----MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEIh7hIRcsQsZ
 
 discovery:
   port: 3545
-  p2pFactor: 1
   seeds:
     - ip: 127.0.0.1
       port: 3545

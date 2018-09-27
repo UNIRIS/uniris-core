@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/uniris/uniris-core/autodiscovery/pkg/bootstraping"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/storage/redis"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/system"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/http"
+
+	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/rabbitmq"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/rpc"
 
@@ -41,26 +41,25 @@ func main() {
 	log.Printf("Key: %s", conf.PublicKey)
 	log.Printf("Port: %d", conf.Discovery.Port)
 	log.Printf("Version: %s", conf.Version)
-	log.Printf("P2P Factor: %d", conf.Discovery.P2PFactor)
 
 	//Initializes dependencies
-	repo, err := redis.NewRepository(conf.Discovery.Redis.Host, conf.Discovery.Redis.Port, conf.Discovery.Redis.Pwd)
+	repo, err := redis.NewRepository(conf.Discovery.Redis)
 	if err != nil {
 		log.Fatal("Cannot connect with redis")
 	}
-	var np bootstraping.PeerNetworker
+	var np monitoring.PeerNetworker
 	if conf.Network == "public" {
-		np = http.NewPeerNetworker()
+		np = system.NewPublicNetworker()
 	} else {
 		if conf.NetworkInterface == "" {
 			log.Fatal("Missing the network interface configuration when using the private network")
 		}
-		np = system.NewPeerNetworker(conf.NetworkInterface)
+		np = system.NewPrivateNetworker(conf.NetworkInterface)
 	}
-	pos := http.NewPeerPositioner()
+	pos := system.NewPeerPositioner()
 	notif := rabbitmq.NewNotifier()
 	msg := rpc.NewMessenger()
-	mon := monitoring.NewService(repo, system.NewPeerMonitor())
+	mon := monitoring.NewService(repo, system.NewPeerMonitor(), np, system.NewRobotWatcher())
 	gos := gossip.NewService(repo, msg, notif, mon)
 	boot := bootstraping.NewService(repo, pos, np)
 
@@ -70,7 +69,7 @@ func main() {
 	}
 
 	//Stores the startup peer
-	startPeer, err := boot.Startup([]byte(conf.PublicKey), conf.Discovery.Port, conf.Discovery.P2PFactor, conf.Version)
+	startPeer, err := boot.Startup([]byte(conf.PublicKey), conf.Discovery.Port, conf.Version)
 	if err != nil {
 		log.Fatal(err)
 	}

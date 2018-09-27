@@ -34,8 +34,13 @@ func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.Syn
 
 	receivedPeers := h.domainFormat.BuildPeerDigestCollection(req.KnownPeers)
 
+	p, err := h.repo.GetOwnedPeer()
+	if err != nil {
+		return nil, err
+	}
+
 	//Update metrics of own peer before to communicate known peers
-	if err := h.mon.RefreshOwnedPeer(); err != nil {
+	if err := h.mon.RefreshPeer(p); err != nil {
 		return nil, err
 	}
 

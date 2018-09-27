@@ -1,32 +1,66 @@
 package system
 
 import (
-	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
+	"errors"
+	"os"
+	"os/exec"
+	"runtime"
+	"syscall"
+
+	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 )
 
-type monitor struct{}
+const (
+	cdns          = "uniris.io"
+	ntpretry      = 3
+	upmaxoffset   = 300
+	downmaxoffset = -300
+)
 
-//Status computes the peer's status according to the health state of the system
-func (m monitor) Status() (discovery.PeerStatus, error) {
-	return discovery.OkStatus, nil
+var (
+	cntp = [...]string{"1.pool.ntp.org", "2.pool.ntp.org", "3.pool.ntp.org", "4.pool.ntp.org"}
+)
+
+type peerMonitor struct {
 }
 
 //CPULoad retrieves the load on the peer's CPU
-func (m monitor) CPULoad() (string, error) {
-	return "", nil
+func (m peerMonitor) CPULoad() (string, error) {
+	var cmd *exec.Cmd
+
+	if runtime.GOOS == "linux" {
+		cmd = exec.Command("cat", "/proc/loadavg")
+
+	} else if runtime.GOOS == "darwin" {
+		cmd = exec.Command("sysctl", "-n", "vm.loadavg")
+	} else {
+		return "", errors.New("You platform is not supported")
+	}
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "--", err
+	}
+	return string(out), nil
 }
 
-//FreeDiskSpace retrieves the available free disk space of the peer
-func (m monitor) FreeDiskSpace() (float64, error) {
-	return 0.0, nil
+//FreeDiskSpace retrieves the available free disk (k bytes) space of the peer
+func (m peerMonitor) FreeDiskSpace() (float64, error) {
+	var stat syscall.Statfs_t
+	wd, err := os.Getwd()
+	if err != nil {
+		return 0.0, err
+	}
+	syscall.Statfs(wd, &stat)
+	return float64((stat.Bavail * uint64(stat.Bsize)) / 1024), nil
 }
 
-//IOWaitRate computes the rate of the I/O operations of the peer
-func (m monitor) IOWaitRate() (float64, error) {
-	return 0.0, nil
+//P2PFactor request the update P2PFactor from the AI Daemon
+func (m peerMonitor) P2PFactor() (int, error) {
+	return 0, nil
 }
 
-//NewPeerMonitor implements peer monitor using system metrics
-func NewPeerMonitor() discovery.PeerMonitor {
-	return monitor{}
+//NewPeerMonitor creates an instance which implements monitoring.Watcher
+func NewPeerMonitor() monitoring.PeerMonitor {
+	return peerMonitor{}
 }

@@ -43,13 +43,13 @@ func TestStartup(t *testing.T) {
 	net := new(mockPeerNetworker)
 
 	srv := NewService(repo, pos, net)
-	p, err := srv.Startup([]byte("key"), 3000, 1, "1.0")
+	p, err := srv.Startup([]byte("key"), 3000, "1.0")
 	assert.NotNil(t, p)
 	assert.Nil(t, err)
 
 	assert.Equal(t, "127.0.0.1", p.IP().String())
 	assert.Equal(t, "key", string(p.PublicKey()))
-	assert.Equal(t, 1, p.P2PFactor())
+	assert.Equal(t, 0, p.P2PFactor())
 	assert.Equal(t, "1.0", p.Version())
 	assert.Equal(t, discovery.BootstrapingStatus, p.Status())
 
@@ -65,6 +65,10 @@ type mockPeerRepository struct {
 	seeds []discovery.Seed
 }
 
+func (r *mockPeerRepository) CountKnownPeers() (int, error) {
+	return len(r.peers), nil
+}
+
 func (r *mockPeerRepository) GetOwnedPeer() (p discovery.Peer, err error) {
 	for _, p := range r.peers {
 		if p.IsOwned() {
@@ -72,6 +76,11 @@ func (r *mockPeerRepository) GetOwnedPeer() (p discovery.Peer, err error) {
 		}
 	}
 	return
+}
+
+func (r *mockPeerRepository) SetPeer(p discovery.Peer) error {
+	r.peers = append(r.peers, p)
+	return nil
 }
 
 func (r *mockPeerRepository) ListSeedPeers() ([]discovery.Seed, error) {
@@ -82,18 +91,13 @@ func (r *mockPeerRepository) ListKnownPeers() ([]discovery.Peer, error) {
 	return r.peers, nil
 }
 
-func (r *mockPeerRepository) SetPeer(peer discovery.Peer) error {
-	if r.containsPeer(peer) {
-		for _, p := range r.peers {
-			if string(p.PublicKey()) == string(peer.PublicKey()) {
-				p = peer
-				break
-			}
+func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
+	for i := 0; i < len(r.peers); i++ {
+		if string(ip) == string(r.peers[i].IP()) {
+			return r.peers[i], nil
 		}
-	} else {
-		r.peers = append(r.peers, peer)
 	}
-	return nil
+	return
 }
 
 func (r *mockPeerRepository) SetSeed(s discovery.Seed) error {
@@ -124,4 +128,12 @@ type mockPeerNetworker struct{}
 
 func (n mockPeerNetworker) IP() (net.IP, error) {
 	return net.ParseIP("127.0.0.1"), nil
+}
+
+func (n mockPeerNetworker) CheckInternetState() error {
+	return nil
+}
+
+func (n mockPeerNetworker) CheckNtpState() error {
+	return nil
 }

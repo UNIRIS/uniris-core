@@ -3,6 +3,7 @@ package gossip
 import (
 	"encoding/hex"
 	"errors"
+	"log"
 	"time"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
@@ -49,13 +50,15 @@ func (s service) Spread(init discovery.Peer) error {
 		if err := s.runGossip(init, seeds); err != nil {
 			return err
 		}
+		selfp, _ := s.repo.GetOwnedPeer()
+		log.Printf("DEBUG: cpu: %s, freedisk: %b, status: %d, discoveredPeersNumber: %d", selfp.CPULoad(), selfp.FreeDiskSpace(), selfp.Status(), selfp.DiscoveredPeersNumber())
 	}
 	return nil
 }
 
 func (s service) runGossip(init discovery.Peer, seeds []discovery.Seed) error {
 	//Refresh own peer before to gossip and send new information
-	if err := s.mon.RefreshOwnedPeer(); err != nil {
+	if err := s.mon.RefreshPeer(init); err != nil {
 		return err
 	}
 	kp, err := s.repo.ListKnownPeers()

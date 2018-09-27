@@ -15,7 +15,7 @@ Scenario: Execute a syn request
 	Then we get some new peers from the receiver
 */
 func TestRoundSpread(t *testing.T) {
-	init := NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{}, 1)
+	init := NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{})
 	tar := NewPeerDigest([]byte("key2"), net.ParseIP("10.0.0.1"), 3000)
 	kp := []Peer{init, NewPeerDigest([]byte("key3"), net.ParseIP("20.0.0.1"), 3000)}
 	spr := mockSpreader{}
@@ -32,7 +32,7 @@ type mockSpreader struct{}
 func (m mockSpreader) SendSyn(r SynRequest) (*SynAck, error) {
 	return &SynAck{
 		NewPeers: []Peer{
-			NewPeerDetailed([]byte("dkey"), net.ParseIP("10.0.0.1"), 3000, time.Now(), false, nil),
+			NewPeerDetailed([]byte("dkey"), net.ParseIP("10.0.0.1"), 3000, time.Now(), nil),
 		},
 		UnknownPeers: []Peer{
 			NewPeerDigest([]byte("key3"), net.ParseIP("20.0.0.1"), 3000),

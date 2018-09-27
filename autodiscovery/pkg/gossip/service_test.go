@@ -21,7 +21,9 @@ Scenario: Run a gossip cycle
 func TestRunGossip(t *testing.T) {
 	repo := new(mockPeerRepository)
 
-	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
+	repo.SetSeed(discovery.Seed{IP: net.ParseIP("20.0.0.1"), Port: 3000})
+
+	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	repo.SetPeer(init)
 
 	kp := discovery.NewPeerDigest([]byte("key2"), net.ParseIP("10.0.0.2"), 3000)
@@ -32,7 +34,7 @@ func TestRunGossip(t *testing.T) {
 	notif := new(mockNotifier)
 	spr := new(mockSpreader)
 
-	monSrv := monitoring.NewService(repo, new(mockMonitor))
+	monSrv := monitoring.NewService(repo, new(mockMonitor), new(mockPeerNetworker), new(mockRobotWatcher))
 
 	s := service{
 		repo:  repo,
@@ -61,8 +63,8 @@ Scenario: Gets diff between our known peers and a list of peers with peers unkno
 func TestDiffPeersWithDifferentPeers(t *testing.T) {
 	repo := new(mockPeerRepository)
 
-	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
-	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{}, 1)
+	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{})
 
 	repo.SetPeer(kp)
 	repo.SetPeer(kp2)
@@ -94,8 +96,8 @@ Scenario: Gets diff between our known peers and a list of peers which include on
 func TestDiffPeerWithSomeKnownPeers(t *testing.T) {
 	repo := new(mockPeerRepository)
 
-	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
-	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{}, 1)
+	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{})
 
 	repo.SetPeer(kp)
 	repo.SetPeer(kp2)
@@ -123,7 +125,7 @@ Scenario: Gets diff between an empty list of peers and known peers
 func TestDiffWithEmptyPeers(t *testing.T) {
 	repo := new(mockPeerRepository)
 
-	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
+	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	kp2 := discovery.NewPeerDigest([]byte("key2"), net.ParseIP("80.200.100.2"), 3000)
 
 	repo.SetPeer(kp)
@@ -148,15 +150,15 @@ Scenario: Gets diff between identically list of peers
 func TestDiffPeerWithSamePeers(t *testing.T) {
 	repo := new(mockPeerRepository)
 
-	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
-	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{}, 1)
+	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{})
 
 	repo.SetPeer(kp)
 	repo.SetPeer(kp2)
 
 	srv := service{repo: repo}
-	np1 := discovery.NewPeerDetailed([]byte("key"), net.ParseIP("127.0.0.1"), 3000, time.Now(), false, nil)
-	np2 := discovery.NewPeerDetailed([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, time.Now(), false, nil)
+	np1 := discovery.NewPeerDetailed([]byte("key"), net.ParseIP("127.0.0.1"), 3000, time.Now(), nil)
+	np2 := discovery.NewPeerDetailed([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, time.Now(), nil)
 
 	diff, err := srv.ComparePeers([]discovery.Peer{np1, np2})
 	assert.Nil(t, err)
@@ -176,6 +178,10 @@ func (r *mockPeerRepository) GetOwnedPeer() (p discovery.Peer, err error) {
 		}
 	}
 	return
+}
+
+func (r *mockPeerRepository) CountKnownPeers() (int, error) {
+	return len(r.peers), nil
 }
 
 func (r *mockPeerRepository) ListSeedPeers() ([]discovery.Seed, error) {
@@ -215,17 +221,26 @@ func (r *mockPeerRepository) containsPeer(p discovery.Peer) bool {
 	return exist
 }
 
+func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
+	for i := 0; i < len(r.peers); i++ {
+		if string(ip) == string(r.peers[i].IP()) {
+			return r.peers[i], nil
+		}
+	}
+	return
+}
+
 type mockSpreader struct {
 }
 
 func (m mockSpreader) SendSyn(req discovery.SynRequest) (*discovery.SynAck, error) {
-	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}, 1)
-	tar := discovery.NewStartupPeer([]byte("uKey1"), net.ParseIP("200.18.186.39"), 3000, "1.1", discovery.PeerPosition{}, 1)
+	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	tar := discovery.NewStartupPeer([]byte("uKey1"), net.ParseIP("200.18.186.39"), 3000, "1.1", discovery.PeerPosition{})
 
 	t, _ := time.Parse(
 		time.RFC3339,
 		"2012-11-01T22:08:41+00:00")
-	np1 := discovery.NewPeerDetailed([]byte("dKey1"), net.ParseIP("35.200.100.2"), 3000, t, false, nil)
+	np1 := discovery.NewPeerDetailed([]byte("dKey1"), net.ParseIP("35.200.100.2"), 3000, t, nil)
 
 	newPeers := []discovery.Peer{np1}
 
@@ -266,9 +281,53 @@ func (m mockMonitor) CPULoad() (string, error) {
 }
 
 func (m mockMonitor) FreeDiskSpace() (float64, error) {
-	return 300.50, nil
+	return 500, nil
 }
 
-func (m mockMonitor) IOWaitRate() (float64, error) {
-	return 500, nil
+func (m mockMonitor) P2PFactor() (int, error) {
+	return 1, nil
+}
+
+type mockPeerNetworker struct{}
+
+func (n mockPeerNetworker) IP() (net.IP, error) {
+	return net.ParseIP("127.0.0.1"), nil
+}
+
+func (n mockPeerNetworker) CheckInternetState() error {
+	return nil
+}
+
+func (n mockPeerNetworker) CheckNtpState() error {
+	return nil
+}
+
+type mockRobotWatcher struct{}
+
+func (r mockRobotWatcher) CheckAutodiscoveryProcess(port int) error {
+	return nil
+}
+
+func (r mockRobotWatcher) CheckDataProcess() error {
+	return nil
+}
+
+func (r mockRobotWatcher) CheckMiningProcess() error {
+	return nil
+}
+
+func (r mockRobotWatcher) CheckAIProcess() error {
+	return nil
+}
+
+func (r mockRobotWatcher) CheckScyllaDbProcess() error {
+	return nil
+}
+
+func (r mockRobotWatcher) CheckRedisProcess() error {
+	return nil
+}
+
+func (r mockRobotWatcher) CheckRabbitmqProcess() error {
+	return nil
 }
