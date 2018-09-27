@@ -14,7 +14,6 @@ import (
 	"github.com/uniris/uniris-core/autodiscovery/pkg/system"
 
 	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/http"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/rabbitmq"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/rpc"
 
@@ -35,7 +34,7 @@ const (
 func main() {
 
 	//Loads peer's configuration
-	network, pbKey, port, ver, p2pFactor, seedsFile, err := loadConfiguration()
+	network, pbKey, port, ver, seedsFile, err := loadConfiguration()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,24 +45,23 @@ func main() {
 	log.Printf("Key: %s", pbKey)
 	log.Printf("Port: %d", port)
 	log.Printf("Version: %s", ver)
-	log.Printf("P2P Factor: %d", p2pFactor)
 
 	//Initializes dependencies
-	repo := new(mem.Repository)
-	var np bootstraping.PeerNetworker
+	repo := mem.NewRepository()
+	var np monitoring.PeerNetworker
 	if network == "public" {
-		np = http.NewPeerNetworker()
+		np = system.NewPublicNetworker()
 	} else {
-		np = system.NewPeerNetworker()
+		np = system.NewPrivateNetworker()
 	}
-	pos := http.NewPeerPositioner()
-	monit := monitoring.NewService(repo, system.NewSystemWatcher())
+	pos := system.NewPeerPositioner()
+	monit := monitoring.NewService(repo, system.NewPeerMonitor(), np, system.NewRobotWatcher())
 	notif := rabbitmq.NewNotifier()
 	msg := rpc.NewMessenger()
 
 	//Store the startup peer
 	boot := bootstraping.NewService(repo, pos, np)
-	startPeer, err := boot.Startup(pbKey, port, p2pFactor, ver)
+	startPeer, err := boot.Startup(pbKey, port, ver)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -93,13 +91,14 @@ func main() {
 		if err := g.Spread(startPeer); err != nil {
 			log.Printf("Gossip failure: %s", err.Error())
 		}
+		selfp, _ := repo.GetOwnedPeer()
+		log.Printf("DEBUG: cpu: %s, freedisk: %b, status: %d, discoveredPeersNumber: %d", selfp.CPULoad(), selfp.FreeDiskSpace(), selfp.Status(), selfp.DiscoveredPeersNumber())
 	}
 }
 
-func loadConfiguration() (string, []byte, int, string, int, string, error) {
+func loadConfiguration() (string, []byte, int, string, string, error) {
 	network := flag.String("network", "public", "Network type: public, private")
 	port := flag.Int("port", 3545, "Discovery port")
-	p2pFactor := flag.Int("p2p-factor", 1, "P2P replication factor")
 	pbKeyFile := flag.String("key-file", defaultPbKeyFile, "Public key file")
 	seedsFile := flag.String("seeds-file", seedsFile, "Seeds listing file")
 
@@ -107,25 +106,25 @@ func loadConfiguration() (string, []byte, int, string, int, string, error) {
 
 	pbKeyPath, err := filepath.Abs(*pbKeyFile)
 	if err != nil {
-		return "", nil, 0, "", 0, "", err
+		return "", nil, 0, "", "", err
 	}
 
 	pbKey, err := ioutil.ReadFile(pbKeyPath)
 	if err != nil {
-		return "", nil, 0, "", 0, "", err
+		return "", nil, 0, "", "", err
 	}
 
 	verPath, err := filepath.Abs(versionFile)
 	if err != nil {
-		return "", nil, 0, "", 0, "", err
+		return "", nil, 0, "", "", err
 	}
 	verBytes, err := ioutil.ReadFile(verPath)
 	if err != nil {
-		return "", nil, 0, "", 0, "", err
+		return "", nil, 0, "", "", err
 	}
 	version := string(verBytes)
 
-	return *network, pbKey, *port, version, *p2pFactor, *seedsFile, nil
+	return *network, pbKey, *port, version, *seedsFile, nil
 }
 
 func startServer(port int, repo discovery.Repository, notif gossip.Notifier) error {

@@ -38,3 +38,7 @@
   version = "1.2.2"
 
 
+
+[[constraint]]
+  name = "github.com/beevik/ntp"
+  version = "0.2.0"

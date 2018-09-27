@@ -8,26 +8,14 @@ import (
 
 //Repository provides access to the peer repository
 type Repository interface {
+	CountKnownPeers() (int, error)
 	GetOwnedPeer() (Peer, error)
 	ListSeedPeers() ([]Seed, error)
 	ListKnownPeers() ([]Peer, error)
 	AddPeer(Peer) error
 	AddSeed(Seed) error
 	UpdatePeer(Peer) error
-}
-
-//Seed is initial peer need to startup the discovery process
-type Seed struct {
-	IP   net.IP
-	Port int
-}
-
-//ToPeer converts a seed into a peer
-func (s Seed) ToPeer() Peer {
-	return Peer{
-		ip:   s.IP,
-		port: s.Port,
-	}
+	GetPeerByIP(ip net.IP) (Peer, error)
 }
 
 //Peer describes a member of the P2P network
@@ -42,13 +30,13 @@ type Peer struct {
 
 //PeerState describes the state of peer and its metrics
 type PeerState struct {
-	status        PeerStatus
-	cpuLoad       string
-	ioWaitRate    float64
-	freeDiskSpace float64
-	version       string
-	geoPosition   PeerPosition
-	p2pFactor     int
+	status                PeerStatus
+	cpuLoad               string
+	freeDiskSpace         float64
+	version               string
+	geoPosition           PeerPosition
+	p2pFactor             int
+	discoveredPeersNumber int
 }
 
 //PeerStatus defines a peer health analysis
@@ -67,6 +55,9 @@ const (
 	//StorageOnlyStatus defines if the peer only accept storage request
 	StorageOnlyStatus PeerStatus = 3
 )
+
+//BootStrapingMinTime is the necessary minimum time on seconds to finish learning about the network
+const BootStrapingMinTime = 1800
 
 //PeerPosition wraps the geo coordinates of a peer
 type PeerPosition struct {
@@ -107,10 +98,18 @@ func (p Peer) GeoPosition() *PeerPosition {
 	return &p.state.geoPosition
 }
 
+//DiscoveredPeersNumber returns the number of discovered nodes by the peer
+func (p Peer) DiscoveredPeersNumber() int {
+	if p.state == nil {
+		return 0
+	}
+	return p.state.discoveredPeersNumber
+}
+
 //P2PFactor returns the peer's replication factor
 func (p Peer) P2PFactor() int {
 	if p.state == nil {
-		return 1
+		return 0
 	}
 	return p.state.p2pFactor
 }
@@ -134,7 +133,7 @@ func (p Peer) Version() string {
 //CPULoad returns the load on the peer's CPU
 func (p Peer) CPULoad() string {
 	if p.state == nil {
-		return "0.0.0"
+		return "--"
 	}
 	return p.state.cpuLoad
 }
@@ -145,14 +144,6 @@ func (p Peer) FreeDiskSpace() float64 {
 		return 0.0
 	}
 	return p.state.freeDiskSpace
-}
-
-//IOWaitRate returns the rate of the peer's I/O operations
-func (p Peer) IOWaitRate() float64 {
-	if p.state == nil {
-		return 0.0
-	}
-	return p.state.ioWaitRate
 }
 
 //IsOk checks if a peer is healthy
@@ -171,18 +162,19 @@ func (p Peer) GetEndpoint() string {
 }
 
 //Refresh the peer state
-func (p *Peer) Refresh(status PeerStatus, disk float64, cpu string, io float64) {
+func (p *Peer) Refresh(status PeerStatus, disk float64, cpu string, dp int, p2p int) {
 	if p.state == nil {
 		p.state = &PeerState{}
 	}
 	p.state.cpuLoad = cpu
 	p.state.status = status
 	p.state.freeDiskSpace = disk
-	p.state.ioWaitRate = io
+	p.state.discoveredPeersNumber = dp
+	p.state.p2pFactor = p2p
 }
 
 //NewStartupPeer creates a new peer started on the peer's machine (aka owned peer)
-func NewStartupPeer(pbKey []byte, ip net.IP, port int, version string, pos PeerPosition, p2Pfactor int) Peer {
+func NewStartupPeer(pbKey []byte, ip net.IP, port int, version string, pos PeerPosition) Peer {
 	return Peer{
 		ip:             ip,
 		port:           port,
@@ -193,7 +185,7 @@ func NewStartupPeer(pbKey []byte, ip net.IP, port int, version string, pos PeerP
 			status:      BootstrapingStatus,
 			version:     version,
 			geoPosition: pos,
-			p2pFactor:   p2Pfactor,
+			p2pFactor:   0,
 		},
 	}
 }
@@ -220,14 +212,14 @@ func NewPeerDetailed(pbKey []byte, ip net.IP, port int, genTime time.Time, state
 }
 
 //NewState creates a new peer's state
-func NewState(ver string, stat PeerStatus, geo PeerPosition, cpu string, disk float64, io float64, p2pfactor int) *PeerState {
+func NewState(ver string, stat PeerStatus, geo PeerPosition, cpu string, disk float64, p2pfactor int, dpn int) *PeerState {
 	return &PeerState{
-		version:       ver,
-		status:        stat,
-		geoPosition:   geo,
-		cpuLoad:       cpu,
-		freeDiskSpace: disk,
-		ioWaitRate:    io,
-		p2pFactor:     p2pfactor,
+		version:               ver,
+		status:                stat,
+		geoPosition:           geo,
+		cpuLoad:               cpu,
+		freeDiskSpace:         disk,
+		p2pFactor:             p2pfactor,
+		discoveredPeersNumber: dpn,
 	}
 }

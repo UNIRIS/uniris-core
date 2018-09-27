@@ -44,11 +44,11 @@ message PeerDetailed {
    message PeerState {
         PeerStatus Status = 1;
         string CPULoad = 2;
-        float IOWaitRate = 3;
-        float FreeDiskSpace = 4;
-        string Version = 5;
-        GeoCoordinates GeoPosition = 6;
-        int32 P2PFactor = 7;
+        float FreeDiskSpace = 3;
+        string Version = 4;
+        GeoCoordinates GeoPosition = 5;
+        int32 P2PFactor = 6;
+        int32 DiscoveredPeersNumber = 7;
 
         message GeoCoordinates {
                 float Lat = 1;
