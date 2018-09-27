@@ -3,10 +3,12 @@
 
 package api
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
-import empty "github.com/golang/protobuf/ptypes/empty"
+import (
+	fmt "fmt"
+	proto "github.com/golang/protobuf/proto"
+	empty "github.com/golang/protobuf/ptypes/empty"
+	math "math"
+)
 
 import (
 	context "golang.org/x/net/context"
@@ -68,14 +70,15 @@ func (*SynRequest) ProtoMessage()    {}
 func (*SynRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_discovery_4b683abf37fd5582, []int{0}
 }
+
 func (m *SynRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SynRequest.Unmarshal(m, b)
 }
 func (m *SynRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SynRequest.Marshal(b, m, deterministic)
 }
-func (dst *SynRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SynRequest.Merge(dst, src)
+func (m *SynRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SynRequest.Merge(m, src)
 }
 func (m *SynRequest) XXX_Size() int {
 	return xxx_messageInfo_SynRequest.Size(m)
@@ -122,14 +125,15 @@ func (*AckRequest) ProtoMessage()    {}
 func (*AckRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_discovery_4b683abf37fd5582, []int{1}
 }
+
 func (m *AckRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AckRequest.Unmarshal(m, b)
 }
 func (m *AckRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_AckRequest.Marshal(b, m, deterministic)
 }
-func (dst *AckRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AckRequest.Merge(dst, src)
+func (m *AckRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AckRequest.Merge(m, src)
 }
 func (m *AckRequest) XXX_Size() int {
 	return xxx_messageInfo_AckRequest.Size(m)
@@ -177,14 +181,15 @@ func (*SynAck) ProtoMessage()    {}
 func (*SynAck) Descriptor() ([]byte, []int) {
 	return fileDescriptor_discovery_4b683abf37fd5582, []int{2}
 }
+
 func (m *SynAck) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SynAck.Unmarshal(m, b)
 }
 func (m *SynAck) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SynAck.Marshal(b, m, deterministic)
 }
-func (dst *SynAck) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SynAck.Merge(dst, src)
+func (m *SynAck) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SynAck.Merge(m, src)
 }
 func (m *SynAck) XXX_Size() int {
 	return xxx_messageInfo_SynAck.Size(m)
@@ -237,14 +242,15 @@ func (*PeerDigest) ProtoMessage()    {}
 func (*PeerDigest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_discovery_4b683abf37fd5582, []int{3}
 }
+
 func (m *PeerDigest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PeerDigest.Unmarshal(m, b)
 }
 func (m *PeerDigest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PeerDigest.Marshal(b, m, deterministic)
 }
-func (dst *PeerDigest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PeerDigest.Merge(dst, src)
+func (m *PeerDigest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeerDigest.Merge(m, src)
 }
 func (m *PeerDigest) XXX_Size() int {
 	return xxx_messageInfo_PeerDigest.Size(m)
@@ -548,6 +554,7 @@ func (m *PeerAppState_GeoCoordinates) GetLon() float32 {
 }
 
 func init() {
+	proto.RegisterEnum("api.PeerDetailed_PeerState_PeerStatus", PeerDetailed_PeerState_PeerStatus_name, PeerDetailed_PeerState_PeerStatus_value)
 	proto.RegisterType((*SynRequest)(nil), "api.SynRequest")
 	proto.RegisterType((*AckRequest)(nil), "api.AckRequest")
 	proto.RegisterType((*SynAck)(nil), "api.SynAck")

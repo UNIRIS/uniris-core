@@ -9,6 +9,17 @@ import (
 
 //ErrChangeNotOwnedPeer is returned when you try to change the state of peer that you don't own
 var ErrChangeNotOwnedPeer = errors.New("Cannot change a peer that you don't own")
+//Repository provides access to the peer repository
+type Repository interface {
+	CountKnownPeers() (int, error)
+	GetOwnedPeer() (Peer, error)
+	ListSeedPeers() ([]Seed, error)
+	ListKnownPeers() ([]Peer, error)
+	AddPeer(Peer) error
+	AddSeed(Seed) error
+	UpdatePeer(Peer) error
+	GetPeerByIP(ip net.IP) (Peer, error)
+}
 
 //PublicKey describes a public key value object
 type PublicKey []byte
@@ -27,6 +38,7 @@ type PeerIdentity interface {
 	IP() net.IP
 	Port() uint16
 	PublicKey() PublicKey
+	discoveredPeersNumber int
 }
 
 type peerIdentity struct {
@@ -67,6 +79,20 @@ type Peer interface {
 	Refresh(status PeerStatus, disk float64, cpu string, p2pFactor uint8) error
 	Endpoint() string
 	Owned() bool
+//DiscoveredPeersNumber returns the number of discovered nodes by the peer
+func (p Peer) DiscoveredPeersNumber() int {
+	if p.state == nil {
+		return 0
+	}
+	return p.state.discoveredPeersNumber
+}
+
+//P2PFactor returns the peer's replication factor
+func (p Peer) P2PFactor() int {
+	if p.state == nil {
+		return 0
+	}
+	return p.state.p2pFactor
 }
 
 //Repository provides access to the peer repository
@@ -87,6 +113,12 @@ type peer struct {
 	isOwned  bool
 }
 
+//CPULoad returns the load on the peer's CPU
+func (p Peer) CPULoad() string {
+	if p.state == nil {
+		return "--"
+	}
+	return p.state.cpuLoad
 //Identity returns the peer's identity
 func (p peer) Identity() PeerIdentity {
 	return p.identity

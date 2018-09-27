@@ -126,6 +126,10 @@ type mockPeerRepository struct {
 	seeds []discovery.Seed
 }
 
+func (r *mockPeerRepository) CountKnownPeers() (int, error) {
+	return len(r.peers), nil
+}
+
 func (r *mockPeerRepository) GetOwnedPeer() (p discovery.Peer, err error) {
 	for _, p := range r.peers {
 		if p.Owned() {
@@ -166,6 +170,15 @@ func (r *mockPeerRepository) UpdatePeer(peer discovery.Peer) error {
 	return nil
 }
 
+func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
+	for i := 0; i < len(r.peers); i++ {
+		if string(ip) == string(r.peers[i].IP()) {
+			return r.peers[i], nil
+		}
+	}
+	return
+}
+
 func (r *mockPeerRepository) containsPeer(p discovery.Peer) bool {
 	mPeers := make(map[string]discovery.Peer, 0)
 	for _, p := range r.peers {
@@ -181,4 +194,8 @@ type mockMonitor struct{}
 //RefreshPeer updates the peer's metrics retrieved from the peer monitor
 func (s mockMonitor) RefreshPeer(p discovery.Peer) error {
 	return nil
+}
+
+func (s mockMonitor) PeerStatus(p discovery.Peer) (discovery.PeerStatus, error) {
+	return discovery.OkStatus, nil
 }

@@ -44,21 +44,19 @@ func (s service) Spread(init discovery.Peer) error {
 	if err != nil {
 		return err
 	}
-
 	kp, err := s.repo.ListKnownPeers()
 	if err != nil {
 		return err
 	}
-
 	r, err := discovery.NewGossipRound(init, kp, sp)
 	if err != nil {
 		return err
 	}
-
 	pSelected, err := r.SelectPeers()
 	if err != nil {
 		return err
 	}
+
 	for _, p := range pSelected {
 		newPeers, err := s.RunCycle(init, p, kp)
 		if err != nil {
