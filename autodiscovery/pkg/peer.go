@@ -1,10 +1,17 @@
 package discovery
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"time"
 )
+
+//BootStrapingMinTime is the necessary minimum time on seconds to finish learning about the network
+const BootStrapingMinTime = 1800
+
+//ErrChangeNotOwnedPeer is returned when you try to change the state of peer that you don't own
+var ErrChangeNotOwnedPeer = errors.New("Cannot change a peer that you don't own")
 
 //Repository provides access to the peer repository
 type Repository interface {
@@ -18,208 +25,144 @@ type Repository interface {
 	GetPeerByIP(ip net.IP) (Peer, error)
 }
 
-//Peer describes a member of the P2P network
-type Peer struct {
-	publicKey      []byte
-	ip             net.IP
-	port           int
-	state          *PeerState
-	generationTime time.Time
-	isOwned        bool
+//PublicKey describes a public key value object
+type PublicKey []byte
+
+func (k PublicKey) String() string {
+	return string(k)
 }
 
-//PeerState describes the state of peer and its metrics
-type PeerState struct {
-	status                PeerStatus
-	cpuLoad               string
-	freeDiskSpace         float64
-	version               string
-	geoPosition           PeerPosition
-	p2pFactor             int
-	discoveredPeersNumber int
+//Equals checks if two public key are the same
+func (k PublicKey) Equals(key PublicKey) bool {
+	return k.String() == key.String()
 }
 
-//PeerStatus defines a peer health analysis
-type PeerStatus int
-
-const (
-	//FaultStatus defines if the peer is not started
-	FaultStatus PeerStatus = 0
-
-	//BootstrapingStatus defines if the peer is starting
-	BootstrapingStatus PeerStatus = 1
-
-	//OkStatus defines if the peer is started
-	OkStatus PeerStatus = 2
-
-	//StorageOnlyStatus defines if the peer only accept storage request
-	StorageOnlyStatus PeerStatus = 3
-)
-
-//BootStrapingMinTime is the necessary minimum time on seconds to finish learning about the network
-const BootStrapingMinTime = 1800
-
-//PeerPosition wraps the geo coordinates of a peer
-type PeerPosition struct {
-	Lat float64
-	Lon float64
+//PeerIdentity describes the peer identification the network
+type PeerIdentity interface {
+	IP() net.IP
+	Port() int
+	PublicKey() PublicKey
 }
 
-//PublicKey returns the peer's public key. It's the identification of a peer among the network
-func (p Peer) PublicKey() []byte {
-	return p.publicKey
+type peerIdentity struct {
+	ip        net.IP
+	port      int
+	publicKey PublicKey
 }
 
-//GenerationTime returns the peer's generation time
-func (p Peer) GenerationTime() time.Time {
-	return p.generationTime
+//NewPeerIdentity creates a new peer identity
+func NewPeerIdentity(ip net.IP, port int, pbKey PublicKey) PeerIdentity {
+	return peerIdentity{
+		ip:        ip,
+		port:      port,
+		publicKey: pbKey,
+	}
 }
 
-//IsOwned determinates if the peer has been created locally (by startup on this computer)
-func (p Peer) IsOwned() bool {
-	return p.isOwned
-}
-
-//IP returns the peer's IP
-func (p Peer) IP() net.IP {
+//IP returns the peer's IP address
+func (p peerIdentity) IP() net.IP {
 	return p.ip
 }
 
 //Port returns the peer's port
-func (p Peer) Port() int {
+func (p peerIdentity) Port() int {
 	return p.port
 }
 
-//GeoPosition returns the peer's geo coordinates
-func (p Peer) GeoPosition() *PeerPosition {
-	if p.state == nil {
-		return nil
+//PublicKey returns the peer's public key
+func (p peerIdentity) PublicKey() PublicKey {
+	return p.publicKey
+}
+
+//Peer describes a network member
+type Peer interface {
+	Identity() PeerIdentity
+	AppState() PeerAppState
+	HeartbeatState() PeerHeartbeatState
+	Refresh(status PeerStatus, disk float64, cpu string, p2pFactor int, discoveryPeersNb int) error
+	Endpoint() string
+	Owned() bool
+}
+
+//Peer describes a member of the P2P network
+type peer struct {
+	identity PeerIdentity
+	hbState  heartbeatState
+	appState appState
+	isOwned  bool
+}
+
+//Identity returns the peer's identity
+func (p peer) Identity() PeerIdentity {
+	return p.identity
+}
+
+//HeartbeatState returns the peer's hearbeat state
+func (p peer) HeartbeatState() PeerHeartbeatState {
+	return p.hbState
+}
+
+//AppState returns the peer's app state including all the metrics
+func (p peer) AppState() PeerAppState {
+	return p.appState
+}
+
+//Owned determinates if the peer has been created locally (by startup on this computer)
+func (p peer) Owned() bool {
+	return p.isOwned
+}
+
+//Endpoint returns the peer endpoint
+func (p peer) Endpoint() string {
+	return fmt.Sprintf("%s:%d", p.Identity().IP().String(), p.Identity().Port())
+}
+
+//Refresh a peer with metrics and updates the elapsed heartbeats
+func (p *peer) Refresh(status PeerStatus, disk float64, cpu string, p2pFactor int, discoveryPeersNb int) error {
+	if !p.isOwned {
+		return ErrChangeNotOwnedPeer
 	}
-	return &p.state.geoPosition
-}
+	p.appState.refresh(status, disk, cpu, p2pFactor, discoveryPeersNb)
+	p.hbState.refreshElapsedHeartbeats()
 
-//DiscoveredPeersNumber returns the number of discovered nodes by the peer
-func (p Peer) DiscoveredPeersNumber() int {
-	if p.state == nil {
-		return 0
-	}
-	return p.state.discoveredPeersNumber
-}
-
-//P2PFactor returns the peer's replication factor
-func (p Peer) P2PFactor() int {
-	if p.state == nil {
-		return 0
-	}
-	return p.state.p2pFactor
-}
-
-//Status returns the peer's status
-func (p Peer) Status() PeerStatus {
-	if p.state == nil {
-		return BootstrapingStatus
-	}
-	return p.state.status
-}
-
-//Version returns the peer's version of the application
-func (p Peer) Version() string {
-	if p.state == nil {
-		return "1.0.0"
-	}
-	return p.state.version
-}
-
-//CPULoad returns the load on the peer's CPU
-func (p Peer) CPULoad() string {
-	if p.state == nil {
-		return "--"
-	}
-	return p.state.cpuLoad
-}
-
-//FreeDiskSpace returns the available space on the peer's disk
-func (p Peer) FreeDiskSpace() float64 {
-	if p.state == nil {
-		return 0.0
-	}
-	return p.state.freeDiskSpace
-}
-
-//IsOk checks if a peer is healthy
-func (p Peer) IsOk() bool {
-	return p.state.status == OkStatus
-}
-
-//GetElapsedHeartbeats returns the elasted hearbeats from the peer's generation time
-func (p Peer) GetElapsedHeartbeats() int64 {
-	return time.Now().Unix() - p.generationTime.Unix()
-}
-
-//GetEndpoint returns the peer endpoint
-func (p Peer) GetEndpoint() string {
-	return fmt.Sprintf("%s:%d", p.ip.String(), p.port)
-}
-
-//Refresh the peer state
-func (p *Peer) Refresh(status PeerStatus, disk float64, cpu string, dp int, p2p int) {
-	if p.state == nil {
-		p.state = &PeerState{}
-	}
-	p.state.cpuLoad = cpu
-	p.state.status = status
-	p.state.freeDiskSpace = disk
-	p.state.discoveredPeersNumber = dp
-	p.state.p2pFactor = p2p
+	return nil
 }
 
 //NewStartupPeer creates a new peer started on the peer's machine (aka owned peer)
-func NewStartupPeer(pbKey []byte, ip net.IP, port int, version string, pos PeerPosition) Peer {
-	return Peer{
-		ip:             ip,
-		port:           port,
-		publicKey:      pbKey,
-		generationTime: time.Now(),
-		isOwned:        true,
-		state: &PeerState{
+func NewStartupPeer(pbKey PublicKey, ip net.IP, port int, version string, pos PeerPosition) Peer {
+	return &peer{
+		identity: peerIdentity{
+			ip:        ip,
+			port:      port,
+			publicKey: pbKey,
+		},
+		appState: appState{
 			status:      BootstrapingStatus,
 			version:     version,
 			geoPosition: pos,
 			p2pFactor:   0,
 		},
+		hbState: heartbeatState{
+			generationTime: time.Now(),
+		},
+		isOwned: true,
 	}
 }
 
-//NewPeerDigest creates a peer digest
-func NewPeerDigest(pbKey []byte, ip net.IP, port int) Peer {
-	return Peer{
-		ip:        ip,
-		publicKey: pbKey,
-		port:      port,
+//NewDiscoveredPeer creates a peer when including identity, heartbeat and app state
+func NewDiscoveredPeer(identity PeerIdentity, hbS PeerHeartbeatState, aS PeerAppState) Peer {
+	return &peer{
+		identity: identity,
+		hbState:  hbS.(heartbeatState),
+		appState: aS.(appState),
+		isOwned:  false,
 	}
 }
 
-//NewPeerDetailed creates a peer detailed
-func NewPeerDetailed(pbKey []byte, ip net.IP, port int, genTime time.Time, state *PeerState) Peer {
-	return Peer{
-		ip:             ip,
-		port:           port,
-		publicKey:      pbKey,
-		generationTime: genTime,
-		isOwned:        false,
-		state:          state,
-	}
-}
-
-//NewState creates a new peer's state
-func NewState(ver string, stat PeerStatus, geo PeerPosition, cpu string, disk float64, p2pfactor int, dpn int) *PeerState {
-	return &PeerState{
-		version:               ver,
-		status:                stat,
-		geoPosition:           geo,
-		cpuLoad:               cpu,
-		freeDiskSpace:         disk,
-		p2pFactor:             p2pfactor,
-		discoveredPeersNumber: dpn,
+//NewPeerDigest creates a peer with the minimum information for network transfert
+func NewPeerDigest(identity PeerIdentity, hbS PeerHeartbeatState) Peer {
+	return &peer{
+		identity: identity,
+		hbState:  hbS.(heartbeatState),
 	}
 }

@@ -14,12 +14,12 @@ Scenario: Picks a random peer
 	Then we get a random peer
 */
 func TestRandomPeer(t *testing.T) {
-	p1 := NewPeerDigest([]byte("key"), net.ParseIP("127.0.0.1"), 3000)
-	p2 := NewPeerDigest([]byte("key2"), net.ParseIP("10.0.0.1"), 3000)
+	p1 := &peer{identity: NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, PublicKey("key"))}
+	p2 := &peer{identity: NewPeerIdentity(net.ParseIP("127.0.0.2"), 3000, PublicKey("key2"))}
 	peers := []Peer{p1, p2}
 
 	g := &GossipRound{
-		initiator:  Peer{},
+		initiator:  &peer{},
 		knownPeers: peers,
 		seedPeers:  []Seed{},
 	}
@@ -38,7 +38,7 @@ func TestRandomSeed(t *testing.T) {
 	s2 := Seed{IP: net.ParseIP("30.0.0.0"), Port: 3000}
 
 	g := &GossipRound{
-		initiator:  Peer{},
+		initiator:  &peer{},
 		knownPeers: []Peer{},
 		seedPeers:  []Seed{s1, s2},
 	}
@@ -53,7 +53,7 @@ Scenario: Starts a gossip round without seeds
 	Then an error is returned
 */
 func TestGossipWithoutSeeds(t *testing.T) {
-	_, err := NewGossipRound(Peer{}, []Peer{}, []Seed{})
+	_, err := NewGossipRound(&peer{}, []Peer{}, []Seed{})
 	assert.Error(t, err, ErrEmptySeed)
 }
 
@@ -67,16 +67,16 @@ func TestSelectPeers(t *testing.T) {
 
 	s1 := Seed{IP: net.ParseIP("30.0.50.100"), Port: 3000}
 
-	p1 := NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{})
-	p2 := NewPeerDigest([]byte("key2"), net.ParseIP("10.0.0.1"), 3000)
+	p1 := NewStartupPeer(PublicKey("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{})
+	p2 := &peer{identity: NewPeerIdentity(net.ParseIP("10.0.0.1"), 3000, PublicKey("key2"))}
 
-	r, _ := NewGossipRound(Peer{}, []Peer{p1, p2}, []Seed{s1})
+	r, _ := NewGossipRound(&peer{}, []Peer{p1, p2}, []Seed{s1})
 
 	peers, err := r.SelectPeers()
 	assert.Nil(t, err)
 	assert.NotNil(t, peers)
 	assert.NotEmpty(t, peers)
 	assert.Equal(t, 2, len(peers))
-	assert.Equal(t, "30.0.50.100", peers[0].IP().String())
-	assert.Equal(t, "10.0.0.1", peers[1].IP().String())
+	assert.Equal(t, "30.0.50.100", peers[0].Identity().IP().String())
+	assert.Equal(t, "10.0.0.1", peers[1].Identity().IP().String())
 }

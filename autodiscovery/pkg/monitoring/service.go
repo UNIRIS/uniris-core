@@ -39,7 +39,8 @@ type PeerMonitor interface {
 	//FreeDiskSpace retrieves the available free disk space of the peer
 	FreeDiskSpace() (float64, error)
 
-	//P2PFactor get the P2PFactor from the AI Daemon
+	//P2PFactor retrieves the replication factor from the AI service
+	//and defines the number of robots that should validate a transaction
 	P2PFactor() (int, error)
 }
 
@@ -59,7 +60,7 @@ type service struct {
 
 //Status computes the peer's status according to the health state of the system
 func (s service) PeerStatus(p discovery.Peer) (discovery.PeerStatus, error) {
-	err := s.checkProcesses(p.Port())
+	err := s.checkProcesses(p.Identity().Port())
 	if err != nil {
 		return discovery.FaultStatus, err
 	}
@@ -80,9 +81,10 @@ func (s service) PeerStatus(p discovery.Peer) (discovery.PeerStatus, error) {
 	if seedDiscoveries == 0 {
 		return discovery.BootstrapingStatus, nil
 	}
-	if t := p.GetElapsedHeartbeats(); t < discovery.BootStrapingMinTime && seedDiscoveries > p.DiscoveredPeersNumber() {
+
+	if t := p.HeartbeatState().ElapsedHeartbeats(); t < discovery.BootStrapingMinTime && seedDiscoveries > p.AppState().DiscoveredPeersNumber() {
 		return discovery.BootstrapingStatus, nil
-	} else if t < discovery.BootStrapingMinTime && seedDiscoveries <= p.DiscoveredPeersNumber() {
+	} else if t < discovery.BootStrapingMinTime && seedDiscoveries <= p.AppState().DiscoveredPeersNumber() {
 		return discovery.OkStatus, nil
 	} else {
 		return discovery.OkStatus, nil
@@ -115,7 +117,9 @@ func (s service) RefreshPeer(p discovery.Peer) error {
 		return err
 	}
 
-	p.Refresh(status, disk, cpu, dp, p2p)
+	if err := p.Refresh(status, disk, cpu, p2p, dp); err != nil {
+		return err
+	}
 	if err := s.repo.UpdatePeer(p); err != nil {
 		return err
 	}

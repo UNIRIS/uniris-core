@@ -66,7 +66,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Printf("Endpoint: %s", startPeer.GetEndpoint())
+	log.Printf("Endpoint: %s", startPeer.Endpoint())
 	log.Print("=================================")
 
 	//Starts server
@@ -92,7 +92,7 @@ func main() {
 			log.Printf("Gossip failure: %s", err.Error())
 		}
 		selfp, _ := repo.GetOwnedPeer()
-		log.Printf("DEBUG: cpu: %s, freedisk: %b, status: %d, discoveredPeersNumber: %d", selfp.CPULoad(), selfp.FreeDiskSpace(), selfp.Status(), selfp.DiscoveredPeersNumber())
+		log.Printf("DEBUG: cpu: %s, freedisk: %b, status: %d, discoveredPeersNumber: %d", selfp.AppState().CPULoad(), selfp.AppState().FreeDiskSpace(), selfp.AppState().Status(), selfp.AppState().DiscoveredPeersNumber())
 	}
 }
 

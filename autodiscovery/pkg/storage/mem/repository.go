@@ -24,7 +24,7 @@ func (r *repo) CountKnownPeers() (int, error) {
 //GetOwnedPeer return the local peer
 func (r *repo) GetOwnedPeer() (p discovery.Peer, err error) {
 	for _, p := range r.peers {
-		if p.IsOwned() {
+		if p.Owned() {
 			return p, nil
 		}
 	}
@@ -59,7 +59,7 @@ func (r *repo) AddSeed(s discovery.Seed) error {
 //UpdatePeer update an existing peer on the repository
 func (r *repo) UpdatePeer(peer discovery.Peer) error {
 	for _, p := range r.peers {
-		if string(p.PublicKey()) == string(peer.PublicKey()) {
+		if p.Identity().PublicKey().Equals(peer.Identity().PublicKey()) {
 			p = peer
 			break
 		}
@@ -70,7 +70,7 @@ func (r *repo) UpdatePeer(peer discovery.Peer) error {
 //GetPeerByIP get a peer from the repository using its ip
 func (r *repo) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
 	for i := 0; i < len(r.peers); i++ {
-		if string(ip) == string(r.peers[i].IP()) {
+		if r.peers[i].Identity().IP().Equal(ip) {
 			return r.peers[i], nil
 		}
 	}
@@ -80,9 +80,9 @@ func (r *repo) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
 func (r *repo) containsPeer(p discovery.Peer) bool {
 	mPeers := make(map[string]discovery.Peer, 0)
 	for _, p := range r.peers {
-		mPeers[hex.EncodeToString(p.PublicKey())] = p
+		mPeers[hex.EncodeToString(p.Identity().PublicKey())] = p
 	}
 
-	_, exist := mPeers[hex.EncodeToString(p.PublicKey())]
+	_, exist := mPeers[hex.EncodeToString(p.Identity().PublicKey())]
 	return exist
 }
