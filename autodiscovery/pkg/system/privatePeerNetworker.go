@@ -41,10 +41,6 @@ func (n privatePeerNetworker) IP() (net.IP, error) {
 
 //CheckInternetConfig check internet configuration on the node
 func (n privatePeerNetworker) CheckInternetState() error {
-	_, err := net.LookupIP(cdns)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -53,11 +49,11 @@ func (n privatePeerNetworker) CheckNtpState() error {
 	for _, ntps := range cntp {
 		r, err := ntp.QueryWithOptions(ntps, ntp.QueryOptions{Version: 4})
 		if err == nil {
-			if (int64(r.ClockOffset/time.Second) < downmaxoffset) || (int64(r.ClockOffset/time.Second) > upmaxoffset) {
-				for i := 0; i < ntpretry; i++ {
+			if (int64(r.ClockOffset/time.Second) < downmaxOffset) || (int64(r.ClockOffset/time.Second) > upmaxOffset) {
+				for i := 0; i < ntpRetry; i++ {
 					r, err := ntp.QueryWithOptions(ntps, ntp.QueryOptions{Version: 4})
 					if err == nil {
-						if (int64(r.ClockOffset/time.Second) > downmaxoffset) || (int64(r.ClockOffset/time.Second) < upmaxoffset) {
+						if (int64(r.ClockOffset/time.Second) > downmaxOffset) || (int64(r.ClockOffset/time.Second) < upmaxOffset) {
 							return nil
 						}
 					}

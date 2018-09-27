@@ -9,6 +9,7 @@ import (
 
 type robotWatcher struct{}
 
+//NewRobotWatcher return a robotWatcher implementation
 func NewRobotWatcher() monitoring.RobotWatcher {
 	return robotWatcher{}
 }

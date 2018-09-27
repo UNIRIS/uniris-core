@@ -8,8 +8,9 @@ import (
 )
 
 type repo struct {
-	peers []discovery.Peer
-	seeds []discovery.Seed
+	peers             []discovery.Peer
+	seeds             []discovery.Seed
+	unreacheablePeers []discovery.Peer
 }
 
 //NewRepository implements the repository in memory
@@ -41,6 +42,11 @@ func (r *repo) ListKnownPeers() ([]discovery.Peer, error) {
 	return r.peers, nil
 }
 
+//ListUnrecheablePeers returns all unreacheable peers on the repository
+func (r *repo) ListUnrecheablePeers() ([]discovery.Peer, error) {
+	return r.unreacheablePeers, nil
+}
+
 //AddPeer add a peer to the repository
 func (r *repo) AddPeer(p discovery.Peer) error {
 	if r.containsPeer(p) {
@@ -53,6 +59,26 @@ func (r *repo) AddPeer(p discovery.Peer) error {
 //AddSeed add a seed to the repository
 func (r *repo) AddSeed(s discovery.Seed) error {
 	r.seeds = append(r.seeds, s)
+	return nil
+}
+
+//AddUnreacheablePeer add an unreacheable peer to the repository
+func (r *repo) AddUnreacheablePeer(p discovery.Peer) error {
+	if !r.containsUnreacheablePeer(p) {
+		r.unreacheablePeers = append(r.unreacheablePeers, p)
+	}
+	return nil
+}
+
+//DelUnreacheablePeer add an unreacheable peer to the repository
+func (r *repo) DelUnreacheablePeer(p discovery.Peer) error {
+	if r.containsUnreacheablePeer(p) {
+		for i := 0; i < len(r.unreacheablePeers); i++ {
+			if r.unreacheablePeers[i].IP().String() == p.IP().String() {
+				r.unreacheablePeers = r.unreacheablePeers[:i+copy(r.unreacheablePeers[i:], r.unreacheablePeers[i+1:])]
+			}
+		}
+	}
 	return nil
 }
 
@@ -84,5 +110,14 @@ func (r *repo) containsPeer(p discovery.Peer) bool {
 	}
 
 	_, exist := mPeers[hex.EncodeToString(p.Identity().PublicKey())]
+	return exist
+}
+
+func (r *repo) containsUnreacheablePeer(p discovery.Peer) bool {
+	mPeers := make(map[string]discovery.Peer, 0)
+	for _, p := range r.unreacheablePeers {
+		mPeers[p.IP().String()] = p
+	}
+	_, exist := mPeers[p.IP().String()]
 	return exist
 }

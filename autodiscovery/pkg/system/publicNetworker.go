@@ -11,6 +11,17 @@ import (
 	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 )
 
+const (
+	cdns          = "uniris.io"
+	ntpRetry      = 3
+	upmaxOffset   = 300
+	downmaxOffset = -300
+)
+
+var (
+	cntp = [...]string{"1.pool.ntp.org", "2.pool.ntp.org", "3.pool.ntp.org", "4.pool.ntp.org"}
+)
+
 //ErrFailToGetIP is returned when the service to get IP does not respond
 var ErrFailToGetIP = errors.New("Cannot get the peer IP. IP providers may failed")
 
@@ -74,11 +85,11 @@ func (n publicPeerNetworker) CheckNtpState() error {
 	for _, ntps := range cntp {
 		r, err := ntp.QueryWithOptions(ntps, ntp.QueryOptions{Version: 4})
 		if err == nil {
-			if (int64(r.ClockOffset/time.Second) < downmaxoffset) || (int64(r.ClockOffset/time.Second) > upmaxoffset) {
-				for i := 0; i < ntpretry; i++ {
+			if (int64(r.ClockOffset/time.Second) < downmaxOffset) || (int64(r.ClockOffset/time.Second) > upmaxOffset) {
+				for i := 0; i < ntpRetry; i++ {
 					r, err := ntp.QueryWithOptions(ntps, ntp.QueryOptions{Version: 4})
 					if err == nil {
-						if (int64(r.ClockOffset/time.Second) > downmaxoffset) || (int64(r.ClockOffset/time.Second) < upmaxoffset) {
+						if (int64(r.ClockOffset/time.Second) > downmaxOffset) || (int64(r.ClockOffset/time.Second) < upmaxOffset) {
 							return nil
 						}
 					}
