@@ -13,7 +13,7 @@ type Repository struct {
 
 func (r *Repository) GetOwnedPeer() (p discovery.Peer, err error) {
 	for _, p := range r.peers {
-		if p.IsOwned() {
+		if p.Owned() {
 			return p, nil
 		}
 	}
@@ -43,7 +43,7 @@ func (r *Repository) AddSeed(s discovery.Seed) error {
 
 func (r *Repository) UpdatePeer(peer discovery.Peer) error {
 	for _, p := range r.peers {
-		if string(p.PublicKey()) == string(peer.PublicKey()) {
+		if p.Identity().PublicKey().Equals(peer.Identity().PublicKey()) {
 			p = peer
 			break
 		}
@@ -54,9 +54,9 @@ func (r *Repository) UpdatePeer(peer discovery.Peer) error {
 func (r *Repository) containsPeer(p discovery.Peer) bool {
 	mPeers := make(map[string]discovery.Peer, 0)
 	for _, p := range r.peers {
-		mPeers[hex.EncodeToString(p.PublicKey())] = p
+		mPeers[hex.EncodeToString(p.Identity().PublicKey())] = p
 	}
 
-	_, exist := mPeers[hex.EncodeToString(p.PublicKey())]
+	_, exist := mPeers[hex.EncodeToString(p.Identity().PublicKey())]
 	return exist
 }

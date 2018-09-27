@@ -43,21 +43,20 @@ func TestStartup(t *testing.T) {
 	net := new(mockPeerNetworker)
 
 	srv := NewService(repo, pos, net)
-	p, err := srv.Startup([]byte("key"), 3000, 1, "1.0")
+	p, err := srv.Startup([]byte("key"), 3000, "1.0")
 	assert.NotNil(t, p)
 	assert.Nil(t, err)
 
-	assert.Equal(t, "127.0.0.1", p.IP().String())
-	assert.Equal(t, "key", string(p.PublicKey()))
-	assert.Equal(t, 1, p.P2PFactor())
-	assert.Equal(t, "1.0", p.Version())
-	assert.Equal(t, discovery.BootstrapingStatus, p.Status())
+	assert.Equal(t, "127.0.0.1", p.Identity().IP().String())
+	assert.Equal(t, "key", p.Identity().PublicKey().String())
+	assert.Equal(t, "1.0", p.AppState().Version())
+	assert.Equal(t, discovery.BootstrapingStatus, p.AppState().Status())
 
 	pp, _ := repo.ListKnownPeers()
 	assert.NotEmpty(t, pp)
 	assert.Equal(t, 1, len(pp))
-	assert.Equal(t, "127.0.0.1", pp[0].IP().String())
-	assert.True(t, pp[0].IsOwned())
+	assert.Equal(t, "127.0.0.1", pp[0].Identity().IP().String())
+	assert.True(t, pp[0].Owned())
 }
 
 type mockPeerRepository struct {
@@ -67,7 +66,7 @@ type mockPeerRepository struct {
 
 func (r *mockPeerRepository) GetOwnedPeer() (p discovery.Peer, err error) {
 	for _, p := range r.peers {
-		if p.IsOwned() {
+		if p.Owned() {
 			return p, nil
 		}
 	}
@@ -97,7 +96,7 @@ func (r *mockPeerRepository) ListSeedPeers() ([]discovery.Seed, error) {
 
 func (r *mockPeerRepository) UpdatePeer(peer discovery.Peer) error {
 	for _, p := range r.peers {
-		if string(p.PublicKey()) == string(peer.PublicKey()) {
+		if p.Identity().PublicKey().Equals(peer.Identity().PublicKey()) {
 			p = peer
 			break
 		}
@@ -108,10 +107,10 @@ func (r *mockPeerRepository) UpdatePeer(peer discovery.Peer) error {
 func (r *mockPeerRepository) containsPeer(peer discovery.Peer) bool {
 	mPeers := make(map[string]discovery.Peer, 0)
 	for _, p := range r.peers {
-		mPeers[hex.EncodeToString(p.PublicKey())] = peer
+		mPeers[hex.EncodeToString(p.Identity().PublicKey())] = peer
 	}
 
-	_, exist := mPeers[hex.EncodeToString(peer.PublicKey())]
+	_, exist := mPeers[hex.EncodeToString(peer.Identity().PublicKey())]
 	return exist
 }
 

@@ -68,10 +68,11 @@ func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, 
 func (g gossipMessenger) SendAck(req gossip.AckRequest) error {
 	serverAddr := fmt.Sprintf("%s", req.Receiver.Endpoint())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	defer conn.Close()
+
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	builder := PeerBuilder{}
 
@@ -81,6 +82,7 @@ func (g gossipMessenger) SendAck(req gossip.AckRequest) error {
 	for _, p := range req.RequestedPeers {
 		reqP = append(reqP, builder.ToPeerDiscovered(p))
 	}
+
 	_, err = client.Acknowledge(context.Background(), &api.AckRequest{
 		Initiator:      builder.ToPeerDigest(req.Initiator),
 		Receiver:       builder.ToPeerDigest(req.Receiver),

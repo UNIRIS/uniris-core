@@ -23,8 +23,8 @@ func (w watcher) FreeDiskSpace() (float64, error) {
 }
 
 //IOWaitRate computes the rate of the I/O operations of the peer
-func (w watcher) IOWaitRate() (float64, error) {
-	return 0.0, nil
+func (w watcher) P2PFactor() (uint8, error) {
+	return 1, nil
 }
 
 //NewSystemWatcher creates an instance which implements monitoring.Watcher

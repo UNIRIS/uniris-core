@@ -17,7 +17,7 @@ type Watcher interface {
 	FreeDiskSpace() (float64, error)
 
 	//P2PFactor retrieves the replication factor from the AI service
-	P2PFactor() (int32, error)
+	P2PFactor() (uint8, error)
 }
 
 //Service defines the interface for the peer inpsection

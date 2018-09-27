@@ -12,7 +12,7 @@ type notifier struct{}
 
 //Notify a new peer has been discovered
 func (n notifier) Notify(p discovery.Peer) {
-	log.Printf("New peer discovered %s", p.GetEndpoint())
+	log.Printf("Peer discovered, %s - beats: %d", p.Endpoint(), p.HeartbeatState().ElapsedHeartbeats())
 
 	//TODO connect with rabbitmq
 }

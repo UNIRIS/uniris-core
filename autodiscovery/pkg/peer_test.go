@@ -19,11 +19,11 @@ func TestNewPeer(t *testing.T) {
 	assert.NotNil(t, p)
 	assert.Equal(t, "key", p.Identity().PublicKey().String())
 	assert.Equal(t, "127.0.0.1", p.Identity().IP().String())
-	assert.Equal(t, int32(3000), p.Identity().Port())
+	assert.Equal(t, uint16(3000), p.Identity().Port())
 	assert.Equal(t, "1.0", p.AppState().Version())
 	assert.Equal(t, 50.0, p.AppState().GeoPosition().Lat)
 	assert.Equal(t, 3.0, p.AppState().GeoPosition().Lon)
-	assert.Equal(t, int32(1), p.AppState().P2PFactor())
+	assert.Equal(t, uint8(1), p.AppState().P2PFactor())
 	assert.True(t, p.Owned())
 	assert.Equal(t, BootstrapingStatus, p.AppState().Status())
 }
@@ -72,7 +72,7 @@ Scenario: Create a discovered peer
 	When we want theses information
 	Then all the fields are setted and owned flag is false
 */
-func TestDefaultGetters(t *testing.T) {
+func TestCreateDiscoveredPeer(t *testing.T) {
 
 	identity := peerIdentity{
 		publicKey: PublicKey("key"),
@@ -95,11 +95,11 @@ func TestDefaultGetters(t *testing.T) {
 	}
 
 	p := NewDiscoveredPeer(identity, hbState, appState)
-	assert.Equal(t, int64(1000), p.HeartbeatState().ElapsedHeartbeats())
+	assert.Equal(t, uint64(1000), p.HeartbeatState().ElapsedHeartbeats())
 	assert.Equal(t, "key", p.Identity().PublicKey().String())
 	assert.Equal(t, "127.0.0.1", p.Identity().IP().String())
-	assert.Equal(t, int32(3000), p.Identity().Port())
-	assert.Equal(t, int32(2), p.AppState().P2PFactor())
+	assert.Equal(t, uint16(3000), p.Identity().Port())
+	assert.Equal(t, uint8(2), p.AppState().P2PFactor())
 	assert.Equal(t, "300.10.200", p.AppState().CPULoad())
 	assert.Equal(t, 200.10, p.AppState().FreeDiskSpace())
 	assert.Equal(t, BootstrapingStatus, p.AppState().Status())
@@ -118,5 +118,5 @@ func TestSeedToPeer(t *testing.T) {
 	p := s.AsPeer()
 	assert.NotNil(t, p)
 	assert.Equal(t, "127.0.0.1", p.Identity().IP().String())
-	assert.Equal(t, int32(3000), p.Identity().Port())
+	assert.Equal(t, uint16(3000), p.Identity().Port())
 }

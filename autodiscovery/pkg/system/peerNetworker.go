@@ -1,7 +1,6 @@
 package system
 
 import (
-	"log"
 	"net"
 
 	"github.com/uniris/uniris-core/autodiscovery/pkg/bootstraping"
@@ -22,7 +21,6 @@ func (n systemNetworker) IP() (net.IP, error) {
 			return nil, err
 		}
 		for _, addr := range addrs {
-			log.Printf(addr.String())
 			var ip net.IP
 			switch v := addr.(type) {
 			case *net.IPNet:

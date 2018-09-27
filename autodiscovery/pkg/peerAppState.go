@@ -1,7 +1,5 @@
 package discovery
 
-import "net"
-
 //PeerAppState describes the state of peer and its metrics
 type PeerAppState interface {
 	Status() PeerStatus
@@ -9,7 +7,7 @@ type PeerAppState interface {
 	CPULoad() string
 	FreeDiskSpace() float64
 	GeoPosition() PeerPosition
-	P2PFactor() int32
+	P2PFactor() uint8
 }
 
 //PeerStatus defines a peer health analysis
@@ -36,27 +34,12 @@ type PeerPosition struct {
 }
 
 type appState struct {
-	ip            net.IP
-	port          int32
-	publicKey     PublicKey
 	status        PeerStatus
 	cpuLoad       string
 	freeDiskSpace float64
 	version       string
 	geoPosition   PeerPosition
-	p2pFactor     int32
-}
-
-func (a appState) IP() net.IP {
-	return a.ip
-}
-
-func (a appState) Port() int32 {
-	return a.port
-}
-
-func (a appState) PublicKey() PublicKey {
-	return a.publicKey
+	p2pFactor     uint8
 }
 
 func (a appState) Status() PeerStatus {
@@ -75,7 +58,7 @@ func (a appState) Version() string {
 	return a.version
 }
 
-func (a appState) P2PFactor() int32 {
+func (a appState) P2PFactor() uint8 {
 	return a.p2pFactor
 }
 
@@ -84,7 +67,7 @@ func (a appState) GeoPosition() PeerPosition {
 }
 
 //NewPeerAppState creates a new peer's app state
-func NewPeerAppState(ver string, stat PeerStatus, geo PeerPosition, cpu string, disk float64, p2pfactor int32) PeerAppState {
+func NewPeerAppState(ver string, stat PeerStatus, geo PeerPosition, cpu string, disk float64, p2pfactor uint8) PeerAppState {
 	return appState{
 		version:       ver,
 		status:        stat,
@@ -96,7 +79,7 @@ func NewPeerAppState(ver string, stat PeerStatus, geo PeerPosition, cpu string, 
 }
 
 //Refresh the peer state
-func (a *appState) refresh(status PeerStatus, disk float64, cpu string, p2pFactor int32) {
+func (a *appState) refresh(status PeerStatus, disk float64, cpu string, p2pFactor uint8) {
 	a.cpuLoad = cpu
 	a.status = status
 	a.freeDiskSpace = disk

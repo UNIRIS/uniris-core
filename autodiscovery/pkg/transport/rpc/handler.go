@@ -3,6 +3,8 @@ package rpc
 import (
 	"context"
 
+	"github.com/uniris/uniris-core/autodiscovery/pkg/comparing"
+
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 
 	"github.com/golang/protobuf/ptypes/empty"
@@ -29,32 +31,32 @@ func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.Syn
 
 	builder := PeerBuilder{}
 
-	pp := make([]discovery.Peer, 0)
+	reqP := make([]discovery.Peer, 0)
 	for _, p := range req.KnownPeers {
-		pp = append(pp, builder.FromPeerDigest(p))
+		reqP = append(reqP, builder.FromPeerDigest(p))
 	}
 
-	g := gossip.NewService(h.repo, nil, nil, nil)
-	diff, err := g.DiffPeers(pp)
+	kp, err := h.repo.ListKnownPeers()
 	if err != nil {
 		return nil, err
 	}
 
-	newP := make([]*api.PeerDiscovered, 0)
-	unknown := make([]*api.PeerDigest, 0)
+	newPeers := make([]*api.PeerDiscovered, 0)
+	unknownPeers := make([]*api.PeerDigest, 0)
 
-	for _, p := range diff.UnknownLocally {
-		newP = append(newP, builder.ToPeerDiscovered(p))
+	diff := comparing.NewPeerDiffer(kp)
+	for _, p := range diff.UnknownPeers(reqP) {
+		unknownPeers = append(unknownPeers, builder.ToPeerDigest(p))
 	}
-	for _, p := range diff.UnknownRemotly {
-		unknown = append(unknown, builder.ToPeerDigest(p))
+	for _, p := range diff.ProvidePeers(reqP) {
+		newPeers = append(newPeers, builder.ToPeerDiscovered(p))
 	}
 
 	return &api.SynAck{
 		Initiator:    req.Receiver,
 		Receiver:     req.Initiator,
-		NewPeers:     newP,
-		UnknownPeers: unknown,
+		NewPeers:     newPeers,
+		UnknownPeers: unknownPeers,
 	}, nil
 }
 
@@ -72,6 +74,7 @@ func (h handler) Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.E
 		h.notif.Notify(p)
 		h.repo.AddPeer(p)
 	}
+
 	return new(empty.Empty), nil
 }
 

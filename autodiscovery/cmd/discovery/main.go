@@ -35,7 +35,7 @@ const (
 func main() {
 
 	//Loads peer's configuration
-	network, pbKey, port, ver, p2pFactor, seedsFile, err := loadConfiguration()
+	network, pbKey, port, ver, seedsFile, err := loadConfiguration()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,7 +46,6 @@ func main() {
 	log.Printf("Key: %s", pbKey)
 	log.Printf("Port: %d", port)
 	log.Printf("Version: %s", ver)
-	log.Printf("P2P Factor: %d", p2pFactor)
 
 	//Initializes dependencies
 	repo := new(mem.Repository)
@@ -63,12 +62,12 @@ func main() {
 
 	//Store the startup peer
 	boot := bootstraping.NewService(repo, pos, np)
-	startPeer, err := boot.Startup(pbKey, port, p2pFactor, ver)
+	startPeer, err := boot.Startup(pbKey, port, ver)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Printf("Endpoint: %s", startPeer.GetEndpoint())
+	log.Printf("Endpoint: %s", startPeer.Endpoint())
 	log.Print("=================================")
 
 	//Starts server
@@ -96,10 +95,9 @@ func main() {
 	}
 }
 
-func loadConfiguration() (string, []byte, int, string, int, string, error) {
+func loadConfiguration() (string, []byte, uint16, string, string, error) {
 	network := flag.String("network", "public", "Network type: public, private")
 	port := flag.Int("port", 3545, "Discovery port")
-	p2pFactor := flag.Int("p2p-factor", 1, "P2P replication factor")
 	pbKeyFile := flag.String("key-file", defaultPbKeyFile, "Public key file")
 	seedsFile := flag.String("seeds-file", seedsFile, "Seeds listing file")
 
@@ -107,28 +105,28 @@ func loadConfiguration() (string, []byte, int, string, int, string, error) {
 
 	pbKeyPath, err := filepath.Abs(*pbKeyFile)
 	if err != nil {
-		return "", nil, 0, "", 0, "", err
+		return "", nil, 0, "", "", err
 	}
 
 	pbKey, err := ioutil.ReadFile(pbKeyPath)
 	if err != nil {
-		return "", nil, 0, "", 0, "", err
+		return "", nil, 0, "", "", err
 	}
 
 	verPath, err := filepath.Abs(versionFile)
 	if err != nil {
-		return "", nil, 0, "", 0, "", err
+		return "", nil, 0, "", "", err
 	}
 	verBytes, err := ioutil.ReadFile(verPath)
 	if err != nil {
-		return "", nil, 0, "", 0, "", err
+		return "", nil, 0, "", "", err
 	}
 	version := string(verBytes)
 
-	return *network, pbKey, *port, version, *p2pFactor, *seedsFile, nil
+	return *network, pbKey, uint16(*port), version, *seedsFile, nil
 }
 
-func startServer(port int, repo discovery.Repository, notif gossip.Notifier) error {
+func startServer(port uint16, repo discovery.Repository, notif gossip.Notifier) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		return err
