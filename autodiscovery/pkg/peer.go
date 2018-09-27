@@ -8,6 +8,7 @@ import (
 
 //Repository provides access to the peer repository
 type Repository interface {
+	CountKnownPeers() (int, error)
 	GetOwnedPeer() (Peer, error)
 	ListSeedPeers() ([]Seed, error)
 	ListKnownPeers() ([]Peer, error)
@@ -15,20 +16,6 @@ type Repository interface {
 	AddSeed(Seed) error
 	UpdatePeer(Peer) error
 	GetPeerByIP(ip net.IP) (Peer, error)
-}
-
-//Seed is initial peer need to startup the discovery process
-type Seed struct {
-	IP   net.IP
-	Port int
-}
-
-//ToPeer converts a seed into a peer
-func (s Seed) ToPeer() Peer {
-	return Peer{
-		ip:   s.IP,
-		port: s.Port,
-	}
 }
 
 //Peer describes a member of the P2P network

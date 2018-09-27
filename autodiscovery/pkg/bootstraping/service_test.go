@@ -65,6 +65,10 @@ type mockPeerRepository struct {
 	seeds []discovery.Seed
 }
 
+func (r *mockPeerRepository) CountKnownPeers() (int, error) {
+	return len(r.peers), nil
+}
+
 func (r *mockPeerRepository) GetOwnedPeer() (p discovery.Peer, err error) {
 	for _, p := range r.peers {
 		if p.IsOwned() {
@@ -137,4 +141,12 @@ type mockPeerNetworker struct{}
 
 func (n mockPeerNetworker) IP() (net.IP, error) {
 	return net.ParseIP("127.0.0.1"), nil
+}
+
+func (n mockPeerNetworker) CheckInternetState() error {
+	return nil
+}
+
+func (n mockPeerNetworker) CheckNtpState() error {
+	return nil
 }

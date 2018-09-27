@@ -14,7 +14,6 @@ import (
 	"github.com/uniris/uniris-core/autodiscovery/pkg/system"
 
 	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/http"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/rabbitmq"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/rpc"
 
@@ -48,15 +47,15 @@ func main() {
 	log.Printf("Version: %s", ver)
 
 	//Initializes dependencies
-	repo := new(mem.Repository)
-	var np bootstraping.PeerNetworker
+	repo := mem.NewRepository()
+	var np monitoring.PeerNetworker
 	if network == "public" {
-		np = http.NewPeerNetworker()
+		np = system.NewPublicNetworker()
 	} else {
-		np = system.NewPeerNetworker()
+		np = system.NewPrivateNetworker()
 	}
-	pos := http.NewPeerPositioner()
-	monit := monitoring.NewService(repo, system.NewSystemWatcher(repo))
+	pos := system.NewPeerPositioner()
+	monit := monitoring.NewService(repo, system.NewPeerMonitor(), np, system.NewRobotWatcher())
 	notif := rabbitmq.NewNotifier()
 	msg := rpc.NewMessenger()
 

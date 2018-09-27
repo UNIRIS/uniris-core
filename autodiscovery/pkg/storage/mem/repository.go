@@ -7,14 +7,22 @@ import (
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 )
 
-//Repository provides access to the peer repository
-type Repository struct {
+type repo struct {
 	peers []discovery.Peer
 	seeds []discovery.Seed
 }
 
+//NewRepository implements the repository in memory
+func NewRepository() discovery.Repository {
+	return &repo{}
+}
+
+func (r *repo) CountKnownPeers() (int, error) {
+	return len(r.peers), nil
+}
+
 //GetOwnedPeer return the local peer
-func (r *Repository) GetOwnedPeer() (p discovery.Peer, err error) {
+func (r *repo) GetOwnedPeer() (p discovery.Peer, err error) {
 	for _, p := range r.peers {
 		if p.IsOwned() {
 			return p, nil
@@ -24,17 +32,17 @@ func (r *Repository) GetOwnedPeer() (p discovery.Peer, err error) {
 }
 
 //ListSeedPeers return all the seed on the repository
-func (r *Repository) ListSeedPeers() ([]discovery.Seed, error) {
+func (r *repo) ListSeedPeers() ([]discovery.Seed, error) {
 	return r.seeds, nil
 }
 
 //ListKnownPeers returns all the peers on the repository
-func (r *Repository) ListKnownPeers() ([]discovery.Peer, error) {
+func (r *repo) ListKnownPeers() ([]discovery.Peer, error) {
 	return r.peers, nil
 }
 
 //AddPeer add a peer to the repository
-func (r *Repository) AddPeer(p discovery.Peer) error {
+func (r *repo) AddPeer(p discovery.Peer) error {
 	if r.containsPeer(p) {
 		return r.UpdatePeer(p)
 	}
@@ -43,13 +51,13 @@ func (r *Repository) AddPeer(p discovery.Peer) error {
 }
 
 //AddSeed add a seed to the repository
-func (r *Repository) AddSeed(s discovery.Seed) error {
+func (r *repo) AddSeed(s discovery.Seed) error {
 	r.seeds = append(r.seeds, s)
 	return nil
 }
 
 //UpdatePeer update an existing peer on the repository
-func (r *Repository) UpdatePeer(peer discovery.Peer) error {
+func (r *repo) UpdatePeer(peer discovery.Peer) error {
 	for _, p := range r.peers {
 		if string(p.PublicKey()) == string(peer.PublicKey()) {
 			p = peer
@@ -60,7 +68,7 @@ func (r *Repository) UpdatePeer(peer discovery.Peer) error {
 }
 
 //GetPeerByIP get a peer from the repository using its ip
-func (r *Repository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
+func (r *repo) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
 	for i := 0; i < len(r.peers); i++ {
 		if string(ip) == string(r.peers[i].IP()) {
 			return r.peers[i], nil
@@ -69,7 +77,7 @@ func (r *Repository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
 	return
 }
 
-func (r *Repository) containsPeer(p discovery.Peer) bool {
+func (r *repo) containsPeer(p discovery.Peer) bool {
 	mPeers := make(map[string]discovery.Peer, 0)
 	for _, p := range r.peers {
 		mPeers[hex.EncodeToString(p.PublicKey())] = p
