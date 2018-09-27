@@ -92,11 +92,11 @@ func main() {
 			log.Printf("Gossip failure: %s", err.Error())
 		}
 		selfp, _ := repo.GetOwnedPeer()
-		log.Printf("DEBUG: cpu: %s, freedisk: %b, status: %d, discoveredPeersNumber: %d", selfp.CPULoad(), selfp.FreeDiskSpace(), selfp.Status(), selfp.DiscoveredPeersNumber())
+		log.Printf("DEBUG: cpu: %s, freedisk: %b, status: %d, discoveredPeersNumber: %d", selfp.AppState().CPULoad(), selfp.AppState().FreeDiskSpace(), selfp.AppState().Status(), selfp.AppState().DiscoveredPeersNumber())
 	}
 }
 
-func loadConfiguration() (string, []byte, uint16, string, string, error) {
+func loadConfiguration() (string, []byte, int, string, string, error) {
 	network := flag.String("network", "public", "Network type: public, private")
 	port := flag.Int("port", 3545, "Discovery port")
 	pbKeyFile := flag.String("key-file", defaultPbKeyFile, "Public key file")
@@ -124,10 +124,10 @@ func loadConfiguration() (string, []byte, uint16, string, string, error) {
 	}
 	version := string(verBytes)
 
-	return *network, pbKey, uint16(*port), version, *seedsFile, nil
+	return *network, pbKey, *port, version, *seedsFile, nil
 }
 
-func startServer(port uint16, repo discovery.Repository, notif gossip.Notifier) error {
+func startServer(port int, repo discovery.Repository, notif gossip.Notifier) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		return err

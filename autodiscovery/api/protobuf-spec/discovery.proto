@@ -42,12 +42,12 @@ message PeerDiscovered {
 message PeerIdentity {
     bytes PublicKey = 1;
     string IP = 2;
-    uint32 Port = 3;
+    int32 Port = 3;
 }
 
 message PeerHeartbeatState {
-    uint64 GenerationTime  = 1;
-    uint64 ElapsedHeartbeats = 2;
+    int64 GenerationTime  = 1;
+    int64 ElapsedHeartbeats = 2;
 }
 
 message PeerAppState {
@@ -57,7 +57,8 @@ message PeerAppState {
     float FreeDiskSpace = 6;
     string Version = 7;
     GeoCoordinates GeoPosition = 8;
-    uint32 P2PFactor = 9;
+    int32 P2PFactor = 9;
+    int32 DiscoveredPeersNumber = 10;
 
     message GeoCoordinates {
         float Lat = 1;

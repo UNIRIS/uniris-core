@@ -1,7 +1,6 @@
 package gossip
 
 import (
-	"encoding/hex"
 	"net"
 	"testing"
 	"time"
@@ -9,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/mock"
 )
 
 /*
@@ -20,7 +20,7 @@ Scenario: Run cycle
 func TestRunCycle(t *testing.T) {
 	initP := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 
-	repo := new(mockPeerRepository)
+	repo := new(mock.Repository)
 	repo.AddPeer(initP)
 
 	id1 := discovery.NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, []byte("key2"))
@@ -38,7 +38,7 @@ func TestRunCycle(t *testing.T) {
 		hb, as,
 	)
 
-	g := NewService(repo, mockMessenger{}, new(mockNotifier), mockMonitor{})
+	g := NewService(repo, mockMessenger{}, new(mock.Notifier), mockMonitor{})
 
 	newPeers, err := g.RunCycle(initP, recP, []discovery.Peer{p1, p2})
 	assert.Nil(t, err)
@@ -57,8 +57,8 @@ Scenario: Gossip across a selection of peers
 func TestGossip(t *testing.T) {
 	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 
-	repo := new(mockPeerRepository)
-	notif := new(mockNotifier)
+	repo := new(mock.Repository)
+	notif := new(mock.Notifier)
 
 	repo.AddPeer(init)
 
@@ -107,86 +107,6 @@ func (m mockMessenger) SendSyn(req SynRequest) (*SynAck, error) {
 
 func (m mockMessenger) SendAck(req AckRequest) error {
 	return nil
-}
-
-type mockNotifier struct {
-	notifiedPeers []discovery.Peer
-}
-
-func (n mockNotifier) NotifiedPeers() []discovery.Peer {
-	return n.notifiedPeers
-}
-
-func (n *mockNotifier) Notify(p discovery.Peer) {
-	n.notifiedPeers = append(n.notifiedPeers, p)
-}
-
-type mockPeerRepository struct {
-	peers []discovery.Peer
-	seeds []discovery.Seed
-}
-
-func (r *mockPeerRepository) CountKnownPeers() (int, error) {
-	return len(r.peers), nil
-}
-
-func (r *mockPeerRepository) GetOwnedPeer() (p discovery.Peer, err error) {
-	for _, p := range r.peers {
-		if p.Owned() {
-			return p, nil
-		}
-	}
-	return
-}
-
-func (r *mockPeerRepository) AddPeer(p discovery.Peer) error {
-	if r.containsPeer(p) {
-		return r.UpdatePeer(p)
-	}
-	r.peers = append(r.peers, p)
-	return nil
-}
-
-func (r *mockPeerRepository) AddSeed(s discovery.Seed) error {
-	r.seeds = append(r.seeds, s)
-	return nil
-}
-
-func (r *mockPeerRepository) ListKnownPeers() ([]discovery.Peer, error) {
-	return r.peers, nil
-}
-
-func (r *mockPeerRepository) ListSeedPeers() ([]discovery.Seed, error) {
-	return r.seeds, nil
-}
-
-func (r *mockPeerRepository) UpdatePeer(peer discovery.Peer) error {
-	// for _, p := range r.peers {
-	// 	if p.Identity().PublicKey().Equals(peer.Identity().PublicKey())
-	// 		p = peer
-	// 		break
-	// 	}
-	// }
-	return nil
-}
-
-func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
-	for i := 0; i < len(r.peers); i++ {
-		if ip.Equal(r.peers[0].Identity().IP()) {
-			return r.peers[i], nil
-		}
-	}
-	return
-}
-
-func (r *mockPeerRepository) containsPeer(p discovery.Peer) bool {
-	mPeers := make(map[string]discovery.Peer, 0)
-	for _, p := range r.peers {
-		mPeers[hex.EncodeToString(p.Identity().PublicKey())] = p
-	}
-
-	_, exist := mPeers[hex.EncodeToString(p.Identity().PublicKey())]
-	return exist
 }
 
 type mockMonitor struct{}

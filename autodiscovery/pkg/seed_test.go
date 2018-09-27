@@ -78,8 +78,8 @@ func TestDiscoveredPeer(t *testing.T) {
 	assert.Equal(t, 3, len(repo.seeds))
 
 	st1 := NewPeerAppState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	st2 := NewPeerAppState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 6)
-	st3 := NewPeerAppState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 7)
+	st2 := NewPeerAppState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 5)
+	st3 := NewPeerAppState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 5)
 
 	p1 := NewDiscoveredPeer(
 		NewPeerIdentity(seed1.IP, seed1.Port, []byte("key1")),

@@ -80,6 +80,7 @@ func (s service) PeerStatus(p discovery.Peer) (discovery.PeerStatus, error) {
 	if seedDiscoveries == 0 {
 		return discovery.BootstrapingStatus, nil
 	}
+
 	if t := p.HeartbeatState().ElapsedHeartbeats(); t < discovery.BootStrapingMinTime && seedDiscoveries > p.AppState().DiscoveredPeersNumber() {
 		return discovery.BootstrapingStatus, nil
 	} else if t < discovery.BootStrapingMinTime && seedDiscoveries <= p.AppState().DiscoveredPeersNumber() {
