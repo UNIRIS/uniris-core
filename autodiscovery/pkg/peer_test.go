@@ -23,7 +23,7 @@ func TestNewPeer(t *testing.T) {
 	assert.Equal(t, "1.0", p.AppState().Version())
 	assert.Equal(t, 50.0, p.AppState().GeoPosition().Lat)
 	assert.Equal(t, 3.0, p.AppState().GeoPosition().Lon)
-	assert.Equal(t, 1, p.AppState().P2PFactor())
+	assert.Equal(t, 0, p.AppState().P2PFactor())
 	assert.True(t, p.Owned())
 	assert.Equal(t, BootstrapingStatus, p.AppState().Status())
 }
@@ -117,9 +117,10 @@ Scenario: Convers a seed into a peer
 	Then we get a peer with the IP and the Port defined
 */
 func TestSeedToPeer(t *testing.T) {
-	s := Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000}
+	s := Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000, PublicKey: []byte("key")}
 	p := s.AsPeer()
 	assert.NotNil(t, p)
 	assert.Equal(t, "127.0.0.1", p.Identity().IP().String())
 	assert.Equal(t, 3000, p.Identity().Port())
+	assert.Equal(t, "key", p.Identity().PublicKey().String())
 }

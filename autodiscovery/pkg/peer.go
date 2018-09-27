@@ -140,7 +140,7 @@ func NewStartupPeer(pbKey PublicKey, ip net.IP, port int, version string, pos Pe
 			status:      BootstrapingStatus,
 			version:     version,
 			geoPosition: pos,
-			p2pFactor:   1,
+			p2pFactor:   0,
 		},
 		hbState: heartbeatState{
 			generationTime: time.Now(),

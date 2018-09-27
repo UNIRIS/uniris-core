@@ -1,6 +1,7 @@
 [
     {
         "IP": "127.0.0.1",
-        "Port": 3545
+        "Port": 3545,
+        "PublicKey": "-----BEGIN PUBLIC KEY-----MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEhNngAzz3Ws1cz7veHnzeCwi9cuJhmpcHoi8+q3y75UL1vG5hyfnEMTjDCeeRHiobASUGvawGlcxexJzlZPIVYg==-----END PUBLIC KEY-----"
     }
 ]

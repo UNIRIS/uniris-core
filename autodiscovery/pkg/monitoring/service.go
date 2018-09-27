@@ -40,6 +40,7 @@ type PeerMonitor interface {
 	FreeDiskSpace() (float64, error)
 
 	//P2PFactor retrieves the replication factor from the AI service
+	//and defines the number of robots that should validate a transaction
 	P2PFactor() (int, error)
 }
 

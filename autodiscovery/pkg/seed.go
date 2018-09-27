@@ -6,16 +6,18 @@ import (
 
 //Seed is initial peer need to startup the discovery process
 type Seed struct {
-	IP   net.IP
-	Port int
+	IP        net.IP
+	Port      int
+	PublicKey string
 }
 
 //AsPeer converts a seed into a peer
 func (s Seed) AsPeer() Peer {
 	return &peer{
 		identity: peerIdentity{
-			ip:   s.IP,
-			port: s.Port,
+			ip:        s.IP,
+			port:      s.Port,
+			publicKey: PublicKey(s.PublicKey),
 		},
 	}
 }
