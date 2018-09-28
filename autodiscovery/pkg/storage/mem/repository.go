@@ -18,6 +18,7 @@ func NewRepository() discovery.Repository {
 	return &repo{}
 }
 
+//CountKnownPeers retrun the number of Known peers
 func (r *repo) CountKnownPeers() (int, error) {
 	return len(r.peers), nil
 }
@@ -40,6 +41,17 @@ func (r *repo) ListSeedPeers() ([]discovery.Seed, error) {
 //ListKnownPeers returns all the peers on the repository
 func (r *repo) ListKnownPeers() ([]discovery.Peer, error) {
 	return r.peers, nil
+}
+
+//ListReacheablePeers returns all the reacheable peers on the repository
+func (r *repo) ListReacheablePeers() ([]discovery.Peer, error) {
+	rp := make([]discovery.Peer, 0)
+	for i := 0; i < len(r.peers); i++ {
+		if !r.containsUnreacheablePeer(r.peers[i]) {
+			rp = append(rp, r.peers[i])
+		}
+	}
+	return rp, nil
 }
 
 //ListUnrecheablePeers returns all unreacheable peers on the repository
@@ -74,7 +86,7 @@ func (r *repo) AddUnreacheablePeer(p discovery.Peer) error {
 func (r *repo) DelUnreacheablePeer(p discovery.Peer) error {
 	if r.containsUnreacheablePeer(p) {
 		for i := 0; i < len(r.unreacheablePeers); i++ {
-			if r.unreacheablePeers[i].IP().String() == p.IP().String() {
+			if r.unreacheablePeers[i].Identity().IP().String() == p.Identity().IP().String() {
 				r.unreacheablePeers = r.unreacheablePeers[:i+copy(r.unreacheablePeers[i:], r.unreacheablePeers[i+1:])]
 			}
 		}
@@ -116,8 +128,8 @@ func (r *repo) containsPeer(p discovery.Peer) bool {
 func (r *repo) containsUnreacheablePeer(p discovery.Peer) bool {
 	mPeers := make(map[string]discovery.Peer, 0)
 	for _, p := range r.unreacheablePeers {
-		mPeers[p.IP().String()] = p
+		mPeers[p.Identity().IP().String()] = p
 	}
-	_, exist := mPeers[p.IP().String()]
+	_, exist := mPeers[p.Identity().IP().String()]
 	return exist
 }

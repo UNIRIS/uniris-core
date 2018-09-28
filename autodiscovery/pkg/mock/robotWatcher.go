@@ -5,32 +5,40 @@ import (
 	"net"
 )
 
+// RobotWatcher assure watching all needed processes on a Robot
 type RobotWatcher struct{}
 
+//CheckAutodiscoveryProcess check that the autodiscovery daemon is running
 func (r RobotWatcher) CheckAutodiscoveryProcess(port int) error {
 	return nil
 }
 
+//CheckDataProcess check that the autodiscovery daemon is running
 func (r RobotWatcher) CheckDataProcess() error {
 	return nil
 }
 
+//CheckMiningProcess check that the autodiscovery daemon is running
 func (r RobotWatcher) CheckMiningProcess() error {
 	return nil
 }
 
+//CheckAIProcess check that the autodiscovery daemon is running
 func (r RobotWatcher) CheckAIProcess() error {
 	return nil
 }
 
+//CheckScyllaDbProcess check that the ScyallaDB daemon is running
 func (r RobotWatcher) CheckScyllaDbProcess() error {
 	return nil
 }
 
+//CheckRedisProcess check that the redis daemon is running
 func (r RobotWatcher) CheckRedisProcess() error {
 	return nil
 }
 
+//CheckRabbitmqProcess check that the rabbitmq daemon is running
 func (r RobotWatcher) CheckRabbitmqProcess() error {
 	return nil
 }

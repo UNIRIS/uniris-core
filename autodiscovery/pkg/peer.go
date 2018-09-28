@@ -20,6 +20,7 @@ type Repository interface {
 	ListSeedPeers() ([]Seed, error)
 	ListKnownPeers() ([]Peer, error)
 	ListUnrecheablePeers() ([]Peer, error)
+	ListReacheablePeers() ([]Peer, error)
 	AddPeer(Peer) error
 	AddSeed(Seed) error
 	AddUnreacheablePeer(Peer) error

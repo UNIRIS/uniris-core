@@ -119,8 +119,9 @@ func TestDiscoveredPeer(t *testing.T) {
 }
 
 type mockPeerRepository struct {
-	peers []Peer
-	seeds []Seed
+	peers             []Peer
+	seeds             []Seed
+	unreacheablePeers []Peer
 }
 
 func (r *mockPeerRepository) CountKnownPeers() (int, error) {
@@ -157,6 +158,20 @@ func (r *mockPeerRepository) ListSeedPeers() ([]Seed, error) {
 	return r.seeds, nil
 }
 
+func (r *mockPeerRepository) ListUnrecheablePeers() ([]Peer, error) {
+	return r.unreacheablePeers, nil
+}
+
+func (r *mockPeerRepository) ListReacheablePeers() ([]Peer, error) {
+	rp := make([]Peer, 0)
+	for i := 0; i < len(r.peers); i++ {
+		if !r.containsUnreacheablePeer(r.peers[i]) {
+			rp = append(rp, r.peers[i])
+		}
+	}
+	return rp, nil
+}
+
 func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p Peer, err error) {
 	for i := 0; i < len(r.peers); i++ {
 		if string(ip) == string(r.peers[i].Identity().IP()) {
@@ -164,6 +179,24 @@ func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p Peer, err error) {
 		}
 	}
 	return
+}
+
+func (r *mockPeerRepository) AddUnreacheablePeer(p Peer) error {
+	if !r.containsUnreacheablePeer(p) {
+		r.unreacheablePeers = append(r.unreacheablePeers, p)
+	}
+	return nil
+}
+
+func (r *mockPeerRepository) DelUnreacheablePeer(p Peer) error {
+	if r.containsUnreacheablePeer(p) {
+		for i := 0; i < len(r.unreacheablePeers); i++ {
+			if r.unreacheablePeers[i].Identity().IP().String() == p.Identity().IP().String() {
+				r.unreacheablePeers = r.unreacheablePeers[:i+copy(r.unreacheablePeers[i:], r.unreacheablePeers[i+1:])]
+			}
+		}
+	}
+	return nil
 }
 
 func (r *mockPeerRepository) UpdatePeer(peer Peer) error {
@@ -183,5 +216,14 @@ func (r *mockPeerRepository) containsPeer(peer Peer) bool {
 	}
 
 	_, exist := mPeers[hex.EncodeToString(peer.Identity().PublicKey())]
+	return exist
+}
+
+func (r *mockPeerRepository) containsUnreacheablePeer(p Peer) bool {
+	mPeers := make(map[string]Peer, 0)
+	for _, p := range r.unreacheablePeers {
+		mPeers[p.Identity().IP().String()] = p
+	}
+	_, exist := mPeers[p.Identity().IP().String()]
 	return exist
 }

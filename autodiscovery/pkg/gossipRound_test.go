@@ -19,9 +19,10 @@ func TestRandomPeer(t *testing.T) {
 	peers := []Peer{p1, p2}
 
 	g := &GossipRound{
-		initiator:  &peer{},
-		knownPeers: peers,
-		seedPeers:  []Seed{},
+		initiator:         &peer{},
+		reacheablePeers:   peers,
+		seedPeers:         []Seed{},
+		unreacheablePeers: []Peer{},
 	}
 	p := g.randomPeer()
 	assert.NotNil(t, p)
@@ -38,9 +39,10 @@ func TestRandomSeed(t *testing.T) {
 	s2 := Seed{IP: net.ParseIP("30.0.0.0"), Port: 3000}
 
 	g := &GossipRound{
-		initiator:  &peer{},
-		knownPeers: []Peer{},
-		seedPeers:  []Seed{s1, s2},
+		initiator:         &peer{},
+		reacheablePeers:   []Peer{},
+		seedPeers:         []Seed{s1, s2},
+		unreacheablePeers: []Peer{},
 	}
 	s := g.randomSeed()
 	assert.NotNil(t, s)
@@ -53,7 +55,7 @@ Scenario: Starts a gossip round without seeds
 	Then an error is returned
 */
 func TestGossipWithoutSeeds(t *testing.T) {
-	_, err := NewGossipRound(&peer{}, []Peer{}, []Seed{})
+	_, err := NewGossipRound(&peer{}, []Peer{}, []Seed{}, []Peer{})
 	assert.Error(t, err, ErrEmptySeed)
 }
 
@@ -70,9 +72,9 @@ func TestSelectPeers(t *testing.T) {
 	p1 := NewStartupPeer(PublicKey("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{})
 	p2 := &peer{identity: NewPeerIdentity(net.ParseIP("10.0.0.1"), 3000, PublicKey("key2"))}
 
-	r, _ := NewGossipRound(&peer{}, []Peer{p1, p2}, []Seed{s1})
+	r, _ := NewGossipRound(&peer{}, []Peer{p1, p2}, []Seed{s1}, []Peer{})
 
-	peers, err := r.SelectPeers()
+	peers, _, err := r.SelectPeers()
 	assert.Nil(t, err)
 	assert.NotNil(t, peers)
 	assert.NotEmpty(t, peers)

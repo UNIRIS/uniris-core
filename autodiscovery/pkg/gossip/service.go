@@ -7,6 +7,16 @@ import (
 	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 )
 
+type rpcError int
+
+const (
+	//UnreacheablePeer defines an unreacheable peer error
+	UnreacheablePeer rpcError = 14
+
+	//GeneralError defines a general transport error
+	GeneralError rpcError = 1
+)
+
 //Service is the interface that provide gossip methods
 type Service interface {
 	Spread(discovery.Peer) error
@@ -17,7 +27,7 @@ type Service interface {
 type Messenger interface {
 
 	//Sends a SYN request
-	SendSyn(SynRequest) (*SynAck, error)
+	SendSyn(SynRequest) (*SynAck, int, error)
 
 	//Sends a ACK request after receipt of the SYN request
 	SendAck(AckRequest) error
@@ -48,11 +58,19 @@ func (s service) Spread(init discovery.Peer) error {
 	if err != nil {
 		return err
 	}
-	r, err := discovery.NewGossipRound(init, kp, sp)
+	rp, err := s.repo.ListReacheablePeers()
 	if err != nil {
 		return err
 	}
-	pSelected, err := r.SelectPeers()
+	up, err := s.repo.ListUnrecheablePeers()
+	if err != nil {
+		return err
+	}
+	r, err := discovery.NewGossipRound(init, rp, sp, up)
+	if err != nil {
+		return err
+	}
+	pSelected, unpSelected, err := r.SelectPeers()
 	if err != nil {
 		return err
 	}
@@ -62,6 +80,20 @@ func (s service) Spread(init discovery.Peer) error {
 		if err != nil {
 			return err
 		}
+		for _, p := range newPeers {
+			if err := s.repo.AddPeer(p); err != nil {
+				return err
+			}
+			s.notif.Notify(p)
+		}
+	}
+
+	if unpSelected != nil {
+		newPeers, err := s.RunCycle(init, unpSelected, kp)
+		if err != nil {
+			return err
+		}
+		s.repo.DelUnreacheablePeer(unpSelected)
 		for _, p := range newPeers {
 			if err := s.repo.AddPeer(p); err != nil {
 				return err
@@ -84,8 +116,11 @@ func (s service) RunCycle(init discovery.Peer, recpt discovery.Peer, kp []discov
 		return nil, err
 	}
 
-	synAck, err := s.msg.SendSyn(NewSynRequest(init, recpt, kp))
+	synAck, errcode, err := s.msg.SendSyn(NewSynRequest(init, recpt, kp))
 	if err != nil {
+		if errcode == int(UnreacheablePeer) {
+			s.repo.AddUnreacheablePeer(recpt)
+		}
 		return nil, err
 	}
 

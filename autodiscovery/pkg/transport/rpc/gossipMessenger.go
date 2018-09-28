@@ -17,13 +17,13 @@ type gossipMessenger struct {
 }
 
 //SendSyn calls the Synchronize grpc method to retrieve unknown peers (SYN handshake)
-func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, err error) {
+func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, errCode int, err error) {
 	serverAddr := fmt.Sprintf("%s", req.Receiver.Endpoint())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
 	if err != nil {
-		return nil, err
+		return nil, 1, err
 	}
 
 	client := api.NewDiscoveryClient(conn)
@@ -42,9 +42,9 @@ func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, 
 	if err != nil {
 		statusCode, _ := status.FromError(err)
 		if statusCode.Code() == codes.Unavailable {
-			return nil, fmt.Errorf("Peer %s is unavailable", req.Receiver.Endpoint())
+			return nil, int(codes.Unavailable), fmt.Errorf("Peer %s is unavailable", req.Receiver.Endpoint())
 		}
-		return nil, err
+		return nil, 1, err
 	}
 
 	newP := make([]discovery.Peer, 0)
@@ -61,7 +61,7 @@ func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, 
 		Receiver:     req.Initiator,
 		NewPeers:     newP,
 		UnknownPeers: unknown,
-	}, nil
+	}, 0, nil
 }
 
 //SendAck calls the Acknoweledge grpc method to send detailed peers requested

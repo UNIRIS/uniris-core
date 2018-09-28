@@ -81,7 +81,7 @@ func TestGossip(t *testing.T) {
 type mockMessenger struct {
 }
 
-func (m mockMessenger) SendSyn(req SynRequest) (*SynAck, error) {
+func (m mockMessenger) SendSyn(req SynRequest) (*SynAck, int, error) {
 	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	rec := discovery.NewStartupPeer([]byte("uKey1"), net.ParseIP("200.18.186.39"), 3000, "1.1", discovery.PeerPosition{})
 
@@ -102,7 +102,7 @@ func (m mockMessenger) SendSyn(req SynRequest) (*SynAck, error) {
 		Receiver:     rec,
 		NewPeers:     newPeers,
 		UnknownPeers: unknownPeers,
-	}, nil
+	}, 0, nil
 }
 
 func (m mockMessenger) SendAck(req AckRequest) error {

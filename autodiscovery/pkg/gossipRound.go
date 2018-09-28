@@ -13,14 +13,16 @@ var ErrNoOwnedPeer = errors.New("Cannot start a gossip round without a startupin
 
 //GossipRound describes a round in a gossip protocol
 type GossipRound struct {
-	initiator  Peer
-	knownPeers []Peer
-	seedPeers  []Seed
+	initiator         Peer
+	reacheablePeers   []Peer
+	seedPeers         []Seed
+	unreacheablePeers []Peer
 }
 
-//SelectPeers returns a seed and a known peer randomly
-func (r GossipRound) SelectPeers() ([]Peer, error) {
+//SelectPeers returns a seed , a known peer and an unreacheable peer randomly
+func (r GossipRound) SelectPeers() ([]Peer, Peer, error) {
 	peers := make([]Peer, 0)
+	var unp Peer
 
 	//We pick a random seed peer
 	s := r.randomSeed().AsPeer()
@@ -28,7 +30,7 @@ func (r GossipRound) SelectPeers() ([]Peer, error) {
 	//Exclude ourself if we are of inside our list seed (impossible in reality, useful for testing)
 	owned := r.getOwnedPeer()
 	if owned == nil {
-		return nil, ErrNoOwnedPeer
+		return nil, nil, ErrNoOwnedPeer
 	}
 	if s.Endpoint() != owned.Endpoint() {
 		peers = append(peers, s)
@@ -36,22 +38,28 @@ func (r GossipRound) SelectPeers() ([]Peer, error) {
 
 	//Filter ourself (we don't want gossip with ourself)
 	filtered := make([]Peer, 0)
-	for _, p := range r.knownPeers {
+	for _, p := range r.reacheablePeers {
 		if !p.Owned() {
 			filtered = append(filtered, p)
 		}
 	}
-	r.knownPeers = filtered
+	r.reacheablePeers = filtered
 
 	//We pick a random known peer
-	if len(r.knownPeers) > 0 {
+	if len(r.reacheablePeers) > 0 {
 		peers = append(peers, r.randomPeer())
 	}
-	return peers, nil
+
+	//We pick a random unreachable peer
+	if len(r.unreacheablePeers) > 0 {
+		unp = r.randomUnreacheablePeer()
+	}
+
+	return peers, unp, nil
 }
 
 func (r GossipRound) getOwnedPeer() Peer {
-	for _, p := range r.knownPeers {
+	for _, p := range r.reacheablePeers {
 		if p.Owned() {
 			return p
 		}
@@ -60,11 +68,12 @@ func (r GossipRound) getOwnedPeer() Peer {
 }
 
 func (r GossipRound) randomPeer() Peer {
-	if len(r.knownPeers) > 1 {
-		rnd := rand.Intn(len(r.knownPeers) - 1)
-		return r.knownPeers[rnd]
+
+	if len(r.reacheablePeers) > 1 {
+		rnd := rand.Intn(len(r.reacheablePeers) - 1)
+		return r.reacheablePeers[rnd]
 	}
-	return r.knownPeers[0]
+	return r.reacheablePeers[0]
 }
 
 func (r GossipRound) randomSeed() Seed {
@@ -75,18 +84,27 @@ func (r GossipRound) randomSeed() Seed {
 	return r.seedPeers[0]
 }
 
+func (r GossipRound) randomUnreacheablePeer() Peer {
+	if len(r.unreacheablePeers) > 1 {
+		rnd := rand.Intn(len(r.unreacheablePeers) - 1)
+		return r.unreacheablePeers[rnd]
+	}
+	return nil
+}
+
 //NewGossipRound creates a gossip round
 //
 //If an empty list of seeds is provided an error is returned
-func NewGossipRound(init Peer, kp []Peer, sp []Seed) (*GossipRound, error) {
+func NewGossipRound(init Peer, rp []Peer, sp []Seed, up []Peer) (*GossipRound, error) {
 
 	if sp == nil || len(sp) == 0 {
 		return nil, ErrEmptySeed
 	}
 
 	return &GossipRound{
-		initiator:  init,
-		knownPeers: kp,
-		seedPeers:  sp,
+		initiator:         init,
+		reacheablePeers:   rp,
+		seedPeers:         sp,
+		unreacheablePeers: up,
 	}, nil
 }
