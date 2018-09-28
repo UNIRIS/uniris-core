@@ -92,7 +92,8 @@ func main() {
 			log.Printf("Gossip failure: %s", err.Error())
 		}
 		selfp, _ := repo.GetOwnedPeer()
-		log.Printf("DEBUG: cpu: %s, freedisk: %b, status: %d, discoveredPeersNumber: %d", selfp.AppState().CPULoad(), selfp.AppState().FreeDiskSpace(), selfp.AppState().Status(), selfp.AppState().DiscoveredPeersNumber())
+		unp, _ := repo.ListReacheablePeers()
+		log.Printf("DEBUG: cpu: %s, freedisk: %b, status: %d, discoveredPeersNumber: %d, unreacheablePeer: %d", selfp.AppState().CPULoad(), selfp.AppState().FreeDiskSpace(), selfp.AppState().Status(), selfp.AppState().DiscoveredPeersNumber(), len(unp))
 	}
 }
 

@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -62,7 +63,7 @@ func TestGossip(t *testing.T) {
 
 	repo.AddPeer(init)
 
-	s := discovery.Seed{IP: net.ParseIP("10.0.0.1"), Port: 3000}
+	s := discovery.Seed{IP: net.ParseIP("10.0.0.1"), Port: 3000, PublicKey: "keyss"}
 	repo.AddSeed(s)
 
 	srv := NewService(repo, mockMessenger{}, notif, new(mockMonitor))
@@ -76,6 +77,72 @@ func TestGossip(t *testing.T) {
 
 	assert.NotEmpty(t, notif.NotifiedPeers())
 	assert.Equal(t, 1, len(notif.NotifiedPeers()))
+}
+
+/*
+Scenario: Gossip across a selection of peers
+	Given a initiator peer, seeds and known peers stored locally
+	When we gossip spread get unreacheable error
+	Then unreacheable peer is stored on the repo
+*/
+func TestGossip2(t *testing.T) {
+	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	repo := new(mock.Repository)
+	notif := new(mock.Notifier)
+	repo.AddPeer(init)
+
+	s := discovery.Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000, PublicKey: "key"}
+	repo.AddSeed(s)
+
+	hb := discovery.NewPeerHeartbeatState(time.Now(), 0)
+	as := discovery.NewPeerAppState("1.0", discovery.OkStatus, discovery.PeerPosition{}, "", 0, 1, 0)
+	p1 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(net.ParseIP("50.10.30.2"), 3000, []byte("ukey")),
+		hb, as,
+	)
+
+	repo.AddPeer(p1)
+	assert.Equal(t, 2, len(repo.Peers))
+	assert.Equal(t, 0, len(repo.UnreacheablePeers))
+	srv := NewService(repo, mockMessengerunreacheable{}, notif, new(mockMonitor))
+	err := srv.Spread(init)
+	assert.NotNil(t, err)
+	assert.Equal(t, 1, len(repo.UnreacheablePeers))
+	assert.Equal(t, "ukey", repo.UnreacheablePeers[0].Identity().PublicKey().String())
+}
+
+/*
+Scenario: Gossip across a selection of peers
+	Given a initiator peer, seeds and known peers stored locally and one unreacheable peer
+	When we gossip
+	Then unreacheable peer is removed from the repo
+*/
+func TestGossip3(t *testing.T) {
+	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	repo := new(mock.Repository)
+	notif := new(mock.Notifier)
+	repo.AddPeer(init)
+
+	s := discovery.Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000, PublicKey: "key"}
+	repo.AddSeed(s)
+
+	hb := discovery.NewPeerHeartbeatState(time.Now(), 0)
+	as := discovery.NewPeerAppState("1.0", discovery.OkStatus, discovery.PeerPosition{}, "", 0, 1, 0)
+	p1 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(net.ParseIP("50.10.30.2"), 3000, []byte("ukey")),
+		hb, as,
+	)
+	repo.AddPeer(p1)
+	repo.AddUnreacheablePeer(p1)
+	rp, _ := repo.ListReacheablePeers()
+	assert.Equal(t, 1, len(rp))
+	assert.Equal(t, 2, len(repo.Peers))
+	assert.Equal(t, 1, len(repo.UnreacheablePeers))
+	srv := NewService(repo, mockMessenger{}, notif, new(mockMonitor))
+	err := srv.Spread(init)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, len(repo.UnreacheablePeers))
+	assert.Equal(t, 3, len(repo.Peers))
 }
 
 type mockMessenger struct {
@@ -118,4 +185,15 @@ func (s mockMonitor) RefreshPeer(p discovery.Peer) error {
 
 func (s mockMonitor) PeerStatus(p discovery.Peer) (discovery.PeerStatus, error) {
 	return discovery.OkStatus, nil
+}
+
+type mockMessengerunreacheable struct {
+}
+
+func (m mockMessengerunreacheable) SendSyn(req SynRequest) (*SynAck, int, error) {
+	return nil, 14, fmt.Errorf("Peer is unavailable")
+}
+
+func (m mockMessengerunreacheable) SendAck(req AckRequest) error {
+	return nil
 }

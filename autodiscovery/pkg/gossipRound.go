@@ -85,10 +85,14 @@ func (r GossipRound) randomSeed() Seed {
 }
 
 func (r GossipRound) randomUnreacheablePeer() Peer {
+	if len(r.unreacheablePeers) == 1 {
+		return r.unreacheablePeers[0]
+	}
 	if len(r.unreacheablePeers) > 1 {
 		rnd := rand.Intn(len(r.unreacheablePeers) - 1)
 		return r.unreacheablePeers[rnd]
 	}
+
 	return nil
 }
 

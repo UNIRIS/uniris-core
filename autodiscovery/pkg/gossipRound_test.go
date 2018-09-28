@@ -49,6 +49,27 @@ func TestRandomSeed(t *testing.T) {
 }
 
 /*
+Scenario: Picks a random unreacheablepeer
+	Given a list of unreacheablePeer
+	When we want to pick a random unreacheablePeer
+	Then we get a random unreacheablePeer
+*/
+func TestRandomUnreacheablePeer(t *testing.T) {
+	p1 := &peer{identity: NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, PublicKey("key"))}
+	p2 := &peer{identity: NewPeerIdentity(net.ParseIP("127.0.0.2"), 3000, PublicKey("key2"))}
+	peers := []Peer{p1, p2}
+
+	g := &GossipRound{
+		initiator:         &peer{},
+		reacheablePeers:   []Peer{},
+		seedPeers:         []Seed{},
+		unreacheablePeers: peers,
+	}
+	p := g.randomUnreacheablePeer()
+	assert.NotNil(t, p)
+}
+
+/*
 Scenario: Starts a gossip round without seeds
 	Given a initiator peer, a empty list of seeds
 	When we starts a gossip round
@@ -60,10 +81,10 @@ func TestGossipWithoutSeeds(t *testing.T) {
 }
 
 /*
-Scenario: Selects peers from seed and known peers
-	Given a list of peers and seeds
+Scenario: Selects peers from seed , reacheable peers and unreacheable peers
+	Given a list of reacheable peers, seeds and unreacheable peers
 	When we want select peers to gossip
-	Then we get a random seed and a random peer (exluding ourself)
+	Then we get a random seed and a random peer (exluding ourself) and a random unreacheable peer
 */
 func TestSelectPeers(t *testing.T) {
 
@@ -71,14 +92,17 @@ func TestSelectPeers(t *testing.T) {
 
 	p1 := NewStartupPeer(PublicKey("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{})
 	p2 := &peer{identity: NewPeerIdentity(net.ParseIP("10.0.0.1"), 3000, PublicKey("key2"))}
+	p3 := &peer{identity: NewPeerIdentity(net.ParseIP("10.0.0.2"), 3000, PublicKey("key3"))}
 
-	r, _ := NewGossipRound(&peer{}, []Peer{p1, p2}, []Seed{s1}, []Peer{})
+	r, _ := NewGossipRound(&peer{}, []Peer{p1, p2}, []Seed{s1}, []Peer{p3})
 
-	peers, _, err := r.SelectPeers()
+	peers, unp, err := r.SelectPeers()
 	assert.Nil(t, err)
 	assert.NotNil(t, peers)
 	assert.NotEmpty(t, peers)
 	assert.Equal(t, 2, len(peers))
+	assert.NotNil(t, unp)
 	assert.Equal(t, "30.0.50.100", peers[0].Identity().IP().String())
 	assert.Equal(t, "10.0.0.1", peers[1].Identity().IP().String())
+	assert.Equal(t, "10.0.0.2", unp.Identity().IP().String())
 }
