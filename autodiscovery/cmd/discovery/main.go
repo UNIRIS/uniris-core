@@ -60,7 +60,7 @@ func main() {
 	notif := rabbitmq.NewNotifier()
 	msg := rpc.NewMessenger()
 	mon := monitoring.NewService(repo, system.NewPeerMonitor(), np, system.NewRobotWatcher())
-	gos := gossip.NewService(repo, msg, notif, mon)
+	gos := gossip.NewService(repo, msg, notif)
 	boot := bootstraping.NewService(repo, pos, np)
 
 	//Initializes the seeds

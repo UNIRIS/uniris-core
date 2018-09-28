@@ -6,21 +6,25 @@ import (
 
 //Seed is initial peer need to startup the discovery process
 type Seed struct {
-	IP   net.IP
-	Port int
+	IP        net.IP
+	Port      int
+	PublicKey PublicKey
 }
 
-//ToPeer converts a seed into a peer
-func (s Seed) ToPeer() Peer {
-	return Peer{
-		ip:   s.IP,
-		port: s.Port,
+//AsPeer converts a seed into a peer
+func (s Seed) AsPeer() Peer {
+	return &peer{
+		identity: peerIdentity{
+			ip:        s.IP,
+			port:      s.Port,
+			publicKey: s.PublicKey,
+		},
 	}
 }
 
 //SeedDiscoveryCounter define the interface to check the number of discovered node by a seed
 type SeedDiscoveryCounter interface {
-	Average() (int, error)
+	CountDiscoveries() (int, error)
 }
 
 type seedDiscoveryCounter struct {
@@ -32,8 +36,8 @@ func NewSeedDiscoveryCounter(repo Repository) SeedDiscoveryCounter {
 	return seedDiscoveryCounter{repo}
 }
 
-//Average report the average of node detected by the differents known seeds
-func (sdc seedDiscoveryCounter) Average() (int, error) {
+//CountDiscoveries report the average of node detected by the differents known seeds
+func (sdc seedDiscoveryCounter) CountDiscoveries() (int, error) {
 	listseed, err := sdc.repo.ListSeedPeers()
 	if err != nil {
 		return 0, err
@@ -42,8 +46,11 @@ func (sdc seedDiscoveryCounter) Average() (int, error) {
 	for i := 0; i < len(listseed); i++ {
 		ipseed := listseed[i].IP
 		p, err := sdc.repo.GetPeerByIP(ipseed)
+		if p == nil {
+			continue
+		}
 		if err == nil {
-			avg += p.DiscoveredPeersNumber()
+			avg += p.AppState().DiscoveredPeersNumber()
 		}
 	}
 	avg = avg / len(listseed)

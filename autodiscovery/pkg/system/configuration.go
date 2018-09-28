@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -23,10 +22,17 @@ type UnirisConfig struct {
 
 //DiscoveryConfig describes the autodiscovery configuration
 type DiscoveryConfig struct {
-	Port      int              `yaml:"port"`
-	P2PFactor int              `yaml:"p2pFactor"`
-	Seeds     []discovery.Seed `yaml:"seeds"`
-	Redis     RedisConfig
+	Port      int          `yaml:"port"`
+	P2PFactor int          `yaml:"p2pFactor"`
+	Seeds     []SeedConfig `yaml:"seeds"`
+	Redis     RedisConfig  `yaml:"redis"`
+}
+
+//SeedConfig describes the autodiscovery seed configuration
+type SeedConfig struct {
+	IP        string `yaml:"ip"`
+	Port      int    `yaml:"port"`
+	PublicKey string `yaml:"publicKey"`
 }
 
 //RedisConfig describes the Redis database configuration
@@ -49,7 +55,7 @@ func BuildFromEnv() (*UnirisConfig, error) {
 	redisPort := os.Getenv("UNIRIS_DISCOVERY_REDIS_PORT")
 	redisPwd := os.Getenv("UNIRIS_DISCOVERY_REDIS_PWD")
 
-	_seeds := make([]discovery.Seed, 0)
+	_seeds := make([]SeedConfig, 0)
 	ss := strings.Split(seeds, ",")
 	for _, s := range ss {
 		addr := strings.Split(s, ":")
@@ -60,9 +66,10 @@ func BuildFromEnv() (*UnirisConfig, error) {
 			return nil, err
 		}
 
-		_seeds = append(_seeds, discovery.Seed{
-			IP:   ips[0],
-			Port: sPort,
+		_seeds = append(_seeds, SeedConfig{
+			IP:        ips[0].String(),
+			Port:      sPort,
+			PublicKey: addr[2],
 		})
 	}
 

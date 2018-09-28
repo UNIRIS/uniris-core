@@ -13,15 +13,12 @@ import (
 
 type redisRepository struct {
 	client *redis.Client
-
-	peers []discovery.Peer
-	seeds []discovery.Seed
 }
 
 const (
-	ownedKey = "peer:owned"
-	peerKey  = "peer"
-	seedKey  = "seed"
+	ownedKey = "owned-peer"
+	peerKey  = "discovered-peer"
+	seedKey  = "seed-peer"
 )
 
 func (r *redisRepository) GetOwnedPeer() (p discovery.Peer, err error) {
@@ -68,7 +65,7 @@ func (r *redisRepository) ListSeedPeers() ([]discovery.Seed, error) {
 	return ss, nil
 }
 
-func (r *redisRepository) ListKnownPeers() ([]discovery.Peer, error) {
+func (r *redisRepository) ListDiscoveredPeers() ([]discovery.Peer, error) {
 	cmdKeys := r.client.Keys(fmt.Sprintf("%s:*", peerKey))
 	if cmdKeys.Err() != nil {
 		return nil, cmdKeys.Err()
@@ -98,10 +95,10 @@ func (r *redisRepository) ListKnownPeers() ([]discovery.Peer, error) {
 
 func (r *redisRepository) SetPeer(p discovery.Peer) error {
 	var id string
-	if p.IsOwned() {
+	if p.Owned() {
 		id = ownedKey
 	} else {
-		id = fmt.Sprintf("%s:%s", peerKey, hex.EncodeToString(p.PublicKey()))
+		id = fmt.Sprintf("%s:%s", peerKey, hex.EncodeToString(p.Identity().PublicKey()))
 	}
 
 	cmd := r.client.HMSet(id, FormatPeerToHash(p))
@@ -112,7 +109,7 @@ func (r *redisRepository) SetPeer(p discovery.Peer) error {
 }
 
 func (r *redisRepository) SetSeed(s discovery.Seed) error {
-	id := fmt.Sprintf("%s:%s", seedKey, s.IP.String())
+	id := fmt.Sprintf("%s:%s", seedKey, hex.EncodeToString(s.PublicKey))
 	cmd := r.client.HMSet(id, FormatSeedToHash(s))
 	if cmd.Err() != nil {
 		return cmd.Err()
@@ -120,7 +117,7 @@ func (r *redisRepository) SetSeed(s discovery.Seed) error {
 	return nil
 }
 
-func (r *redisRepository) CountKnownPeers() (int, error) {
+func (r *redisRepository) CountDiscoveredPeers() (int, error) {
 	cmdKeys := r.client.Keys(fmt.Sprintf("%s:*", peerKey))
 	if cmdKeys.Err() != nil {
 		return 0, cmdKeys.Err()
@@ -133,32 +130,25 @@ func (r *redisRepository) CountKnownPeers() (int, error) {
 }
 
 func (r *redisRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
-	cmdKeys := r.client.Keys(fmt.Sprintf("%s:*", peerKey))
-	if cmdKeys.Err() != nil {
-		err = cmdKeys.Err()
+	owned, err := r.GetOwnedPeer()
+	if err != nil {
 		return
 	}
-	keys, err := cmdKeys.Result()
+	if owned.Identity().IP().Equal(ip) {
+		return owned, nil
+	}
+
+	list, err := r.ListDiscoveredPeers()
 	if err != nil {
 		return
 	}
 
-	for _, k := range keys {
-		cmdGet := r.client.HGetAll(k)
-		if cmdGet.Err() != nil {
-			err = cmdKeys.Err()
-			return
-		}
-		res, err := cmdGet.Result()
-		if err != nil {
-			return p, err
-		}
-
-		if res["ip"] == ip.String() {
-			p := FormatHashToPeer(res)
+	for _, p := range list {
+		if p.Identity().IP().Equal(ip) {
 			return p, nil
 		}
 	}
+
 	return
 }
 

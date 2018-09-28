@@ -3,6 +3,8 @@ package rpc
 import (
 	"golang.org/x/net/context"
 
+	"github.com/uniris/uniris-core/autodiscovery/pkg/comparing"
+
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 
 	"github.com/golang/protobuf/ptypes/empty"
@@ -18,12 +20,8 @@ type Handler interface {
 }
 
 type handler struct {
-	repo         discovery.Repository
-	domainFormat PeerDomainFormater
-	apiFormat    PeerAPIFormater
-	gos          gossip.Service
-	mon          monitoring.Service
-	notif        gossip.Notifier
+	repo  discovery.Repository
+	notif gossip.Notifier
 }
 
 //Synchronize implements the protobuf Synchronize request handler
@@ -32,29 +30,34 @@ func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.Syn
 	// init := h.domainFormat.BuildPeerDigest(req.Initiator)
 	// log.Printf("Syn request received from %s", init.Endpoint())
 
-	receivedPeers := h.domainFormat.BuildPeerDigestCollection(req.KnownPeers)
+	builder := PeerBuilder{}
 
-	p, err := h.repo.GetOwnedPeer()
+	reqP := make([]discovery.Peer, 0)
+	for _, p := range req.KnownPeers {
+		reqP = append(reqP, builder.FromPeerDigest(p))
+	}
+
+	kp, err := h.repo.ListDiscoveredPeers()
 	if err != nil {
 		return nil, err
 	}
 
-	//Update metrics of own peer before to communicate known peers
-	if err := h.mon.RefreshPeer(p); err != nil {
-		return nil, err
-	}
+	newPeers := make([]*api.PeerDiscovered, 0)
+	unknownPeers := make([]*api.PeerDigest, 0)
 
-	//Get the diff between known peers and the received peers
-	diff, err := h.gos.ComparePeers(receivedPeers)
-	if err != nil {
-		return nil, err
+	diff := comparing.NewPeerDiffer(kp)
+	for _, p := range diff.UnknownPeers(reqP) {
+		unknownPeers = append(unknownPeers, builder.ToPeerDigest(p))
+	}
+	for _, p := range diff.ProvidePeers(reqP) {
+		newPeers = append(newPeers, builder.ToPeerDiscovered(p))
 	}
 
 	return &api.SynAck{
 		Initiator:    req.Target,
 		Target:       req.Initiator,
-		NewPeers:     h.apiFormat.BuildPeerDetailedCollection(diff.UnknownRemotly),
-		UnknownPeers: h.apiFormat.BuildPeerDigestCollection(diff.UnknownLocally),
+		NewPeers:     newPeers,
+		UnknownPeers: unknownPeers,
 	}, nil
 }
 
@@ -64,23 +67,22 @@ func (h handler) Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.E
 	// init := h.domainFormat.BuildPeerDigest(req.Initiator)
 	// log.Printf("Ack request received from %s", init.GetEndpoint())
 
-	//Store the peers requested and notifies them
+	builder := PeerBuilder{}
+
+	//Store the peers requested
 	for _, rp := range req.RequestedPeers {
-		p := h.domainFormat.BuildPeerDetailed(rp)
+		p := builder.FromPeerDiscovered(rp)
 		h.notif.Notify(p)
 		h.repo.SetPeer(p)
 	}
+
 	return new(empty.Empty), nil
 }
 
 //NewHandler create a new GRPC handler
 func NewHandler(repo discovery.Repository, gos gossip.Service, mon monitoring.Service, notif gossip.Notifier) Handler {
 	return handler{
-		repo:         repo,
-		domainFormat: PeerDomainFormater{},
-		apiFormat:    PeerAPIFormater{},
-		gos:          gos,
-		mon:          mon,
-		notif:        notif,
+		repo:  repo,
+		notif: notif,
 	}
 }

@@ -2,7 +2,9 @@ package gossip
 
 import (
 	"encoding/hex"
+	"errors"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,240 +15,122 @@ import (
 )
 
 /*
-Scenario: Run a gossip cycle
-	Given a initator peer, a list of seeds and a list known peer
+Scenario: Gossip across a selection of peers
+	Given a initiator peer, seeds and known peers stored locally
 	When we gossip
-	Then we get new peers are stored and notified
+	Then the new peers are stored and notified
 */
-func TestRunGossip(t *testing.T) {
-	repo := new(mockPeerRepository)
+func TestGossip(t *testing.T) {
 
-	repo.SetSeed(discovery.Seed{IP: net.ParseIP("20.0.0.1"), Port: 3000})
+	repo := new(mockRepository)
+	notif := new(notifier)
+	msg := new(mockMessenger)
+	mon := monitoring.NewService(repo, new(monitor), new(networker), new(robotWatcher))
+
+	repo.SetSeed(discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000})
 
 	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	repo.SetPeer(init)
 
-	kp := discovery.NewPeerDigest([]byte("key2"), net.ParseIP("10.0.0.2"), 3000)
-	kp2 := discovery.NewPeerDigest([]byte("key3"), net.ParseIP("80.200.100.2"), 3000)
-	repo.SetPeer(kp)
-	repo.SetPeer(kp2)
+	s := service{
+		msg:   msg,
+		repo:  repo,
+		notif: notif,
+		mon:   mon,
+	}
 
-	notif := new(mockNotifier)
-	spr := new(mockSpreader)
+	seeds, _ := repo.ListSeedPeers()
 
-	monSrv := monitoring.NewService(repo, new(mockMonitor), new(mockPeerNetworker), new(mockRobotWatcher))
+	errs := make(chan error)
+	newP := make(chan discovery.Peer)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		s.spread(init, seeds, errs, newP)
+		for range newP {
+			wg.Done()
+		}
+	}()
+
+	wg.Wait()
+
+	assert.Empty(t, errs)
+
+	pp, _ := repo.ListDiscoveredPeers()
+	assert.NotEmpty(t, pp)
+	assert.Equal(t, "dKey1", pp[0].Identity().PublicKey().String())
+}
+
+/*
+Scenario: Gossip with unexpected error
+	Given a gossip round spread fails
+	When the error is not about the target cannot be reach
+	Then the error is catched
+*/
+func TestGossipFailureCatched(t *testing.T) {
+
+	repo := new(mockRepository)
+	notif := new(notifier)
+	msg := new(mockMessengerUnexpectedFailure)
+	mon := monitoring.NewService(repo, new(monitor), new(networker), new(robotWatcher))
+
+	repo.SetSeed(discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000})
+
+	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	repo.SetPeer(init)
 
 	s := service{
+		msg:   msg,
 		repo:  repo,
-		mon:   monSrv,
 		notif: notif,
-		spr:   spr,
+		mon:   mon,
 	}
-	err := s.runGossip(init, []discovery.Seed{discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000}})
-	assert.Nil(t, err)
 
-	pp, _ := repo.ListKnownPeers()
-	assert.Equal(t, 4, len(pp))
-	assert.Equal(t, "dKey1", string(pp[3].PublicKey()))
+	seeds, _ := repo.ListSeedPeers()
 
-	npp := notif.NotifiedPeers()
-	assert.NotEmpty(t, npp)
-	assert.Equal(t, "dKey1", string(npp[0].PublicKey()))
-}
+	errs := make(chan error)
 
-/*
-Scenario: Gets diff between our known peers and a list of peers with peers unknown from the both sides
-	Given a unknown list of peers and a list known peers unknown from the sender
-	When we want get to the diff between
-	Then we retrieve a list of peers not include inside the list, and a peer unknows from us
-*/
-func TestDiffPeersWithDifferentPeers(t *testing.T) {
-	repo := new(mockPeerRepository)
+	var wg sync.WaitGroup
+	wg.Add(1)
 
-	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
-	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{})
-
-	repo.SetPeer(kp)
-	repo.SetPeer(kp2)
-
-	srv := service{repo: repo}
-
-	np1 := discovery.NewPeerDigest([]byte("key3"), net.ParseIP("10.0.0.1"), 3000)
-	np2 := discovery.NewPeerDigest([]byte("key4"), net.ParseIP("50.0.0.1"), 3000)
-
-	diff, err := srv.ComparePeers([]discovery.Peer{np1, np2})
-	assert.Nil(t, err)
-	assert.NotEmpty(t, diff.UnknownLocally)
-	assert.Equal(t, 2, len(diff.UnknownLocally))
-	assert.Equal(t, "key3", string(diff.UnknownLocally[0].PublicKey()))
-	assert.Equal(t, "key4", string(diff.UnknownLocally[1].PublicKey()))
-
-	assert.NotEmpty(t, diff.UnknownRemotly)
-	assert.Equal(t, 2, len(diff.UnknownRemotly))
-	assert.Equal(t, "key", string(diff.UnknownRemotly[0].PublicKey()))
-	assert.Equal(t, "key2", string(diff.UnknownRemotly[1].PublicKey()))
-}
-
-/*
-Scenario: Gets diff between our known peers and a list of peers which include one of our peer
-	Given a list of peers including one of our peer and a list of known peer
-	When we want to get the diff
-	Then we get the only the peer that the list don't know and we don' know
-*/
-func TestDiffPeerWithSomeKnownPeers(t *testing.T) {
-	repo := new(mockPeerRepository)
-
-	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
-	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{})
-
-	repo.SetPeer(kp)
-	repo.SetPeer(kp2)
-
-	srv := service{repo: repo}
-	np1 := discovery.NewPeerDigest([]byte("key"), net.ParseIP("127.0.0.1"), 3000)
-	np2 := discovery.NewPeerDigest([]byte("key4"), net.ParseIP("50.0.0.1"), 3000)
-
-	diff, err := srv.ComparePeers([]discovery.Peer{np1, np2})
-	assert.Nil(t, err)
-	assert.NotEmpty(t, diff.UnknownLocally)
-	assert.Equal(t, 1, len(diff.UnknownLocally))
-	assert.Equal(t, "key4", string(diff.UnknownLocally[0].PublicKey()))
-	assert.NotEmpty(t, diff.UnknownRemotly)
-	assert.Equal(t, 1, len(diff.UnknownRemotly))
-	assert.Equal(t, "key2", string(diff.UnknownRemotly[0].PublicKey()))
-}
-
-/*
-Scenario: Gets diff between an empty list of peers and known peers
-	Given a empty list of peers and a known list of peers
-	When we want to get the diff
-	Then we provide only our known peers
-*/
-func TestDiffWithEmptyPeers(t *testing.T) {
-	repo := new(mockPeerRepository)
-
-	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
-	kp2 := discovery.NewPeerDigest([]byte("key2"), net.ParseIP("80.200.100.2"), 3000)
-
-	repo.SetPeer(kp)
-	repo.SetPeer(kp2)
-
-	srv := service{repo: repo}
-	diff, err := srv.ComparePeers([]discovery.Peer{})
-	assert.Nil(t, err)
-	assert.Empty(t, diff.UnknownLocally)
-	assert.NotEmpty(t, diff.UnknownRemotly)
-	assert.Equal(t, 2, len(diff.UnknownRemotly))
-	assert.Equal(t, "key", string(diff.UnknownRemotly[0].PublicKey()))
-	assert.Equal(t, "key2", string(diff.UnknownRemotly[1].PublicKey()))
-}
-
-/*
-Scenario: Gets diff between identically list of peers
-	Given a list of peers identical to our known list of peers
-	When we want to get the diff
-	Then we provide empty lists
-*/
-func TestDiffPeerWithSamePeers(t *testing.T) {
-	repo := new(mockPeerRepository)
-
-	kp := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
-	kp2 := discovery.NewStartupPeer([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, "1.0", discovery.PeerPosition{})
-
-	repo.SetPeer(kp)
-	repo.SetPeer(kp2)
-
-	srv := service{repo: repo}
-	np1 := discovery.NewPeerDetailed([]byte("key"), net.ParseIP("127.0.0.1"), 3000, time.Now(), nil)
-	np2 := discovery.NewPeerDetailed([]byte("key2"), net.ParseIP("80.200.100.2"), 3000, time.Now(), nil)
-
-	diff, err := srv.ComparePeers([]discovery.Peer{np1, np2})
-	assert.Nil(t, err)
-	assert.Empty(t, diff.UnknownLocally)
-	assert.Empty(t, diff.UnknownRemotly)
-}
-
-type mockPeerRepository struct {
-	peers []discovery.Peer
-	seeds []discovery.Seed
-}
-
-func (r *mockPeerRepository) GetOwnedPeer() (p discovery.Peer, err error) {
-	for _, p := range r.peers {
-		if p.IsOwned() {
-			return p, nil
+	go func() {
+		s.spread(init, seeds, errs, nil)
+		for err := range errs {
+			assert.Error(t, err, "Unexpected failure")
+			wg.Done()
 		}
-	}
-	return
+	}()
+
+	wg.Wait()
+
 }
 
-func (r *mockPeerRepository) CountKnownPeers() (int, error) {
-	return len(r.peers), nil
+//////////////////////////////////////////////////////////
+// 						MOCKS
+/////////////////////////////////////////////////////////
+
+type mockMessenger struct {
 }
 
-func (r *mockPeerRepository) ListSeedPeers() ([]discovery.Seed, error) {
-	return r.seeds, nil
-}
-
-func (r *mockPeerRepository) ListKnownPeers() ([]discovery.Peer, error) {
-	return r.peers, nil
-}
-
-func (r *mockPeerRepository) SetPeer(peer discovery.Peer) error {
-	if r.containsPeer(peer) {
-		for _, p := range r.peers {
-			if string(p.PublicKey()) == string(peer.PublicKey()) {
-				p = peer
-				break
-			}
-		}
-	} else {
-		r.peers = append(r.peers, peer)
-	}
-	return nil
-}
-
-func (r *mockPeerRepository) SetSeed(s discovery.Seed) error {
-	r.seeds = append(r.seeds, s)
-	return nil
-}
-
-func (r *mockPeerRepository) containsPeer(p discovery.Peer) bool {
-	mPeers := make(map[string]discovery.Peer, 0)
-	for _, p := range r.peers {
-		mPeers[hex.EncodeToString(p.PublicKey())] = p
-	}
-
-	_, exist := mPeers[hex.EncodeToString(p.PublicKey())]
-	return exist
-}
-
-func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
-	for i := 0; i < len(r.peers); i++ {
-		if string(ip) == string(r.peers[i].IP()) {
-			return r.peers[i], nil
-		}
-	}
-	return
-}
-
-type mockSpreader struct {
-}
-
-func (m mockSpreader) SendSyn(req discovery.SynRequest) (*discovery.SynAck, error) {
+func (m mockMessenger) SendSyn(req SynRequest) (*SynAck, error) {
 	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	tar := discovery.NewStartupPeer([]byte("uKey1"), net.ParseIP("200.18.186.39"), 3000, "1.1", discovery.PeerPosition{})
 
-	t, _ := time.Parse(
-		time.RFC3339,
-		"2012-11-01T22:08:41+00:00")
-	np1 := discovery.NewPeerDetailed([]byte("dKey1"), net.ParseIP("35.200.100.2"), 3000, t, nil)
+	hb := discovery.NewPeerHeartbeatState(time.Now(), 0)
+	as := discovery.NewPeerAppState("1.0", discovery.OkStatus, discovery.PeerPosition{}, "", 0, 1, 0)
+
+	np1 := discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(net.ParseIP("35.200.100.2"), 3000, []byte("dKey1")),
+		hb, as,
+	)
 
 	newPeers := []discovery.Peer{np1}
 
 	unknownPeers := []discovery.Peer{tar}
 
-	return &discovery.SynAck{
+	return &SynAck{
 		Initiator:    init,
 		Target:       tar,
 		NewPeers:     newPeers,
@@ -254,80 +138,175 @@ func (m mockSpreader) SendSyn(req discovery.SynRequest) (*discovery.SynAck, erro
 	}, nil
 }
 
-func (m mockSpreader) SendAck(req discovery.AckRequest) error {
+func (m mockMessenger) SendAck(req AckRequest) error {
 	return nil
 }
 
-type mockNotifier struct {
+type mockRepository struct {
+	ownedPeer       discovery.Peer
+	discoveredPeers []discovery.Peer
+	seedPeers       []discovery.Seed
+}
+
+func (r *mockRepository) CountDiscoveredPeers() (int, error) {
+	return len(r.discoveredPeers), nil
+}
+
+//GetOwnedPeer return the local peer
+func (r *mockRepository) GetOwnedPeer() (discovery.Peer, error) {
+	return r.ownedPeer, nil
+}
+
+//ListSeedPeers return all the seed on the mockRepository
+func (r *mockRepository) ListSeedPeers() ([]discovery.Seed, error) {
+	return r.seedPeers, nil
+}
+
+//ListDiscoveredPeers returns all the discoveredPeers on the mockRepository
+func (r *mockRepository) ListDiscoveredPeers() ([]discovery.Peer, error) {
+	return r.discoveredPeers, nil
+}
+
+func (r *mockRepository) SetPeer(peer discovery.Peer) error {
+	if peer.Owned() {
+		r.ownedPeer = peer
+		return nil
+	}
+	if r.containsPeer(peer) {
+		for _, p := range r.discoveredPeers {
+			if p.Identity().PublicKey().Equals(peer.Identity().PublicKey()) {
+				p = peer
+				break
+			}
+		}
+	} else {
+		r.discoveredPeers = append(r.discoveredPeers, peer)
+	}
+	return nil
+}
+
+func (r *mockRepository) SetSeed(s discovery.Seed) error {
+	r.seedPeers = append(r.seedPeers, s)
+	return nil
+}
+
+//GetPeerByIP get a peer from the mockRepository using its ip
+func (r *mockRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
+	if r.ownedPeer.Identity().IP().Equal(ip) {
+		return r.ownedPeer, nil
+	}
+	for i := 0; i < len(r.discoveredPeers); i++ {
+		if r.discoveredPeers[i].Identity().IP().Equal(ip) {
+			return r.discoveredPeers[i], nil
+		}
+	}
+	return
+}
+
+func (r *mockRepository) containsPeer(p discovery.Peer) bool {
+	mdiscoveredPeers := make(map[string]discovery.Peer, 0)
+	for _, p := range r.discoveredPeers {
+		mdiscoveredPeers[hex.EncodeToString(p.Identity().PublicKey())] = p
+	}
+
+	_, exist := mdiscoveredPeers[hex.EncodeToString(p.Identity().PublicKey())]
+	return exist
+}
+
+type notifier struct {
 	notifiedPeers []discovery.Peer
 }
 
-func (n mockNotifier) NotifiedPeers() []discovery.Peer {
+func (n notifier) NotifiedPeers() []discovery.Peer {
 	return n.notifiedPeers
 }
 
-func (n *mockNotifier) Notify(p discovery.Peer) {
+func (n *notifier) Notify(p discovery.Peer) {
 	n.notifiedPeers = append(n.notifiedPeers, p)
 }
 
-type mockMonitor struct{}
+type monitor struct{}
 
-func (m mockMonitor) Status() (discovery.PeerStatus, error) {
-	return discovery.OkStatus, nil
+func (w monitor) CPULoad() (string, error) {
+	return "0.62 0.77 0.71 4/972 26361", nil
 }
 
-func (m mockMonitor) CPULoad() (string, error) {
-	return "100.0.0", nil
+func (w monitor) FreeDiskSpace() (float64, error) {
+	return 212383852, nil
 }
 
-func (m mockMonitor) FreeDiskSpace() (float64, error) {
-	return 500, nil
-}
-
-func (m mockMonitor) P2PFactor() (int, error) {
+func (w monitor) P2PFactor() (int, error) {
 	return 1, nil
 }
 
-type mockPeerNetworker struct{}
+type networker struct{}
 
-func (n mockPeerNetworker) IP() (net.IP, error) {
+func (n networker) IP() (net.IP, error) {
 	return net.ParseIP("127.0.0.1"), nil
 }
 
-func (n mockPeerNetworker) CheckInternetState() error {
+func (n networker) CheckInternetState() error {
 	return nil
 }
 
-func (n mockPeerNetworker) CheckNtpState() error {
+func (n networker) CheckNtpState() error {
 	return nil
 }
 
-type mockRobotWatcher struct{}
+type networkerNTPFails struct{}
 
-func (r mockRobotWatcher) CheckAutodiscoveryProcess(port int) error {
+func (n networkerNTPFails) IP() (net.IP, error) {
+	return net.ParseIP("127.0.0.1"), nil
+}
+
+func (n networkerNTPFails) CheckInternetState() error {
 	return nil
 }
 
-func (r mockRobotWatcher) CheckDataProcess() error {
+func (n networkerNTPFails) CheckNtpState() error {
+	return errors.New("System Clock have a big Offset check the ntp configuration of the system")
+}
+
+type networkerInternetFails struct{}
+
+func (n networkerInternetFails) IP() (net.IP, error) {
+	return net.ParseIP("127.0.0.1"), nil
+}
+
+func (n networkerInternetFails) CheckInternetState() error {
+	return errors.New("required processes are not running")
+}
+
+func (n networkerInternetFails) CheckNtpState() error {
 	return nil
 }
 
-func (r mockRobotWatcher) CheckMiningProcess() error {
+type robotWatcher struct{}
+
+func (r robotWatcher) CheckAutodiscoveryProcess(port int) error {
 	return nil
 }
 
-func (r mockRobotWatcher) CheckAIProcess() error {
+func (r robotWatcher) CheckDataProcess() error {
 	return nil
 }
 
-func (r mockRobotWatcher) CheckScyllaDbProcess() error {
+func (r robotWatcher) CheckMiningProcess() error {
 	return nil
 }
 
-func (r mockRobotWatcher) CheckRedisProcess() error {
+func (r robotWatcher) CheckAIProcess() error {
 	return nil
 }
 
-func (r mockRobotWatcher) CheckRabbitmqProcess() error {
+func (r robotWatcher) CheckScyllaDbProcess() error {
+	return nil
+}
+
+func (r robotWatcher) CheckRedisProcess() error {
+	return nil
+}
+
+func (r robotWatcher) CheckRabbitmqProcess() error {
 	return nil
 }

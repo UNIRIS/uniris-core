@@ -15,13 +15,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type gossipSpreader struct {
-	domainFormat PeerDomainFormater
-	apiFormat    PeerAPIFormater
+type gossipMessenger struct {
 }
 
 //SendSyn calls the Synchronize grpc method to retrieve unknown peers (SYN handshake)
-func (g gossipSpreader) SendSyn(req discovery.SynRequest) (synAck *discovery.SynAck, err error) {
+func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, err error) {
 	serverAddr := fmt.Sprintf("%s", req.Target.Endpoint())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
@@ -33,50 +31,69 @@ func (g gossipSpreader) SendSyn(req discovery.SynRequest) (synAck *discovery.Syn
 	//We initalize a GRPC client
 	client := api.NewDiscoveryClient(conn)
 
-	//We send the SYN request
-	resp, err := client.Synchronize(context.Background(), &api.SynRequest{
-		Initiator:  g.apiFormat.BuildPeerDigest(req.Initiator),
-		Target:     g.apiFormat.BuildPeerDigest(req.Target),
-		KnownPeers: g.apiFormat.BuildPeerDigestCollection(req.KnownPeers),
+	builder := PeerBuilder{}
+	kp := make([]*api.PeerDigest, 0)
+	for _, p := range req.KnownPeers {
+		kp = append(kp, builder.ToPeerDigest(p))
+	}
+
+	res, err := client.Synchronize(context.Background(), &api.SynRequest{
+		Initiator:  builder.ToPeerDigest(req.Initiator),
+		Target:     builder.ToPeerDigest(req.Target),
+		KnownPeers: kp,
 	})
 
 	if err != nil {
 		//If the peer cannot be reached, we throw an ErrPeerUnreachable error
 		statusCode, _ := status.FromError(err)
 		if statusCode.Code() == codes.Unavailable {
-			log.Printf(gossip.ErrPeerUnreachable.Error(), req.Target.Endpoint())
+			log.Printf("%s: %s", gossip.ErrPeerUnreachable.Error(), req.Target.Endpoint())
 			return nil, gossip.ErrPeerUnreachable
 		}
 		return nil, err
 	}
 
-	//We format the SYN ACK reponse for the domain
-	return &discovery.SynAck{
+	newP := make([]discovery.Peer, 0)
+	unknown := make([]discovery.Peer, 0)
+	for _, p := range res.NewPeers {
+		newP = append(newP, builder.FromPeerDiscovered(p))
+	}
+	for _, p := range res.UnknownPeers {
+		unknown = append(unknown, builder.FromPeerDigest(p))
+	}
+
+	return &gossip.SynAck{
 		Initiator:    req.Target,
 		Target:       req.Initiator,
-		NewPeers:     g.domainFormat.BuildPeerDetailedCollection(resp.NewPeers),
-		UnknownPeers: g.domainFormat.BuildPeerDigestCollection(resp.UnknownPeers),
+		NewPeers:     newP,
+		UnknownPeers: unknown,
 	}, nil
 }
 
 //SendAck calls the Acknoweledge grpc method to send detailed peers requested
-func (g gossipSpreader) SendAck(req discovery.AckRequest) error {
+func (g gossipMessenger) SendAck(req gossip.AckRequest) error {
 	serverAddr := fmt.Sprintf("%s", req.Target.Endpoint())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	defer conn.Close()
+
 	if err != nil {
 		return err
 	}
 
-	defer conn.Close()
+	builder := PeerBuilder{}
 
 	//We initalize a GRPC client
 	client := api.NewDiscoveryClient(conn)
 
-	//We send the ACK request with the requested detailed peers
+	reqP := make([]*api.PeerDiscovered, 0)
+	for _, p := range req.RequestedPeers {
+		reqP = append(reqP, builder.ToPeerDiscovered(p))
+	}
+
 	_, err = client.Acknowledge(context.Background(), &api.AckRequest{
-		Initiator:      g.apiFormat.BuildPeerDigest(req.Initiator),
-		Target:         g.apiFormat.BuildPeerDigest(req.Target),
-		RequestedPeers: g.apiFormat.BuildPeerDetailedCollection(req.RequestedPeers),
+		Initiator:      builder.ToPeerDigest(req.Initiator),
+		Target:         builder.ToPeerDigest(req.Target),
+		RequestedPeers: reqP,
 	})
 	if err != nil {
 		return err
@@ -85,9 +102,6 @@ func (g gossipSpreader) SendAck(req discovery.AckRequest) error {
 }
 
 //NewMessenger creates a new gossip messenger using GRPC
-func NewMessenger() discovery.GossipSpreader {
-	return gossipSpreader{
-		apiFormat:    PeerAPIFormater{},
-		domainFormat: PeerDomainFormater{},
-	}
+func NewMessenger() gossip.Messenger {
+	return gossipMessenger{}
 }

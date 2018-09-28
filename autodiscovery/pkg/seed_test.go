@@ -26,12 +26,29 @@ func TestGetSeedDiscoveredPeer(t *testing.T) {
 	repo.SetSeed(seed2)
 	repo.SetSeed(seed3)
 	assert.Equal(t, 3, len(repo.seeds))
-	st1 := NewState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	st2 := NewState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 6)
-	st3 := NewState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 7)
-	p1 := NewPeerDetailed([]byte("key1"), seed1.IP, seed1.Port, time.Now(), st1)
-	p2 := NewPeerDetailed([]byte("key2"), seed2.IP, seed1.Port, time.Now(), st2)
-	p3 := NewPeerDetailed([]byte("key3"), seed3.IP, seed1.Port, time.Now(), st3)
+
+	st1 := NewPeerAppState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 5)
+	st2 := NewPeerAppState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 6)
+	st3 := NewPeerAppState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 7)
+
+	p1 := NewDiscoveredPeer(
+		NewPeerIdentity(seed1.IP, seed1.Port, []byte("key1")),
+		NewPeerHeartbeatState(time.Now(), 0),
+		st1,
+	)
+
+	p2 := NewDiscoveredPeer(
+		NewPeerIdentity(seed2.IP, seed2.Port, []byte("key2")),
+		NewPeerHeartbeatState(time.Now(), 0),
+		st2,
+	)
+
+	p3 := NewDiscoveredPeer(
+		NewPeerIdentity(seed3.IP, seed3.Port, []byte("key3")),
+		NewPeerHeartbeatState(time.Now(), 0),
+		st3,
+	)
+
 	repo.SetPeer(p1)
 	repo.SetPeer(p2)
 	repo.SetPeer(p3)
@@ -59,16 +76,38 @@ func TestDiscoveredPeer(t *testing.T) {
 	repo.SetSeed(seed2)
 	repo.SetSeed(seed3)
 	assert.Equal(t, 3, len(repo.seeds))
-	st1 := NewState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	st2 := NewState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	st3 := NewState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 5)
-	p1 := NewPeerDetailed([]byte("key1"), seed1.IP, seed1.Port, time.Now(), st1)
-	p2 := NewPeerDetailed([]byte("key2"), seed2.IP, seed1.Port, time.Now(), st2)
-	p3 := NewPeerDetailed([]byte("key3"), seed3.IP, seed1.Port, time.Now(), st3)
+
+	st1 := NewPeerAppState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 5)
+	st2 := NewPeerAppState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 5)
+	st3 := NewPeerAppState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 5)
+
+	p1 := NewDiscoveredPeer(
+		NewPeerIdentity(seed1.IP, seed1.Port, []byte("key1")),
+		NewPeerHeartbeatState(time.Now(), 0),
+		st1,
+	)
+
+	p2 := NewDiscoveredPeer(
+		NewPeerIdentity(seed2.IP, seed2.Port, []byte("key2")),
+		NewPeerHeartbeatState(time.Now(), 0),
+		st2,
+	)
+
+	p3 := NewDiscoveredPeer(
+		NewPeerIdentity(seed3.IP, seed3.Port, []byte("key3")),
+		NewPeerHeartbeatState(time.Now(), 0),
+		st3,
+	)
+
 	repo.SetPeer(p1)
 	repo.SetPeer(p2)
 	repo.SetPeer(p3)
-	p4 := NewPeerDetailed([]byte("key4"), net.ParseIP("185.123.4.9"), 4000, time.Now(), st1)
+
+	p4 := NewDiscoveredPeer(
+		NewPeerIdentity(net.ParseIP("185.123.4.9"), 4000, []byte("key4")),
+		NewPeerHeartbeatState(time.Now(), 0),
+		st1)
+
 	repo.SetPeer(p4)
 	assert.Equal(t, 5, len(repo.peers))
 
@@ -90,7 +129,7 @@ func (r *mockPeerRepository) CountKnownPeers() (int, error) {
 
 func (r *mockPeerRepository) GetOwnedPeer() (p Peer, err error) {
 	for _, p := range r.peers {
-		if p.IsOwned() {
+		if p.Owned() {
 			return p, nil
 		}
 	}
@@ -120,7 +159,7 @@ func (r *mockPeerRepository) ListSeedPeers() ([]Seed, error) {
 
 func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p Peer, err error) {
 	for i := 0; i < len(r.peers); i++ {
-		if string(ip) == string(r.peers[i].IP()) {
+		if string(ip) == string(r.peers[i].Identity().IP()) {
 			return r.peers[i], nil
 		}
 	}
@@ -129,7 +168,7 @@ func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p Peer, err error) {
 
 func (r *mockPeerRepository) UpdatePeer(peer Peer) error {
 	for _, p := range r.peers {
-		if string(p.PublicKey()) == string(peer.PublicKey()) {
+		if p.Identity().PublicKey().Equals(p.Identity().PublicKey()) {
 			p = peer
 			break
 		}
@@ -140,9 +179,9 @@ func (r *mockPeerRepository) UpdatePeer(peer Peer) error {
 func (r *mockPeerRepository) containsPeer(peer Peer) bool {
 	mPeers := make(map[string]Peer, 0)
 	for _, p := range r.peers {
-		mPeers[hex.EncodeToString(p.PublicKey())] = peer
+		mPeers[hex.EncodeToString(p.Identity().PublicKey())] = peer
 	}
 
-	_, exist := mPeers[hex.EncodeToString(peer.PublicKey())]
+	_, exist := mPeers[hex.EncodeToString(peer.Identity().PublicKey())]
 	return exist
 }

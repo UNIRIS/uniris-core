@@ -14,11 +14,11 @@ import (
 Scenario: Loads initial seed peers
 	Given list of seeds
 	When we want to load them
-	Then we can retreive them into the repository
+	Then we can retreive them into the mockRepository
 */
 func TestLoadSeeds(t *testing.T) {
 	seeds := []discovery.Seed{discovery.Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000}}
-	repo := new(mockPeerRepository)
+	repo := new(mockRepository)
 
 	srv := NewService(repo, nil, nil)
 	err := srv.LoadSeeds(seeds)
@@ -32,108 +32,124 @@ func TestLoadSeeds(t *testing.T) {
 
 /*
 Scenario: Starts a peer
-	Given a peer repository and a peer localizer
+	Given a peer mockRepository and a peer localizer
 	When a peer startups
-	Then the peer is stored on the peer repository
+	Then the peer is stored on the peer mockRepository
 */
 func TestStartup(t *testing.T) {
 
-	repo := new(mockPeerRepository)
-	pos := new(mockPeerPositionner)
-	net := new(mockPeerNetworker)
+	repo := new(mockRepository)
+	pos := new(mockPositioner)
+	net := new(networker)
 
 	srv := NewService(repo, pos, net)
 	p, err := srv.Startup([]byte("key"), 3000, "1.0")
 	assert.NotNil(t, p)
 	assert.Nil(t, err)
 
-	assert.Equal(t, "127.0.0.1", p.IP().String())
-	assert.Equal(t, "key", string(p.PublicKey()))
-	assert.Equal(t, 0, p.P2PFactor())
-	assert.Equal(t, "1.0", p.Version())
-	assert.Equal(t, discovery.BootstrapingStatus, p.Status())
+	assert.Equal(t, "127.0.0.1", p.Identity().IP().String())
+	assert.Equal(t, "key", p.Identity().PublicKey().String())
+	assert.Equal(t, "1.0", p.AppState().Version())
+	assert.Equal(t, discovery.BootstrapingStatus, p.AppState().Status())
 
-	pp, _ := repo.ListKnownPeers()
-	assert.NotEmpty(t, pp)
-	assert.Equal(t, 1, len(pp))
-	assert.Equal(t, "127.0.0.1", pp[0].IP().String())
-	assert.True(t, pp[0].IsOwned())
+	selfPeer, _ := repo.GetOwnedPeer()
+	assert.Equal(t, "127.0.0.1", selfPeer.Identity().IP().String())
 }
 
-type mockPeerRepository struct {
-	peers []discovery.Peer
-	seeds []discovery.Seed
+//////////////////////////////////////////////////////////
+// 						MOCKS
+/////////////////////////////////////////////////////////
+
+type mockRepository struct {
+	ownedPeer       discovery.Peer
+	discoveredPeers []discovery.Peer
+	seedPeers       []discovery.Seed
 }
 
-func (r *mockPeerRepository) CountKnownPeers() (int, error) {
-	return len(r.peers), nil
+func (r *mockRepository) CountDiscoveredPeers() (int, error) {
+	return len(r.discoveredPeers), nil
 }
 
-func (r *mockPeerRepository) GetOwnedPeer() (p discovery.Peer, err error) {
-	for _, p := range r.peers {
-		if p.IsOwned() {
-			return p, nil
+//GetOwnedPeer return the local peer
+func (r *mockRepository) GetOwnedPeer() (discovery.Peer, error) {
+	return r.ownedPeer, nil
+}
+
+//ListSeedPeers return all the seed on the mockRepository
+func (r *mockRepository) ListSeedPeers() ([]discovery.Seed, error) {
+	return r.seedPeers, nil
+}
+
+//ListDiscoveredPeers returns all the discoveredPeers on the mockRepository
+func (r *mockRepository) ListDiscoveredPeers() ([]discovery.Peer, error) {
+	return r.discoveredPeers, nil
+}
+
+func (r *mockRepository) SetPeer(peer discovery.Peer) error {
+	if peer.Owned() {
+		r.ownedPeer = peer
+		return nil
+	}
+	if r.containsPeer(peer) {
+		for _, p := range r.discoveredPeers {
+			if p.Identity().PublicKey().Equals(peer.Identity().PublicKey()) {
+				p = peer
+				break
+			}
+		}
+	} else {
+		r.discoveredPeers = append(r.discoveredPeers, peer)
+	}
+	return nil
+}
+
+func (r *mockRepository) SetSeed(s discovery.Seed) error {
+	r.seedPeers = append(r.seedPeers, s)
+	return nil
+}
+
+//GetPeerByIP get a peer from the mockRepository using its ip
+func (r *mockRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
+	if r.ownedPeer.Identity().IP().Equal(ip) {
+		return r.ownedPeer, nil
+	}
+	for i := 0; i < len(r.discoveredPeers); i++ {
+		if r.discoveredPeers[i].Identity().IP().Equal(ip) {
+			return r.discoveredPeers[i], nil
 		}
 	}
 	return
 }
 
-func (r *mockPeerRepository) SetPeer(p discovery.Peer) error {
-	r.peers = append(r.peers, p)
-	return nil
-}
-
-func (r *mockPeerRepository) ListSeedPeers() ([]discovery.Seed, error) {
-	return r.seeds, nil
-}
-
-func (r *mockPeerRepository) ListKnownPeers() ([]discovery.Peer, error) {
-	return r.peers, nil
-}
-
-func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
-	for i := 0; i < len(r.peers); i++ {
-		if string(ip) == string(r.peers[i].IP()) {
-			return r.peers[i], nil
-		}
-	}
-	return
-}
-
-func (r *mockPeerRepository) SetSeed(s discovery.Seed) error {
-	r.seeds = append(r.seeds, s)
-	return nil
-}
-
-func (r *mockPeerRepository) containsPeer(p discovery.Peer) bool {
-	mPeers := make(map[string]discovery.Peer, 0)
-	for _, p := range r.peers {
-		mPeers[hex.EncodeToString(p.PublicKey())] = p
+func (r *mockRepository) containsPeer(p discovery.Peer) bool {
+	mdiscoveredPeers := make(map[string]discovery.Peer, 0)
+	for _, p := range r.discoveredPeers {
+		mdiscoveredPeers[hex.EncodeToString(p.Identity().PublicKey())] = p
 	}
 
-	_, exist := mPeers[hex.EncodeToString(p.PublicKey())]
+	_, exist := mdiscoveredPeers[hex.EncodeToString(p.Identity().PublicKey())]
 	return exist
 }
 
-type mockPeerPositionner struct{}
+type networker struct{}
 
-func (l mockPeerPositionner) Position() (discovery.PeerPosition, error) {
+func (n networker) IP() (net.IP, error) {
+	return net.ParseIP("127.0.0.1"), nil
+}
+
+func (n networker) CheckInternetState() error {
+	return nil
+}
+
+func (n networker) CheckNtpState() error {
+	return nil
+}
+
+type mockPositioner struct{}
+
+func (l mockPositioner) Position() (discovery.PeerPosition, error) {
 	return discovery.PeerPosition{
 		Lon: 3.5,
 		Lat: 65.2,
 	}, nil
-}
-
-type mockPeerNetworker struct{}
-
-func (n mockPeerNetworker) IP() (net.IP, error) {
-	return net.ParseIP("127.0.0.1"), nil
-}
-
-func (n mockPeerNetworker) CheckInternetState() error {
-	return nil
-}
-
-func (n mockPeerNetworker) CheckNtpState() error {
-	return nil
 }
