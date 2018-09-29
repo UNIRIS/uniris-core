@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"encoding/hex"
+	"fmt"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
@@ -106,6 +107,7 @@ func (s service) Spread(init discovery.Peer) error {
 }
 
 func (s service) RunCycle(init discovery.Peer, recpt discovery.Peer, kp []discovery.Peer) ([]discovery.Peer, error) {
+	fmt.Printf("Gossip round with %s:%d \n", recpt.Identity().IP().String(), recpt.Identity().Port())
 	owned, err := s.repo.GetOwnedPeer()
 	if err != nil {
 		return nil, err

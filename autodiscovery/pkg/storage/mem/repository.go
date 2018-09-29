@@ -86,7 +86,7 @@ func (r *repo) AddUnreacheablePeer(p discovery.Peer) error {
 func (r *repo) DelUnreacheablePeer(p discovery.Peer) error {
 	if r.containsUnreacheablePeer(p) {
 		for i := 0; i < len(r.unreacheablePeers); i++ {
-			if r.unreacheablePeers[i].Identity().IP().String() == p.Identity().IP().String() {
+			if r.unreacheablePeers[i].Identity().PublicKey().Equals(p.Identity().PublicKey()) {
 				r.unreacheablePeers = r.unreacheablePeers[:i+copy(r.unreacheablePeers[i:], r.unreacheablePeers[i+1:])]
 			}
 		}
@@ -97,6 +97,12 @@ func (r *repo) DelUnreacheablePeer(p discovery.Peer) error {
 //UpdatePeer update an existing peer on the repository
 func (r *repo) UpdatePeer(peer discovery.Peer) error {
 	for _, p := range r.peers {
+		if p.Identity().PublicKey().Equals(peer.Identity().PublicKey()) {
+			p = peer
+			break
+		}
+	}
+	for _, p := range r.unreacheablePeers {
 		if p.Identity().PublicKey().Equals(peer.Identity().PublicKey()) {
 			p = peer
 			break
@@ -128,8 +134,8 @@ func (r *repo) containsPeer(p discovery.Peer) bool {
 func (r *repo) containsUnreacheablePeer(p discovery.Peer) bool {
 	mPeers := make(map[string]discovery.Peer, 0)
 	for _, p := range r.unreacheablePeers {
-		mPeers[p.Identity().IP().String()] = p
+		mPeers[hex.EncodeToString(p.Identity().PublicKey())] = p
 	}
-	_, exist := mPeers[p.Identity().IP().String()]
+	_, exist := mPeers[hex.EncodeToString(p.Identity().PublicKey())]
 	return exist
 }

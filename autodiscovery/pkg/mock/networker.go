@@ -41,7 +41,7 @@ func (n NetworkerNTPFails) CheckNtpState() error {
 	return errors.New("System Clock have a big Offset check the ntp configuration of the system")
 }
 
-//NetworkerInternetFails mock
+//NetworkerInternetFails a Networker mock
 type NetworkerInternetFails struct{}
 
 //IP mock
@@ -51,7 +51,7 @@ func (n NetworkerInternetFails) IP() (net.IP, error) {
 
 //CheckInternetState mock
 func (n NetworkerInternetFails) CheckInternetState() error {
-	return errors.New("required processes are not running")
+	return errors.New("No internet connexion")
 }
 
 //CheckNtpState mock
