@@ -104,14 +104,14 @@ func TestAddUnreachable(t *testing.T) {
 
 	repo.AddPeer(p1)
 	assert.Equal(t, 2, len(repo.Peers))
-	assert.Equal(t, 0, len(repo.UnreacheablePeers))
+	assert.Equal(t, 0, len(repo.UnreachablePeers))
 	srv := NewService(repo, mockMessengerunreacheable{}, notif, new(mockMonitor))
 	err := srv.Spread(init)
 	assert.NotNil(t, err)
 	fmt.Printf(err.Error())
-	fmt.Print(repo.UnreacheablePeers)
-	assert.Equal(t, 1, len(repo.UnreacheablePeers))
-	assert.Equal(t, "ukey", repo.UnreacheablePeers[0].String())
+	fmt.Print(repo.UnreachablePeers)
+	assert.Equal(t, 1, len(repo.UnreachablePeers))
+	assert.Equal(t, "ukey", repo.UnreachablePeers[0].String())
 }
 
 /*
@@ -136,15 +136,15 @@ func TestDelUnreachable(t *testing.T) {
 		hb, as,
 	)
 	repo.AddPeer(p1)
-	repo.AddUnreacheablePeer(p1.Identity().PublicKey())
-	rp, _ := repo.ListReacheablePeers()
+	repo.AddUnreachablePeer(p1.Identity().PublicKey())
+	rp, _ := repo.ListReachablePeers()
 	assert.Equal(t, 1, len(rp))
 	assert.Equal(t, 2, len(repo.Peers))
-	assert.Equal(t, 1, len(repo.UnreacheablePeers))
+	assert.Equal(t, 1, len(repo.UnreachablePeers))
 	srv := NewService(repo, mockMessenger{}, notif, new(mockMonitor))
 	err := srv.Spread(init)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(repo.UnreacheablePeers))
+	assert.Equal(t, 0, len(repo.UnreachablePeers))
 	assert.Equal(t, 3, len(repo.Peers))
 }
 

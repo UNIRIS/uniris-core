@@ -43,22 +43,22 @@ func (r *repo) ListKnownPeers() ([]discovery.Peer, error) {
 	return r.peers, nil
 }
 
-//ListReacheablePeers returns all the reacheable peers on the repository
-func (r *repo) ListReacheablePeers() ([]discovery.Peer, error) {
+//ListReachablePeers returns all the reachable peers on the repository
+func (r *repo) ListReachablePeers() ([]discovery.Peer, error) {
 	rp := make([]discovery.Peer, 0)
 	for i := 0; i < len(r.peers); i++ {
-		if !r.containsUnreacheablePeer(r.peers[i].Identity().PublicKey()) {
+		if !r.containsUnreachablePeer(r.peers[i].Identity().PublicKey()) {
 			rp = append(rp, r.peers[i])
 		}
 	}
 	return rp, nil
 }
 
-//ListUnrecheablePeers returns all unreacheable peers on the repository
-func (r *repo) ListUnrecheablePeers() ([]discovery.Peer, error) {
+//ListUnreacheablePeers returns all unreachable peers on the repository
+func (r *repo) ListUnreachablePeers() ([]discovery.Peer, error) {
 	unrp := make([]discovery.Peer, 0)
 	for i := 0; i < len(r.peers); i++ {
-		if r.containsUnreacheablePeer(r.peers[i].Identity().PublicKey()) {
+		if r.containsUnreachablePeer(r.peers[i].Identity().PublicKey()) {
 			unrp = append(unrp, r.peers[i])
 		}
 	}
@@ -80,17 +80,17 @@ func (r *repo) AddSeed(s discovery.Seed) error {
 	return nil
 }
 
-//AddUnreacheablePeer add an unreacheable peer to the repository
-func (r *repo) AddUnreacheablePeer(pk discovery.PublicKey) error {
-	if !r.containsUnreacheablePeer(pk) {
+//AddUnreachablePeer add an unreachable peer to the repository
+func (r *repo) AddUnreachablePeer(pk discovery.PublicKey) error {
+	if !r.containsUnreachablePeer(pk) {
 		r.unreacheablePeers = append(r.unreacheablePeers, pk)
 	}
 	return nil
 }
 
-//DelUnreacheablePeer add an unreacheable peer to the repository
-func (r *repo) DelUnreacheablePeer(pk discovery.PublicKey) error {
-	if r.containsUnreacheablePeer(pk) {
+//DelUnreacheablePeer remove an unreachable peer to the repository
+func (r *repo) DelUnreachablePeer(pk discovery.PublicKey) error {
+	if r.containsUnreachablePeer(pk) {
 		for i := 0; i < len(r.unreacheablePeers); i++ {
 			if r.unreacheablePeers[i].Equals(pk) {
 				r.unreacheablePeers = r.unreacheablePeers[:i+copy(r.unreacheablePeers[i:], r.unreacheablePeers[i+1:])]
@@ -121,11 +121,6 @@ func (r *repo) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
 	return
 }
 
-//IsUnreachablePeer check if a peer was tagged as unreachable on the repo
-func (r *repo) IsUnreachablePeer(pk discovery.PublicKey) bool {
-	return r.containsUnreacheablePeer(pk)
-}
-
 func (r *repo) containsPeer(p discovery.Peer) bool {
 	mPeers := make(map[string]discovery.Peer, 0)
 	for _, p := range r.peers {
@@ -136,7 +131,7 @@ func (r *repo) containsPeer(p discovery.Peer) bool {
 	return exist
 }
 
-func (r *repo) containsUnreacheablePeer(pk discovery.PublicKey) bool {
+func (r *repo) containsUnreachablePeer(pk discovery.PublicKey) bool {
 	for _, up := range r.unreacheablePeers {
 		if up.Equals(pk) {
 			return true

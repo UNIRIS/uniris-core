@@ -11,7 +11,7 @@ import (
 
 type rpcError int
 
-//ErrUnrechablePeer is returnes when no owned peers has been stored
+//ErrUnrechablePeer is returns when no owned peers has been stored
 var ErrUnrechablePeer = errors.New("Unreachable Peer")
 
 //Service is the interface that provide gossip methods
@@ -55,11 +55,11 @@ func (s service) Spread(init discovery.Peer) error {
 	if err != nil {
 		return err
 	}
-	rp, err := s.repo.ListReacheablePeers()
+	rp, err := s.repo.ListReachablePeers()
 	if err != nil {
 		return err
 	}
-	up, err := s.repo.ListUnrecheablePeers()
+	up, err := s.repo.ListUnreachablePeers()
 	if err != nil {
 		return err
 	}
@@ -77,9 +77,7 @@ func (s service) Spread(init discovery.Peer) error {
 		if err != nil {
 			return err
 		}
-		if s.repo.IsUnreachablePeer(p.Identity().PublicKey()) {
-			s.repo.DelUnreacheablePeer(p.Identity().PublicKey())
-		}
+
 		for _, p := range newPeers {
 			if err := s.repo.AddPeer(p); err != nil {
 				return err
@@ -106,8 +104,12 @@ func (s service) RunCycle(init discovery.Peer, recpt discovery.Peer, kp []discov
 	synAck, err := s.msg.SendSyn(NewSynRequest(init, recpt, kp))
 	if err != nil {
 		if err.Error() == ErrUnrechablePeer.Error() {
-			s.repo.AddUnreacheablePeer(recpt.Identity().PublicKey())
+			s.repo.AddUnreachablePeer(recpt.Identity().PublicKey())
 		}
+		return nil, err
+	}
+	//Remove the target from the unreachable list if it is
+	if err := s.repo.DelUnreachablePeer(recpt.Identity().PublicKey()); err != nil {
 		return nil, err
 	}
 

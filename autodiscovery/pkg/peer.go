@@ -19,15 +19,14 @@ type Repository interface {
 	GetOwnedPeer() (Peer, error)
 	ListSeedPeers() ([]Seed, error)
 	ListKnownPeers() ([]Peer, error)
-	ListUnrecheablePeers() ([]Peer, error)
-	ListReacheablePeers() ([]Peer, error)
+	ListUnreachablePeers() ([]Peer, error)
+	ListReachablePeers() ([]Peer, error)
 	AddPeer(Peer) error
 	AddSeed(Seed) error
-	AddUnreacheablePeer(PublicKey) error
+	AddUnreachablePeer(PublicKey) error
 	UpdatePeer(Peer) error
-	DelUnreacheablePeer(PublicKey) error
+	DelUnreachablePeer(PublicKey) error
 	GetPeerByIP(ip net.IP) (Peer, error)
-	IsUnreachablePeer(pk PublicKey) bool
 }
 
 //PublicKey describes a public key value object
