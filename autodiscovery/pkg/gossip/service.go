@@ -60,7 +60,7 @@ func (s service) Start(init discovery.Peer) (errs chan error) {
 	return nil
 }
 
-func (s service) spread(init discovery.Peer, seeds []discovery.Seed, errs chan<- error) {
+func (s service) spread(init discovery.Peer, seeds []discovery.Seed, errs chan<- error) chan discovery.Peer {
 
 	newPeers := make(chan discovery.Peer)
 
@@ -92,6 +92,8 @@ func (s service) spread(init discovery.Peer, seeds []discovery.Seed, errs chan<-
 
 	go s.handleCycleErrors(c, errs)
 	go s.handleCycleDiscoveries(c, errs, newPeers)
+
+	return newPeers
 }
 
 func (s service) handleCycleErrors(c *Cycle, errs chan<- error) {

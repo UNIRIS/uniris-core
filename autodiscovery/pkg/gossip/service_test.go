@@ -42,15 +42,19 @@ func TestGossip(t *testing.T) {
 	seeds, _ := repo.ListSeedPeers()
 
 	errs := make(chan error)
-	newP := make(chan discovery.Peer)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 
 	go func() {
-		s.spread(init, seeds, errs, newP)
-		for range newP {
+		for range s.spread(init, seeds, errs) {
 			wg.Done()
+		}
+	}()
+
+	go func() {
+		for range errs {
+			assert.Fail(t, "Cannot have errors")
 		}
 	}()
 
@@ -96,7 +100,11 @@ func TestGossipFailureCatched(t *testing.T) {
 	wg.Add(1)
 
 	go func() {
-		s.spread(init, seeds, errs, nil)
+		s.spread(init, seeds, errs)
+
+	}()
+
+	go func() {
 		for err := range errs {
 			assert.Error(t, err, "Unexpected failure")
 			wg.Done()
