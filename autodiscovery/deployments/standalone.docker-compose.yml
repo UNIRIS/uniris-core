@@ -3,7 +3,7 @@ version: "3.0"
 services:
   peer:
     build: 
-      dockerfile: build/Dockerfile
+      dockerfile: build/package/Dockerfile
       context: ..
     environment:
       - UNIRIS_NETWORK_INTERFACE=eth0

@@ -1,12 +1,12 @@
 package gossip
 
 import (
-	"encoding/hex"
-	"errors"
 	"net"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/uniris/uniris-core/autodiscovery/pkg/mock"
 
 	"github.com/stretchr/testify/assert"
 
@@ -22,10 +22,10 @@ Scenario: Gossip across a selection of peers
 */
 func TestGossip(t *testing.T) {
 
-	repo := new(mockRepository)
-	notif := new(notifier)
+	repo := new(mock.Repository)
+	notif := new(mock.Notifier)
 	msg := new(mockMessenger)
-	mon := monitoring.NewService(repo, new(monitor), new(networker), new(robotWatcher))
+	mon := monitoring.NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
 
 	repo.SetSeed(discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000})
 
@@ -75,10 +75,10 @@ Scenario: Gossip with unexpected error
 */
 func TestGossipFailureCatched(t *testing.T) {
 
-	repo := new(mockRepository)
-	notif := new(notifier)
+	repo := new(mock.Repository)
+	notif := new(mock.Notifier)
 	msg := new(mockMessengerUnexpectedFailure)
-	mon := monitoring.NewService(repo, new(monitor), new(networker), new(robotWatcher))
+	mon := monitoring.NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
 
 	repo.SetSeed(discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000})
 
@@ -147,175 +147,5 @@ func (m mockMessenger) SendSyn(req SynRequest) (*SynAck, error) {
 }
 
 func (m mockMessenger) SendAck(req AckRequest) error {
-	return nil
-}
-
-type mockRepository struct {
-	ownedPeer       discovery.Peer
-	discoveredPeers []discovery.Peer
-	seedPeers       []discovery.Seed
-}
-
-func (r *mockRepository) CountDiscoveredPeers() (int, error) {
-	return len(r.discoveredPeers), nil
-}
-
-//GetOwnedPeer return the local peer
-func (r *mockRepository) GetOwnedPeer() (discovery.Peer, error) {
-	return r.ownedPeer, nil
-}
-
-//ListSeedPeers return all the seed on the mockRepository
-func (r *mockRepository) ListSeedPeers() ([]discovery.Seed, error) {
-	return r.seedPeers, nil
-}
-
-//ListDiscoveredPeers returns all the discoveredPeers on the mockRepository
-func (r *mockRepository) ListDiscoveredPeers() ([]discovery.Peer, error) {
-	return r.discoveredPeers, nil
-}
-
-func (r *mockRepository) SetPeer(peer discovery.Peer) error {
-	if peer.Owned() {
-		r.ownedPeer = peer
-		return nil
-	}
-	if r.containsPeer(peer) {
-		for _, p := range r.discoveredPeers {
-			if p.Identity().PublicKey().Equals(peer.Identity().PublicKey()) {
-				p = peer
-				break
-			}
-		}
-	} else {
-		r.discoveredPeers = append(r.discoveredPeers, peer)
-	}
-	return nil
-}
-
-func (r *mockRepository) SetSeed(s discovery.Seed) error {
-	r.seedPeers = append(r.seedPeers, s)
-	return nil
-}
-
-//GetPeerByIP get a peer from the mockRepository using its ip
-func (r *mockRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
-	if r.ownedPeer.Identity().IP().Equal(ip) {
-		return r.ownedPeer, nil
-	}
-	for i := 0; i < len(r.discoveredPeers); i++ {
-		if r.discoveredPeers[i].Identity().IP().Equal(ip) {
-			return r.discoveredPeers[i], nil
-		}
-	}
-	return
-}
-
-func (r *mockRepository) containsPeer(p discovery.Peer) bool {
-	mdiscoveredPeers := make(map[string]discovery.Peer, 0)
-	for _, p := range r.discoveredPeers {
-		mdiscoveredPeers[hex.EncodeToString(p.Identity().PublicKey())] = p
-	}
-
-	_, exist := mdiscoveredPeers[hex.EncodeToString(p.Identity().PublicKey())]
-	return exist
-}
-
-type notifier struct {
-	notifiedPeers []discovery.Peer
-}
-
-func (n notifier) NotifiedPeers() []discovery.Peer {
-	return n.notifiedPeers
-}
-
-func (n *notifier) Notify(p discovery.Peer) error {
-	n.notifiedPeers = append(n.notifiedPeers, p)
-	return nil
-}
-
-type monitor struct{}
-
-func (w monitor) CPULoad() (string, error) {
-	return "0.62 0.77 0.71 4/972 26361", nil
-}
-
-func (w monitor) FreeDiskSpace() (float64, error) {
-	return 212383852, nil
-}
-
-func (w monitor) P2PFactor() (int, error) {
-	return 1, nil
-}
-
-type networker struct{}
-
-func (n networker) IP() (net.IP, error) {
-	return net.ParseIP("127.0.0.1"), nil
-}
-
-func (n networker) CheckInternetState() error {
-	return nil
-}
-
-func (n networker) CheckNtpState() error {
-	return nil
-}
-
-type networkerNTPFails struct{}
-
-func (n networkerNTPFails) IP() (net.IP, error) {
-	return net.ParseIP("127.0.0.1"), nil
-}
-
-func (n networkerNTPFails) CheckInternetState() error {
-	return nil
-}
-
-func (n networkerNTPFails) CheckNtpState() error {
-	return errors.New("System Clock have a big Offset check the ntp configuration of the system")
-}
-
-type networkerInternetFails struct{}
-
-func (n networkerInternetFails) IP() (net.IP, error) {
-	return net.ParseIP("127.0.0.1"), nil
-}
-
-func (n networkerInternetFails) CheckInternetState() error {
-	return errors.New("required processes are not running")
-}
-
-func (n networkerInternetFails) CheckNtpState() error {
-	return nil
-}
-
-type robotWatcher struct{}
-
-func (r robotWatcher) CheckAutodiscoveryProcess(port int) error {
-	return nil
-}
-
-func (r robotWatcher) CheckDataProcess() error {
-	return nil
-}
-
-func (r robotWatcher) CheckMiningProcess() error {
-	return nil
-}
-
-func (r robotWatcher) CheckAIProcess() error {
-	return nil
-}
-
-func (r robotWatcher) CheckScyllaDbProcess() error {
-	return nil
-}
-
-func (r robotWatcher) CheckRedisProcess() error {
-	return nil
-}
-
-func (r robotWatcher) CheckRabbitmqProcess() error {
 	return nil
 }

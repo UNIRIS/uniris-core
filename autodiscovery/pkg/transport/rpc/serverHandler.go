@@ -10,22 +10,15 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	api "github.com/uniris/uniris-core/autodiscovery/api/protobuf-spec"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 )
 
-//Handler is the interface that provides methods to handle GRPC requests
-type Handler interface {
-	Synchronize(ctx context.Context, req *api.SynRequest) (*api.SynAck, error)
-	Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.Empty, error)
-}
-
-type handler struct {
+type srvHandler struct {
 	repo  discovery.Repository
 	notif gossip.Notifier
 }
 
 //Synchronize implements the protobuf Synchronize request handler
-func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.SynAck, error) {
+func (h srvHandler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.SynAck, error) {
 	// FOR DEBUG
 	// init := h.domainFormat.BuildPeerDigest(req.Initiator)
 	// log.Printf("Syn request received from %s", init.Endpoint())
@@ -69,7 +62,7 @@ func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.Syn
 }
 
 //Acknowledge implements the protobuf Acknowledge request handler
-func (h handler) Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.Empty, error) {
+func (h srvHandler) Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.Empty, error) {
 	// FOR DEBUG
 	// init := h.domainFormat.BuildPeerDigest(req.Initiator)
 	// log.Printf("Ack request received from %s", init.GetEndpoint())
@@ -86,9 +79,9 @@ func (h handler) Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.E
 	return new(empty.Empty), nil
 }
 
-//NewHandler create a new GRPC handler
-func NewHandler(repo discovery.Repository, gos gossip.Service, mon monitoring.Service, notif gossip.Notifier) Handler {
-	return handler{
+//NewServerHandler create a new GRPC server handler
+func NewServerHandler(repo discovery.Repository, notif gossip.Notifier) api.DiscoveryServer {
+	return srvHandler{
 		repo:  repo,
 		notif: notif,
 	}

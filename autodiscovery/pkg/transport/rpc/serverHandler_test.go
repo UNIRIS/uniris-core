@@ -2,13 +2,11 @@ package rpc
 
 import (
 	"encoding/hex"
-	"errors"
 	"net"
 	"testing"
 	"time"
 
 	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 
 	"github.com/stretchr/testify/assert"
 
@@ -32,10 +30,12 @@ func TestHandleSynRequest(t *testing.T) {
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
+	repo.SetPeer(
+		discovery.NewStartupPeer([]byte("key2"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
+
 	notif := new(mockNotifier)
-	msg := new(mockMessenger)
-	mon := monitoring.NewService(repo, new(mockMonitor), new(mockNetworker), new(mockRobotWatcher))
-	h := NewHandler(repo, gossip.NewService(repo, msg, notif), mon, notif)
+
+	h := NewServerHandler(repo, notif)
 
 	req := &api.SynRequest{
 		Initiator: &api.PeerDigest{},
@@ -81,10 +81,12 @@ func TestHandleSynRequestNewPeers(t *testing.T) {
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
+	repo.SetPeer(
+		discovery.NewStartupPeer([]byte("key3"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
+
 	notif := new(mockNotifier)
-	msg := new(mockMessenger)
-	mon := monitoring.NewService(repo, new(mockMonitor), new(mockNetworker), new(mockRobotWatcher))
-	h := NewHandler(repo, gossip.NewService(repo, msg, notif), mon, notif)
+
+	h := NewServerHandler(repo, notif)
 
 	req := &api.SynRequest{
 		Initiator: &api.PeerDigest{},
@@ -129,10 +131,12 @@ func TestHandleSynRequestNewPeersRecentOnly(t *testing.T) {
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
+	repo.SetPeer(
+		discovery.NewStartupPeer([]byte("key3"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
+
 	notif := new(mockNotifier)
-	msg := new(mockMessenger)
-	mon := monitoring.NewService(repo, new(mockMonitor), new(mockNetworker), new(mockRobotWatcher))
-	h := NewHandler(repo, gossip.NewService(repo, msg, notif), mon, notif)
+
+	h := NewServerHandler(repo, notif)
 
 	req := &api.SynRequest{
 		Initiator: &api.PeerDigest{},
@@ -185,10 +189,11 @@ func TestHandleSynRequestUnknownPeers(t *testing.T) {
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
+	repo.SetPeer(
+		discovery.NewStartupPeer([]byte("key2"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
+
 	notif := new(mockNotifier)
-	msg := new(mockMessenger)
-	mon := monitoring.NewService(repo, new(mockMonitor), new(mockNetworker), new(mockRobotWatcher))
-	h := NewHandler(repo, gossip.NewService(repo, msg, notif), mon, notif)
+	h := NewServerHandler(repo, notif)
 
 	req := &api.SynRequest{
 		Initiator: &api.PeerDigest{},
@@ -236,18 +241,16 @@ Scenario: Process a SYN request by returning only the unknown peers more recent
 func TestHandleSynRequestUnknownPeersRecentOnly(t *testing.T) {
 	repo := new(mockRepository)
 	repo.SetPeer(discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, []byte("key1")),
-		discovery.NewPeerHeartbeatState(time.Now(), 1000),
-	))
-	repo.SetPeer(discovery.NewPeerDigest(
 		discovery.NewPeerIdentity(net.ParseIP("30.0.0.1"), 3000, []byte("key2")),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
+	repo.SetPeer(
+		discovery.NewStartupPeer([]byte("key1"), net.ParseIP("20.10.0.1"), 3000, "1.0", discovery.PeerPosition{}))
+
 	notif := new(mockNotifier)
-	msg := new(mockMessenger)
-	mon := monitoring.NewService(repo, new(mockMonitor), new(mockNetworker), new(mockRobotWatcher))
-	h := NewHandler(repo, gossip.NewService(repo, msg, notif), mon, notif)
+
+	h := NewServerHandler(repo, notif)
 
 	req := &api.SynRequest{
 		Initiator: &api.PeerDigest{},
@@ -295,10 +298,8 @@ Scenario: Process a ACK request by saving and notifying the request detailed pee
 */
 func TestHandlAckRequest(t *testing.T) {
 	notif := new(mockNotifier)
-	msg := new(mockMessenger)
 	repo := new(mockRepository)
-	mon := monitoring.NewService(repo, new(mockMonitor), new(mockNetworker), new(mockRobotWatcher))
-	h := NewHandler(repo, gossip.NewService(repo, msg, notif), mon, notif)
+	h := NewServerHandler(repo, notif)
 
 	req := &api.AckRequest{
 		Initiator: &api.PeerDigest{},
@@ -463,92 +464,7 @@ func (n mockNotifier) NotifiedPeers() []discovery.Peer {
 	return n.notifiedPeers
 }
 
-func (n *mockNotifier) Notify(p discovery.Peer) {
+func (n *mockNotifier) Notify(p discovery.Peer) error {
 	n.notifiedPeers = append(n.notifiedPeers, p)
-}
-
-type mockMonitor struct{}
-
-func (w mockMonitor) CPULoad() (string, error) {
-	return "0.62 0.77 0.71 4/972 26361", nil
-}
-
-func (w mockMonitor) FreeDiskSpace() (float64, error) {
-	return 212383852, nil
-}
-
-func (w mockMonitor) P2PFactor() (int, error) {
-	return 1, nil
-}
-
-type mockNetworker struct{}
-
-func (n mockNetworker) IP() (net.IP, error) {
-	return net.ParseIP("127.0.0.1"), nil
-}
-
-func (n mockNetworker) CheckInternetState() error {
-	return nil
-}
-
-func (n mockNetworker) CheckNtpState() error {
-	return nil
-}
-
-type mockNetworkerNTPFails struct{}
-
-func (n mockNetworkerNTPFails) IP() (net.IP, error) {
-	return net.ParseIP("127.0.0.1"), nil
-}
-
-func (n mockNetworkerNTPFails) CheckInternetState() error {
-	return nil
-}
-
-func (n mockNetworkerNTPFails) CheckNtpState() error {
-	return errors.New("System Clock have a big Offset check the ntp configuration of the system")
-}
-
-type mockNetworkerInternetFails struct{}
-
-func (n mockNetworkerInternetFails) IP() (net.IP, error) {
-	return net.ParseIP("127.0.0.1"), nil
-}
-
-func (n mockNetworkerInternetFails) CheckInternetState() error {
-	return errors.New("required processes are not running")
-}
-
-func (n mockNetworkerInternetFails) CheckNtpState() error {
-	return nil
-}
-
-type mockRobotWatcher struct{}
-
-func (r mockRobotWatcher) CheckAutodiscoveryProcess(port int) error {
-	return nil
-}
-
-func (r mockRobotWatcher) CheckDataProcess() error {
-	return nil
-}
-
-func (r mockRobotWatcher) CheckMiningProcess() error {
-	return nil
-}
-
-func (r mockRobotWatcher) CheckAIProcess() error {
-	return nil
-}
-
-func (r mockRobotWatcher) CheckScyllaDbProcess() error {
-	return nil
-}
-
-func (r mockRobotWatcher) CheckRedisProcess() error {
-	return nil
-}
-
-func (r mockRobotWatcher) CheckRabbitmqProcess() error {
 	return nil
 }

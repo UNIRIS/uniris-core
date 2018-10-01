@@ -15,11 +15,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type gossipMessenger struct {
-}
+type clientMessenger struct{}
 
 //SendSyn calls the Synchronize grpc method to retrieve unknown peers (SYN handshake)
-func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, err error) {
+func (m clientMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, err error) {
 	serverAddr := fmt.Sprintf("%s", req.Target.Endpoint())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
@@ -71,7 +70,7 @@ func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, 
 }
 
 //SendAck calls the Acknoweledge grpc method to send detailed peers requested
-func (g gossipMessenger) SendAck(req gossip.AckRequest) error {
+func (m clientMessenger) SendAck(req gossip.AckRequest) error {
 	serverAddr := fmt.Sprintf("%s", req.Target.Endpoint())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
@@ -103,5 +102,5 @@ func (g gossipMessenger) SendAck(req gossip.AckRequest) error {
 
 //NewMessenger creates a new gossip messenger using GRPC
 func NewMessenger() gossip.Messenger {
-	return gossipMessenger{}
+	return clientMessenger{}
 }

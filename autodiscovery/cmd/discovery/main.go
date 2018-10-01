@@ -88,7 +88,7 @@ func main() {
 
 	//Starts server
 	go func() {
-		if err := startServer(conf.Discovery.Port, repo, gos, mon, notif); err != nil {
+		if err := startServer(conf.Discovery.Port, repo, notif); err != nil {
 			log.Fatal(err)
 		}
 	}()
@@ -121,13 +121,13 @@ func loadConfiguration() (*system.UnirisConfig, error) {
 	return conf, nil
 }
 
-func startServer(port int, repo discovery.Repository, gos gossip.Service, mon monitoring.Service, notif gossip.Notifier) error {
+func startServer(port int, repo discovery.Repository, notif gossip.Notifier) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return err
 	}
 	grpcServer := grpc.NewServer()
-	api.RegisterDiscoveryServer(grpcServer, rpc.NewHandler(repo, gos, mon, notif))
+	api.RegisterDiscoveryServer(grpcServer, rpc.NewServerHandler(repo, notif))
 	log.Printf("Server listening on %d", port)
 	if err := grpcServer.Serve(lis); err != nil {
 		return err
