@@ -1,12 +1,14 @@
 version: 1.0
 network: private
-publicKey: -----BEGIN PUBLIC KEY-----MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEXjQEnfjxr1gHFetBym2C8zcU9n+DGRz3Ip+dLErOjCtQ8PoKzjQei2S9vle70Ano6MdaZlUHT1TLrFIrqYto1Q==-----END PUBLIC KEY-----
+networkInterface: lo0
+publicKey: MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEXjQEnfjxr1gHFetBym2C8zcU9n+DGRz3Ip+dLErOjCtQ8PoKzjQei2S9vle70Ano6MdaZlUHT1TLrFIrqYto1Q==
 
 discovery:
   port: 5000
   seeds:
     - ip: 127.0.0.1
       port: 3545
+      publicKey: MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEhNngAzz3Ws1cz7veHnzeCwi9cuJhmpcHoi8+q3y75UL1vG5hyfnEMTjDCeeRHiobASUGvawGlcxexJzlZPIVYg==
   redis:
     host: localhost
     port: 6379

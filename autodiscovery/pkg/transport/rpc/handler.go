@@ -37,15 +37,22 @@ func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.Syn
 		reqP = append(reqP, builder.FromPeerDigest(p))
 	}
 
-	kp, err := h.repo.ListDiscoveredPeers()
+	discoveredPeers, err := h.repo.ListDiscoveredPeers()
 	if err != nil {
 		return nil, err
 	}
 
+	ownedPeer, err := h.repo.GetOwnedPeer()
+	if err != nil {
+		return nil, err
+	}
+
+	knownPeers := append(discoveredPeers, ownedPeer)
+
 	newPeers := make([]*api.PeerDiscovered, 0)
 	unknownPeers := make([]*api.PeerDigest, 0)
 
-	diff := comparing.NewPeerDiffer(kp)
+	diff := comparing.NewPeerDiffer(knownPeers)
 	for _, p := range diff.UnknownPeers(reqP) {
 		unknownPeers = append(unknownPeers, builder.ToPeerDigest(p))
 	}

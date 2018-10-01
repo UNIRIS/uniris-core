@@ -60,11 +60,19 @@ func main() {
 	notif := rabbitmq.NewNotifier()
 	msg := rpc.NewMessenger()
 	mon := monitoring.NewService(repo, system.NewPeerMonitor(), np, system.NewRobotWatcher())
-	gos := gossip.NewService(repo, msg, notif)
+	gos := gossip.NewService(repo, msg, notif, mon)
 	boot := bootstraping.NewService(repo, pos, np)
 
 	//Initializes the seeds
-	if err := boot.LoadSeeds(conf.Discovery.Seeds); err != nil {
+	seeds := make([]discovery.Seed, 0)
+	for _, s := range conf.Discovery.Seeds {
+		seeds = append(seeds, discovery.Seed{
+			IP:        net.ParseIP(s.IP),
+			Port:      s.Port,
+			PublicKey: []byte(s.PublicKey),
+		})
+	}
+	if err := boot.LoadSeeds(seeds); err != nil {
 		log.Fatal(err)
 	}
 
@@ -87,8 +95,9 @@ func main() {
 	//Starts gossiping
 	time.Sleep(1 * time.Second)
 	log.Print("Start gossip...")
-	if err := gos.Spread(startPeer); err != nil {
-		log.Print(err)
+
+	for err := range gos.Start(startPeer) {
+		log.Fatal(err)
 	}
 }
 

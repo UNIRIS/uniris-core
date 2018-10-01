@@ -53,7 +53,7 @@ func TestGetSeedDiscoveredPeer(t *testing.T) {
 	repo.SetPeer(p2)
 	repo.SetPeer(p3)
 	assert.Equal(t, 3, len(repo.peers))
-	avg, _ := sdc.Average()
+	avg, _ := sdc.CountDiscoveries()
 	assert.Equal(t, 6, avg)
 
 }
@@ -112,7 +112,7 @@ func TestDiscoveredPeer(t *testing.T) {
 	assert.Equal(t, 5, len(repo.peers))
 
 	sdc := NewSeedDiscoveryCounter(repo)
-	dn, err := sdc.Average()
+	dn, err := sdc.CountDiscoveries()
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 5, dn)
 
@@ -123,7 +123,7 @@ type mockPeerRepository struct {
 	seeds []Seed
 }
 
-func (r *mockPeerRepository) CountKnownPeers() (int, error) {
+func (r *mockPeerRepository) CountDiscoveredPeers() (int, error) {
 	return len(r.peers), nil
 }
 
@@ -149,7 +149,7 @@ func (r *mockPeerRepository) SetSeed(s Seed) error {
 	return nil
 }
 
-func (r *mockPeerRepository) ListKnownPeers() ([]Peer, error) {
+func (r *mockPeerRepository) ListDiscoveredPeers() ([]Peer, error) {
 	return r.peers, nil
 }
 

@@ -26,8 +26,8 @@ func TestRandomPeer(t *testing.T) {
 
 	peers := []discovery.Peer{p1, p2}
 
-	c := Cycle{knownPeers: peers}
-	p := c.randomPeer()
+	c := Cycle{}
+	p := c.randomPeer(peers)
 	assert.NotNil(t, p)
 }
 

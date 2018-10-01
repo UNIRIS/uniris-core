@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"errors"
+	"log"
 	"math/rand"
 	"sync"
 
@@ -59,6 +60,7 @@ func (c Cycle) Run() {
 	wg.Add(len(pp))
 
 	for _, p := range pp {
+		log.Printf("Gossip with %s", p.Endpoint())
 		go func(target discovery.Peer) {
 			defer wg.Done()
 
@@ -84,17 +86,25 @@ func (c Cycle) selectPeers() []discovery.Peer {
 		peers = append(peers, s)
 	}
 
-	//We pick a random known peer
-	if len(c.knownPeers) > 0 {
-		peers = append(peers, c.randomPeer())
+	filterP := make([]discovery.Peer, 0)
+	for _, p := range c.knownPeers {
+		if p.Endpoint() != c.initator.Endpoint() {
+			filterP = append(filterP, p)
+		}
 	}
+
+	//We pick a random known peer
+	if len(filterP) > 0 {
+		peers = append(peers, c.randomPeer(filterP))
+	}
+
 	return peers
 }
 
-func (c Cycle) randomPeer() discovery.Peer {
-	if len(c.knownPeers) > 1 {
-		rnd := rand.Intn(len(c.knownPeers) - 1)
-		return c.knownPeers[rnd]
+func (c Cycle) randomPeer(peers []discovery.Peer) discovery.Peer {
+	if len(peers) > 1 {
+		rnd := rand.Intn(len(peers) - 1)
+		return peers[rnd]
 	}
 	return c.knownPeers[0]
 }
