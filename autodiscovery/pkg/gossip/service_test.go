@@ -229,8 +229,9 @@ func (n notifier) NotifiedPeers() []discovery.Peer {
 	return n.notifiedPeers
 }
 
-func (n *notifier) Notify(p discovery.Peer) {
+func (n *notifier) Notify(p discovery.Peer) error {
 	n.notifiedPeers = append(n.notifiedPeers, p)
+	return nil
 }
 
 type monitor struct{}

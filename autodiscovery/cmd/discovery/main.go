@@ -47,6 +47,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Cannot connect with redis")
 	}
+
 	var np monitoring.PeerNetworker
 	if conf.Network == "public" {
 		np = system.NewPublicNetworker()

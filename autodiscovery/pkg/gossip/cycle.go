@@ -103,7 +103,7 @@ func (c Cycle) selectPeers() []discovery.Peer {
 
 func (c Cycle) randomPeer(peers []discovery.Peer) discovery.Peer {
 	if len(peers) > 1 {
-		rnd := rand.Intn(len(peers) - 1)
+		rnd := rand.Intn(len(peers))
 		return peers[rnd]
 	}
 	return c.knownPeers[0]
@@ -111,7 +111,7 @@ func (c Cycle) randomPeer(peers []discovery.Peer) discovery.Peer {
 
 func (c Cycle) randomSeed() discovery.Seed {
 	if len(c.seedPeers) > 1 {
-		rnd := rand.Intn(len(c.seedPeers) - 1)
+		rnd := rand.Intn(len(c.seedPeers))
 		return c.seedPeers[rnd]
 	}
 	return c.seedPeers[0]
