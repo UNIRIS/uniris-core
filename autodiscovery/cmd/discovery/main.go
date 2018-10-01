@@ -14,7 +14,7 @@ import (
 	"github.com/uniris/uniris-core/autodiscovery/pkg/system"
 
 	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/rabbitmq"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/amqp"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/rpc"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
@@ -57,7 +57,7 @@ func main() {
 		np = system.NewPrivateNetworker(conf.NetworkInterface)
 	}
 	pos := system.NewPeerPositioner()
-	notif := rabbitmq.NewNotifier()
+	notif := amqp.NewNotifier(conf.Discovery.AMQP)
 	msg := rpc.NewMessenger()
 	mon := monitoring.NewService(repo, system.NewPeerMonitor(), np, system.NewRobotWatcher())
 	gos := gossip.NewService(repo, msg, notif, mon)

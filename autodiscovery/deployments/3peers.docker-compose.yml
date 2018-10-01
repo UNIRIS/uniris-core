@@ -14,6 +14,7 @@ services:
     environment:
       - UNIRIS_NETWORK_INTERFACE=eth0
       - UNIRIS_DISCOVERY_REDIS_HOST=redis
+      - UNIRIS_DISCOVERY_AMQP_HOST=rabbitmq
     networks:
       uniris:
         aliases: 
@@ -21,6 +22,7 @@ services:
       peer1:
     depends_on:
       - redis1
+      - rabbitmq1
 
   redis1:
     image: redis
@@ -28,6 +30,12 @@ services:
       peer1:
         aliases:
           - redis
+  rabbitmq1:
+    image: rabbitmq
+    networks:
+      peer1:
+        aliases:
+          - rabbitmq
     
   peer2:
     build: 
@@ -39,8 +47,10 @@ services:
       - UNIRIS_DISCOVERY_PORT=3545
       - UNIRIS_DISCOVERY_REDIS_HOST=redis
       - UNIRIS_DISCOVERY_SEEDS=peer1:3545:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEhNngAzz3Ws1cz7veHnzeCwi9cuJhmpcHoi8+q3y75UL1vG5hyfnEMTjDCeeRHiobASUGvawGlcxexJzlZPIVYg==
+      - UNIRIS_DISCOVERY_AMQP_HOST=rabbitmq
     depends_on:
       - redis2
+      - rabbitmq2
     networks:
       uniris:
         aliases:
@@ -53,6 +63,12 @@ services:
       peer2:
         aliases:
           - redis
+  rabbitmq2:
+    image: rabbitmq
+    networks:
+      peer2:
+        aliases:
+          - rabbitmq
 
   peer3:
     build: 
@@ -64,8 +80,10 @@ services:
       - UNIRIS_DISCOVERY_PORT=3545
       - UNIRIS_DISCOVERY_REDIS_HOST=redis
       - UNIRIS_DISCOVERY_SEEDS=peer1:3545:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEhNngAzz3Ws1cz7veHnzeCwi9cuJhmpcHoi8+q3y75UL1vG5hyfnEMTjDCeeRHiobASUGvawGlcxexJzlZPIVYg==
+      - UNIRIS_DISCOVERY_AMQP_HOST=rabbitmq
     depends_on:
       - redis3
+      - rabbitmq3
     networks:
       uniris:
         aliases:
@@ -78,3 +96,10 @@ services:
       peer3:
         aliases:
           - redis
+
+  rabbitmq3:
+    image: rabbitmq
+    networks:
+      peer3:
+        aliases:
+          - rabbitmq

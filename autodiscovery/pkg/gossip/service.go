@@ -15,7 +15,7 @@ type Service interface {
 
 //Notifier is the interface that provides methods to notify gossip discovery
 type Notifier interface {
-	Notify(discovery.Peer)
+	Notify(discovery.Peer) error
 }
 
 type service struct {
@@ -106,8 +106,12 @@ func (s service) handleCycleDiscoveries(c *Cycle, errs chan<- error, newPeers ch
 	for p := range c.result.discoveries {
 		if err := s.repo.SetPeer(p); err != nil {
 			errs <- err
+			return
 		}
-		s.notif.Notify(p)
+		if err := s.notif.Notify(p); err != nil {
+			errs <- err
+			return
+		}
 		newPeers <- p
 	}
 }

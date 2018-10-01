@@ -26,6 +26,7 @@ type DiscoveryConfig struct {
 	P2PFactor int          `yaml:"p2pFactor"`
 	Seeds     []SeedConfig `yaml:"seeds"`
 	Redis     RedisConfig  `yaml:"redis"`
+	AMQP      AMQPConfig   `yaml:"amqp"`
 }
 
 //SeedConfig describes the autodiscovery seed configuration
@@ -42,6 +43,14 @@ type RedisConfig struct {
 	Pwd  string `yaml:"pwd"`
 }
 
+//AMQPConfig describes the AMQP notifier configuration
+type AMQPConfig struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
 //BuildFromEnv creates configurtion from env variables
 func BuildFromEnv() (*UnirisConfig, error) {
 	ver := os.Getenv("UNIRIS_VERSION")
@@ -54,12 +63,19 @@ func BuildFromEnv() (*UnirisConfig, error) {
 	redisHost := os.Getenv("UNIRIS_DISCOVERY_REDIS_HOST")
 	redisPort := os.Getenv("UNIRIS_DISCOVERY_REDIS_PORT")
 	redisPwd := os.Getenv("UNIRIS_DISCOVERY_REDIS_PWD")
+	amqpHost := os.Getenv("UNIRIS_DISCOVERY_AMQP_HOST")
+	amqpPort := os.Getenv("UNIRIS_DISCOVERY_AMQP_PORT")
+	amqpUsername := os.Getenv("UNIRIS_DISCOVERY_AMQP_USER")
+	amqpPassword := os.Getenv("UNIRIS_DISCOVERY_AMQP_PWD")
 
 	_seeds := make([]SeedConfig, 0)
 	ss := strings.Split(seeds, ",")
 	for _, s := range ss {
 		addr := strings.Split(s, ":")
-		sPort, _ := strconv.Atoi(addr[1])
+		sPort, err := strconv.Atoi(addr[1])
+		if err != nil {
+			return nil, err
+		}
 
 		ips, err := net.LookupIP(addr[0])
 		if err != nil {
@@ -73,9 +89,22 @@ func BuildFromEnv() (*UnirisConfig, error) {
 		})
 	}
 
-	_port, _ := strconv.Atoi(port)
-	_p2pFactor, _ := strconv.Atoi(p2pFactor)
-	_redisPort, _ := strconv.Atoi(redisPort)
+	_port, err := strconv.Atoi(port)
+	if err != nil {
+		return nil, err
+	}
+	_p2pFactor, err := strconv.Atoi(p2pFactor)
+	if err != nil {
+		return nil, err
+	}
+	_redisPort, err := strconv.Atoi(redisPort)
+	if err != nil {
+		return nil, err
+	}
+	_amqpPort, err := strconv.Atoi(amqpPort)
+	if err != nil {
+		return nil, err
+	}
 
 	return &UnirisConfig{
 		Version:          ver,
@@ -90,6 +119,12 @@ func BuildFromEnv() (*UnirisConfig, error) {
 				Host: redisHost,
 				Port: _redisPort,
 				Pwd:  redisPwd,
+			},
+			AMQP: AMQPConfig{
+				Host:     amqpHost,
+				Port:     _amqpPort,
+				Username: amqpUsername,
+				Password: amqpPassword,
 			},
 		},
 	}, nil

@@ -8,10 +8,16 @@ services:
     environment:
       - UNIRIS_NETWORK_INTERFACE=eth0
       - UNIRIS_DISCOVERY_REDIS_HOST=redis
+      - UNIRIS_DISCOVERY_AMQP_HOST=rabbitmq
     links:
       - redis
+      - rabbitmq
     depends_on:
       - redis
+      - rabbitmq
 
   redis:
     image: redis
+
+  rabbitmq:
+    image: rabbitmq

@@ -28,6 +28,18 @@ const (
 	StorageOnlyStatus
 )
 
+func (s PeerStatus) String() string {
+	if s == OkStatus {
+		return "Ok"
+	} else if s == BootstrapingStatus {
+		return "Bootstraping"
+	} else if s == FaultStatus {
+		return "Faulty"
+	} else {
+		return "StorageOnly"
+	}
+}
+
 //PeerPosition wraps the geo coordinates of a peer
 type PeerPosition struct {
 	Lat float64
