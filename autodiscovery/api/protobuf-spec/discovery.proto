@@ -11,19 +11,19 @@ service Discovery {
 
 message SynRequest {
     PeerDigest Initiator = 1;
-    PeerDigest Receiver = 2;
+    PeerDigest Target = 2;
     repeated PeerDigest KnownPeers = 3;
 }
 
 message AckRequest {
     PeerDigest Initiator = 1;
-    PeerDigest Receiver = 2;
+    PeerDigest Target = 2;
     repeated PeerDiscovered RequestedPeers = 3;
 }
 
 message SynAck {
     PeerDigest Initiator = 1;
-    PeerDigest Receiver = 2;
+    PeerDigest Target = 2;
     repeated PeerDiscovered NewPeers = 3;
     repeated PeerDigest UnknownPeers = 4;
 }

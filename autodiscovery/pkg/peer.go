@@ -15,13 +15,12 @@ var ErrChangeNotOwnedPeer = errors.New("Cannot change a peer that you don't own"
 
 //Repository provides access to the peer repository
 type Repository interface {
-	CountKnownPeers() (int, error)
+	CountDiscoveredPeers() (int, error)
 	GetOwnedPeer() (Peer, error)
 	ListSeedPeers() ([]Seed, error)
-	ListKnownPeers() ([]Peer, error)
-	AddPeer(Peer) error
-	AddSeed(Seed) error
-	UpdatePeer(Peer) error
+	ListDiscoveredPeers() ([]Peer, error)
+	SetPeer(Peer) error
+	SetSeed(Seed) error
 	GetPeerByIP(ip net.IP) (Peer, error)
 }
 

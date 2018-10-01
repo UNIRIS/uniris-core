@@ -1,8 +1,10 @@
 package rpc
 
 import (
-	"context"
 	"fmt"
+	"log"
+
+	"golang.org/x/net/context"
 
 	"google.golang.org/grpc/codes"
 
@@ -18,7 +20,7 @@ type gossipMessenger struct {
 
 //SendSyn calls the Synchronize grpc method to retrieve unknown peers (SYN handshake)
 func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, err error) {
-	serverAddr := fmt.Sprintf("%s", req.Receiver.Endpoint())
+	serverAddr := fmt.Sprintf("%s", req.Target.Endpoint())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -26,6 +28,7 @@ func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, 
 		return nil, err
 	}
 
+	//We initalize a GRPC client
 	client := api.NewDiscoveryClient(conn)
 
 	builder := PeerBuilder{}
@@ -36,13 +39,16 @@ func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, 
 
 	res, err := client.Synchronize(context.Background(), &api.SynRequest{
 		Initiator:  builder.ToPeerDigest(req.Initiator),
-		Receiver:   builder.ToPeerDigest(req.Receiver),
+		Target:     builder.ToPeerDigest(req.Target),
 		KnownPeers: kp,
 	})
+
 	if err != nil {
+		//If the peer cannot be reached, we throw an ErrPeerUnreachable error
 		statusCode, _ := status.FromError(err)
 		if statusCode.Code() == codes.Unavailable {
-			return nil, fmt.Errorf("Peer %s is unavailable", req.Receiver.Endpoint())
+			log.Printf("%s: %s", gossip.ErrPeerUnreachable.Error(), req.Target.Endpoint())
+			return nil, gossip.ErrPeerUnreachable
 		}
 		return nil, err
 	}
@@ -57,8 +63,8 @@ func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, 
 	}
 
 	return &gossip.SynAck{
-		Initiator:    req.Receiver,
-		Receiver:     req.Initiator,
+		Initiator:    req.Target,
+		Target:       req.Initiator,
 		NewPeers:     newP,
 		UnknownPeers: unknown,
 	}, nil
@@ -66,7 +72,7 @@ func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, 
 
 //SendAck calls the Acknoweledge grpc method to send detailed peers requested
 func (g gossipMessenger) SendAck(req gossip.AckRequest) error {
-	serverAddr := fmt.Sprintf("%s", req.Receiver.Endpoint())
+	serverAddr := fmt.Sprintf("%s", req.Target.Endpoint())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -76,6 +82,7 @@ func (g gossipMessenger) SendAck(req gossip.AckRequest) error {
 
 	builder := PeerBuilder{}
 
+	//We initalize a GRPC client
 	client := api.NewDiscoveryClient(conn)
 
 	reqP := make([]*api.PeerDiscovered, 0)
@@ -85,7 +92,7 @@ func (g gossipMessenger) SendAck(req gossip.AckRequest) error {
 
 	_, err = client.Acknowledge(context.Background(), &api.AckRequest{
 		Initiator:      builder.ToPeerDigest(req.Initiator),
-		Receiver:       builder.ToPeerDigest(req.Receiver),
+		Target:         builder.ToPeerDigest(req.Target),
 		RequestedPeers: reqP,
 	})
 	if err != nil {

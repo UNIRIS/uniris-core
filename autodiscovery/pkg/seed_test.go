@@ -22,9 +22,9 @@ func TestGetSeedDiscoveredPeer(t *testing.T) {
 	seed1 := Seed{IP: net.ParseIP("10.1.1.1"), Port: 3000}
 	seed2 := Seed{IP: net.ParseIP("10.1.1.2"), Port: 3001}
 	seed3 := Seed{IP: net.ParseIP("10.1.1.3"), Port: 3002}
-	repo.AddSeed(seed1)
-	repo.AddSeed(seed2)
-	repo.AddSeed(seed3)
+	repo.SetSeed(seed1)
+	repo.SetSeed(seed2)
+	repo.SetSeed(seed3)
 	assert.Equal(t, 3, len(repo.seeds))
 
 	st1 := NewPeerAppState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 5)
@@ -49,11 +49,11 @@ func TestGetSeedDiscoveredPeer(t *testing.T) {
 		st3,
 	)
 
-	repo.AddPeer(p1)
-	repo.AddPeer(p2)
-	repo.AddPeer(p3)
+	repo.SetPeer(p1)
+	repo.SetPeer(p2)
+	repo.SetPeer(p3)
 	assert.Equal(t, 3, len(repo.peers))
-	avg, _ := sdc.Average()
+	avg, _ := sdc.CountDiscoveries()
 	assert.Equal(t, 6, avg)
 
 }
@@ -68,13 +68,13 @@ Scenario: check DiscoveredPeer
 func TestDiscoveredPeer(t *testing.T) {
 	repo := new(mockPeerRepository)
 	initP := NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "0.0", PeerPosition{})
-	repo.AddPeer(initP)
+	repo.SetPeer(initP)
 	seed1 := Seed{IP: net.ParseIP("10.1.1.1"), Port: 3000}
 	seed2 := Seed{IP: net.ParseIP("10.1.1.2"), Port: 3001}
 	seed3 := Seed{IP: net.ParseIP("10.1.1.3"), Port: 3002}
-	repo.AddSeed(seed1)
-	repo.AddSeed(seed2)
-	repo.AddSeed(seed3)
+	repo.SetSeed(seed1)
+	repo.SetSeed(seed2)
+	repo.SetSeed(seed3)
 	assert.Equal(t, 3, len(repo.seeds))
 
 	st1 := NewPeerAppState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 5)
@@ -99,20 +99,20 @@ func TestDiscoveredPeer(t *testing.T) {
 		st3,
 	)
 
-	repo.AddPeer(p1)
-	repo.AddPeer(p2)
-	repo.AddPeer(p3)
+	repo.SetPeer(p1)
+	repo.SetPeer(p2)
+	repo.SetPeer(p3)
 
 	p4 := NewDiscoveredPeer(
 		NewPeerIdentity(net.ParseIP("185.123.4.9"), 4000, []byte("key4")),
 		NewPeerHeartbeatState(time.Now(), 0),
 		st1)
 
-	repo.AddPeer(p4)
+	repo.SetPeer(p4)
 	assert.Equal(t, 5, len(repo.peers))
 
 	sdc := NewSeedDiscoveryCounter(repo)
-	dn, err := sdc.Average()
+	dn, err := sdc.CountDiscoveries()
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 5, dn)
 
@@ -123,7 +123,7 @@ type mockPeerRepository struct {
 	seeds []Seed
 }
 
-func (r *mockPeerRepository) CountKnownPeers() (int, error) {
+func (r *mockPeerRepository) CountDiscoveredPeers() (int, error) {
 	return len(r.peers), nil
 }
 
@@ -136,7 +136,7 @@ func (r *mockPeerRepository) GetOwnedPeer() (p Peer, err error) {
 	return
 }
 
-func (r *mockPeerRepository) AddPeer(p Peer) error {
+func (r *mockPeerRepository) SetPeer(p Peer) error {
 	if r.containsPeer(p) {
 		return r.UpdatePeer(p)
 	}
@@ -144,12 +144,12 @@ func (r *mockPeerRepository) AddPeer(p Peer) error {
 	return nil
 }
 
-func (r *mockPeerRepository) AddSeed(s Seed) error {
+func (r *mockPeerRepository) SetSeed(s Seed) error {
 	r.seeds = append(r.seeds, s)
 	return nil
 }
 
-func (r *mockPeerRepository) ListKnownPeers() ([]Peer, error) {
+func (r *mockPeerRepository) ListDiscoveredPeers() ([]Peer, error) {
 	return r.peers, nil
 }
 

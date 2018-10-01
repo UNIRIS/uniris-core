@@ -1,16 +1,16 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
-	"path/filepath"
+	"os"
 	"time"
 
+	"github.com/uniris/uniris-core/autodiscovery/pkg/bootstraping"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/storage/redis"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/system"
 
 	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
@@ -18,50 +18,66 @@ import (
 	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/rpc"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/bootstraping"
 
 	api "github.com/uniris/uniris-core/autodiscovery/api/protobuf-spec"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/storage/mem"
 	"google.golang.org/grpc"
 )
 
 const (
-	seedsFile        = "../../configs/seeds.json"
-	versionFile      = "../../configs/version"
-	defaultPbKeyFile = "../../configs/id.pub"
+	defaultConfFile = "../../../default-conf.yml"
 )
 
 func main() {
+	log.Print("Service starting...")
 
-	//Loads peer's configuration
-	network, pbKey, port, ver, seedsFile, err := loadConfiguration()
+	conf, err := loadConfiguration()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	log.Print("PEER CONFIGURATION")
 	log.Print("=================================")
-	log.Printf("Network type: %s", network)
-	log.Printf("Key: %s", pbKey)
-	log.Printf("Port: %d", port)
-	log.Printf("Version: %s", ver)
+	log.Printf("Network type: %s", conf.Network)
+	log.Printf("Key: %s", conf.PublicKey)
+	log.Printf("Port: %d", conf.Discovery.Port)
+	log.Printf("Version: %s", conf.Version)
 
 	//Initializes dependencies
-	repo := mem.NewRepository()
+	repo, err := redis.NewRepository(conf.Discovery.Redis)
+	if err != nil {
+		log.Fatal("Cannot connect with redis")
+	}
 	var np monitoring.PeerNetworker
-	if network == "public" {
+	if conf.Network == "public" {
 		np = system.NewPublicNetworker()
 	} else {
-		np = system.NewPrivateNetworker()
+		if conf.NetworkInterface == "" {
+			log.Fatal("Missing the network interface configuration when using the private network")
+		}
+		np = system.NewPrivateNetworker(conf.NetworkInterface)
 	}
 	pos := system.NewPeerPositioner()
-	monit := monitoring.NewService(repo, system.NewPeerMonitor(), np, system.NewRobotWatcher())
 	notif := rabbitmq.NewNotifier()
 	msg := rpc.NewMessenger()
-
-	//Store the startup peer
+	mon := monitoring.NewService(repo, system.NewPeerMonitor(), np, system.NewRobotWatcher())
+	gos := gossip.NewService(repo, msg, notif, mon)
 	boot := bootstraping.NewService(repo, pos, np)
-	startPeer, err := boot.Startup(pbKey, port, ver)
+
+	//Initializes the seeds
+	seeds := make([]discovery.Seed, 0)
+	for _, s := range conf.Discovery.Seeds {
+		seeds = append(seeds, discovery.Seed{
+			IP:        net.ParseIP(s.IP),
+			Port:      s.Port,
+			PublicKey: []byte(s.PublicKey),
+		})
+	}
+	if err := boot.LoadSeeds(seeds); err != nil {
+		log.Fatal(err)
+	}
+
+	//Stores the startup peer
+	startPeer, err := boot.Startup([]byte(conf.PublicKey), conf.Discovery.Port, conf.Version)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,92 +87,48 @@ func main() {
 
 	//Starts server
 	go func() {
-		if err := startServer(port, repo, notif); err != nil {
+		if err := startServer(conf.Discovery.Port, repo, gos, mon, notif); err != nil {
 			log.Fatal(err)
 		}
 	}()
 
-	//Initializes the seeds
-	if err := loadSeeds(seedsFile, boot); err != nil {
+	//Starts gossiping
+	time.Sleep(1 * time.Second)
+	log.Print("Start gossip...")
+
+	for err := range gos.Start(startPeer) {
 		log.Fatal(err)
 	}
-
-	time.Sleep(1 * time.Second)
-
-	//Starts gossiping
-	log.Print("Start gossip...")
-	g := gossip.NewService(repo, msg, notif, monit)
-	ticker := time.NewTicker(1 * time.Second)
-	for range ticker.C {
-		if err := g.Spread(startPeer); err != nil {
-			log.Printf("Gossip failure: %s", err.Error())
-		}
-		selfp, _ := repo.GetOwnedPeer()
-		log.Printf("DEBUG: cpu: %s, freedisk: %b, status: %d, discoveredPeersNumber: %d", selfp.AppState().CPULoad(), selfp.AppState().FreeDiskSpace(), selfp.AppState().Status(), selfp.AppState().DiscoveredPeersNumber())
-	}
 }
 
-func loadConfiguration() (string, []byte, int, string, string, error) {
-	network := flag.String("network", "public", "Network type: public, private")
-	port := flag.Int("port", 3545, "Discovery port")
-	pbKeyFile := flag.String("key-file", defaultPbKeyFile, "Public key file")
-	seedsFile := flag.String("seeds-file", seedsFile, "Seeds listing file")
-
+func loadConfiguration() (*system.UnirisConfig, error) {
+	confFile := flag.String("conf-file", defaultConfFile, "Configuration file")
 	flag.Parse()
 
-	pbKeyPath, err := filepath.Abs(*pbKeyFile)
-	if err != nil {
-		return "", nil, 0, "", "", err
+	var conf *system.UnirisConfig
+	if os.Getenv("UNIRIS_VERSION") != "" {
+		conf, err := system.BuildFromEnv()
+		if err != nil {
+			return nil, err
+		}
+		return conf, nil
 	}
-
-	pbKey, err := ioutil.ReadFile(pbKeyPath)
+	conf, err := system.BuildFromFile(*confFile)
 	if err != nil {
-		return "", nil, 0, "", "", err
+		return nil, err
 	}
-
-	verPath, err := filepath.Abs(versionFile)
-	if err != nil {
-		return "", nil, 0, "", "", err
-	}
-	verBytes, err := ioutil.ReadFile(verPath)
-	if err != nil {
-		return "", nil, 0, "", "", err
-	}
-	version := string(verBytes)
-
-	return *network, pbKey, *port, version, *seedsFile, nil
+	return conf, nil
 }
 
-func startServer(port int, repo discovery.Repository, notif gossip.Notifier) error {
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
+func startServer(port int, repo discovery.Repository, gos gossip.Service, mon monitoring.Service, notif gossip.Notifier) error {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return err
 	}
 	grpcServer := grpc.NewServer()
-	api.RegisterDiscoveryServer(grpcServer, rpc.NewHandler(repo, notif))
+	api.RegisterDiscoveryServer(grpcServer, rpc.NewHandler(repo, gos, mon, notif))
 	log.Printf("Server listening on %d", port)
 	if err := grpcServer.Serve(lis); err != nil {
-		return err
-	}
-	return nil
-}
-
-func loadSeeds(seedsFile string, boot bootstraping.Service) error {
-	seedPath, err := filepath.Abs(seedsFile)
-	if err != nil {
-		return err
-	}
-	bytes, err := ioutil.ReadFile(seedPath)
-	if err != nil {
-		return err
-	}
-
-	seeds := make([]discovery.Seed, 0)
-	if err := json.Unmarshal(bytes, &seeds); err != nil {
-		return err
-	}
-
-	if err := boot.LoadSeeds(seeds); err != nil {
 		return err
 	}
 	return nil

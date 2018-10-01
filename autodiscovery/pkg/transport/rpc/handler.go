@@ -1,7 +1,7 @@
 package rpc
 
 import (
-	"context"
+	"golang.org/x/net/context"
 
 	"github.com/uniris/uniris-core/autodiscovery/pkg/comparing"
 
@@ -10,6 +10,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	api "github.com/uniris/uniris-core/autodiscovery/api/protobuf-spec"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 )
 
 //Handler is the interface that provides methods to handle GRPC requests
@@ -27,7 +28,7 @@ type handler struct {
 func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.SynAck, error) {
 	// FOR DEBUG
 	// init := h.domainFormat.BuildPeerDigest(req.Initiator)
-	// log.Printf("Syn request received from %s", init.GetEndpoint())
+	// log.Printf("Syn request received from %s", init.Endpoint())
 
 	builder := PeerBuilder{}
 
@@ -36,15 +37,22 @@ func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.Syn
 		reqP = append(reqP, builder.FromPeerDigest(p))
 	}
 
-	kp, err := h.repo.ListKnownPeers()
+	discoveredPeers, err := h.repo.ListDiscoveredPeers()
 	if err != nil {
 		return nil, err
 	}
 
+	ownedPeer, err := h.repo.GetOwnedPeer()
+	if err != nil {
+		return nil, err
+	}
+
+	knownPeers := append(discoveredPeers, ownedPeer)
+
 	newPeers := make([]*api.PeerDiscovered, 0)
 	unknownPeers := make([]*api.PeerDigest, 0)
 
-	diff := comparing.NewPeerDiffer(kp)
+	diff := comparing.NewPeerDiffer(knownPeers)
 	for _, p := range diff.UnknownPeers(reqP) {
 		unknownPeers = append(unknownPeers, builder.ToPeerDigest(p))
 	}
@@ -53,8 +61,8 @@ func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.Syn
 	}
 
 	return &api.SynAck{
-		Initiator:    req.Receiver,
-		Receiver:     req.Initiator,
+		Initiator:    req.Target,
+		Target:       req.Initiator,
 		NewPeers:     newPeers,
 		UnknownPeers: unknownPeers,
 	}, nil
@@ -72,14 +80,14 @@ func (h handler) Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.E
 	for _, rp := range req.RequestedPeers {
 		p := builder.FromPeerDiscovered(rp)
 		h.notif.Notify(p)
-		h.repo.AddPeer(p)
+		h.repo.SetPeer(p)
 	}
 
 	return new(empty.Empty), nil
 }
 
 //NewHandler create a new GRPC handler
-func NewHandler(repo discovery.Repository, notif gossip.Notifier) Handler {
+func NewHandler(repo discovery.Repository, gos gossip.Service, mon monitoring.Service, notif gossip.Notifier) Handler {
 	return handler{
 		repo:  repo,
 		notif: notif,

@@ -74,7 +74,7 @@ func (s service) PeerStatus(p discovery.Peer) (discovery.PeerStatus, error) {
 		return discovery.StorageOnlyStatus, err
 	}
 
-	seedDiscoveries, err := s.sdc.Average()
+	seedDiscoveries, err := s.sdc.CountDiscoveries()
 	if err != nil {
 		return discovery.FaultStatus, err
 	}
@@ -107,7 +107,7 @@ func (s service) RefreshPeer(p discovery.Peer) error {
 		return err
 	}
 
-	dp, err := s.repo.CountKnownPeers()
+	dp, err := s.repo.CountDiscoveredPeers()
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func (s service) RefreshPeer(p discovery.Peer) error {
 	if err := p.Refresh(status, disk, cpu, p2p, dp); err != nil {
 		return err
 	}
-	if err := s.repo.UpdatePeer(p); err != nil {
+	if err := s.repo.SetPeer(p); err != nil {
 		return err
 	}
 	return nil

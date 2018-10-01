@@ -1,0 +1,17 @@
+version: "3.0"
+
+services:
+  peer:
+    build: 
+      dockerfile: build/Dockerfile
+      context: ..
+    environment:
+      - UNIRIS_NETWORK_INTERFACE=eth0
+      - UNIRIS_DISCOVERY_REDIS_HOST=redis
+    links:
+      - redis
+    depends_on:
+      - redis
+
+  redis:
+    image: redis
