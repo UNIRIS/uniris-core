@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
@@ -10,13 +11,8 @@ import (
 
 type rpcError int
 
-const (
-	//UnreacheablePeer defines an unreacheable peer error
-	UnreacheablePeer rpcError = 14
-
-	//GeneralError defines a general transport error
-	GeneralError rpcError = 1
-)
+//ErrUnrechablePeer is returnes when no owned peers has been stored
+var ErrUnrechablePeer = errors.New("Unreachable Peer")
 
 //Service is the interface that provide gossip methods
 type Service interface {
@@ -28,7 +24,7 @@ type Service interface {
 type Messenger interface {
 
 	//Sends a SYN request
-	SendSyn(SynRequest) (*SynAck, int, error)
+	SendSyn(SynRequest) (*SynAck, error)
 
 	//Sends a ACK request after receipt of the SYN request
 	SendAck(AckRequest) error
@@ -71,7 +67,7 @@ func (s service) Spread(init discovery.Peer) error {
 	if err != nil {
 		return err
 	}
-	pSelected, unpSelected, err := r.SelectPeers()
+	pSelected, err := r.SelectPeers()
 	if err != nil {
 		return err
 	}
@@ -81,20 +77,9 @@ func (s service) Spread(init discovery.Peer) error {
 		if err != nil {
 			return err
 		}
-		for _, p := range newPeers {
-			if err := s.repo.AddPeer(p); err != nil {
-				return err
-			}
-			s.notif.Notify(p)
+		if s.repo.IsUnreachablePeer(p.Identity().PublicKey()) {
+			s.repo.DelUnreacheablePeer(p.Identity().PublicKey())
 		}
-	}
-
-	if unpSelected != nil {
-		newPeers, err := s.RunCycle(init, unpSelected, kp)
-		if err != nil {
-			return err
-		}
-		s.repo.DelUnreacheablePeer(unpSelected)
 		for _, p := range newPeers {
 			if err := s.repo.AddPeer(p); err != nil {
 				return err
@@ -118,10 +103,10 @@ func (s service) RunCycle(init discovery.Peer, recpt discovery.Peer, kp []discov
 		return nil, err
 	}
 
-	synAck, errcode, err := s.msg.SendSyn(NewSynRequest(init, recpt, kp))
+	synAck, err := s.msg.SendSyn(NewSynRequest(init, recpt, kp))
 	if err != nil {
-		if errcode == int(UnreacheablePeer) {
-			s.repo.AddUnreacheablePeer(recpt)
+		if err.Error() == ErrUnrechablePeer.Error() {
+			s.repo.AddUnreacheablePeer(recpt.Identity().PublicKey())
 		}
 		return nil, err
 	}

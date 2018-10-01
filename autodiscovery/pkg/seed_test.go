@@ -121,7 +121,7 @@ func TestDiscoveredPeer(t *testing.T) {
 type mockPeerRepository struct {
 	peers             []Peer
 	seeds             []Seed
-	unreacheablePeers []Peer
+	unreacheablePeers []PublicKey
 }
 
 func (r *mockPeerRepository) CountKnownPeers() (int, error) {
@@ -158,18 +158,24 @@ func (r *mockPeerRepository) ListSeedPeers() ([]Seed, error) {
 	return r.seeds, nil
 }
 
-func (r *mockPeerRepository) ListUnrecheablePeers() ([]Peer, error) {
-	return r.unreacheablePeers, nil
-}
-
 func (r *mockPeerRepository) ListReacheablePeers() ([]Peer, error) {
 	rp := make([]Peer, 0)
 	for i := 0; i < len(r.peers); i++ {
-		if !r.containsUnreacheablePeer(r.peers[i]) {
+		if !r.containsUnreacheablePeer(r.peers[i].Identity().PublicKey()) {
 			rp = append(rp, r.peers[i])
 		}
 	}
 	return rp, nil
+}
+
+func (r *mockPeerRepository) ListUnrecheablePeers() ([]Peer, error) {
+	unrp := make([]Peer, 0)
+	for i := 0; i < len(r.peers); i++ {
+		if r.containsUnreacheablePeer(r.peers[i].Identity().PublicKey()) {
+			unrp = append(unrp, r.peers[i])
+		}
+	}
+	return unrp, nil
 }
 
 func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p Peer, err error) {
@@ -181,17 +187,17 @@ func (r *mockPeerRepository) GetPeerByIP(ip net.IP) (p Peer, err error) {
 	return
 }
 
-func (r *mockPeerRepository) AddUnreacheablePeer(p Peer) error {
-	if !r.containsUnreacheablePeer(p) {
-		r.unreacheablePeers = append(r.unreacheablePeers, p)
+func (r *mockPeerRepository) AddUnreacheablePeer(pk PublicKey) error {
+	if !r.containsUnreacheablePeer(pk) {
+		r.unreacheablePeers = append(r.unreacheablePeers, pk)
 	}
 	return nil
 }
 
-func (r *mockPeerRepository) DelUnreacheablePeer(p Peer) error {
-	if r.containsUnreacheablePeer(p) {
+func (r *mockPeerRepository) DelUnreacheablePeer(pk PublicKey) error {
+	if r.containsUnreacheablePeer(pk) {
 		for i := 0; i < len(r.unreacheablePeers); i++ {
-			if r.unreacheablePeers[i].Identity().PublicKey().Equals(p.Identity().PublicKey()) {
+			if r.unreacheablePeers[i].Equals(pk) {
 				r.unreacheablePeers = r.unreacheablePeers[:i+copy(r.unreacheablePeers[i:], r.unreacheablePeers[i+1:])]
 			}
 		}
@@ -206,13 +212,11 @@ func (r *mockPeerRepository) UpdatePeer(peer Peer) error {
 			break
 		}
 	}
-	for _, p := range r.unreacheablePeers {
-		if p.Identity().PublicKey().Equals(peer.Identity().PublicKey()) {
-			p = peer
-			break
-		}
-	}
 	return nil
+}
+
+func (r *mockPeerRepository) IsUnreachablePeer(pk PublicKey) bool {
+	return r.containsUnreacheablePeer(pk)
 }
 
 func (r *mockPeerRepository) containsPeer(peer Peer) bool {
@@ -225,11 +229,11 @@ func (r *mockPeerRepository) containsPeer(peer Peer) bool {
 	return exist
 }
 
-func (r *mockPeerRepository) containsUnreacheablePeer(p Peer) bool {
-	mPeers := make(map[string]Peer, 0)
-	for _, p := range r.unreacheablePeers {
-		mPeers[hex.EncodeToString(p.Identity().PublicKey())] = p
+func (r *mockPeerRepository) containsUnreacheablePeer(pk PublicKey) bool {
+	for _, up := range r.unreacheablePeers {
+		if up.Equals(pk) {
+			return true
+		}
 	}
-	_, exist := mPeers[hex.EncodeToString(p.Identity().PublicKey())]
-	return exist
+	return false
 }

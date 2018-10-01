@@ -20,9 +20,8 @@ type GossipRound struct {
 }
 
 //SelectPeers returns a seed , a known peer and an unreacheable peer randomly
-func (r GossipRound) SelectPeers() ([]Peer, Peer, error) {
+func (r GossipRound) SelectPeers() ([]Peer, error) {
 	peers := make([]Peer, 0)
-	var unp Peer
 
 	//We pick a random seed peer
 	s := r.randomSeed().AsPeer()
@@ -30,7 +29,7 @@ func (r GossipRound) SelectPeers() ([]Peer, Peer, error) {
 	//Exclude ourself if we are of inside our list seed (impossible in reality, useful for testing)
 	owned := r.getOwnedPeer()
 	if owned == nil {
-		return nil, nil, ErrNoOwnedPeer
+		return nil, ErrNoOwnedPeer
 	}
 	if s.Endpoint() != owned.Endpoint() {
 		peers = append(peers, s)
@@ -52,10 +51,11 @@ func (r GossipRound) SelectPeers() ([]Peer, Peer, error) {
 
 	//We pick a random unreachable peer
 	if len(r.unreacheablePeers) > 0 {
-		unp = r.randomUnreacheablePeer()
+		peers = append(peers, r.randomUnreacheablePeer())
+
 	}
 
-	return peers, unp, nil
+	return peers, nil
 }
 
 func (r GossipRound) getOwnedPeer() Peer {

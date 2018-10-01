@@ -96,13 +96,12 @@ func TestSelectPeers(t *testing.T) {
 
 	r, _ := NewGossipRound(&peer{}, []Peer{p1, p2}, []Seed{s1}, []Peer{p3})
 
-	peers, unp, err := r.SelectPeers()
+	peers, err := r.SelectPeers()
 	assert.Nil(t, err)
 	assert.NotNil(t, peers)
 	assert.NotEmpty(t, peers)
-	assert.Equal(t, 2, len(peers))
-	assert.NotNil(t, unp)
+	assert.Equal(t, 3, len(peers))
 	assert.Equal(t, "30.0.50.100", peers[0].Identity().IP().String())
 	assert.Equal(t, "10.0.0.1", peers[1].Identity().IP().String())
-	assert.Equal(t, "10.0.0.2", unp.Identity().IP().String())
+	assert.Equal(t, "10.0.0.2", peers[2].Identity().IP().String())
 }

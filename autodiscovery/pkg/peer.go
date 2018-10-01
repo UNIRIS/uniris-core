@@ -23,10 +23,11 @@ type Repository interface {
 	ListReacheablePeers() ([]Peer, error)
 	AddPeer(Peer) error
 	AddSeed(Seed) error
-	AddUnreacheablePeer(Peer) error
+	AddUnreacheablePeer(PublicKey) error
 	UpdatePeer(Peer) error
-	DelUnreacheablePeer(Peer) error
+	DelUnreacheablePeer(PublicKey) error
 	GetPeerByIP(ip net.IP) (Peer, error)
+	IsUnreachablePeer(pk PublicKey) bool
 }
 
 //PublicKey describes a public key value object

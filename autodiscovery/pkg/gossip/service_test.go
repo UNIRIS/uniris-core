@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"testing"
@@ -85,7 +86,7 @@ Scenario: Gossip across a selection of peers
 	When we gossip spread get unreacheable error
 	Then unreacheable peer is stored on the repo
 */
-func TestGossip2(t *testing.T) {
+func TestAddUnreachable(t *testing.T) {
 	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	repo := new(mock.Repository)
 	notif := new(mock.Notifier)
@@ -107,8 +108,10 @@ func TestGossip2(t *testing.T) {
 	srv := NewService(repo, mockMessengerunreacheable{}, notif, new(mockMonitor))
 	err := srv.Spread(init)
 	assert.NotNil(t, err)
+	fmt.Printf(err.Error())
+	fmt.Print(repo.UnreacheablePeers)
 	assert.Equal(t, 1, len(repo.UnreacheablePeers))
-	assert.Equal(t, "ukey", repo.UnreacheablePeers[0].Identity().PublicKey().String())
+	assert.Equal(t, "ukey", repo.UnreacheablePeers[0].String())
 }
 
 /*
@@ -117,7 +120,7 @@ Scenario: Gossip across a selection of peers
 	When we gossip
 	Then unreacheable peer is removed from the repo
 */
-func TestGossip3(t *testing.T) {
+func TestDelUnreachable(t *testing.T) {
 	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	repo := new(mock.Repository)
 	notif := new(mock.Notifier)
@@ -133,7 +136,7 @@ func TestGossip3(t *testing.T) {
 		hb, as,
 	)
 	repo.AddPeer(p1)
-	repo.AddUnreacheablePeer(p1)
+	repo.AddUnreacheablePeer(p1.Identity().PublicKey())
 	rp, _ := repo.ListReacheablePeers()
 	assert.Equal(t, 1, len(rp))
 	assert.Equal(t, 2, len(repo.Peers))
@@ -148,7 +151,7 @@ func TestGossip3(t *testing.T) {
 type mockMessenger struct {
 }
 
-func (m mockMessenger) SendSyn(req SynRequest) (*SynAck, int, error) {
+func (m mockMessenger) SendSyn(req SynRequest) (*SynAck, error) {
 	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	rec := discovery.NewStartupPeer([]byte("uKey1"), net.ParseIP("200.18.186.39"), 3000, "1.1", discovery.PeerPosition{})
 
@@ -169,7 +172,7 @@ func (m mockMessenger) SendSyn(req SynRequest) (*SynAck, int, error) {
 		Receiver:     rec,
 		NewPeers:     newPeers,
 		UnknownPeers: unknownPeers,
-	}, 0, nil
+	}, nil
 }
 
 func (m mockMessenger) SendAck(req AckRequest) error {
@@ -190,8 +193,8 @@ func (s mockMonitor) PeerStatus(p discovery.Peer) (discovery.PeerStatus, error) 
 type mockMessengerunreacheable struct {
 }
 
-func (m mockMessengerunreacheable) SendSyn(req SynRequest) (*SynAck, int, error) {
-	return nil, 14, fmt.Errorf("Peer is unavailable")
+func (m mockMessengerunreacheable) SendSyn(req SynRequest) (*SynAck, error) {
+	return nil, errors.New("Unreachable Peer")
 }
 
 func (m mockMessengerunreacheable) SendAck(req AckRequest) error {
