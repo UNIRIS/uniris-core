@@ -117,7 +117,7 @@ Scenario: Convers a seed into a peer
 	Then we get a peer with the IP and the Port defined
 */
 func TestSeedToPeer(t *testing.T) {
-	s := Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000, PublicKey: []byte("key")}
+	s := Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000, PublicKey: "key"}
 	p := s.AsPeer()
 	assert.NotNil(t, p)
 	assert.Equal(t, "127.0.0.1", p.Identity().IP().String())

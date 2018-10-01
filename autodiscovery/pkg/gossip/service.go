@@ -2,10 +2,17 @@ package gossip
 
 import (
 	"encoding/hex"
+	"errors"
+	"fmt"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 )
+
+type rpcError int
+
+//ErrUnrechablePeer is returns when no owned peers has been stored
+var ErrUnrechablePeer = errors.New("Unreachable Peer")
 
 //Service is the interface that provide gossip methods
 type Service interface {
@@ -48,7 +55,15 @@ func (s service) Spread(init discovery.Peer) error {
 	if err != nil {
 		return err
 	}
-	r, err := discovery.NewGossipRound(init, kp, sp)
+	rp, err := s.repo.ListReachablePeers()
+	if err != nil {
+		return err
+	}
+	up, err := s.repo.ListUnreachablePeers()
+	if err != nil {
+		return err
+	}
+	r, err := discovery.NewGossipRound(init, rp, sp, up)
 	if err != nil {
 		return err
 	}
@@ -62,6 +77,7 @@ func (s service) Spread(init discovery.Peer) error {
 		if err != nil {
 			return err
 		}
+
 		for _, p := range newPeers {
 			if err := s.repo.AddPeer(p); err != nil {
 				return err
@@ -74,6 +90,7 @@ func (s service) Spread(init discovery.Peer) error {
 }
 
 func (s service) RunCycle(init discovery.Peer, recpt discovery.Peer, kp []discovery.Peer) ([]discovery.Peer, error) {
+	fmt.Printf("Gossip round with %s:%d \n", recpt.Identity().IP().String(), recpt.Identity().Port())
 	owned, err := s.repo.GetOwnedPeer()
 	if err != nil {
 		return nil, err
@@ -86,6 +103,13 @@ func (s service) RunCycle(init discovery.Peer, recpt discovery.Peer, kp []discov
 
 	synAck, err := s.msg.SendSyn(NewSynRequest(init, recpt, kp))
 	if err != nil {
+		if err.Error() == ErrUnrechablePeer.Error() {
+			s.repo.AddUnreachablePeer(recpt.Identity().PublicKey())
+		}
+		return nil, err
+	}
+	//Remove the target from the unreachable list if it is
+	if err := s.repo.DelUnreachablePeer(recpt.Identity().PublicKey()); err != nil {
 		return nil, err
 	}
 

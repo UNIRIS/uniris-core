@@ -10,17 +10,6 @@ import (
 	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 )
 
-const (
-	cdns          = "uniris.io"
-	ntpretry      = 3
-	upmaxoffset   = 300
-	downmaxoffset = -300
-)
-
-var (
-	cntp = [...]string{"1.pool.ntp.org", "2.pool.ntp.org", "3.pool.ntp.org", "4.pool.ntp.org"}
-)
-
 type peerMonitor struct {
 }
 

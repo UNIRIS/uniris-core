@@ -88,11 +88,13 @@ func main() {
 	g := gossip.NewService(repo, msg, notif, monit)
 	ticker := time.NewTicker(1 * time.Second)
 	for range ticker.C {
+		log.Printf("########################################################################################")
 		if err := g.Spread(startPeer); err != nil {
 			log.Printf("Gossip failure: %s", err.Error())
 		}
 		selfp, _ := repo.GetOwnedPeer()
-		log.Printf("DEBUG: cpu: %s, freedisk: %b, status: %d, discoveredPeersNumber: %d", selfp.AppState().CPULoad(), selfp.AppState().FreeDiskSpace(), selfp.AppState().Status(), selfp.AppState().DiscoveredPeersNumber())
+		unp, _ := repo.ListUnreachablePeers()
+		log.Printf("DEBUG: cpu: %s, freedisk: %b, status: %d, discoveredPeersNumber: %d, unreacheablePeer: %d", selfp.AppState().CPULoad(), selfp.AppState().FreeDiskSpace(), selfp.AppState().Status(), selfp.AppState().DiscoveredPeersNumber(), len(unp))
 	}
 }
 

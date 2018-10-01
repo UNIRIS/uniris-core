@@ -19,9 +19,13 @@ type Repository interface {
 	GetOwnedPeer() (Peer, error)
 	ListSeedPeers() ([]Seed, error)
 	ListKnownPeers() ([]Peer, error)
+	ListUnreachablePeers() ([]Peer, error)
+	ListReachablePeers() ([]Peer, error)
 	AddPeer(Peer) error
 	AddSeed(Seed) error
+	AddUnreachablePeer(PublicKey) error
 	UpdatePeer(Peer) error
+	DelUnreachablePeer(PublicKey) error
 	GetPeerByIP(ip net.IP) (Peer, error)
 }
 

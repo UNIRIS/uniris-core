@@ -42,7 +42,7 @@ func (g gossipMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, 
 	if err != nil {
 		statusCode, _ := status.FromError(err)
 		if statusCode.Code() == codes.Unavailable {
-			return nil, fmt.Errorf("Peer %s is unavailable", req.Receiver.Endpoint())
+			return nil, gossip.ErrUnrechablePeer
 		}
 		return nil, err
 	}
