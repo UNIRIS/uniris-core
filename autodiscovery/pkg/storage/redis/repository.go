@@ -16,91 +16,57 @@ type redisRepository struct {
 }
 
 const (
-	ownedKey = "owned-peer"
-	peerKey  = "discovered-peer"
-	seedKey  = "seed-peer"
+	unreachableKey = "unreachabled-peer"
+	peerKey        = "discovered-peer"
+	seedKey        = "seed-peer"
 )
 
-func (r *redisRepository) GetOwnedPeer() (p discovery.Peer, err error) {
-	cmd := r.client.HGetAll(ownedKey)
-	if cmd.Err() != nil {
-		err = cmd.Err()
-		return
-	}
-
-	res, err := cmd.Result()
+func (r redisRepository) GetOwnedPeer() (discovery.Peer, error) {
+	peers, err := r.ListKnownPeers()
 	if err != nil {
-		return
+		return nil, err
 	}
-
-	p = FormatHashToPeer(res)
-	return
+	for _, p := range peers {
+		if p.Owned() {
+			return p, nil
+		}
+	}
+	return nil, nil
 }
 
-func (r *redisRepository) ListSeedPeers() ([]discovery.Seed, error) {
-	cmdKeys := r.client.Keys(fmt.Sprintf("%s:*", seedKey))
-	if cmdKeys.Err() != nil {
-		return nil, cmdKeys.Err()
-	}
-	keys, err := cmdKeys.Result()
+func (r redisRepository) ListSeedPeers() ([]discovery.Seed, error) {
+	id := fmt.Sprintf("%s:*", seedKey)
+	list, err := r.fetchList(id)
 	if err != nil {
 		return nil, err
 	}
 
-	ss := make([]discovery.Seed, 0)
-	for _, k := range keys {
-		cmdGet := r.client.HGetAll(k)
-		if cmdGet.Err() != nil {
-			return nil, cmdGet.Err()
-		}
-		res, err := cmdGet.Result()
-		if err != nil {
-			return nil, err
-		}
-
-		s := FormatHashToSeed(res)
-		ss = append(ss, s)
+	seeds := make([]discovery.Seed, 0)
+	for _, s := range list {
+		seed := FormatHashToSeed(s)
+		seeds = append(seeds, seed)
 	}
 
-	return ss, nil
+	return seeds, nil
 }
 
-func (r *redisRepository) ListDiscoveredPeers() ([]discovery.Peer, error) {
-	cmdKeys := r.client.Keys(fmt.Sprintf("%s:*", peerKey))
-	if cmdKeys.Err() != nil {
-		return nil, cmdKeys.Err()
-	}
-	keys, err := cmdKeys.Result()
+func (r redisRepository) ListKnownPeers() ([]discovery.Peer, error) {
+	list, err := r.fetchList(fmt.Sprintf("%s:*", peerKey))
 	if err != nil {
 		return nil, err
 	}
 
-	pp := make([]discovery.Peer, 0)
-	for _, k := range keys {
-		cmdGet := r.client.HGetAll(k)
-		if cmdGet.Err() != nil {
-			return nil, cmdGet.Err()
-		}
-		res, err := cmdGet.Result()
-		if err != nil {
-			return nil, err
-		}
-
-		p := FormatHashToPeer(res)
-		pp = append(pp, p)
+	peers := make([]discovery.Peer, 0)
+	for _, p := range list {
+		peer := FormatHashToPeer(p)
+		peers = append(peers, peer)
 	}
 
-	return pp, nil
+	return peers, nil
 }
 
-func (r *redisRepository) SetPeer(p discovery.Peer) error {
-	var id string
-	if p.Owned() {
-		id = ownedKey
-	} else {
-		id = fmt.Sprintf("%s:%s", peerKey, hex.EncodeToString(p.Identity().PublicKey()))
-	}
-
+func (r redisRepository) SetKnownPeer(p discovery.Peer) error {
+	id := fmt.Sprintf("%s:%s", peerKey, hex.EncodeToString(p.Identity().PublicKey()))
 	cmd := r.client.HMSet(id, FormatPeerToHash(p))
 	if cmd.Err() != nil {
 		return cmd.Err()
@@ -108,7 +74,7 @@ func (r *redisRepository) SetPeer(p discovery.Peer) error {
 	return nil
 }
 
-func (r *redisRepository) SetSeed(s discovery.Seed) error {
+func (r redisRepository) SetSeedPeer(s discovery.Seed) error {
 	id := fmt.Sprintf("%s:%s", seedKey, hex.EncodeToString(s.PublicKey))
 	cmd := r.client.HMSet(id, FormatSeedToHash(s))
 	if cmd.Err() != nil {
@@ -117,7 +83,7 @@ func (r *redisRepository) SetSeed(s discovery.Seed) error {
 	return nil
 }
 
-func (r *redisRepository) CountDiscoveredPeers() (int, error) {
+func (r redisRepository) CountKnownPeers() (int, error) {
 	cmdKeys := r.client.Keys(fmt.Sprintf("%s:*", peerKey))
 	if cmdKeys.Err() != nil {
 		return 0, cmdKeys.Err()
@@ -129,27 +95,125 @@ func (r *redisRepository) CountDiscoveredPeers() (int, error) {
 	return len(keys), nil
 }
 
-func (r *redisRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
-	owned, err := r.GetOwnedPeer()
+func (r redisRepository) GetKnownPeerByIP(ip net.IP) (discovery.Peer, error) {
+	peers, err := r.ListKnownPeers()
 	if err != nil {
-		return
+		return nil, err
 	}
-	if owned.Identity().IP().Equal(ip) {
-		return owned, nil
-	}
-
-	list, err := r.ListDiscoveredPeers()
-	if err != nil {
-		return
-	}
-
-	for _, p := range list {
+	for _, p := range peers {
 		if p.Identity().IP().Equal(ip) {
 			return p, nil
 		}
 	}
+	return nil, nil
+}
 
-	return
+func (r redisRepository) SetUnreachablePeer(pbKey discovery.PublicKey) error {
+	cmd := r.client.SAdd(unreachableKey, hex.EncodeToString(pbKey))
+	if cmd.Err() != nil {
+		return cmd.Err()
+	}
+	return nil
+}
+func (r redisRepository) RemoveUnreachablePeer(pbKey discovery.PublicKey) error {
+	boolCmd := r.client.SIsMember(unreachableKey, hex.EncodeToString(pbKey))
+	if boolCmd.Err() != nil {
+		return boolCmd.Err()
+	}
+
+	exists, err := boolCmd.Result()
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		cmd := r.client.SRem(unreachableKey, hex.EncodeToString(pbKey), 0)
+		if cmd.Err() != nil {
+			return cmd.Err()
+		}
+	}
+	return nil
+}
+
+func (r redisRepository) ListReachablePeers() ([]discovery.Peer, error) {
+	peers, err := r.ListKnownPeers()
+	if err != nil {
+		return nil, err
+	}
+
+	unreachableKeys, err := r.listUnreachableKeys()
+	if err != nil {
+		return nil, err
+	}
+
+	pp := make([]discovery.Peer, 0)
+	for _, p := range peers {
+		for _, key := range unreachableKeys {
+			if p.Identity().PublicKey().String() != key {
+				pp = append(pp, p)
+			}
+		}
+	}
+	return pp, nil
+}
+
+func (r redisRepository) listUnreachableKeys() ([]string, error) {
+	cmd := r.client.SMembers(unreachableKey)
+	if cmd.Err() != nil {
+		return nil, cmd.Err()
+	}
+
+	res, err := cmd.Result()
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (r redisRepository) ListUnreachablePeers() ([]discovery.Peer, error) {
+	unreachableKeys, err := r.listUnreachableKeys()
+	if err != nil {
+		return nil, err
+	}
+	peers, err := r.ListKnownPeers()
+	if err != nil {
+		return nil, err
+	}
+	pp := make([]discovery.Peer, 0)
+	for _, key := range unreachableKeys {
+		for _, p := range peers {
+			if p.Identity().PublicKey().String() == key {
+				pp = append(pp, p)
+			}
+		}
+	}
+
+	return pp, nil
+}
+
+func (r redisRepository) fetchList(key string) ([]map[string]string, error) {
+	cmdKeys := r.client.Keys(key)
+	if cmdKeys.Err() != nil {
+		return nil, cmdKeys.Err()
+	}
+	keys, err := cmdKeys.Result()
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]map[string]string, 0)
+	for _, k := range keys {
+		cmdGet := r.client.HGetAll(k)
+		if cmdGet.Err() != nil {
+			return nil, cmdGet.Err()
+		}
+		res, err := cmdGet.Result()
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, res)
+	}
+	return list, nil
 }
 
 //NewRepository creates a new repository using redis as storage
@@ -167,7 +231,7 @@ func NewRepository(conf system.RedisConfig) (discovery.Repository, error) {
 		return nil, err
 	}
 
-	return &redisRepository{
+	return redisRepository{
 		client: client,
 	}, nil
 }

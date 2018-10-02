@@ -3,7 +3,6 @@ package amqp
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/streadway/amqp"
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
@@ -54,7 +53,6 @@ func (n notifier) Notify(p discovery.Peer) error {
 	}); err != nil {
 		return err
 	}
-	log.Printf("New peer discovered %s", p.Endpoint())
 	return nil
 }
 

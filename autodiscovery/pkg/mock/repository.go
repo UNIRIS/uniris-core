@@ -7,62 +7,113 @@ import (
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 )
 
+//Repository implements the repository interface as mock
 type Repository struct {
-	ownedPeer       discovery.Peer
-	discoveredPeers []discovery.Peer
-	seedPeers       []discovery.Seed
+	SeedPeers        []discovery.Seed
+	KnownPeers       []discovery.Peer
+	UnreachablePeers []discovery.PublicKey
 }
 
-func (r *Repository) CountDiscoveredPeers() (int, error) {
-	return len(r.discoveredPeers), nil
+//CountKnownPeers counts the known peers
+func (r *Repository) CountKnownPeers() (int, error) {
+	return len(r.KnownPeers), nil
 }
 
 //GetOwnedPeer return the local peer
 func (r *Repository) GetOwnedPeer() (discovery.Peer, error) {
-	return r.ownedPeer, nil
-}
-
-//ListSeedPeers return all the seed on the mockRepository
-func (r *Repository) ListSeedPeers() ([]discovery.Seed, error) {
-	return r.seedPeers, nil
-}
-
-//ListDiscoveredPeers returns all the discoveredPeers on the mockRepository
-func (r *Repository) ListDiscoveredPeers() ([]discovery.Peer, error) {
-	return r.discoveredPeers, nil
-}
-
-func (r *Repository) SetPeer(peer discovery.Peer) error {
-	if peer.Owned() {
-		r.ownedPeer = peer
-		return nil
+	for _, p := range r.KnownPeers {
+		if p.Owned() {
+			return p, nil
+		}
 	}
+	return nil, nil
+}
+
+//ListSeedPeers return all the seed on the repository
+func (r *Repository) ListSeedPeers() ([]discovery.Seed, error) {
+	return r.SeedPeers, nil
+}
+
+//ListKnownPeers returns all the KnownPeers on the repository
+func (r *Repository) ListKnownPeers() ([]discovery.Peer, error) {
+	return r.KnownPeers, nil
+}
+
+//SetKnownPeer add or update a known peer
+func (r *Repository) SetKnownPeer(peer discovery.Peer) error {
 	if r.containsPeer(peer) {
-		for _, p := range r.discoveredPeers {
+		for _, p := range r.KnownPeers {
 			if p.Identity().PublicKey().Equals(peer.Identity().PublicKey()) {
 				p = peer
 				break
 			}
 		}
 	} else {
-		r.discoveredPeers = append(r.discoveredPeers, peer)
+		r.KnownPeers = append(r.KnownPeers, peer)
 	}
 	return nil
 }
 
-func (r *Repository) SetSeed(s discovery.Seed) error {
-	r.seedPeers = append(r.seedPeers, s)
+//ListReachablePeers returns all the reachable peers on the repository
+func (r *Repository) ListReachablePeers() ([]discovery.Peer, error) {
+	pp := make([]discovery.Peer, 0)
+	for i := 0; i < len(r.KnownPeers); i++ {
+		if !r.containsUnreachablePeer(r.KnownPeers[i].Identity().PublicKey()) {
+			pp = append(pp, r.KnownPeers[i])
+		}
+	}
+	return pp, nil
+}
+
+//ListUnreachablePeers returns all unreachable peers on the repository
+func (r *Repository) ListUnreachablePeers() ([]discovery.Peer, error) {
+	pp := make([]discovery.Peer, 0)
+
+	for i := 0; i < len(r.SeedPeers); i++ {
+		if r.containsUnreachablePeer(r.SeedPeers[i].PublicKey) {
+			pp = append(pp, r.SeedPeers[i].AsPeer())
+		}
+	}
+
+	for i := 0; i < len(r.KnownPeers); i++ {
+		if r.containsUnreachablePeer(r.KnownPeers[i].Identity().PublicKey()) {
+			pp = append(pp, r.KnownPeers[i])
+		}
+	}
+	return pp, nil
+}
+
+//SetSeedPeer adds a seed
+func (r *Repository) SetSeedPeer(s discovery.Seed) error {
+	r.SeedPeers = append(r.SeedPeers, s)
 	return nil
 }
 
-//GetPeerByIP get a peer from the mockRepository using its ip
-func (r *Repository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
-	if r.ownedPeer.Identity().IP().Equal(ip) {
-		return r.ownedPeer, nil
+//SetUnreachablePeer add an unreachable peer to the repository
+func (r *Repository) SetUnreachablePeer(pk discovery.PublicKey) error {
+	if !r.containsUnreachablePeer(pk) {
+		r.UnreachablePeers = append(r.UnreachablePeers, pk)
 	}
-	for i := 0; i < len(r.discoveredPeers); i++ {
-		if r.discoveredPeers[i].Identity().IP().Equal(ip) {
-			return r.discoveredPeers[i], nil
+	return nil
+}
+
+//RemoveUnreachablePeer remove an unreachable peer to the repository
+func (r *Repository) RemoveUnreachablePeer(pk discovery.PublicKey) error {
+	if r.containsUnreachablePeer(pk) {
+		for i := 0; i < len(r.UnreachablePeers); i++ {
+			if r.UnreachablePeers[i].Equals(pk) {
+				r.UnreachablePeers = r.UnreachablePeers[:i+copy(r.UnreachablePeers[i:], r.UnreachablePeers[i+1:])]
+			}
+		}
+	}
+	return nil
+}
+
+//GetPeerByIP get a peer from the repository using its ip
+func (r *Repository) GetKnownPeerByIP(ip net.IP) (p discovery.Peer, err error) {
+	for i := 0; i < len(r.KnownPeers); i++ {
+		if r.KnownPeers[i].Identity().IP().Equal(ip) {
+			return r.KnownPeers[i], nil
 		}
 	}
 	return
@@ -70,10 +121,19 @@ func (r *Repository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
 
 func (r *Repository) containsPeer(p discovery.Peer) bool {
 	mdiscoveredPeers := make(map[string]discovery.Peer, 0)
-	for _, p := range r.discoveredPeers {
+	for _, p := range r.KnownPeers {
 		mdiscoveredPeers[hex.EncodeToString(p.Identity().PublicKey())] = p
 	}
 
 	_, exist := mdiscoveredPeers[hex.EncodeToString(p.Identity().PublicKey())]
 	return exist
+}
+
+func (r *Repository) containsUnreachablePeer(pk discovery.PublicKey) bool {
+	for _, up := range r.UnreachablePeers {
+		if up.Equals(pk) {
+			return true
+		}
+	}
+	return false
 }

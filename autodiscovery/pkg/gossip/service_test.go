@@ -27,10 +27,10 @@ func TestGossip(t *testing.T) {
 	msg := new(mockMessenger)
 	mon := monitoring.NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
 
-	repo.SetSeed(discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000})
+	repo.SetSeedPeer(discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000})
 
 	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
-	repo.SetPeer(init)
+	repo.SetKnownPeer(init)
 
 	s := service{
 		msg:   msg,
@@ -41,30 +41,34 @@ func TestGossip(t *testing.T) {
 
 	seeds, _ := repo.ListSeedPeers()
 
-	errs := make(chan error)
-
 	var wg sync.WaitGroup
 	wg.Add(1)
 
+	res := NewSpreadResult()
+
+	go s.spread(init, seeds, res.Discoveries, res.Unreaches, res.Errors)
+
 	go func() {
-		for range s.spread(init, seeds, errs) {
+		for range res.Discoveries {
 			wg.Done()
 		}
 	}()
 
 	go func() {
-		for range errs {
+		for range res.Errors {
 			assert.Fail(t, "Cannot have errors")
 		}
 	}()
 
 	wg.Wait()
 
-	assert.Empty(t, errs)
+	res.CloseChannels()
 
-	pp, _ := repo.ListDiscoveredPeers()
+	pp, _ := repo.ListKnownPeers()
 	assert.NotEmpty(t, pp)
-	assert.Equal(t, "dKey1", pp[0].Identity().PublicKey().String())
+	assert.Len(t, pp, 2)
+	assert.Equal(t, "key", pp[0].Identity().PublicKey().String())
+	assert.Equal(t, "dKey1", pp[1].Identity().PublicKey().String())
 }
 
 /*
@@ -80,10 +84,10 @@ func TestGossipFailureCatched(t *testing.T) {
 	msg := new(mockMessengerUnexpectedFailure)
 	mon := monitoring.NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
 
-	repo.SetSeed(discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000})
+	repo.SetSeedPeer(discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000})
 
 	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
-	repo.SetPeer(init)
+	repo.SetKnownPeer(init)
 
 	s := service{
 		msg:   msg,
@@ -94,30 +98,198 @@ func TestGossipFailureCatched(t *testing.T) {
 
 	seeds, _ := repo.ListSeedPeers()
 
-	errs := make(chan error)
-
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go func() {
-		s.spread(init, seeds, errs)
+	res := NewSpreadResult()
 
-	}()
+	go s.spread(init, seeds, res.Discoveries, res.Unreaches, res.Errors)
 
+	errs := make([]error, 0)
 	go func() {
-		for err := range errs {
-			assert.Error(t, err, "Unexpected failure")
+		for e := range res.Errors {
+			errs = append(errs, e)
 			wg.Done()
 		}
 	}()
 
 	wg.Wait()
 
+	res.CloseChannels()
+
+	assert.NotEmpty(t, errs)
+	assert.Equal(t, errs[0].Error(), "Unexpected")
 }
 
-//////////////////////////////////////////////////////////
-// 						MOCKS
-/////////////////////////////////////////////////////////
+/*
+Scenario: Gossip across a selection of peers
+	Given a initiator peer, seeds and known peers stored locally
+	When we gossip spread get unreacheable error
+	Then unreacheable peer is stored on the repo
+*/
+func TestAddUnreachable(t *testing.T) {
+	repo := new(mock.Repository)
+	notif := new(mock.Notifier)
+	msg := new(mockMessengerWithSynFailure)
+	mon := monitoring.NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
+
+	seed := discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000, PublicKey: []byte("key2")}
+	repo.SetSeedPeer(seed)
+
+	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	repo.SetKnownPeer(init)
+
+	s := service{
+		msg:   msg,
+		repo:  repo,
+		notif: notif,
+		mon:   mon,
+	}
+
+	seeds, _ := repo.ListSeedPeers()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	res := NewSpreadResult()
+
+	go s.spread(init, seeds, res.Discoveries, res.Unreaches, res.Errors)
+
+	go func() {
+		for range res.Unreaches {
+			wg.Done()
+		}
+	}()
+
+	wg.Wait()
+
+	res.CloseChannels()
+
+	unreaches, _ := repo.ListUnreachablePeers()
+	assert.NotEmpty(t, unreaches)
+}
+
+/*
+Scenario: Gossip across a selection of peers
+	Given a initiator peer, seeds and known peers stored locally and one unreacheable peer
+	When we gossip
+	Then unreacheable peer is removed from the repo
+*/
+func TestRemoveUnreachable(t *testing.T) {
+	repo := new(mock.Repository)
+	notif := new(mock.Notifier)
+	msg := new(mockMessengerWithSynFailure)
+	mon := monitoring.NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
+
+	seed := discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000, PublicKey: []byte("dKey1")}
+	repo.SetSeedPeer(seed)
+
+	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	repo.SetKnownPeer(init)
+
+	s := service{
+		msg:   msg,
+		repo:  repo,
+		notif: notif,
+		mon:   mon,
+	}
+
+	seeds, _ := repo.ListSeedPeers()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	res := NewSpreadResult()
+	go s.spread(init, seeds, res.Discoveries, res.Unreaches, res.Errors)
+
+	go func() {
+		for range res.Unreaches {
+			wg.Done()
+		}
+	}()
+
+	wg.Wait()
+
+	unreaches, _ := repo.ListUnreachablePeers()
+	assert.NotEmpty(t, unreaches)
+
+	msg2 := mockMessenger{}
+	s = service{
+		msg:   msg2,
+		repo:  repo,
+		notif: notif,
+		mon:   mon,
+	}
+
+	var wg2 sync.WaitGroup
+	wg2.Add(2)
+
+	go s.spread(init, seeds, res.Discoveries, res.Unreaches, res.Errors)
+
+	go func() {
+		for range res.Discoveries {
+			wg2.Done()
+		}
+	}()
+
+	wg2.Wait()
+
+	res.CloseChannels()
+
+	unreaches, _ = repo.ListUnreachablePeers()
+	assert.Empty(t, unreaches)
+
+	reaches, _ := repo.ListReachablePeers()
+	assert.NotEmpty(t, reaches)
+	assert.Equal(t, "dKey1", reaches[1].Identity().PublicKey().String())
+}
+
+/*
+Scenario: Stop the timer when a error is returned during the gossip spreading
+	Given a gossip starting
+	When an unexpected error occurred
+	Then the gossip is stopped
+*/
+func TestStopTimerWhenGossipError(t *testing.T) {
+	repo := new(mock.Repository)
+	notif := new(mock.Notifier)
+	msg := new(mockMessengerUnexpectedFailure)
+	mon := monitoring.NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
+
+	seed := discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000, PublicKey: []byte("dKey1")}
+	repo.SetSeedPeer(seed)
+
+	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	repo.SetKnownPeer(init)
+
+	srv := NewService(repo, msg, notif, mon)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	ticker := time.NewTicker(1 * time.Second)
+	res, _ := srv.Start(init, ticker)
+
+	errs := make([]error, 0)
+	go func() {
+		for err := range res.Errors {
+			errs = append(errs, err)
+		}
+	}()
+
+	go func() {
+		for range res.Finish {
+			wg.Done()
+		}
+	}()
+
+	wg.Wait()
+
+	assert.Empty(t, res.Discoveries)
+	assert.Empty(t, res.Unreaches)
+	assert.NotEmpty(t, errs)
+	assert.Equal(t, "Unexpected", errs[0].Error())
+}
 
 type mockMessenger struct {
 }

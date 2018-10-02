@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -10,81 +11,182 @@ import (
 )
 
 /*
-Scenario: Picks a random peer
-	Given a list of peer
-	When we want to pick a random peer
-	Then we get a random peer
+Scenario: Select peers without seeds
+	Given no seeds
+	When we i want select peers
+	Then we get an error
 */
-func TestRandomPeer(t *testing.T) {
-	p1 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, []byte("key")),
-		discovery.NewPeerHeartbeatState(time.Now(), 0))
-
-	p2 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("10.0.0.1"), 3000, []byte("key2")),
-		discovery.NewPeerHeartbeatState(time.Now(), 0))
-
-	peers := []discovery.Peer{p1, p2}
-
+func TestSelectPeersWithoutSeeds(t *testing.T) {
 	c := Cycle{}
-	p := c.randomPeer(peers)
-	assert.NotNil(t, p)
-}
-
-/*
-Scenario: Picks a random seed
-	Given a list of seeds
-	When we want to pick a random seed
-	Then we get a random seed
-*/
-func TestRandomSeed(t *testing.T) {
-	s1 := discovery.Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000}
-	s2 := discovery.Seed{IP: net.ParseIP("30.0.0.0"), Port: 3000}
-
-	g := Cycle{seedPeers: []discovery.Seed{s1, s2}}
-	s := g.randomSeed()
-	assert.NotNil(t, s)
-}
-
-/*
-Scenario: Starts a gossip round without seeds
-	Given a initiator peer, a empty list of seeds
-	When we starts a gossip round
-	Then an error is returned
-*/
-func TestCycleWithoutSeeds(t *testing.T) {
-	p1 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, []byte("key")),
-		discovery.NewPeerHeartbeatState(time.Now(), 0))
-
-	_, err := NewGossipCycle(p1, []discovery.Peer{}, []discovery.Seed{}, nil)
+	_, err := c.SelectPeers(nil, nil, nil)
 	assert.Error(t, err, ErrEmptySeed)
 }
 
 /*
-Scenario: Selects peers from seed and known peers
-	Given a list of peers and seeds
-	When we want select peers to gossip
-	Then we get a random seed and a random peer (exluding ourself)
+Scenario: Picks a random peer from an only list of seeds
+	Given a list of seeds
+	When we want to pick a random seed
+	Then we get a random seed
 */
-func TestSelectPeers(t *testing.T) {
+func TestSelectPeersWithOnlyPeers(t *testing.T) {
+	seeds := []discovery.Seed{
+		discovery.Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000},
+	}
 
-	s1 := discovery.Seed{IP: net.ParseIP("30.0.50.100"), Port: 3000}
+	c := Cycle{
+		initator: discovery.NewStartupPeer([]byte("key"), net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{}),
+	}
+	pp, err := c.SelectPeers(seeds, []discovery.Peer{}, []discovery.Peer{})
+	assert.Nil(t, err)
+	assert.NotNil(t, pp)
+	assert.Equal(t, 1, len(pp))
+	assert.Equal(t, "127.0.0.1", pp[0].Identity().IP().String())
+}
 
-	p1 := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+/*
+Scenario: Picks a random peer from an only list of seeds excluding ourself
+	Given a list of seeds including ourself
+	When we want to pick a random seed
+	Then we get a random seed
+*/
+func TestSelectPeersWithOnlyPeersExcludingOurself(t *testing.T) {
+	seeds := []discovery.Seed{
+		discovery.Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000},
+	}
 
-	p2 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("10.0.0.1"), 3000, []byte("key")),
+	c := Cycle{
+		initator: discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}),
+	}
+	pp, err := c.SelectPeers(seeds, []discovery.Peer{}, []discovery.Peer{})
+	assert.Nil(t, err)
+	assert.NotNil(t, pp)
+	assert.Empty(t, pp)
+}
+
+/*
+Scenario: Pick two random nodes (seed and a reachable peer)
+	Given a list of seeds and a list of reachable peers
+	When we want select peers
+	Then we get a random seed and a random reachable peer
+*/
+func TestSelectPeerWithSomeReachablePeers(t *testing.T) {
+	seeds := []discovery.Seed{
+		discovery.Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000},
+	}
+
+	p1 := discovery.NewPeerDigest(
+		discovery.NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, []byte("key")),
 		discovery.NewPeerHeartbeatState(time.Now(), 0))
 
-	c, _ := NewGossipCycle(p1, []discovery.Peer{p1, p2}, []discovery.Seed{s1}, nil)
+	c := Cycle{
+		initator: discovery.NewStartupPeer([]byte("key"), net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{}),
+	}
 
-	peers := c.selectPeers()
-	assert.NotNil(t, peers)
-	assert.NotEmpty(t, peers)
-	assert.Equal(t, 2, len(peers))
-	assert.Equal(t, "30.0.50.100", peers[0].Identity().IP().String())
-	assert.True(t, peers[1].Identity().IP().String() == "127.0.0.1" || peers[1].Identity().IP().String() == "10.0.0.1")
+	reachP := []discovery.Peer{p1}
+
+	pp, err := c.SelectPeers(seeds, reachP, []discovery.Peer{})
+	assert.Nil(t, err)
+	assert.NotNil(t, pp)
+	assert.Equal(t, 2, len(pp))
+	assert.Equal(t, "127.0.0.1", pp[0].Identity().IP().String())
+	assert.Equal(t, "20.0.0.1", pp[1].Identity().IP().String())
+}
+
+/*
+Scenario: Pick two random nodes (seed and a reachable peer) but ourself is in the reachable peer
+	Given a list of seeds and a list of reachable peers (including ourself)
+	When we want select peers
+	Then we get a random seed and no reachable peers
+*/
+func TestSelectPeerWithOurselfAsReachable(t *testing.T) {
+	seeds := []discovery.Seed{
+		discovery.Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000},
+	}
+
+	me := discovery.NewStartupPeer([]byte("key"), net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+
+	c := Cycle{
+		initator: me,
+	}
+
+	reachP := []discovery.Peer{me}
+
+	pp, err := c.SelectPeers(seeds, reachP, []discovery.Peer{})
+	assert.Nil(t, err)
+	assert.NotNil(t, pp)
+	assert.Equal(t, 1, len(pp))
+	assert.Equal(t, "127.0.0.1", pp[0].Identity().IP().String())
+}
+
+/*
+Scenario: Pick two random nodes (seed and a unreachable peer)
+	Given a list of seeds and a list of unreachable peers
+	When we want select peers
+	Then we get a random seed and a random unreachable peer
+*/
+func TestSelectPeerWithSomeUnReachablePeers(t *testing.T) {
+	seeds := []discovery.Seed{
+		discovery.Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000},
+	}
+
+	p1 := discovery.NewPeerDigest(
+		discovery.NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, []byte("key")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0))
+
+	c := Cycle{
+		initator: discovery.NewStartupPeer([]byte("key"), net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{}),
+	}
+
+	unreachP := []discovery.Peer{p1}
+
+	pp, err := c.SelectPeers(seeds, []discovery.Peer{}, unreachP)
+	assert.Nil(t, err)
+	assert.NotNil(t, pp)
+	assert.Equal(t, 2, len(pp))
+	assert.Equal(t, "127.0.0.1", pp[0].Identity().IP().String())
+	assert.Equal(t, "20.0.0.1", pp[1].Identity().IP().String())
+}
+
+/*
+Scenario: Pick random peers (seed, reachable and unreachable)
+	Given a list of seeds, a list of reachables peers and unreachables peers
+	When we select randomly peers
+	Then we get a seed, a reachable and an unreachable peer
+*/
+func TestSelectPeersFully(t *testing.T) {
+	seeds := []discovery.Seed{
+		discovery.Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000},
+		discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000},
+	}
+
+	p1 := discovery.NewPeerDigest(
+		discovery.NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, []byte("key")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0))
+	p2 := discovery.NewPeerDigest(
+		discovery.NewPeerIdentity(net.ParseIP("21.0.0.1"), 3000, []byte("key")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0))
+	p3 := discovery.NewPeerDigest(
+		discovery.NewPeerIdentity(net.ParseIP("22.0.0.1"), 3000, []byte("key")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0))
+	p4 := discovery.NewPeerDigest(
+		discovery.NewPeerIdentity(net.ParseIP("23.0.0.1"), 3000, []byte("key")),
+		discovery.NewPeerHeartbeatState(time.Now(), 0))
+
+	c := Cycle{
+		initator: discovery.NewStartupPeer([]byte("key"), net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{}),
+	}
+
+	reachP := []discovery.Peer{p1, p2}
+	unreachP := []discovery.Peer{p3, p4}
+
+	pp, err := c.SelectPeers(seeds, reachP, unreachP)
+	assert.Nil(t, err)
+	assert.NotNil(t, pp)
+	assert.Equal(t, 3, len(pp))
+	assert.True(t, pp[0].Identity().IP().String() == "127.0.0.1" || pp[0].Identity().IP().String() == "30.0.0.1")
+	assert.True(t, pp[1].Identity().IP().String() == "20.0.0.1" || pp[1].Identity().IP().String() == "21.0.0.1")
+	assert.True(t, pp[2].Identity().IP().String() == "22.0.0.1" || pp[2].Identity().IP().String() == "23.0.0.1")
+
 }
 
 /*
@@ -103,15 +205,28 @@ func TestRun(t *testing.T) {
 
 	seeds := []discovery.Seed{discovery.Seed{IP: net.ParseIP("20.0.0.1"), Port: 3000, PublicKey: []byte("key3")}}
 
-	c, err := NewGossipCycle(init, []discovery.Peer{kp1}, seeds, mockMessenger{})
+	c := NewGossipCycle(init, mockMessenger{})
+
+	pp, err := c.SelectPeers(seeds, []discovery.Peer{kp1}, []discovery.Peer{})
 	assert.Nil(t, err)
 
-	go c.Run()
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go c.Run(init, pp, []discovery.Peer{kp1})
 
 	newP := make([]discovery.Peer, 0)
-	for p := range c.result.discoveries {
-		newP = append(newP, p)
-	}
+	go func() {
+		for p := range c.result.discoveries {
+			newP = append(newP, p)
+			wg.Done()
+		}
+	}()
+
+	wg.Wait()
+	close(c.result.discoveries)
+	close(c.result.unreachables)
+	close(c.result.errors)
 
 	assert.NotEmpty(t, newP)
 	assert.Equal(t, 2, len(newP))

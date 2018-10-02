@@ -199,7 +199,7 @@ type mockMessengerWithSynFailure struct {
 }
 
 func (m mockMessengerWithSynFailure) SendSyn(req SynRequest) (*SynAck, error) {
-	return nil, ErrPeerUnreachable
+	return nil, ErrUnreachablePeer
 }
 
 func (m mockMessengerWithSynFailure) SendAck(req AckRequest) error {
@@ -234,7 +234,7 @@ func (m mockMessengerWithAckFailure) SendSyn(req SynRequest) (*SynAck, error) {
 }
 
 func (m mockMessengerWithAckFailure) SendAck(req AckRequest) error {
-	return ErrPeerUnreachable
+	return ErrUnreachablePeer
 }
 
 type mockMessengerUnexpectedFailure struct {

@@ -107,7 +107,7 @@ func (s service) RefreshPeer(p discovery.Peer) error {
 		return err
 	}
 
-	dp, err := s.repo.CountDiscoveredPeers()
+	dp, err := s.repo.CountKnownPeers()
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func (s service) RefreshPeer(p discovery.Peer) error {
 	if err := p.Refresh(status, disk, cpu, p2p, dp); err != nil {
 		return err
 	}
-	if err := s.repo.SetPeer(p); err != nil {
+	if err := s.repo.SetKnownPeer(p); err != nil {
 		return err
 	}
 	return nil

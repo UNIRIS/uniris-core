@@ -19,10 +19,6 @@ type srvHandler struct {
 
 //Synchronize implements the protobuf Synchronize request handler
 func (h srvHandler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.SynAck, error) {
-	// FOR DEBUG
-	// init := h.domainFormat.BuildPeerDigest(req.Initiator)
-	// log.Printf("Syn request received from %s", init.Endpoint())
-
 	builder := PeerBuilder{}
 
 	reqP := make([]discovery.Peer, 0)
@@ -30,17 +26,10 @@ func (h srvHandler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.
 		reqP = append(reqP, builder.FromPeerDigest(p))
 	}
 
-	discoveredPeers, err := h.repo.ListDiscoveredPeers()
+	knownPeers, err := h.repo.ListKnownPeers()
 	if err != nil {
 		return nil, err
 	}
-
-	ownedPeer, err := h.repo.GetOwnedPeer()
-	if err != nil {
-		return nil, err
-	}
-
-	knownPeers := append(discoveredPeers, ownedPeer)
 
 	newPeers := make([]*api.PeerDiscovered, 0)
 	unknownPeers := make([]*api.PeerDigest, 0)
@@ -63,17 +52,13 @@ func (h srvHandler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.
 
 //Acknowledge implements the protobuf Acknowledge request handler
 func (h srvHandler) Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.Empty, error) {
-	// FOR DEBUG
-	// init := h.domainFormat.BuildPeerDigest(req.Initiator)
-	// log.Printf("Ack request received from %s", init.GetEndpoint())
-
 	builder := PeerBuilder{}
 
 	//Store the peers requested
 	for _, rp := range req.RequestedPeers {
 		p := builder.FromPeerDiscovered(rp)
 		h.notif.Notify(p)
-		h.repo.SetPeer(p)
+		h.repo.SetKnownPeer(p)
 	}
 
 	return new(empty.Empty), nil

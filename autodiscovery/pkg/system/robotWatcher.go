@@ -9,11 +9,12 @@ import (
 
 type robotWatcher struct{}
 
+//NewRobotWatcher return a robotWatcher implementation
 func NewRobotWatcher() monitoring.RobotWatcher {
 	return robotWatcher{}
 }
 
-//CheckAutodiscovery check that the autodiscovery daemon is running
+//CheckAutodiscoveryProcess check that the autodiscovery daemon is running
 func (r robotWatcher) CheckAutodiscoveryProcess(port int) error {
 	_, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
@@ -40,7 +41,7 @@ func (r robotWatcher) CheckAIProcess() error {
 	return nil
 }
 
-//CheckRedisProcess check that the ScyallaDB daemon is running
+//CheckScyllaDbProcess check that the ScyallaDB daemon is running
 func (r robotWatcher) CheckScyllaDbProcess() error {
 	//TBD
 	return nil

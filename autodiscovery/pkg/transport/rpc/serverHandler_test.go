@@ -1,12 +1,11 @@
 package rpc
 
 import (
-	"encoding/hex"
 	"net"
 	"testing"
 	"time"
 
-	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/mock"
 
 	"github.com/stretchr/testify/assert"
 
@@ -24,16 +23,16 @@ Scenario: Process a SYN request by returning new peers and unknown peers
 */
 func TestHandleSynRequest(t *testing.T) {
 
-	repo := new(mockRepository)
-	repo.SetPeer(discovery.NewPeerDigest(
+	repo := new(mock.Repository)
+	repo.SetKnownPeer(discovery.NewPeerDigest(
 		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, []byte("key1")),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
-	repo.SetPeer(
+	repo.SetKnownPeer(
 		discovery.NewStartupPeer([]byte("key2"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
 
-	notif := new(mockNotifier)
+	notif := new(mock.Notifier)
 
 	h := NewServerHandler(repo, notif)
 
@@ -71,20 +70,20 @@ Scenario: Process a SYN request by returning only the new peers
 	Then we returns the unknown peers from the sender
 */
 func TestHandleSynRequestNewPeers(t *testing.T) {
-	repo := new(mockRepository)
-	repo.SetPeer(discovery.NewPeerDigest(
+	repo := new(mock.Repository)
+	repo.SetKnownPeer(discovery.NewPeerDigest(
 		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, []byte("key1")),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
-	repo.SetPeer(discovery.NewPeerDigest(
+	repo.SetKnownPeer(discovery.NewPeerDigest(
 		discovery.NewPeerIdentity(net.ParseIP("30.0.0.1"), 3000, []byte("key2")),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
-	repo.SetPeer(
+	repo.SetKnownPeer(
 		discovery.NewStartupPeer([]byte("key3"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
 
-	notif := new(mockNotifier)
+	notif := new(mock.Notifier)
 
 	h := NewServerHandler(repo, notif)
 
@@ -121,20 +120,20 @@ Scenario: Process a SYN request by returning only the new peers recent
 	Then we returns the unknown peers more recent from the sender
 */
 func TestHandleSynRequestNewPeersRecentOnly(t *testing.T) {
-	repo := new(mockRepository)
-	repo.SetPeer(discovery.NewPeerDigest(
+	repo := new(mock.Repository)
+	repo.SetKnownPeer(discovery.NewPeerDigest(
 		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, []byte("key1")),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
-	repo.SetPeer(discovery.NewPeerDigest(
+	repo.SetKnownPeer(discovery.NewPeerDigest(
 		discovery.NewPeerIdentity(net.ParseIP("30.0.0.1"), 3000, []byte("key2")),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
-	repo.SetPeer(
+	repo.SetKnownPeer(
 		discovery.NewStartupPeer([]byte("key3"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
 
-	notif := new(mockNotifier)
+	notif := new(mock.Notifier)
 
 	h := NewServerHandler(repo, notif)
 
@@ -183,16 +182,16 @@ Scenario: Process a SYN request by returning only the unknown peers
 	Then we returns the unknown peers locally
 */
 func TestHandleSynRequestUnknownPeers(t *testing.T) {
-	repo := new(mockRepository)
-	repo.SetPeer(discovery.NewPeerDigest(
+	repo := new(mock.Repository)
+	repo.SetKnownPeer(discovery.NewPeerDigest(
 		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, []byte("key1")),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
-	repo.SetPeer(
+	repo.SetKnownPeer(
 		discovery.NewStartupPeer([]byte("key2"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
 
-	notif := new(mockNotifier)
+	notif := new(mock.Notifier)
 	h := NewServerHandler(repo, notif)
 
 	req := &api.SynRequest{
@@ -239,16 +238,16 @@ Scenario: Process a SYN request by returning only the unknown peers more recent
 	Then we returns the unknown peers locally more recent
 */
 func TestHandleSynRequestUnknownPeersRecentOnly(t *testing.T) {
-	repo := new(mockRepository)
-	repo.SetPeer(discovery.NewPeerDigest(
+	repo := new(mock.Repository)
+	repo.SetKnownPeer(discovery.NewPeerDigest(
 		discovery.NewPeerIdentity(net.ParseIP("30.0.0.1"), 3000, []byte("key2")),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
-	repo.SetPeer(
+	repo.SetKnownPeer(
 		discovery.NewStartupPeer([]byte("key1"), net.ParseIP("20.10.0.1"), 3000, "1.0", discovery.PeerPosition{}))
 
-	notif := new(mockNotifier)
+	notif := new(mock.Notifier)
 
 	h := NewServerHandler(repo, notif)
 
@@ -297,8 +296,8 @@ Scenario: Process a ACK request by saving and notifying the request detailed pee
 	Then we store and notified the new peers
 */
 func TestHandlAckRequest(t *testing.T) {
-	notif := new(mockNotifier)
-	repo := new(mockRepository)
+	notif := new(mock.Notifier)
+	repo := new(mock.Repository)
 	h := NewServerHandler(repo, notif)
 
 	req := &api.AckRequest{
@@ -332,7 +331,7 @@ func TestHandlAckRequest(t *testing.T) {
 	_, err := h.Acknowledge(context.TODO(), req)
 	assert.Nil(t, err)
 
-	kp, _ := repo.ListDiscoveredPeers()
+	kp, _ := repo.ListKnownPeers()
 	assert.Equal(t, 1, len(kp))
 	assert.Equal(t, "key1", kp[0].Identity().PublicKey().String())
 	assert.Equal(t, "20.10.0.1", kp[0].Identity().IP().String())
@@ -348,123 +347,4 @@ func TestHandlAckRequest(t *testing.T) {
 
 	assert.NotEmpty(t, notif.NotifiedPeers)
 	assert.Equal(t, "key1", notif.NotifiedPeers()[0].Identity().PublicKey().String())
-}
-
-//////////////////////////////////////////////////////////
-// 						MOCKS
-/////////////////////////////////////////////////////////
-
-type mockMessenger struct {
-}
-
-func (m mockMessenger) SendSyn(req gossip.SynRequest) (*gossip.SynAck, error) {
-	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
-	tar := discovery.NewStartupPeer([]byte("uKey1"), net.ParseIP("200.18.186.39"), 3000, "1.1", discovery.PeerPosition{})
-
-	hb := discovery.NewPeerHeartbeatState(time.Now(), 0)
-	as := discovery.NewPeerAppState("1.0", discovery.OkStatus, discovery.PeerPosition{}, "", 0, 1, 0)
-
-	np1 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("35.200.100.2"), 3000, []byte("dKey1")),
-		hb, as,
-	)
-
-	newPeers := []discovery.Peer{np1}
-
-	unknownPeers := []discovery.Peer{tar}
-
-	return &gossip.SynAck{
-		Initiator:    init,
-		Target:       tar,
-		NewPeers:     newPeers,
-		UnknownPeers: unknownPeers,
-	}, nil
-}
-
-func (m mockMessenger) SendAck(req gossip.AckRequest) error {
-	return nil
-}
-
-type mockRepository struct {
-	ownedPeer       discovery.Peer
-	discoveredPeers []discovery.Peer
-	seedPeers       []discovery.Seed
-}
-
-func (r *mockRepository) CountDiscoveredPeers() (int, error) {
-	return len(r.discoveredPeers), nil
-}
-
-//GetOwnedPeer return the local peer
-func (r *mockRepository) GetOwnedPeer() (discovery.Peer, error) {
-	return r.ownedPeer, nil
-}
-
-//ListSeedPeers return all the seed on the mockRepository
-func (r *mockRepository) ListSeedPeers() ([]discovery.Seed, error) {
-	return r.seedPeers, nil
-}
-
-//ListDiscoveredPeers returns all the discoveredPeers on the mockRepository
-func (r *mockRepository) ListDiscoveredPeers() ([]discovery.Peer, error) {
-	return r.discoveredPeers, nil
-}
-
-func (r *mockRepository) SetPeer(peer discovery.Peer) error {
-	if peer.Owned() {
-		r.ownedPeer = peer
-		return nil
-	}
-	if r.containsPeer(peer) {
-		for _, p := range r.discoveredPeers {
-			if p.Identity().PublicKey().Equals(peer.Identity().PublicKey()) {
-				p = peer
-				break
-			}
-		}
-	} else {
-		r.discoveredPeers = append(r.discoveredPeers, peer)
-	}
-	return nil
-}
-
-func (r *mockRepository) SetSeed(s discovery.Seed) error {
-	r.seedPeers = append(r.seedPeers, s)
-	return nil
-}
-
-//GetPeerByIP get a peer from the mockRepository using its ip
-func (r *mockRepository) GetPeerByIP(ip net.IP) (p discovery.Peer, err error) {
-	if r.ownedPeer.Identity().IP().Equal(ip) {
-		return r.ownedPeer, nil
-	}
-	for i := 0; i < len(r.discoveredPeers); i++ {
-		if r.discoveredPeers[i].Identity().IP().Equal(ip) {
-			return r.discoveredPeers[i], nil
-		}
-	}
-	return
-}
-
-func (r *mockRepository) containsPeer(p discovery.Peer) bool {
-	mdiscoveredPeers := make(map[string]discovery.Peer, 0)
-	for _, p := range r.discoveredPeers {
-		mdiscoveredPeers[hex.EncodeToString(p.Identity().PublicKey())] = p
-	}
-
-	_, exist := mdiscoveredPeers[hex.EncodeToString(p.Identity().PublicKey())]
-	return exist
-}
-
-type mockNotifier struct {
-	notifiedPeers []discovery.Peer
-}
-
-func (n mockNotifier) NotifiedPeers() []discovery.Peer {
-	return n.notifiedPeers
-}
-
-func (n *mockNotifier) Notify(p discovery.Peer) error {
-	n.notifiedPeers = append(n.notifiedPeers, p)
-	return nil
 }

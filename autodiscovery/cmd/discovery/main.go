@@ -11,10 +11,11 @@ import (
 	"github.com/uniris/uniris-core/autodiscovery/pkg/bootstraping"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/storage/redis"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/amqp"
+
 	"github.com/uniris/uniris-core/autodiscovery/pkg/system"
 
 	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/amqp"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/rpc"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
@@ -42,12 +43,14 @@ func main() {
 	log.Printf("Port: %d", conf.Discovery.Port)
 	log.Printf("Version: %s", conf.Version)
 
-	//Initializes dependencies
+	//Initialize middlewares dependencies
 	repo, err := redis.NewRepository(conf.Discovery.Redis)
 	if err != nil {
 		log.Fatal("Cannot connect with redis")
 	}
+	notif := amqp.NewNotifier(conf.Discovery.AMQP)
 
+	//Initializes the infrastructure implementations
 	var np monitoring.PeerNetworker
 	if conf.Network == "public" {
 		np = system.NewPublicNetworker()
@@ -58,8 +61,9 @@ func main() {
 		np = system.NewPrivateNetworker(conf.NetworkInterface)
 	}
 	pos := system.NewPeerPositioner()
-	notif := amqp.NewNotifier(conf.Discovery.AMQP)
 	msg := rpc.NewMessenger()
+
+	//Setup services
 	mon := monitoring.NewService(repo, system.NewPeerMonitor(), np, system.NewRobotWatcher())
 	gos := gossip.NewService(repo, msg, notif, mon)
 	boot := bootstraping.NewService(repo, pos, np)
@@ -93,12 +97,43 @@ func main() {
 		}
 	}()
 
-	//Starts gossiping
+	//Waiting server to start up
 	time.Sleep(1 * time.Second)
-	log.Print("Start gossip...")
 
-	for err := range gos.Start(startPeer) {
+	//We want to gossip every seconds
+	ticker := time.NewTicker(1 * time.Second)
+
+	//Starts the gossip
+	log.Print("Gossip started...")
+	res, err := gos.Start(startPeer, ticker)
+	if err != nil {
 		log.Fatal(err)
+	}
+
+	//Log the discovered or updated peers
+	go func() {
+		for p := range res.Discoveries {
+			log.Printf("New discovery - Endpoint: %s - CPU: %s - FreeDisk: %f - Status: %d - DiscoveredPeersNumber: %d",
+				p.Endpoint(),
+				p.AppState().CPULoad(),
+				p.AppState().FreeDiskSpace(),
+				p.AppState().Status(),
+				p.AppState().DiscoveredPeersNumber())
+		}
+	}()
+
+	//Log the unreachables peer
+	go func() {
+		for p := range res.Unreaches {
+			log.Printf("Unreachable peer: %s", p.Endpoint())
+		}
+	}()
+
+	//When an unexpected error from the gossip is returned we crash
+	for range res.Finish {
+		err := <-res.Errors
+		res.CloseChannels()
+		log.Fatal(fmt.Errorf("Unexpected error %s", err.Error()))
 	}
 }
 

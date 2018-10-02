@@ -7,8 +7,8 @@ import (
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 )
 
-//ErrPeerUnreachable is returned when the gossip cycle cannot reach a peer
-var ErrPeerUnreachable = errors.New("Cannot reach the peer")
+//ErrUnreachablePeer is returns when no owned peers has been stored
+var ErrUnreachablePeer = errors.New("Unreachable Peer")
 
 //Round decribes a gossip round
 type Round struct {
@@ -51,11 +51,11 @@ func (r *Round) Spread(kp []discovery.Peer, discovP chan<- discovery.Peer, unrea
 	if err != nil {
 		//We do not throw an error when the peer is unreachable
 		//Gossip must continue
-		//We catch the unreachable peer, store somewhere
-		if err.Error() == ErrPeerUnreachable.Error() {
+		if err.Error() == ErrUnreachablePeer.Error() {
 			unreachP <- r.target
 			return nil
 		}
+
 		return err
 	}
 
@@ -73,7 +73,7 @@ func (r *Round) Spread(kp []discovery.Peer, discovP chan<- discovery.Peer, unrea
 			//We do not throw an error when the peer is unreachable
 			//Gossip must continue
 			//We catch the unreachable peer, store somewhere
-			if err.Error() == ErrPeerUnreachable.Error() {
+			if err.Error() == ErrUnreachablePeer.Error() {
 				unreachP <- r.target
 				return nil
 			}

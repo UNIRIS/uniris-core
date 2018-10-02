@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"fmt"
-	"log"
 
 	"golang.org/x/net/context"
 
@@ -46,8 +45,7 @@ func (m clientMessenger) SendSyn(req gossip.SynRequest) (synAck *gossip.SynAck, 
 		//If the peer cannot be reached, we throw an ErrPeerUnreachable error
 		statusCode, _ := status.FromError(err)
 		if statusCode.Code() == codes.Unavailable {
-			log.Printf("%s: %s", gossip.ErrPeerUnreachable.Error(), req.Target.Endpoint())
-			return nil, gossip.ErrPeerUnreachable
+			return nil, gossip.ErrUnreachablePeer
 		}
 		return nil, err
 	}

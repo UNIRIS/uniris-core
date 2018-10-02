@@ -71,13 +71,13 @@ func BuildFromEnv() (*UnirisConfig, error) {
 	_seeds := make([]SeedConfig, 0)
 	ss := strings.Split(seeds, ",")
 	for _, s := range ss {
-		addr := strings.Split(s, ":")
-		sPort, err := strconv.Atoi(addr[1])
+		split := strings.Split(s, ":")
+		sPort, err := strconv.Atoi(split[1])
 		if err != nil {
 			return nil, err
 		}
 
-		ips, err := net.LookupIP(addr[0])
+		ips, err := net.LookupIP(split[0])
 		if err != nil {
 			return nil, err
 		}
@@ -85,7 +85,7 @@ func BuildFromEnv() (*UnirisConfig, error) {
 		_seeds = append(_seeds, SeedConfig{
 			IP:        ips[0].String(),
 			Port:      sPort,
-			PublicKey: addr[2],
+			PublicKey: split[2],
 		})
 	}
 
