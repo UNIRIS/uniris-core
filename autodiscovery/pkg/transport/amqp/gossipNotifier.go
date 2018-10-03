@@ -34,7 +34,7 @@ func (n notifier) Notify(p discovery.Peer) error {
 	}
 	q, err := ch.QueueDeclare(
 		queueName, // name
-		false,     // durable
+		true,      // durable
 		false,     // delete when unused
 		false,     // exclusive
 		false,     // no-wait
@@ -48,8 +48,9 @@ func (n notifier) Notify(p discovery.Peer) error {
 		return err
 	}
 	if err := ch.Publish("", q.Name, false, false, amqp.Publishing{
-		ContentType: "application/json",
-		Body:        b,
+		ContentType:  "application/json",
+		Body:         b,
+		DeliveryMode: amqp.Persistent,
 	}); err != nil {
 		return err
 	}
