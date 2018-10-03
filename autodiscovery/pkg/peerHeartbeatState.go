@@ -54,10 +54,10 @@ func (hb heartbeatState) MoreRecentThan(hbS PeerHeartbeatState) bool {
 	}
 }
 
-func (h heartbeatState) String() string {
+func (hb heartbeatState) String() string {
 	return fmt.Sprintf("Generation time: %s, Elapsed heartbeats: %d",
-		h.GenerationTime().String(),
-		h.ElapsedHeartbeats())
+		hb.GenerationTime().String(),
+		hb.ElapsedHeartbeats())
 }
 
 //NewPeerHeartbeatState creates a new peer's heartbeat state

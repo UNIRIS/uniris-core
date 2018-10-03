@@ -18,7 +18,7 @@ type notifier struct {
 	amqpURI string
 }
 
-//DisptachNewPeer notifies a new peers has been discovered
+//Notify notifies a new peers has been discovered
 func (n notifier) Notify(p discovery.Peer) error {
 	conn, err := amqp.Dial(n.amqpURI)
 	defer conn.Close()

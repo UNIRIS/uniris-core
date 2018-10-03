@@ -12,6 +12,7 @@ func (n Notifier) NotifiedPeers() []discovery.Peer {
 	return n.notifiedPeers
 }
 
+//Notify notifies a new peers has been discovered
 func (n *Notifier) Notify(p discovery.Peer) error {
 	n.notifiedPeers = append(n.notifiedPeers, p)
 	return nil

@@ -109,7 +109,7 @@ func (r *Repository) RemoveUnreachablePeer(pk discovery.PublicKey) error {
 	return nil
 }
 
-//GetPeerByIP get a peer from the repository using its ip
+//GetKnownPeerByIP get a peer from the repository using its ip
 func (r *Repository) GetKnownPeerByIP(ip net.IP) (p discovery.Peer, err error) {
 	for i := 0; i < len(r.KnownPeers); i++ {
 		if r.KnownPeers[i].Identity().IP().Equal(ip) {

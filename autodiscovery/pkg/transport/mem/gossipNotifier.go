@@ -15,6 +15,7 @@ func (n notifier) Notify(p discovery.Peer) error {
 	return nil
 }
 
+//NewNotifier  creates a notifier in memory
 func NewNotifier() gossip.Notifier {
 	return notifier{}
 }

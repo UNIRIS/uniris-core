@@ -33,6 +33,7 @@ type SpreadResult struct {
 	Finish      chan bool
 }
 
+//NewSpreadResult creates a new result for the gossip
 func NewSpreadResult() *SpreadResult {
 	return &SpreadResult{
 		Discoveries: make(chan discovery.Peer),
@@ -42,6 +43,7 @@ func NewSpreadResult() *SpreadResult {
 	}
 }
 
+//CloseChannels closes the opened channels during the gossip
 func (r *SpreadResult) CloseChannels() {
 	close(r.Errors)
 	close(r.Discoveries)
