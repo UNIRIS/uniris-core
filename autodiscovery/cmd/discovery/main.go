@@ -8,20 +8,17 @@ import (
 	"os"
 	"time"
 
-	"github.com/uniris/uniris-core/autodiscovery/pkg/bootstraping"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/storage/redis"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/amqp"
-
-	"github.com/uniris/uniris-core/autodiscovery/pkg/system"
-
-	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/rpc"
-
-	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
+	"google.golang.org/grpc"
 
 	api "github.com/uniris/uniris-core/autodiscovery/api/protobuf-spec"
-	"google.golang.org/grpc"
+	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/bootstraping"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/storage/redis"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/system"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/amqp"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/transport/rpc"
 )
 
 const (
