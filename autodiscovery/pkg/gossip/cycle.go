@@ -2,7 +2,6 @@ package gossip
 
 import (
 	"errors"
-	"log"
 	"math/rand"
 	"sync"
 
@@ -19,6 +18,7 @@ type Cycle struct {
 type gossipChannel struct {
 	discoveries  chan discovery.Peer
 	unreachables chan discovery.Peer
+	reaches      chan discovery.Peer
 	errors       chan error
 }
 
@@ -36,6 +36,7 @@ func NewGossipCycle(initiator discovery.Peer, msg Messenger) *Cycle {
 			discoveries:  make(chan discovery.Peer),
 			unreachables: make(chan discovery.Peer),
 			errors:       make(chan error, 1),
+			reaches:      make(chan discovery.Peer),
 		},
 	}
 }
@@ -52,9 +53,7 @@ func (c Cycle) Run(init discovery.Peer, selectedP []discovery.Peer, knownPeers [
 
 			r := NewGossipRound(init, target, c.msg)
 
-			log.Printf("New gossip round with %s", target.Endpoint())
-
-			if err := r.Spread(knownPeers, c.result.discoveries, c.result.unreachables); err != nil {
+			if err := r.Spread(knownPeers, c.result.discoveries, c.result.reaches, c.result.unreachables); err != nil {
 				c.result.errors <- err
 			}
 		}(p)

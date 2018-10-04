@@ -45,8 +45,8 @@ type AckRequest struct {
 	RequestedPeers []discovery.Peer
 }
 
-//Spread starts messenging with a target peer and communicates known peers
-func (r *Round) Spread(kp []discovery.Peer, discovP chan<- discovery.Peer, unreachP chan<- discovery.Peer) error {
+//Spread starts messenging with a target peer
+func (r *Round) Spread(kp []discovery.Peer, discovP chan<- discovery.Peer, reachP chan<- discovery.Peer, unreachP chan<- discovery.Peer) error {
 	res, err := r.msg.SendSyn(SynRequest{r.initator, r.target, kp})
 	if err != nil {
 		//We do not throw an error when the peer is unreachable
@@ -58,6 +58,9 @@ func (r *Round) Spread(kp []discovery.Peer, discovP chan<- discovery.Peer, unrea
 
 		return err
 	}
+
+	//Notifies the peer's response
+	reachP <- r.target
 
 	if len(res.UnknownPeers) > 0 {
 		reqPeers := make([]discovery.Peer, 0)

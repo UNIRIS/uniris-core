@@ -223,10 +223,16 @@ func TestRun(t *testing.T) {
 		}
 	}()
 
+	go func() {
+		for range c.result.reaches {
+		}
+	}()
+
 	wg.Wait()
 	close(c.result.discoveries)
 	close(c.result.unreachables)
 	close(c.result.errors)
+	close(c.result.reaches)
 
 	assert.NotEmpty(t, newP)
 	assert.Equal(t, 2, len(newP))

@@ -3,6 +3,7 @@ package gossip
 import (
 	"errors"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -41,21 +42,38 @@ func TestSpreadDiscoveries(t *testing.T) {
 	kp := []discovery.Peer{p1, p2}
 
 	discoveries := make(chan discovery.Peer)
+	reaches := make(chan discovery.Peer)
 
-	go func() {
-		err := g.Spread(kp, discoveries, nil)
-		assert.Nil(t, err)
-		close(discoveries)
-	}()
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go g.Spread(kp, discoveries, reaches, nil)
 
 	pp := make([]discovery.Peer, 0)
-	for p := range discoveries {
-		pp = append(pp, p)
-	}
+	go func() {
+		for p := range discoveries {
+			pp = append(pp, p)
+			wg.Done()
+			close(discoveries)
+		}
+	}()
+
+	reachP := make([]discovery.Peer, 0)
+	go func() {
+		for p := range reaches {
+			reachP = append(reachP, p)
+			wg.Done()
+			close(reaches)
+		}
+	}()
+
+	wg.Wait()
 
 	assert.NotEmpty(t, pp)
 	assert.Equal(t, 1, len(pp))
 	assert.Equal(t, "dKey1", pp[0].Identity().PublicKey().String())
+
+	assert.NotEmpty(t, reachP)
 }
 
 /*
@@ -90,7 +108,7 @@ func TestSYNSpreadUnreachables(t *testing.T) {
 	unreaches := make(chan discovery.Peer)
 
 	go func() {
-		err := g.Spread(kp, nil, unreaches)
+		err := g.Spread(kp, nil, nil, unreaches)
 		assert.Nil(t, err)
 		close(unreaches)
 	}()
@@ -135,13 +153,20 @@ func TestACKSpreadUnreachables(t *testing.T) {
 	kp := []discovery.Peer{p1, p2}
 
 	discoveries := make(chan discovery.Peer)
+	reaches := make(chan discovery.Peer)
 	unreaches := make(chan discovery.Peer)
 
 	go func() {
-		err := g.Spread(kp, discoveries, unreaches)
+		err := g.Spread(kp, discoveries, reaches, unreaches)
 		assert.Nil(t, err)
 		close(unreaches)
 		close(discoveries)
+		close(reaches)
+	}()
+
+	go func() {
+		for range reaches {
+		}
 	}()
 
 	unreachP := make([]discovery.Peer, 0)
@@ -190,7 +215,7 @@ func TestSpreadUnexpectedError(t *testing.T) {
 
 	kp := []discovery.Peer{p1, p2}
 
-	err := g.Spread(kp, nil, nil)
+	err := g.Spread(kp, nil, nil, nil)
 	assert.NotNil(t, err)
 	assert.Error(t, err, "Unexpected")
 }

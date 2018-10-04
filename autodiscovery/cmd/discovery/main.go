@@ -110,25 +110,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	//Log the discovered or updated peers
-	go func() {
-		for p := range res.Discoveries {
-			log.Printf("New discovery - Endpoint: %s - CPU: %s - FreeDisk: %f - Status: %d - DiscoveredPeersNumber: %d",
-				p.Endpoint(),
-				p.AppState().CPULoad(),
-				p.AppState().FreeDiskSpace(),
-				p.AppState().Status(),
-				p.AppState().DiscoveredPeersNumber())
-		}
-	}()
-
-	//Log the unreachables peer
-	go func() {
-		for p := range res.Unreaches {
-			log.Printf("Unreachable peer: %s", p.Endpoint())
-		}
-	}()
-
 	//When an unexpected error from the gossip is returned we crash
 	for range res.Finish {
 		err := <-res.Errors

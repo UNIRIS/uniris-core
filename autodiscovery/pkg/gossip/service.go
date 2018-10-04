@@ -30,6 +30,7 @@ type SpreadResult struct {
 	Errors      chan error
 	Discoveries chan discovery.Peer
 	Unreaches   chan discovery.Peer
+	Reaches     chan discovery.Peer
 	Finish      chan bool
 }
 
@@ -115,8 +116,6 @@ func (s service) spread(init discovery.Peer, seeds []discovery.Seed, dChan chan<
 		return
 	}
 
-	log.Print("New gossip cycle")
-
 	pp, err := c.SelectPeers(seeds, rp, up)
 	if err != nil {
 		eChan <- err
@@ -129,10 +128,23 @@ func (s service) spread(init discovery.Peer, seeds []discovery.Seed, dChan chan<
 	go s.handleCycleErrors(c, eChan)
 	go s.handleCycleDiscoveries(c, dChan, eChan)
 	go s.handleCycleUnreachables(c, uChan, eChan)
+	go s.handleCycleReachables(c, eChan)
+}
+
+func (s service) handleCycleReachables(c *Cycle, eChan chan<- error) {
+	for p := range c.result.reaches {
+		log.Printf("Reached peer: %s", p.Endpoint())
+		//Remove the target from the unreachable list if it is
+		if err := s.repo.RemoveUnreachablePeer(p.Identity().PublicKey()); err != nil {
+			eChan <- err
+			return
+		}
+	}
 }
 
 func (s service) handleCycleUnreachables(c *Cycle, uChan chan<- discovery.Peer, eChan chan<- error) {
 	for p := range c.result.unreachables {
+		log.Printf("Unreached peer: %s", p.Endpoint())
 		if err := s.repo.SetUnreachablePeer(p.Identity().PublicKey()); err != nil {
 			eChan <- err
 			return
@@ -150,11 +162,7 @@ func (s service) handleCycleErrors(c *Cycle, eChan chan<- error) {
 
 func (s service) handleCycleDiscoveries(c *Cycle, dChan chan<- discovery.Peer, eChan chan<- error) {
 	for p := range c.result.discoveries {
-		//Remove the target from the unreachable list if it is
-		if err := s.repo.RemoveUnreachablePeer(p.Identity().PublicKey()); err != nil {
-			eChan <- err
-			return
-		}
+		log.Printf("New discovery: %s", p.String())
 
 		//Add or update the discovered peer
 		if err := s.repo.SetKnownPeer(p); err != nil {
