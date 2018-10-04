@@ -187,7 +187,14 @@ func (r redisRepository) ListUnreachablePeers() ([]discovery.Peer, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	pp := make([]discovery.Peer, 0)
+
+	//Avoid looping if there is not unreachable keys
+	if len(unreachableKeys) == 0 {
+		return pp, nil
+	}
+
 	for _, key := range unreachableKeys {
 		//TODO: IMPROVE FOR BETTER PERFORMANCE
 		//TODO: AVOID O(n*log(n))
