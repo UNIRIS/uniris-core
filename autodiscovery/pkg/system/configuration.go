@@ -22,11 +22,10 @@ type UnirisConfig struct {
 
 //DiscoveryConfig describes the autodiscovery configuration
 type DiscoveryConfig struct {
-	Port      int          `yaml:"port"`
-	P2PFactor int          `yaml:"p2pFactor"`
-	Seeds     []SeedConfig `yaml:"seeds"`
-	Redis     RedisConfig  `yaml:"redis"`
-	AMQP      AMQPConfig   `yaml:"amqp"`
+	Port  int          `yaml:"port"`
+	Seeds []SeedConfig `yaml:"seeds"`
+	Redis RedisConfig  `yaml:"redis"`
+	AMQP  AMQPConfig   `yaml:"amqp"`
 }
 
 //SeedConfig describes the autodiscovery seed configuration
@@ -58,7 +57,6 @@ func BuildFromEnv() (*UnirisConfig, error) {
 	network := os.Getenv("UNIRIS_NETWORK")
 	netiface := os.Getenv("UNIRIS_NETWORK_INTERFACE")
 	port := os.Getenv("UNIRIS_DISCOVERY_PORT")
-	p2pFactor := os.Getenv("UNIRIS_DISCOVERY_P2PFACTOR")
 	seeds := os.Getenv("UNIRIS_DISCOVERY_SEEDS")
 	redisHost := os.Getenv("UNIRIS_DISCOVERY_REDIS_HOST")
 	redisPort := os.Getenv("UNIRIS_DISCOVERY_REDIS_PORT")
@@ -93,10 +91,6 @@ func BuildFromEnv() (*UnirisConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	_p2pFactor, err := strconv.Atoi(p2pFactor)
-	if err != nil {
-		return nil, err
-	}
 	_redisPort, err := strconv.Atoi(redisPort)
 	if err != nil {
 		return nil, err
@@ -112,9 +106,8 @@ func BuildFromEnv() (*UnirisConfig, error) {
 		Network:          network,
 		NetworkInterface: netiface,
 		Discovery: DiscoveryConfig{
-			Port:      _port,
-			P2PFactor: _p2pFactor,
-			Seeds:     _seeds,
+			Port:  _port,
+			Seeds: _seeds,
 			Redis: RedisConfig{
 				Host: redisHost,
 				Port: _redisPort,
