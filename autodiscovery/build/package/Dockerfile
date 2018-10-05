@@ -1,9 +1,10 @@
-FROM golang:1.8
+FROM uniris:v1
 
 # Download and install dep
 RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 
 # Install the dependencies
+ENV GOPATH=/root/go
 WORKDIR $GOPATH/src/github.com/uniris/uniris-core/autodiscovery
 COPY Gopkg.toml Gopkg.lock ./
 RUN dep ensure --vendor-only
@@ -30,4 +31,4 @@ ENV UNIRIS_DISCOVERY_AMQP_PWD=guest
 EXPOSE $UNIRIS_DISCOVERY_PORT
 
 # Run the app
-CMD go run cmd/discovery/main.go
+CMD /etc/init.d/redis-server start ; /etc/init.d/rabbitmq-server start ; go run cmd/discovery/main.go

@@ -1,4 +1,4 @@
-version: "3.0"
+version: "2.0"
 
 services:
   peer:
@@ -7,17 +7,5 @@ services:
       context: ..
     environment:
       - UNIRIS_NETWORK_INTERFACE=eth0
-      - UNIRIS_DISCOVERY_REDIS_HOST=redis
-      - UNIRIS_DISCOVERY_AMQP_HOST=rabbitmq
-    links:
-      - redis
-      - rabbitmq
-    depends_on:
-      - redis
-      - rabbitmq
-
-  redis:
-    image: redis
-
-  rabbitmq:
-    image: rabbitmq
+      - UNIRIS_DISCOVERY_REDIS_HOST=localhost
+      - UNIRIS_DISCOVERY_AMQP_HOST=localhost
