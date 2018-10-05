@@ -13,20 +13,18 @@ const BootStrapingMinTime = 1800
 //ErrChangeNotOwnedPeer is returned when you try to change the state of peer that you don't own
 var ErrChangeNotOwnedPeer = errors.New("Cannot change a peer that you don't own")
 
-//Repository provides access to the peer repository
+//Repository provides access to the local repository
 type Repository interface {
-	CountKnownPeers() (int, error)
+	SeedRepository
+	GetKnownPeerByIP(ip net.IP) (Peer, error)
 	GetOwnedPeer() (Peer, error)
-	ListSeedPeers() ([]Seed, error)
+	CountKnownPeers() (int, error)
 	ListKnownPeers() ([]Peer, error)
+	SetKnownPeer(Peer) error
 	ListUnreachablePeers() ([]Peer, error)
 	ListReachablePeers() ([]Peer, error)
-	AddPeer(Peer) error
-	AddSeed(Seed) error
-	AddUnreachablePeer(PublicKey) error
-	UpdatePeer(Peer) error
-	DelUnreachablePeer(PublicKey) error
-	GetPeerByIP(ip net.IP) (Peer, error)
+	SetUnreachablePeer(PublicKey) error
+	RemoveUnreachablePeer(PublicKey) error
 }
 
 //PublicKey describes a public key value object
@@ -86,6 +84,7 @@ type Peer interface {
 	Refresh(status PeerStatus, disk float64, cpu string, p2pFactor int, discoveryPeersNb int) error
 	Endpoint() string
 	Owned() bool
+	String() string
 }
 
 //Peer describes a member of the P2P network
@@ -130,6 +129,15 @@ func (p *peer) Refresh(status PeerStatus, disk float64, cpu string, p2pFactor in
 	p.hbState.refreshElapsedHeartbeats()
 
 	return nil
+}
+
+func (p peer) String() string {
+	return fmt.Sprintf("Endpoint: %s, Owned: %t, %s, %s",
+		p.Endpoint(),
+		p.Owned(),
+		p.HeartbeatState().String(),
+		p.AppState().String(),
+	)
 }
 
 //NewStartupPeer creates a new peer started on the peer's machine (aka owned peer)

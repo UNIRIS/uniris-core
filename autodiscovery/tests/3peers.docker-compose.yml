@@ -1,0 +1,56 @@
+version: "2.0"
+
+networks:
+  uniris:
+    external: true
+
+services:
+  peer1:
+    build: 
+      dockerfile: build/package/Dockerfile
+      context: ..
+    environment:
+      - UNIRIS_NETWORK_INTERFACE=eth0
+      - UNIRIS_DISCOVERY_REDIS_HOST=localhost
+      - UNIRIS_DISCOVERY_AMQP_HOST=localhost
+    networks:
+      uniris:
+        aliases: 
+          - peer1
+        ipv4_address: 172.16.0.10
+
+    
+  peer2:
+    build: 
+      dockerfile: build/package/Dockerfile
+      context: ..
+    environment:
+      - UNIRIS_PUBLICKEY="MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE4cJYIBdi+WjxtbFuNn+QCaD+94SbL3vpBJpXbTcYcMnb2v2IYDX0XhRUchKMnjdvMa6X6nokrTGTlfVY9mmr6Q=="
+      - UNIRIS_NETWORK_INTERFACE=eth0
+      - UNIRIS_DISCOVERY_PORT=3545
+      - UNIRIS_DISCOVERY_REDIS_HOST=localhost
+      - UNIRIS_DISCOVERY_SEEDS=peer1:3545:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEhNngAzz3Ws1cz7veHnzeCwi9cuJhmpcHoi8+q3y75UL1vG5hyfnEMTjDCeeRHiobASUGvawGlcxexJzlZPIVYg==
+      - UNIRIS_DISCOVERY_AMQP_HOST=localhost
+    networks:
+      uniris:
+        aliases:
+          - peer2
+        ipv4_address: 172.16.0.20
+
+
+  peer3:
+    build: 
+      dockerfile: build/package/Dockerfile
+      context: ..
+    environment:
+      - UNIRIS_PUBLICKEY=MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEXjQEnfjxr1gHFetBym2C8zcU9n+DGRz3Ip+dLErOjCtQ8PoKzjQei2S9vle70Ano6MdaZlUHT1TLrFIrqYto1Q==
+      - UNIRIS_NETWORK_INTERFACE=eth0
+      - UNIRIS_DISCOVERY_PORT=3545
+      - UNIRIS_DISCOVERY_REDIS_HOST=localhost
+      - UNIRIS_DISCOVERY_SEEDS=peer1:3545:MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEhNngAzz3Ws1cz7veHnzeCwi9cuJhmpcHoi8+q3y75UL1vG5hyfnEMTjDCeeRHiobASUGvawGlcxexJzlZPIVYg==
+      - UNIRIS_DISCOVERY_AMQP_HOST=localhost
+    networks:
+      uniris:
+        aliases:
+          - peer3
+        ipv4_address: 172.16.0.30

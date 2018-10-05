@@ -1,54 +1,18 @@
 package gossip
 
 import (
-	"errors"
-	"fmt"
 	"net"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/uniris/uniris-core/autodiscovery/pkg/mock"
 
 	"github.com/stretchr/testify/assert"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
-	"github.com/uniris/uniris-core/autodiscovery/pkg/mock"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 )
-
-/*
-Scenario: Run cycle
-	Given a initiator peer, a receiver peer and list of known peers
-	When we start a gossip round, we run a gossip cycle to spread
-	Then we get the new peers discovered
-*/
-func TestRunCycle(t *testing.T) {
-	initP := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
-
-	repo := new(mock.Repository)
-	repo.AddPeer(initP)
-
-	id1 := discovery.NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, []byte("key2"))
-	hb := discovery.NewPeerHeartbeatState(time.Now(), 0)
-	as := discovery.NewPeerAppState("1.0", discovery.OkStatus, discovery.PeerPosition{}, "", 0, 1, 0)
-	recP := discovery.NewDiscoveredPeer(id1, hb, as)
-
-	p1 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, []byte("key3")),
-		hb, as,
-	)
-
-	p2 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("50.10.30.2"), 3000, []byte("uKey1")),
-		hb, as,
-	)
-
-	g := NewService(repo, mockMessenger{}, new(mock.Notifier), mockMonitor{})
-
-	newPeers, err := g.RunCycle(initP, recP, []discovery.Peer{p1, p2})
-	assert.Nil(t, err)
-	assert.NotEmpty(t, newPeers)
-
-	assert.Equal(t, 1, len(newPeers))
-	assert.Equal(t, "dKey1", newPeers[0].Identity().PublicKey().String())
-}
 
 /*
 Scenario: Gossip across a selection of peers
@@ -57,27 +21,104 @@ Scenario: Gossip across a selection of peers
 	Then the new peers are stored and notified
 */
 func TestGossip(t *testing.T) {
-	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 
 	repo := new(mock.Repository)
 	notif := new(mock.Notifier)
+	msg := new(mockMessenger)
+	mon := monitoring.NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
 
-	repo.AddPeer(init)
+	repo.SetSeedPeer(discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000})
 
-	s := discovery.Seed{IP: net.ParseIP("10.0.0.1"), Port: 3000, PublicKey: "keyss"}
-	repo.AddSeed(s)
+	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	repo.SetKnownPeer(init)
 
-	srv := NewService(repo, mockMessenger{}, notif, new(mockMonitor))
-	err := srv.Spread(init)
-	assert.Nil(t, err)
+	s := service{
+		msg:   msg,
+		repo:  repo,
+		notif: notif,
+		mon:   mon,
+	}
 
-	peers, _ := repo.ListKnownPeers()
-	assert.Equal(t, 2, len(peers))
-	assert.Equal(t, "key", string(peers[0].Identity().PublicKey()))
-	assert.Equal(t, "dKey1", string(peers[1].Identity().PublicKey()))
+	seeds, _ := repo.ListSeedPeers()
 
-	assert.NotEmpty(t, notif.NotifiedPeers())
-	assert.Equal(t, 1, len(notif.NotifiedPeers()))
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	res := NewSpreadResult()
+
+	go s.spread(init, seeds, res.Discoveries, res.Unreaches, res.Errors)
+
+	go func() {
+		for range res.Discoveries {
+			wg.Done()
+		}
+	}()
+
+	go func() {
+		for range res.Errors {
+			assert.Fail(t, "Cannot have errors")
+		}
+	}()
+
+	wg.Wait()
+
+	res.CloseChannels()
+
+	pp, _ := repo.ListKnownPeers()
+	assert.NotEmpty(t, pp)
+	assert.Len(t, pp, 2)
+	assert.Equal(t, "key", pp[0].Identity().PublicKey().String())
+	assert.Equal(t, "dKey1", pp[1].Identity().PublicKey().String())
+}
+
+/*
+Scenario: Gossip with unexpected error
+	Given a gossip round spread fails
+	When the error is not about the target cannot be reach
+	Then the error is catched
+*/
+func TestGossipFailureCatched(t *testing.T) {
+
+	repo := new(mock.Repository)
+	notif := new(mock.Notifier)
+	msg := new(mockMessengerUnexpectedFailure)
+	mon := monitoring.NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
+
+	repo.SetSeedPeer(discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000})
+
+	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	repo.SetKnownPeer(init)
+
+	s := service{
+		msg:   msg,
+		repo:  repo,
+		notif: notif,
+		mon:   mon,
+	}
+
+	seeds, _ := repo.ListSeedPeers()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	res := NewSpreadResult()
+
+	go s.spread(init, seeds, res.Discoveries, res.Unreaches, res.Errors)
+
+	errs := make([]error, 0)
+	go func() {
+		for e := range res.Errors {
+			errs = append(errs, e)
+			wg.Done()
+		}
+	}()
+
+	wg.Wait()
+
+	res.CloseChannels()
+
+	assert.NotEmpty(t, errs)
+	assert.Equal(t, errs[0].Error(), "Unexpected")
 }
 
 /*
@@ -87,31 +128,45 @@ Scenario: Gossip across a selection of peers
 	Then unreacheable peer is stored on the repo
 */
 func TestAddUnreachable(t *testing.T) {
-	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	repo := new(mock.Repository)
 	notif := new(mock.Notifier)
-	repo.AddPeer(init)
+	msg := new(mockMessengerWithSynFailure)
+	mon := monitoring.NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
 
-	s := discovery.Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000, PublicKey: "key"}
-	repo.AddSeed(s)
+	seed := discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000, PublicKey: []byte("key2")}
+	repo.SetSeedPeer(seed)
 
-	hb := discovery.NewPeerHeartbeatState(time.Now(), 0)
-	as := discovery.NewPeerAppState("1.0", discovery.OkStatus, discovery.PeerPosition{}, "", 0, 1, 0)
-	p1 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("50.10.30.2"), 3000, []byte("ukey")),
-		hb, as,
-	)
+	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	repo.SetKnownPeer(init)
 
-	repo.AddPeer(p1)
-	assert.Equal(t, 2, len(repo.Peers))
-	assert.Equal(t, 0, len(repo.UnreachablePeers))
-	srv := NewService(repo, mockMessengerunreacheable{}, notif, new(mockMonitor))
-	err := srv.Spread(init)
-	assert.NotNil(t, err)
-	fmt.Printf(err.Error())
-	fmt.Print(repo.UnreachablePeers)
-	assert.Equal(t, 1, len(repo.UnreachablePeers))
-	assert.Equal(t, "ukey", repo.UnreachablePeers[0].String())
+	s := service{
+		msg:   msg,
+		repo:  repo,
+		notif: notif,
+		mon:   mon,
+	}
+
+	seeds, _ := repo.ListSeedPeers()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	res := NewSpreadResult()
+
+	go s.spread(init, seeds, res.Discoveries, res.Unreaches, res.Errors)
+
+	go func() {
+		for range res.Unreaches {
+			wg.Done()
+		}
+	}()
+
+	wg.Wait()
+
+	res.CloseChannels()
+
+	unreaches, _ := repo.ListUnreachablePeers()
+	assert.NotEmpty(t, unreaches)
 }
 
 /*
@@ -120,32 +175,120 @@ Scenario: Gossip across a selection of peers
 	When we gossip
 	Then unreacheable peer is removed from the repo
 */
-func TestDelUnreachable(t *testing.T) {
-	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+func TestRemoveUnreachable(t *testing.T) {
 	repo := new(mock.Repository)
 	notif := new(mock.Notifier)
-	repo.AddPeer(init)
+	msg := new(mockMessengerWithSynFailure)
+	mon := monitoring.NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
 
-	s := discovery.Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000, PublicKey: "key"}
-	repo.AddSeed(s)
+	seed := discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000, PublicKey: []byte("dKey1")}
+	repo.SetSeedPeer(seed)
 
-	hb := discovery.NewPeerHeartbeatState(time.Now(), 0)
-	as := discovery.NewPeerAppState("1.0", discovery.OkStatus, discovery.PeerPosition{}, "", 0, 1, 0)
-	p1 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("50.10.30.2"), 3000, []byte("ukey")),
-		hb, as,
-	)
-	repo.AddPeer(p1)
-	repo.AddUnreachablePeer(p1.Identity().PublicKey())
-	rp, _ := repo.ListReachablePeers()
-	assert.Equal(t, 1, len(rp))
-	assert.Equal(t, 2, len(repo.Peers))
-	assert.Equal(t, 1, len(repo.UnreachablePeers))
-	srv := NewService(repo, mockMessenger{}, notif, new(mockMonitor))
-	err := srv.Spread(init)
-	assert.Nil(t, err)
-	assert.Equal(t, 0, len(repo.UnreachablePeers))
-	assert.Equal(t, 3, len(repo.Peers))
+	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	repo.SetKnownPeer(init)
+
+	s := service{
+		msg:   msg,
+		repo:  repo,
+		notif: notif,
+		mon:   mon,
+	}
+
+	seeds, _ := repo.ListSeedPeers()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	res := NewSpreadResult()
+	go s.spread(init, seeds, res.Discoveries, res.Unreaches, res.Errors)
+
+	go func() {
+		for range res.Unreaches {
+			wg.Done()
+		}
+	}()
+
+	wg.Wait()
+
+	unreaches, _ := repo.ListUnreachablePeers()
+	assert.NotEmpty(t, unreaches)
+
+	msg2 := mockMessenger{}
+	s = service{
+		msg:   msg2,
+		repo:  repo,
+		notif: notif,
+		mon:   mon,
+	}
+
+	var wg2 sync.WaitGroup
+	wg2.Add(2)
+
+	go s.spread(init, seeds, res.Discoveries, res.Unreaches, res.Errors)
+
+	go func() {
+		for range res.Discoveries {
+			wg2.Done()
+		}
+	}()
+
+	wg2.Wait()
+
+	res.CloseChannels()
+
+	unreaches, _ = repo.ListUnreachablePeers()
+	assert.Empty(t, unreaches)
+
+	reaches, _ := repo.ListReachablePeers()
+	assert.NotEmpty(t, reaches)
+	assert.Equal(t, "dKey1", reaches[1].Identity().PublicKey().String())
+}
+
+/*
+Scenario: Stop the timer when a error is returned during the gossip spreading
+	Given a gossip starting
+	When an unexpected error occurred
+	Then the gossip is stopped
+*/
+func TestStopTimerWhenGossipError(t *testing.T) {
+	repo := new(mock.Repository)
+	notif := new(mock.Notifier)
+	msg := new(mockMessengerUnexpectedFailure)
+	mon := monitoring.NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
+
+	seed := discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000, PublicKey: []byte("dKey1")}
+	repo.SetSeedPeer(seed)
+
+	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	repo.SetKnownPeer(init)
+
+	srv := NewService(repo, msg, notif, mon)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	ticker := time.NewTicker(1 * time.Second)
+	res, _ := srv.Start(init, ticker)
+
+	errs := make([]error, 0)
+	go func() {
+		for err := range res.Errors {
+			errs = append(errs, err)
+		}
+	}()
+
+	go func() {
+		for range res.Finish {
+			wg.Done()
+		}
+	}()
+
+	wg.Wait()
+
+	assert.Empty(t, res.Discoveries)
+	assert.Empty(t, res.Unreaches)
+	assert.NotEmpty(t, errs)
+	assert.Equal(t, "Unexpected", errs[0].Error())
 }
 
 type mockMessenger struct {
@@ -153,7 +296,7 @@ type mockMessenger struct {
 
 func (m mockMessenger) SendSyn(req SynRequest) (*SynAck, error) {
 	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
-	rec := discovery.NewStartupPeer([]byte("uKey1"), net.ParseIP("200.18.186.39"), 3000, "1.1", discovery.PeerPosition{})
+	tar := discovery.NewStartupPeer([]byte("uKey1"), net.ParseIP("200.18.186.39"), 3000, "1.1", discovery.PeerPosition{})
 
 	hb := discovery.NewPeerHeartbeatState(time.Now(), 0)
 	as := discovery.NewPeerAppState("1.0", discovery.OkStatus, discovery.PeerPosition{}, "", 0, 1, 0)
@@ -165,38 +308,16 @@ func (m mockMessenger) SendSyn(req SynRequest) (*SynAck, error) {
 
 	newPeers := []discovery.Peer{np1}
 
-	unknownPeers := []discovery.Peer{rec}
+	unknownPeers := []discovery.Peer{tar}
 
 	return &SynAck{
 		Initiator:    init,
-		Receiver:     rec,
+		Target:       tar,
 		NewPeers:     newPeers,
 		UnknownPeers: unknownPeers,
 	}, nil
 }
 
 func (m mockMessenger) SendAck(req AckRequest) error {
-	return nil
-}
-
-type mockMonitor struct{}
-
-//RefreshPeer updates the peer's metrics retrieved from the peer monitor
-func (s mockMonitor) RefreshPeer(p discovery.Peer) error {
-	return nil
-}
-
-func (s mockMonitor) PeerStatus(p discovery.Peer) (discovery.PeerStatus, error) {
-	return discovery.OkStatus, nil
-}
-
-type mockMessengerunreacheable struct {
-}
-
-func (m mockMessengerunreacheable) SendSyn(req SynRequest) (*SynAck, error) {
-	return nil, errors.New("Unreachable Peer")
-}
-
-func (m mockMessengerunreacheable) SendAck(req AckRequest) error {
 	return nil
 }

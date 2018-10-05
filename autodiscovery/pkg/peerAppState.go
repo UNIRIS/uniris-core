@@ -1,5 +1,9 @@
 package discovery
 
+import (
+	"fmt"
+)
+
 //PeerAppState describes the state of peer and its metrics
 type PeerAppState interface {
 	Status() PeerStatus
@@ -9,6 +13,7 @@ type PeerAppState interface {
 	GeoPosition() PeerPosition
 	P2PFactor() int
 	DiscoveredPeersNumber() int
+	String() string
 }
 
 //PeerStatus defines a peer health analysis
@@ -28,10 +33,26 @@ const (
 	StorageOnlyStatus
 )
 
+func (s PeerStatus) String() string {
+	if s == OkStatus {
+		return "Ok"
+	} else if s == BootstrapingStatus {
+		return "Bootstraping"
+	} else if s == FaultStatus {
+		return "Faulty"
+	} else {
+		return "StorageOnly"
+	}
+}
+
 //PeerPosition wraps the geo coordinates of a peer
 type PeerPosition struct {
 	Lat float64
 	Lon float64
+}
+
+func (pos PeerPosition) String() string {
+	return fmt.Sprintf("Lat: %f, Lon: %f", pos.Lat, pos.Lon)
 }
 
 type appState struct {
@@ -71,6 +92,18 @@ func (a appState) GeoPosition() PeerPosition {
 //DiscoveredPeersNumber returns the number of discovered nodes by the peer
 func (a appState) DiscoveredPeersNumber() int {
 	return a.discoveredPeersNumber
+}
+
+func (a appState) String() string {
+	return fmt.Sprintf("Status: %s, CPU load: %s, Free disk space: %f, Version: %s, GeoPosition: %s, P2PFactor: %d, Discovered peer number: %d",
+		a.Status().String(),
+		a.CPULoad(),
+		a.FreeDiskSpace(),
+		a.Version(),
+		a.GeoPosition().String(),
+		a.P2PFactor(),
+		a.DiscoveredPeersNumber(),
+	)
 }
 
 //NewPeerAppState creates a new peer's app state

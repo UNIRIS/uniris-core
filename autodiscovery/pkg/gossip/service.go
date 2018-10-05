@@ -1,147 +1,191 @@
 package gossip
 
 import (
-	"encoding/hex"
-	"errors"
-	"fmt"
+	"log"
+	"time"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
 )
 
-type rpcError int
-
-//ErrUnrechablePeer is returns when no owned peers has been stored
-var ErrUnrechablePeer = errors.New("Unreachable Peer")
-
 //Service is the interface that provide gossip methods
 type Service interface {
-	Spread(discovery.Peer) error
-	RunCycle(initiator discovery.Peer, receiver discovery.Peer, knownPeers []discovery.Peer) ([]discovery.Peer, error)
-}
-
-//Messenger is the interface that provides methods to send gossip requests
-type Messenger interface {
-
-	//Sends a SYN request
-	SendSyn(SynRequest) (*SynAck, error)
-
-	//Sends a ACK request after receipt of the SYN request
-	SendAck(AckRequest) error
+	Start(discovery.Peer, *time.Ticker) (*SpreadResult, error)
 }
 
 //Notifier is the interface that provides methods to notify gossip discovery
 type Notifier interface {
-
-	//Notify a new peer has been discovered
-	Notify(peer discovery.Peer)
+	Notify(discovery.Peer) error
 }
 
 type service struct {
-	msg   Messenger
 	repo  discovery.Repository
+	msg   Messenger
 	notif Notifier
-	monit monitoring.Service
+	mon   monitoring.Service
 }
 
-//Spread creates a gossip round, stores and notifies the discovered peers
-func (s service) Spread(init discovery.Peer) error {
-
-	sp, err := s.repo.ListSeedPeers()
-	if err != nil {
-		return err
-	}
-	kp, err := s.repo.ListKnownPeers()
-	if err != nil {
-		return err
-	}
-	rp, err := s.repo.ListReachablePeers()
-	if err != nil {
-		return err
-	}
-	up, err := s.repo.ListUnreachablePeers()
-	if err != nil {
-		return err
-	}
-	r, err := discovery.NewGossipRound(init, rp, sp, up)
-	if err != nil {
-		return err
-	}
-	pSelected, err := r.SelectPeers()
-	if err != nil {
-		return err
-	}
-
-	for _, p := range pSelected {
-		newPeers, err := s.RunCycle(init, p, kp)
-		if err != nil {
-			return err
-		}
-
-		for _, p := range newPeers {
-			if err := s.repo.AddPeer(p); err != nil {
-				return err
-			}
-			s.notif.Notify(p)
-		}
-	}
-
-	return nil
+//SpreadResult represents the gossig results from the peer starting up
+type SpreadResult struct {
+	Errors      chan error
+	Discoveries chan discovery.Peer
+	Unreaches   chan discovery.Peer
+	Reaches     chan discovery.Peer
+	Finish      chan bool
 }
 
-func (s service) RunCycle(init discovery.Peer, recpt discovery.Peer, kp []discovery.Peer) ([]discovery.Peer, error) {
-	fmt.Printf("Gossip round with %s:%d \n", recpt.Identity().IP().String(), recpt.Identity().Port())
-	owned, err := s.repo.GetOwnedPeer()
+//NewSpreadResult creates a new result for the gossip
+func NewSpreadResult() *SpreadResult {
+	return &SpreadResult{
+		Discoveries: make(chan discovery.Peer),
+		Unreaches:   make(chan discovery.Peer),
+		Errors:      make(chan error, 1),
+		Finish:      make(chan bool),
+	}
+}
+
+//CloseChannels closes the opened channels during the gossip
+func (r *SpreadResult) CloseChannels() {
+	close(r.Errors)
+	close(r.Discoveries)
+	close(r.Unreaches)
+	close(r.Finish)
+}
+
+//Start initialize the gossip session
+//It stores the discovered peers and unreachables peers
+//It calls the notifier to dispatch the discovered peers to the AI service
+func (s service) Start(init discovery.Peer, ticker *time.Ticker) (*SpreadResult, error) {
+	res := NewSpreadResult()
+
+	seeds, err := s.repo.ListSeedPeers()
 	if err != nil {
 		return nil, err
 	}
+
+	go func() {
+
+		for range ticker.C {
+			go s.spread(init, seeds, res.Discoveries, res.Unreaches, res.Errors)
+
+			//Stop the ticker when an unexpected error is returned
+			//We also close all the channels to prevent any unexpected storage
+			go func() {
+				for range res.Errors {
+					ticker.Stop()
+					res.Finish <- true
+					return
+				}
+			}()
+		}
+	}()
+
+	return res, nil
+}
+
+func (s service) spread(init discovery.Peer, seeds []discovery.Seed, dChan chan<- discovery.Peer, uChan chan<- discovery.Peer, eChan chan<- error) {
 
 	//Refreshes owned peer state before sending any requests
-	if err := s.monit.RefreshPeer(owned); err != nil {
-		return nil, err
+	if err := s.mon.RefreshPeer(init); err != nil {
+		eChan <- err
+		return
 	}
 
-	synAck, err := s.msg.SendSyn(NewSynRequest(init, recpt, kp))
+	knownPeers, err := s.repo.ListKnownPeers()
 	if err != nil {
-		if err.Error() == ErrUnrechablePeer.Error() {
-			s.repo.AddUnreachablePeer(recpt.Identity().PublicKey())
-		}
-		return nil, err
-	}
-	//Remove the target from the unreachable list if it is
-	if err := s.repo.DelUnreachablePeer(recpt.Identity().PublicKey()); err != nil {
-		return nil, err
+		eChan <- err
+		return
 	}
 
-	if len(synAck.UnknownPeers) > 0 {
-
-		reqPeers := make([]discovery.Peer, 0)
-
-		mPeers := make(map[string]discovery.Peer, 0)
-		for _, p := range kp {
-			mPeers[hex.EncodeToString(p.Identity().PublicKey())] = p
-		}
-
-		for _, p := range synAck.UnknownPeers {
-			if k, exist := mPeers[hex.EncodeToString(p.Identity().PublicKey())]; exist {
-				reqPeers = append(reqPeers, k)
-			}
-		}
-
-		if err := s.msg.SendAck(NewAckRequest(init, recpt, reqPeers)); err != nil {
-			return nil, err
-		}
+	rp, err := s.repo.ListReachablePeers()
+	if err != nil {
+		eChan <- err
+		return
 	}
 
-	return synAck.NewPeers, nil
+	up, err := s.repo.ListUnreachablePeers()
+	if err != nil {
+		eChan <- err
+		return
+	}
+
+	//add reachables, seeds, unreachables
+	c := NewGossipCycle(init, s.msg)
+	if err != nil {
+		eChan <- err
+		return
+	}
+
+	pp, err := c.SelectPeers(seeds, rp, up)
+	if err != nil {
+		eChan <- err
+		return
+	}
+
+	go c.Run(init, pp, knownPeers)
+
+	//Handle gossip cycle returns
+	go s.handleCycleErrors(c, eChan)
+	go s.handleCycleDiscoveries(c, dChan, eChan)
+	go s.handleCycleUnreachables(c, uChan, eChan)
+	go s.handleCycleReachables(c, eChan)
+}
+
+func (s service) handleCycleReachables(c *Cycle, eChan chan<- error) {
+	for p := range c.result.reaches {
+		log.Printf("Reached peer: %s", p.Endpoint())
+		//Remove the target from the unreachable list if it is
+		if err := s.repo.RemoveUnreachablePeer(p.Identity().PublicKey()); err != nil {
+			eChan <- err
+			return
+		}
+	}
+}
+
+func (s service) handleCycleUnreachables(c *Cycle, uChan chan<- discovery.Peer, eChan chan<- error) {
+	for p := range c.result.unreachables {
+		log.Printf("Unreached peer: %s", p.Endpoint())
+		if err := s.repo.SetUnreachablePeer(p.Identity().PublicKey()); err != nil {
+			eChan <- err
+			return
+		}
+		uChan <- p
+	}
+}
+
+func (s service) handleCycleErrors(c *Cycle, eChan chan<- error) {
+	for err := range c.result.errors {
+		eChan <- err
+		return
+	}
+}
+
+func (s service) handleCycleDiscoveries(c *Cycle, dChan chan<- discovery.Peer, eChan chan<- error) {
+	for p := range c.result.discoveries {
+		log.Printf("New discovery: %s", p.String())
+
+		//Add or update the discovered peer
+		if err := s.repo.SetKnownPeer(p); err != nil {
+			eChan <- err
+			return
+		}
+
+		//Notify the new discovery
+		if err := s.notif.Notify(p); err != nil {
+			eChan <- err
+			return
+		}
+
+		dChan <- p
+	}
 }
 
 //NewService creates a gossiping service its dependencies
-func NewService(repo discovery.Repository, msg Messenger, notif Notifier, monit monitoring.Service) Service {
+func NewService(repo discovery.Repository, msg Messenger, notif Notifier, mon monitoring.Service) Service {
 	return service{
 		repo:  repo,
 		msg:   msg,
 		notif: notif,
-		monit: monit,
+		mon:   mon,
 	}
 }

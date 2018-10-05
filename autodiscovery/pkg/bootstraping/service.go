@@ -21,7 +21,7 @@ type service struct {
 func (s service) Startup(pbKey []byte, port int, ver string) (p discovery.Peer, err error) {
 	pos, err := s.pp.Position()
 	if err != nil {
-		return
+		return p, err
 	}
 
 	ip, err := s.pn.IP()
@@ -30,7 +30,7 @@ func (s service) Startup(pbKey []byte, port int, ver string) (p discovery.Peer, 
 	}
 
 	p = discovery.NewStartupPeer(pbKey, ip, port, ver, pos)
-	if err = s.repo.AddPeer(p); err != nil {
+	if err = s.repo.SetKnownPeer(p); err != nil {
 		return
 	}
 
@@ -38,9 +38,9 @@ func (s service) Startup(pbKey []byte, port int, ver string) (p discovery.Peer, 
 }
 
 //LoadSeeds stores the provided seed peers
-func (s service) LoadSeeds(ss []discovery.Seed) error {
-	for _, sd := range ss {
-		if err := s.repo.AddSeed(sd); err != nil {
+func (s service) LoadSeeds(seeds []discovery.Seed) error {
+	for _, sd := range seeds {
+		if err := s.repo.SetSeedPeer(sd); err != nil {
 			return err
 		}
 	}

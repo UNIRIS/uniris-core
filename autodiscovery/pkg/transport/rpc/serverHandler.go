@@ -1,7 +1,7 @@
 package rpc
 
 import (
-	"context"
+	"golang.org/x/net/context"
 
 	"github.com/uniris/uniris-core/autodiscovery/pkg/comparing"
 
@@ -12,23 +12,13 @@ import (
 	"github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
 )
 
-//Handler is the interface that provides methods to handle GRPC requests
-type Handler interface {
-	Synchronize(ctx context.Context, req *api.SynRequest) (*api.SynAck, error)
-	Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.Empty, error)
-}
-
-type handler struct {
+type srvHandler struct {
 	repo  discovery.Repository
 	notif gossip.Notifier
 }
 
 //Synchronize implements the protobuf Synchronize request handler
-func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.SynAck, error) {
-	// FOR DEBUG
-	// init := h.domainFormat.BuildPeerDigest(req.Initiator)
-	// log.Printf("Syn request received from %s", init.GetEndpoint())
-
+func (h srvHandler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.SynAck, error) {
 	builder := PeerBuilder{}
 
 	reqP := make([]discovery.Peer, 0)
@@ -36,7 +26,7 @@ func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.Syn
 		reqP = append(reqP, builder.FromPeerDigest(p))
 	}
 
-	kp, err := h.repo.ListKnownPeers()
+	knownPeers, err := h.repo.ListKnownPeers()
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +34,7 @@ func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.Syn
 	newPeers := make([]*api.PeerDiscovered, 0)
 	unknownPeers := make([]*api.PeerDigest, 0)
 
-	diff := comparing.NewPeerDiffer(kp)
+	diff := comparing.NewPeerDiffer(knownPeers)
 	for _, p := range diff.UnknownPeers(reqP) {
 		unknownPeers = append(unknownPeers, builder.ToPeerDigest(p))
 	}
@@ -53,34 +43,30 @@ func (h handler) Synchronize(ctx context.Context, req *api.SynRequest) (*api.Syn
 	}
 
 	return &api.SynAck{
-		Initiator:    req.Receiver,
-		Receiver:     req.Initiator,
+		Initiator:    req.Target,
+		Target:       req.Initiator,
 		NewPeers:     newPeers,
 		UnknownPeers: unknownPeers,
 	}, nil
 }
 
 //Acknowledge implements the protobuf Acknowledge request handler
-func (h handler) Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.Empty, error) {
-	// FOR DEBUG
-	// init := h.domainFormat.BuildPeerDigest(req.Initiator)
-	// log.Printf("Ack request received from %s", init.GetEndpoint())
-
+func (h srvHandler) Acknowledge(ctx context.Context, req *api.AckRequest) (*empty.Empty, error) {
 	builder := PeerBuilder{}
 
 	//Store the peers requested
 	for _, rp := range req.RequestedPeers {
 		p := builder.FromPeerDiscovered(rp)
 		h.notif.Notify(p)
-		h.repo.AddPeer(p)
+		h.repo.SetKnownPeer(p)
 	}
 
 	return new(empty.Empty), nil
 }
 
-//NewHandler create a new GRPC handler
-func NewHandler(repo discovery.Repository, notif gossip.Notifier) Handler {
-	return handler{
+//NewServerHandler create a new GRPC server handler
+func NewServerHandler(repo discovery.Repository, notif gossip.Notifier) api.DiscoveryServer {
+	return srvHandler{
 		repo:  repo,
 		notif: notif,
 	}

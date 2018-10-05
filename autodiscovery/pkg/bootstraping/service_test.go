@@ -15,7 +15,7 @@ import (
 Scenario: Loads initial seed peers
 	Given list of seeds
 	When we want to load them
-	Then we can retreive them into the repository
+	Then we can retreive them into the mockRepository
 */
 func TestLoadSeeds(t *testing.T) {
 	seeds := []discovery.Seed{discovery.Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000}}
@@ -33,9 +33,9 @@ func TestLoadSeeds(t *testing.T) {
 
 /*
 Scenario: Starts a peer
-	Given a peer repository and a peer localizer
+	Given a peer mockRepository and a peer localizer
 	When a peer startups
-	Then the peer is stored on the peer repository
+	Then the peer is stored on the peer mockRepository
 */
 func TestStartup(t *testing.T) {
 
@@ -53,9 +53,6 @@ func TestStartup(t *testing.T) {
 	assert.Equal(t, "1.0", p.AppState().Version())
 	assert.Equal(t, discovery.BootstrapingStatus, p.AppState().Status())
 
-	pp, _ := repo.ListKnownPeers()
-	assert.NotEmpty(t, pp)
-	assert.Equal(t, 1, len(pp))
-	assert.Equal(t, "127.0.0.1", pp[0].Identity().IP().String())
-	assert.True(t, pp[0].Owned())
+	selfPeer, _ := repo.GetOwnedPeer()
+	assert.Equal(t, "127.0.0.1", selfPeer.Identity().IP().String())
 }

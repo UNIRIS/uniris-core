@@ -1,7 +1,5 @@
 package mock
 
-import ()
-
 // RobotWatcher mock
 type RobotWatcher struct{}
 

@@ -12,7 +12,8 @@ func (n Notifier) NotifiedPeers() []discovery.Peer {
 	return n.notifiedPeers
 }
 
-//Notify mock
-func (n *Notifier) Notify(p discovery.Peer) {
+//Notify notifies a new peers has been discovered
+func (n *Notifier) Notify(p discovery.Peer) error {
 	n.notifiedPeers = append(n.notifiedPeers, p)
+	return nil
 }

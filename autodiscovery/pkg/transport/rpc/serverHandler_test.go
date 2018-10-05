@@ -24,15 +24,21 @@ Scenario: Process a SYN request by returning new peers and unknown peers
 func TestHandleSynRequest(t *testing.T) {
 
 	repo := new(mock.Repository)
-	repo.AddPeer(discovery.NewPeerDigest(
+	repo.SetKnownPeer(discovery.NewPeerDigest(
 		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, []byte("key1")),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
-	h := NewHandler(repo, nil)
+	repo.SetKnownPeer(
+		discovery.NewStartupPeer([]byte("key2"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
+
+	notif := new(mock.Notifier)
+
+	h := NewServerHandler(repo, notif)
+
 	req := &api.SynRequest{
 		Initiator: &api.PeerDigest{},
-		Receiver:  &api.PeerDigest{},
+		Target:    &api.PeerDigest{},
 		KnownPeers: []*api.PeerDigest{
 			&api.PeerDigest{
 				Identity: &api.PeerIdentity{
@@ -65,19 +71,25 @@ Scenario: Process a SYN request by returning only the new peers
 */
 func TestHandleSynRequestNewPeers(t *testing.T) {
 	repo := new(mock.Repository)
-	repo.AddPeer(discovery.NewPeerDigest(
+	repo.SetKnownPeer(discovery.NewPeerDigest(
 		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, []byte("key1")),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
-	repo.AddPeer(discovery.NewPeerDigest(
+	repo.SetKnownPeer(discovery.NewPeerDigest(
 		discovery.NewPeerIdentity(net.ParseIP("30.0.0.1"), 3000, []byte("key2")),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
-	h := NewHandler(repo, nil)
+	repo.SetKnownPeer(
+		discovery.NewStartupPeer([]byte("key3"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
+
+	notif := new(mock.Notifier)
+
+	h := NewServerHandler(repo, notif)
+
 	req := &api.SynRequest{
 		Initiator: &api.PeerDigest{},
-		Receiver:  &api.PeerDigest{},
+		Target:    &api.PeerDigest{},
 		KnownPeers: []*api.PeerDigest{
 			&api.PeerDigest{
 				Identity: &api.PeerIdentity{
@@ -109,19 +121,25 @@ Scenario: Process a SYN request by returning only the new peers recent
 */
 func TestHandleSynRequestNewPeersRecentOnly(t *testing.T) {
 	repo := new(mock.Repository)
-	repo.AddPeer(discovery.NewPeerDigest(
+	repo.SetKnownPeer(discovery.NewPeerDigest(
 		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, []byte("key1")),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
-	repo.AddPeer(discovery.NewPeerDigest(
+	repo.SetKnownPeer(discovery.NewPeerDigest(
 		discovery.NewPeerIdentity(net.ParseIP("30.0.0.1"), 3000, []byte("key2")),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
-	h := NewHandler(repo, nil)
+	repo.SetKnownPeer(
+		discovery.NewStartupPeer([]byte("key3"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
+
+	notif := new(mock.Notifier)
+
+	h := NewServerHandler(repo, notif)
+
 	req := &api.SynRequest{
 		Initiator: &api.PeerDigest{},
-		Receiver:  &api.PeerDigest{},
+		Target:    &api.PeerDigest{},
 		KnownPeers: []*api.PeerDigest{
 			&api.PeerDigest{
 				Identity: &api.PeerIdentity{
@@ -165,15 +183,20 @@ Scenario: Process a SYN request by returning only the unknown peers
 */
 func TestHandleSynRequestUnknownPeers(t *testing.T) {
 	repo := new(mock.Repository)
-	repo.AddPeer(discovery.NewPeerDigest(
+	repo.SetKnownPeer(discovery.NewPeerDigest(
 		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, []byte("key1")),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
-	h := NewHandler(repo, nil)
+	repo.SetKnownPeer(
+		discovery.NewStartupPeer([]byte("key2"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
+
+	notif := new(mock.Notifier)
+	h := NewServerHandler(repo, notif)
+
 	req := &api.SynRequest{
 		Initiator: &api.PeerDigest{},
-		Receiver:  &api.PeerDigest{},
+		Target:    &api.PeerDigest{},
 		KnownPeers: []*api.PeerDigest{
 			&api.PeerDigest{
 				Identity: &api.PeerIdentity{
@@ -216,19 +239,21 @@ Scenario: Process a SYN request by returning only the unknown peers more recent
 */
 func TestHandleSynRequestUnknownPeersRecentOnly(t *testing.T) {
 	repo := new(mock.Repository)
-	repo.AddPeer(discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, []byte("key1")),
-		discovery.NewPeerHeartbeatState(time.Now(), 1000),
-	))
-	repo.AddPeer(discovery.NewPeerDigest(
+	repo.SetKnownPeer(discovery.NewPeerDigest(
 		discovery.NewPeerIdentity(net.ParseIP("30.0.0.1"), 3000, []byte("key2")),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
-	h := NewHandler(repo, nil)
+	repo.SetKnownPeer(
+		discovery.NewStartupPeer([]byte("key1"), net.ParseIP("20.10.0.1"), 3000, "1.0", discovery.PeerPosition{}))
+
+	notif := new(mock.Notifier)
+
+	h := NewServerHandler(repo, notif)
+
 	req := &api.SynRequest{
 		Initiator: &api.PeerDigest{},
-		Receiver:  &api.PeerDigest{},
+		Target:    &api.PeerDigest{},
 		KnownPeers: []*api.PeerDigest{
 			&api.PeerDigest{
 				Identity: &api.PeerIdentity{
@@ -271,13 +296,13 @@ Scenario: Process a ACK request by saving and notifying the request detailed pee
 	Then we store and notified the new peers
 */
 func TestHandlAckRequest(t *testing.T) {
-	repo := new(mock.Repository)
 	notif := new(mock.Notifier)
-	h := NewHandler(repo, notif)
+	repo := new(mock.Repository)
+	h := NewServerHandler(repo, notif)
 
 	req := &api.AckRequest{
 		Initiator: &api.PeerDigest{},
-		Receiver:  &api.PeerDigest{},
+		Target:    &api.PeerDigest{},
 		RequestedPeers: []*api.PeerDiscovered{
 			&api.PeerDiscovered{
 				Identity: &api.PeerIdentity{

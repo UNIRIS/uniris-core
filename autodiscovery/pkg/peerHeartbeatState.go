@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -9,6 +10,7 @@ type PeerHeartbeatState interface {
 	GenerationTime() time.Time
 	ElapsedHeartbeats() int64
 	MoreRecentThan(PeerHeartbeatState) bool
+	String() string
 }
 
 type heartbeatState struct {
@@ -50,6 +52,12 @@ func (hb heartbeatState) MoreRecentThan(hbS PeerHeartbeatState) bool {
 	} else {
 		return false
 	}
+}
+
+func (hb heartbeatState) String() string {
+	return fmt.Sprintf("Generation time: %s, Elapsed heartbeats: %d",
+		hb.GenerationTime().String(),
+		hb.ElapsedHeartbeats())
 }
 
 //NewPeerHeartbeatState creates a new peer's heartbeat state
