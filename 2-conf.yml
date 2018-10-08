@@ -1,0 +1,25 @@
+version: 1.0
+network: private
+networkInterface: lo0
+publicKey: MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE4cJYIBdi+WjxtbFuNn+QCaD+94SbL3vpBJpXbTcYcMnb2v2IYDX0XhRUchKMnjdvMa6X6nokrTGTlfVY9mmr6Q==
+
+discovery:
+  port: 4000
+  seeds:
+    - ip: 127.0.0.1
+      port: 3545
+      publicKey: MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEhNngAzz3Ws1cz7veHnzeCwi9cuJhmpcHoi8+q3y75UL1vG5hyfnEMTjDCeeRHiobASUGvawGlcxexJzlZPIVYg==
+  redis:
+    host: localhost
+    port: 6379
+    pwd: ""
+  amqp:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+
+
+
+

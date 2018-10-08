@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package api;
+
+service Discovery {
+    rpc Synchronize (SynRequest) returns (SynAck) {}
+    rpc Acknowledge(AckRequest) returns(google.protobuf.Empty) {}
+}
+
+message SynRequest {
+    PeerDigest Initiator = 1;
+    PeerDigest Target = 2;
+    repeated PeerDigest KnownPeers = 3;
+}
+
+message AckRequest {
+    PeerDigest Initiator = 1;
+    PeerDigest Target = 2;
+    repeated PeerDiscovered RequestedPeers = 3;
+}
+
+message SynAck {
+    PeerDigest Initiator = 1;
+    PeerDigest Target = 2;
+    repeated PeerDiscovered NewPeers = 3;
+    repeated PeerDigest UnknownPeers = 4;
+}
+
+message PeerDigest {
+    PeerIdentity Identity = 1;
+    PeerHeartbeatState HeartbeatState = 2;
+}
+
+message PeerDiscovered {
+    PeerIdentity Identity = 1;
+    PeerHeartbeatState HeartbeatState = 2;
+    PeerAppState AppState = 3; 
+}
+
+message PeerIdentity {
+    bytes PublicKey = 1;
+    string IP = 2;
+    int32 Port = 3;
+}
+
+message PeerHeartbeatState {
+    int64 GenerationTime  = 1;
+    int64 ElapsedHeartbeats = 2;
+}
+
+message PeerAppState {
+        
+    PeerStatus Status = 4;
+    string CPULoad = 5;
+    float FreeDiskSpace = 6;
+    string Version = 7;
+    GeoCoordinates GeoPosition = 8;
+    int32 P2PFactor = 9;
+    int32 DiscoveredPeersNumber = 10;
+
+    message GeoCoordinates {
+        float Lat = 1;
+        float Lon = 2;
+    };
+
+    enum PeerStatus {
+        Bootstraping = 0;
+        Ok = 1;
+        Faulty = 2;
+        StorageOnly = 3;
+    };
+}
