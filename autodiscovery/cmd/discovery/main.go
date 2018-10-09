@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"time"
 
 	"google.golang.org/grpc"
@@ -119,15 +120,16 @@ func loadConfiguration() (*system.UnirisConfig, error) {
 	confFile := flag.String("conf-file", defaultConfFile, "Configuration file")
 	flag.Parse()
 
-	var conf *system.UnirisConfig
-	if os.Getenv("UNIRIS_VERSION") != "" {
+	confFilePath, err := filepath.Abs(*confFile)
+	if _, err := os.Stat(confFilePath); os.IsNotExist(err) {
 		conf, err := system.BuildFromEnv()
 		if err != nil {
 			return nil, err
 		}
 		return conf, nil
 	}
-	conf, err := system.BuildFromFile(*confFile)
+
+	conf, err := system.BuildFromFile(confFilePath)
 	if err != nil {
 		return nil, err
 	}
