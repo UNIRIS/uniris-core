@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
+	"sort"
 
 	"github.com/uniris/uniris-core/autodiscovery/pkg/system"
 
@@ -153,29 +154,17 @@ func (r redisRepository) ListReachablePeers() ([]discovery.Peer, error) {
 
 	//We want to get the peers no include inside the list of unreachables
 	pp := make([]discovery.Peer, 0)
-	for _, p := range peers {
-		//TODO: IMPROVE FOR BETTER PERFORMANCE
-		//TODO: AVOID O(n*log(n))
-		for _, key := range unreachableKeys {
-			if key != p.Identity().PublicKey().String() {
-				pp = append(pp, p)
-			}
+
+	sort.Strings(unreachableKeys)
+
+	for i, p := range peers {
+		idx := sort.SearchStrings(unreachableKeys, p.Identity().PublicKey().String())
+		if idx >= len(unreachableKeys) || peers[i].Identity().PublicKey().String() != unreachableKeys[idx] {
+			pp = append(pp, peers[i])
 		}
 	}
+
 	return pp, nil
-}
-
-func (r redisRepository) listUnreachableKeys() ([]string, error) {
-	cmd := r.client.SMembers(unreachablesKey)
-	if cmd.Err() != nil {
-		return nil, cmd.Err()
-	}
-
-	res, err := cmd.Result()
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
 }
 
 func (r redisRepository) ListUnreachablePeers() ([]discovery.Peer, error) {
@@ -195,13 +184,12 @@ func (r redisRepository) ListUnreachablePeers() ([]discovery.Peer, error) {
 		return pp, nil
 	}
 
-	for _, key := range unreachableKeys {
-		//TODO: IMPROVE FOR BETTER PERFORMANCE
-		//TODO: AVOID O(n*log(n))
-		for _, p := range peers {
-			if p.Identity().PublicKey().String() == key {
-				pp = append(pp, p)
-			}
+	sort.Strings(unreachableKeys)
+
+	for i, p := range peers {
+		idx := sort.SearchStrings(unreachableKeys, p.Identity().PublicKey().String())
+		if idx < len(unreachableKeys) && peers[i].Identity().PublicKey().String() == unreachableKeys[idx] {
+			pp = append(pp, peers[i])
 		}
 	}
 
@@ -231,6 +219,19 @@ func (r redisRepository) fetchList(key string) ([]map[string]string, error) {
 		list = append(list, res)
 	}
 	return list, nil
+}
+
+func (r redisRepository) listUnreachableKeys() ([]string, error) {
+	cmd := r.client.SMembers(unreachablesKey)
+	if cmd.Err() != nil {
+		return nil, cmd.Err()
+	}
+
+	res, err := cmd.Result()
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 //NewRepository creates a new repository using redis as storage
