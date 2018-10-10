@@ -3,14 +3,13 @@ package validation
 import (
 	"time"
 
-	common "github.com/uniris/uniris-core/datamining/pkg"
-	wallet "github.com/uniris/uniris-core/datamining/pkg"
+	robot "github.com/uniris/uniris-core/datamining/pkg"
 )
 
 //MasterRobotValidation describe a validation of an elected master robot
 type MasterRobotValidation struct {
-	lastTxnv []common.PublicKey
-	pow      common.PublicKey
+	lastTxnv []robot.PublicKey
+	pow      robot.PublicKey
 	rbv      RobotValidation
 }
 
@@ -18,6 +17,6 @@ type MasterRobotValidation struct {
 type RobotValidation struct {
 	status    string
 	timestamp time.Time
-	pubk      common.PublicKey
-	sig       common.Signature
+	pubk      robot.PublicKey
+	sig       robot.Signature
 }
