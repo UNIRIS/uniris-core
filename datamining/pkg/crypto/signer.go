@@ -8,26 +8,20 @@ import (
 	"encoding/hex"
 	"errors"
 	"math/big"
-
-	robot "github.com/uniris/uniris-core/datamining/pkg"
 )
 
 //ErrBadSignature define a bad signature error
 var ErrBadSignature = errors.New("Error: Bad Signature")
 
-type signer struct{}
+//Signer defines signatures methods
+type Signer struct{}
 
 type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-//NewSigner creates a new signer service
-func NewSigner() (robot.Signer, error) {
-	return signer{}, nil
-}
-
 //Verify verify a signature and a data using a public key
-func (si signer) Verify(pubk []byte, der []byte, hash []byte) error {
+func (si Signer) Verify(pubk []byte, der []byte, hash []byte) error {
 	var signature ecdsaSignature
 
 	decodedsig, _ := hex.DecodeString(string(der))
@@ -47,8 +41,8 @@ func (si signer) Verify(pubk []byte, der []byte, hash []byte) error {
 	return ErrBadSignature
 }
 
-//Sign, sign data using a privatekey
-func (si signer) Sign(privk []byte, data []byte) ([]byte, error) {
+//Sign data using a privatekey
+func (si Signer) Sign(privk []byte, data []byte) ([]byte, error) {
 	pv, err := x509.ParseECPrivateKey(privk)
 	if err != nil {
 		return nil, err

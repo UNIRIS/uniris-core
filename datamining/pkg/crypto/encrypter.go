@@ -7,19 +7,14 @@ import (
 	"encoding/hex"
 
 	"github.com/uniris/ecies/pkg"
-	robot "github.com/uniris/uniris-core/datamining/pkg"
 )
 
-type encrypter struct {
-}
-
-//Newencrypter creates a new encrypter service
-func Newencrypter() (robot.Encrypter, error) {
-	return encrypter{}, nil
+//Encrypter define encryption methods
+type Encrypter struct {
 }
 
 //Encrypt encrypt data using a public key
-func (e encrypter) Encrypt(pubk []byte, data []byte) ([]byte, error) {
+func (e Encrypter) Encrypt(pubk []byte, data []byte) ([]byte, error) {
 	pu, err := x509.ParsePKIXPublicKey(pubk)
 	if err != nil {
 		return nil, err
@@ -34,7 +29,7 @@ func (e encrypter) Encrypt(pubk []byte, data []byte) ([]byte, error) {
 }
 
 //Decrypt decrypt data using a private key
-func (e encrypter) Decrypt(privk []byte, edata []byte) ([]byte, error) {
+func (e Encrypter) Decrypt(privk []byte, edata []byte) ([]byte, error) {
 	decodeCipher, _ := hex.DecodeString(string(edata))
 	robotKey, err := x509.ParseECPrivateKey(privk)
 	robotEciesKey := ecies.ImportECDSA(robotKey)
