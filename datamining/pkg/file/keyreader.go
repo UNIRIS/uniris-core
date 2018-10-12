@@ -1,12 +1,10 @@
-package crypto
+package file
 
 import (
 	"encoding/hex"
 	"io/ioutil"
 	"path"
 	"path/filepath"
-
-	robot "github.com/uniris/uniris-core/datamining/pkg"
 )
 
 type reader struct {
@@ -14,16 +12,16 @@ type reader struct {
 }
 
 //NewReader creates a new file reader
-func NewReader() (robot.KeyReader, error) {
+func NewReader() (r reader, err error) {
 	keysDir, err := filepath.Abs("../../../keys")
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	return reader{keysDir}, nil
 }
 
-func (r reader) SharedRobotPrivateKey() (robot.PrivateKey, error) {
+func (r reader) SharedRobotPrivateKey() ([]byte, error) {
 	biodPvKey, err := ioutil.ReadFile(path.Join(r.keysDir, "sharedRobot.key"))
 	if err != nil {
 		return nil, err
@@ -37,7 +35,7 @@ func (r reader) SharedRobotPrivateKey() (robot.PrivateKey, error) {
 	return b, nil
 }
 
-func (r reader) SharedRobotPublicKey() (robot.PublicKey, error) {
+func (r reader) SharedRobotPublicKey() ([]byte, error) {
 	biodPub, err := ioutil.ReadFile(path.Join(r.keysDir, "sharedRobot.pub"))
 	if err != nil {
 		return nil, err
@@ -51,7 +49,7 @@ func (r reader) SharedRobotPublicKey() (robot.PublicKey, error) {
 	return b, nil
 }
 
-func (r reader) SharedBiodPublicKey() (robot.PublicKey, error) {
+func (r reader) SharedBiodPublicKey() ([]byte, error) {
 	robotPub, err := ioutil.ReadFile(path.Join(r.keysDir, "sharedBiod.pub"))
 	if err != nil {
 		return nil, err
