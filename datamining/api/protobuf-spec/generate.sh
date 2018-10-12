@@ -1,3 +1,3 @@
 #!/bin/sh
 
-protoc --go_out=plugins=grpc:. wallet.proto
+protoc --go_out=plugins=grpc:. *.proto
