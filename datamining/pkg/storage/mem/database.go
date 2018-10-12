@@ -1,22 +1,29 @@
 package mem
 
 import (
-	robot "github.com/uniris/uniris-core/datamining/pkg"
-	"github.com/uniris/uniris-core/datamining/pkg/wallet"
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/adding"
+	"github.com/uniris/uniris-core/datamining/pkg/listing"
 )
 
+//Database represents a database
+type Database interface {
+	adding.Repository
+	listing.Repository
+}
+
 type db struct {
-	bioWallets []wallet.BioWallet
-	wallets    []wallet.Wallet
+	bioWallets []datamining.BioWallet
+	wallets    []datamining.Wallet
 }
 
 //NewDatabase implements the database in memory
-func NewDatabase() wallet.Database {
+func NewDatabase() Database {
 	return &db{}
 }
 
-//GetEncWalletAddr return the encrypted wallet address
-func (d *db) GetBioWallet(bh robot.BioHash) (b wallet.BioWallet, err error) {
+//FindBioWallet return the bio wallet
+func (d *db) FindBioWallet(bh datamining.BioHash) (b datamining.BioWallet, err error) {
 	for _, b := range d.bioWallets {
 		if string(b.Bhash()) == string(bh) {
 			return b, nil
@@ -25,8 +32,8 @@ func (d *db) GetBioWallet(bh robot.BioHash) (b wallet.BioWallet, err error) {
 	return
 }
 
-//GetEncWallet return the encrypted wallet
-func (d *db) GetWallet(addr []byte) (b wallet.Wallet, err error) {
+//FindWallet return the wallet
+func (d *db) FindWallet(addr datamining.WalletAddr) (b datamining.Wallet, err error) {
 	for _, b := range d.wallets {
 		if string(b.WalletAddr()) == string(addr) {
 			return b, nil
@@ -36,13 +43,13 @@ func (d *db) GetWallet(addr []byte) (b wallet.Wallet, err error) {
 }
 
 //AddWallet add a wallet line to the database
-func (d *db) AddWallet(w wallet.Wallet) error {
+func (d *db) AddWallet(w datamining.Wallet) error {
 	d.wallets = append(d.wallets, w)
 	return nil
 }
 
 //AddBioWallet add a biowallet line to the database
-func (d *db) AddBioWallet(bw wallet.BioWallet) error {
+func (d *db) AddBioWallet(bw datamining.BioWallet) error {
 	d.bioWallets = append(d.bioWallets, bw)
 	return nil
 }
