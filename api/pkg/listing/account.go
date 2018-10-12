@@ -2,8 +2,8 @@ package listing
 
 //AccountResult defines the account's data returned from the robot
 type AccountResult struct {
-	EncryptedWallet  []byte `json:"encrypted_wallet"`
-	EncryptedAESKey  []byte `json:"encrypted_aes_key"`
+	EncryptedWallet  string `json:"encrypted_wallet"`
+	EncryptedAESKey  string `json:"encrypted_aes_key"`
 	AddrWalletPerson string `json:"@wallet_encrypted_person"`
 }
 
