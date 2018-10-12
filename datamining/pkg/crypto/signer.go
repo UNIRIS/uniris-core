@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/asn1"
+	"encoding/hex"
 	"errors"
 	"math/big"
 
@@ -28,13 +29,16 @@ func NewSigner() (robot.Signer, error) {
 //Verify verify a signature and a data using a public key
 func (si signer) Verify(pubk []byte, der []byte, hash []byte) error {
 	var signature ecdsaSignature
+
+	decodedsig, _ := hex.DecodeString(string(der))
+
 	pu, err := x509.ParsePKIXPublicKey(pubk)
 	if err != nil {
 		return err
 	}
 
 	ecdsaPublic := pu.(*ecdsa.PublicKey)
-	asn1.Unmarshal(der, &signature)
+	asn1.Unmarshal(decodedsig, &signature)
 
 	if ecdsa.Verify(ecdsaPublic, hash, signature.R, signature.S) {
 		return nil
@@ -60,6 +64,6 @@ func (si signer) Sign(privk []byte, data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return sig, nil
+	return []byte(hex.EncodeToString(sig)), nil
 
 }

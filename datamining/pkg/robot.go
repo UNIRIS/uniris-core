@@ -1,5 +1,7 @@
 package robot
 
+import ()
+
 //PrivateKey describe a Private Key
 type PrivateKey []byte
 
@@ -8,6 +10,12 @@ type Signature []byte
 
 //PublicKey describe a Public key
 type PublicKey []byte
+
+//CipherWallet describe the encrypted wallet
+type CipherWallet []byte
+
+//BioHash is the hash describing a biometric identitie
+type BioHash []byte
 
 //ECDSAKeyPair represent ECDSA key pair
 type ECDSAKeyPair struct {
@@ -30,7 +38,7 @@ type KeyReader interface {
 //Encrypter describes methods to encrypt or decrypt data
 type Encrypter interface {
 	Decrypt(PrivateKey, data []byte) ([]byte, error)
-	Ecrypt(PublicKey, data []byte) ([]byte, error)
+	Encrypt(PublicKey, data []byte) ([]byte, error)
 }
 
 //Signer describes methods to sign and verify data

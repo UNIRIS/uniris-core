@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/x509"
+	"encoding/hex"
 
 	"github.com/uniris/ecies/pkg"
 	robot "github.com/uniris/uniris-core/datamining/pkg"
@@ -17,19 +18,8 @@ func Newencrypter() (robot.Encrypter, error) {
 	return encrypter{}, nil
 }
 
-//Decrypt decrypt data using a private key
-func (e encrypter) Decrypt(privk []byte, edata []byte) ([]byte, error) {
-	robotKey, err := x509.ParseECPrivateKey(privk)
-	robotEciesKey := ecies.ImportECDSA(robotKey)
-	message, err := robotEciesKey.Decrypt(edata, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return message, nil
-}
-
 //Encrypt encrypt data using a public key
-func (e encrypter) Ecrypt(pubk []byte, data []byte) ([]byte, error) {
+func (e encrypter) Encrypt(pubk []byte, data []byte) ([]byte, error) {
 	pu, err := x509.ParsePKIXPublicKey(pubk)
 	if err != nil {
 		return nil, err
@@ -40,5 +30,17 @@ func (e encrypter) Ecrypt(pubk []byte, data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return cipher, nil
+	return []byte(hex.EncodeToString(cipher)), nil
+}
+
+//Decrypt decrypt data using a private key
+func (e encrypter) Decrypt(privk []byte, edata []byte) ([]byte, error) {
+	decodeCipher, _ := hex.DecodeString(string(edata))
+	robotKey, err := x509.ParseECPrivateKey(privk)
+	robotEciesKey := ecies.ImportECDSA(robotKey)
+	message, err := robotEciesKey.Decrypt(decodeCipher, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return message, nil
 }

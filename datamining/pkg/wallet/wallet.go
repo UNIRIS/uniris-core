@@ -6,26 +6,21 @@ import (
 
 	robot "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/validation"
+	formater "github.com/uniris/uniris-core/datamining/pkg/walletformating"
 )
 
 //Database provides access to the local repository
 type Database interface {
-	GetEncWalletAddr(bh BioHash) ([]byte, error)
-	GetEncWallet(addr []byte) (CipherWallet, error)
+	GetBioWallet(bh robot.BioHash) (BioWallet, error)
+	GetWallet(addr []byte) (Wallet, error)
+	AddWallet(w Wallet) error
+	AddBioWallet(bw BioWallet) error
 }
-
-//CipherWallet describe the encrypted wallet
-type CipherWallet []byte
 
 //Wallet describe a secure Wallet
 type Wallet struct {
-	walletAddr   []byte
-	cWallet      CipherWallet
+	fw           formater.FormatedWallet
 	timeStamp    time.Time
-	emPubk       robot.PublicKey
-	emSig        robot.Signature
-	biodPubk     robot.PublicKey
-	biodSig      robot.Signature
 	oldTxnHash   hash.Hash64
 	txnHash      hash.Hash64
 	masterRobotv validation.MasterRobotValidation
@@ -33,11 +28,40 @@ type Wallet struct {
 }
 
 //CWallet returns the encrypted wallet
-func (w Wallet) CWallet() CipherWallet {
-	return w.cWallet
+func (w Wallet) CWallet() robot.CipherWallet {
+	return w.fw.CWallet
 }
 
 //WalletAddr returns address of the encrypted wallet
 func (w Wallet) WalletAddr() []byte {
-	return w.walletAddr
+	return w.fw.WalletAddr
+}
+
+//BioWallet describe the data adressing biometric imprint and the wallet address
+type BioWallet struct {
+	fbw          formater.FormatedBioWallet
+	timeStamp    time.Time
+	txnHash      hash.Hash64
+	masterRobotv validation.MasterRobotValidation
+	robotsv      []validation.RobotValidation
+}
+
+//Bhash returns the biometric hash
+func (b BioWallet) Bhash() robot.BioHash {
+	return b.fbw.BHash
+}
+
+//CipherAddrRobot returns the address of the wallet encrypted with shared robot publickey
+func (b BioWallet) CipherAddrRobot() []byte {
+	return b.fbw.CipherAddrRobot
+}
+
+//CipherAddrBio returns the address of the wallet encrypted with person keys
+func (b BioWallet) CipherAddrBio() []byte {
+	return b.fbw.CipherAddrBio
+}
+
+//CipherAesKey returns the AES key encrypted with person keys
+func (b BioWallet) CipherAesKey() []byte {
+	return b.fbw.CipherAesKey
 }

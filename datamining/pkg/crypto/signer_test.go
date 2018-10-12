@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
+	"encoding/hex"
 
 	"testing"
 
@@ -30,7 +31,8 @@ func TestSign(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, sig)
 	var signature ecdsaSignature
-	asn1.Unmarshal(sig, &signature)
+	decodesig, _ := hex.DecodeString(string(sig))
+	asn1.Unmarshal(decodesig, &signature)
 	assert.True(t, ecdsa.Verify(&key.PublicKey, d, signature.R, signature.S))
 }
 
@@ -50,6 +52,6 @@ func TestVerify(t *testing.T) {
 	d := h[:]
 	R, S, _ := ecdsa.Sign(rand.Reader, key, d)
 	sig, _ := asn1.Marshal(ecdsaSignature{R, S})
-	err := s.Verify(puKey, sig, d)
+	err := s.Verify(puKey, []byte(hex.EncodeToString(sig)), d)
 	assert.Nil(t, err)
 }
