@@ -3,7 +3,7 @@ package listing
 import "errors"
 
 //ErrInvalidSignature is returned when the request contains invalid signatures
-var ErrInvalidSignature = errors.New("Request contains an invalid signature")
+var ErrInvalidSignature = errors.New("Invalid signature")
 
 //RobotClient define methods to interfact with the robot
 type RobotClient interface {
