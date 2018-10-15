@@ -21,8 +21,8 @@ func (b DataBuilder) BuildWalletResult(w datamining.Wallet, bioW datamining.BioW
 	}
 }
 
-//BuildWallets constitue details for the StoreWallet rpc command
-func (b DataBuilder) BuildWallets(p *api.Wallet) (w datamining.WalletData, bw datamining.BioData, err error) {
+//BuildWallet constitue details for the StoreWallet rpc command
+func (b DataBuilder) BuildWallet(p *api.Wallet) (w datamining.WalletData, bw datamining.BioData, err error) {
 	bioData, err := b.decrypt.Decipher(p.EncryptedBioData)
 	if err != nil {
 		return
@@ -32,13 +32,13 @@ func (b DataBuilder) BuildWallets(p *api.Wallet) (w datamining.WalletData, bw da
 		return
 	}
 
-	var bio BioData
+	var bio BioDataFromJSON
 	err = json.Unmarshal(bioData, &bio)
 	if err != nil {
 		return
 	}
 
-	var wallet WalletData
+	var wallet WalletDataFromJSON
 	err = json.Unmarshal(walletData, &wallet)
 	if err != nil {
 		return
@@ -81,8 +81,8 @@ func (b DataBuilder) BuildWallets(p *api.Wallet) (w datamining.WalletData, bw da
 	return
 }
 
-//WalletData represents wallet data JSON
-type WalletData struct {
+//WalletDataFromJSON represents wallet data JSON
+type WalletDataFromJSON struct {
 	PersonPublicKey    string     `json:"person_pubk"`
 	BiodPublicKey      string     `json:"biod_pubk"`
 	EncryptedWallet    string     `json:"encrypted_wallet"`
@@ -90,8 +90,8 @@ type WalletData struct {
 	Sigs               Signatures `json:"signature_wallet"`
 }
 
-//BioData represents bio data JSON
-type BioData struct {
+//BioDataFromJSON represents bio data JSON
+type BioDataFromJSON struct {
 	PersonPublicKey     string     `json:"person_pubk"`
 	BiodPublicKey       string     `json:"biod_pubk"`
 	PersonHash          string     `json:"person_hash"`

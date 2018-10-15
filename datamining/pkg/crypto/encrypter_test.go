@@ -21,7 +21,7 @@ Scenario: Encrypt the wallet AES key
 */
 func TestEncryptext(t *testing.T) {
 
-	e := encrypter{}
+	e := Encrypter{}
 	superKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(superKey.Public())
 
@@ -44,7 +44,7 @@ Scenario: Encrypt the wallet AES key
 */
 func TestDecryptText(t *testing.T) {
 
-	e := encrypter{}
+	e := Encrypter{}
 
 	superKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(superKey.Public())

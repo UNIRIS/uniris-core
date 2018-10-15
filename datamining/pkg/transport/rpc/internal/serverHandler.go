@@ -51,7 +51,7 @@ func (s internalSrvHandler) StoreWallet(ctx context.Context, req *api.Wallet) (*
 	decrypter := NewDecrypter(s.sharedRobotPrivateKey)
 	b := DataBuilder{decrypter}
 
-	walletData, bioData, err := b.BuildWallets(req)
+	walletData, bioData, err := b.BuildWallet(req)
 	if err != nil {
 		return nil, err
 	}

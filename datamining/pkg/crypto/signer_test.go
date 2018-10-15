@@ -21,7 +21,7 @@ Scenario: Sign encrypted data
 	Then I get the signature and can be verify by the public key associated
 */
 func TestSign(t *testing.T) {
-	s, _ := NewSigner()
+	s := Signer{}
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	encData := []byte("uxazexc")
@@ -44,7 +44,7 @@ Scenario: Verify encrypted data
 */
 
 func TestVerify(t *testing.T) {
-	s, _ := NewSigner()
+	s := Signer{}
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	puKey, _ := x509.MarshalPKIXPublicKey(key.Public())
 	encData := []byte("uxazexc")

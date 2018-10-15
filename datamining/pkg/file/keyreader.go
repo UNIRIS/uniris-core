@@ -7,21 +7,23 @@ import (
 	"path/filepath"
 )
 
-type reader struct {
+//Reader create a keys reader struct
+type Reader struct {
 	keysDir string
 }
 
 //NewReader creates a new file reader
-func NewReader() (r reader, err error) {
+func NewReader() (r Reader, err error) {
 	keysDir, err := filepath.Abs("../../../keys")
 	if err != nil {
 		return
 	}
 
-	return reader{keysDir}, nil
+	return Reader{keysDir}, nil
 }
 
-func (r reader) SharedRobotPrivateKey() ([]byte, error) {
+//SharedRobotPrivateKey return the shared privatekey between robot
+func (r Reader) SharedRobotPrivateKey() ([]byte, error) {
 	biodPvKey, err := ioutil.ReadFile(path.Join(r.keysDir, "sharedRobot.key"))
 	if err != nil {
 		return nil, err
@@ -35,7 +37,8 @@ func (r reader) SharedRobotPrivateKey() ([]byte, error) {
 	return b, nil
 }
 
-func (r reader) SharedRobotPublicKey() ([]byte, error) {
+//SharedRobotPublicKey returns the shared publickey between robot
+func (r Reader) SharedRobotPublicKey() ([]byte, error) {
 	biodPub, err := ioutil.ReadFile(path.Join(r.keysDir, "sharedRobot.pub"))
 	if err != nil {
 		return nil, err
@@ -49,7 +52,8 @@ func (r reader) SharedRobotPublicKey() ([]byte, error) {
 	return b, nil
 }
 
-func (r reader) SharedBiodPublicKey() ([]byte, error) {
+//SharedBiodPublicKey returns the shared publickey between Biometric device
+func (r Reader) SharedBiodPublicKey() ([]byte, error) {
 	robotPub, err := ioutil.ReadFile(path.Join(r.keysDir, "sharedBiod.pub"))
 	if err != nil {
 		return nil, err
