@@ -1,6 +1,8 @@
 package internalrpc
 
-import crypto "github.com/uniris/uniris-core/datamining/pkg/crypto"
+import (
+	crypto "github.com/uniris/uniris-core/datamining/pkg/crypto"
+)
 
 //Decrypter data for the rpc transport layer
 type Decrypter struct {

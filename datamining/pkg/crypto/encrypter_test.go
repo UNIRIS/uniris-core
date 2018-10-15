@@ -25,7 +25,7 @@ func TestEncryptext(t *testing.T) {
 	superKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(superKey.Public())
 
-	cipher, err := e.Encrypt(pbKey, []byte("uniris"))
+	cipher, err := e.Encrypt([]byte(hex.EncodeToString(pbKey)), []byte("uniris"))
 	assert.Nil(t, err)
 	assert.NotEmpty(t, cipher)
 
@@ -55,6 +55,6 @@ func TestDecryptText(t *testing.T) {
 	assert.NotEmpty(t, cipher)
 
 	pvkey, _ := x509.MarshalECPrivateKey(superKey)
-	clear, _ := e.Decrypt(pvkey, []byte(hex.EncodeToString(cipher)))
+	clear, _ := e.Decrypt([]byte(hex.EncodeToString(pvkey)), []byte(hex.EncodeToString(cipher)))
 	assert.Equal(t, []byte("uniris"), clear)
 }

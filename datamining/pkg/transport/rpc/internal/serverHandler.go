@@ -64,7 +64,7 @@ func (s internalSrvHandler) StoreWallet(ctx context.Context, req *api.Wallet) (*
 		return nil, err
 	}
 
-	//TODO: find the updated hash wallet
+	//TODO: calculate the updated hash wallet
 
 	return &api.StorageResult{}, nil
 }

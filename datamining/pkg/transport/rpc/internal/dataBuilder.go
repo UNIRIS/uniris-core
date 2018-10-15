@@ -1,6 +1,7 @@
 package internalrpc
 
 import (
+	"encoding/hex"
 	"encoding/json"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
@@ -32,26 +33,36 @@ func (b DataBuilder) BuildWallet(p *api.Wallet) (w datamining.WalletData, bw dat
 		return
 	}
 
+	bioDataB, err := hex.DecodeString(string(bioData))
+	if err != nil {
+		return
+	}
+
 	var bio BioDataFromJSON
-	err = json.Unmarshal(bioData, &bio)
+	err = json.Unmarshal(bioDataB, &bio)
+	if err != nil {
+		return
+	}
+
+	walletDataB, err := hex.DecodeString(string(walletData))
 	if err != nil {
 		return
 	}
 
 	var wallet WalletDataFromJSON
-	err = json.Unmarshal(walletData, &wallet)
+	err = json.Unmarshal(walletDataB, &wallet)
 	if err != nil {
 		return
 	}
 
 	bioSig := Signatures{
-		Person: p.SignatureBioData.Person,
-		Biod:   p.SignatureBioData.Biod,
+		Person: string(p.SignatureBioData.Person),
+		Biod:   string(p.SignatureBioData.Biod),
 	}
 
 	walletSig := Signatures{
-		Person: p.SignatureWalletData.Person,
-		Biod:   p.SignatureWalletData.Biod,
+		Person: string(p.SignatureWalletData.Person),
+		Biod:   string(p.SignatureWalletData.Biod),
 	}
 
 	w = datamining.WalletData{
@@ -60,8 +71,8 @@ func (b DataBuilder) BuildWallet(p *api.Wallet) (w datamining.WalletData, bw dat
 		CipherWallet:    datamining.CipherWallet(wallet.EncryptedWallet),
 		EmPubk:          datamining.PublicKey(wallet.PersonPublicKey),
 		Sigs: datamining.Signatures{
-			BiodSig: walletSig.Biod,
-			EmSig:   walletSig.Person,
+			BiodSig: []byte(walletSig.Biod),
+			EmSig:   []byte(walletSig.Person),
 		},
 	}
 
@@ -73,8 +84,8 @@ func (b DataBuilder) BuildWallet(p *api.Wallet) (w datamining.WalletData, bw dat
 		CipherAESKey:    []byte(bio.EncryptedAESKey),
 		EmPubk:          datamining.PublicKey(bio.PersonPublicKey),
 		Sigs: datamining.Signatures{
-			BiodSig: bioSig.Biod,
-			EmSig:   bioSig.Person,
+			BiodSig: []byte(bioSig.Biod),
+			EmSig:   []byte(bioSig.Person),
 		},
 	}
 
@@ -103,6 +114,6 @@ type BioDataFromJSON struct {
 
 //Signatures represents signatures JSON
 type Signatures struct {
-	Person []byte `json:"person_sig"`
-	Biod   []byte `json:"biod_sig"`
+	Person string `json:"person_sig"`
+	Biod   string `json:"biod_sig"`
 }

@@ -15,7 +15,12 @@ type Encrypter struct {
 
 //Encrypt encrypt data using a public key
 func (e Encrypter) Encrypt(pubk []byte, data []byte) ([]byte, error) {
-	pu, err := x509.ParsePKIXPublicKey(pubk)
+	decodeKey, err := hex.DecodeString(string(pubk))
+	if err != nil {
+		return nil, err
+	}
+
+	pu, err := x509.ParsePKIXPublicKey(decodeKey)
 	if err != nil {
 		return nil, err
 	}
@@ -30,8 +35,21 @@ func (e Encrypter) Encrypt(pubk []byte, data []byte) ([]byte, error) {
 
 //Decrypt decrypt data using a private key
 func (e Encrypter) Decrypt(privk []byte, edata []byte) ([]byte, error) {
-	decodeCipher, _ := hex.DecodeString(string(edata))
-	robotKey, err := x509.ParseECPrivateKey(privk)
+	decodeCipher, err := hex.DecodeString(string(edata))
+	if err != nil {
+		return nil, err
+	}
+
+	decodeKey, err := hex.DecodeString(string(privk))
+	if err != nil {
+		return nil, err
+	}
+
+	robotKey, err := x509.ParseECPrivateKey(decodeKey)
+	if err != nil {
+		return nil, err
+	}
+
 	robotEciesKey := ecies.ImportECDSA(robotKey)
 	message, err := robotEciesKey.Decrypt(decodeCipher, nil, nil)
 	if err != nil {
