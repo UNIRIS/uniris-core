@@ -1,5 +1,9 @@
 version: "2.0"
 
+networks:
+  uniris:
+    external: true
+
 services:
   peer:
     build: 
@@ -7,5 +11,6 @@ services:
       context: ..
     environment:
       - UNIRIS_NETWORK_INTERFACE=eth0
-      - UNIRIS_DISCOVERY_REDIS_HOST=localhost
-      - UNIRIS_DISCOVERY_AMQP_HOST=localhost
+    networks:
+      uniris:
+        ipv4_address: 172.16.0.10

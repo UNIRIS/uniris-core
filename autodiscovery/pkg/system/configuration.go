@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -69,21 +69,39 @@ func BuildFromEnv() (*UnirisConfig, error) {
 	_seeds := make([]SeedConfig, 0)
 	ss := strings.Split(seeds, ",")
 	for _, s := range ss {
+		if s == "" {
+			continue
+		}
 		split := strings.Split(s, ":")
-		sPort, err := strconv.Atoi(split[1])
+		hostSeed := split[0]
+		portSeed := split[1]
+		keySeed := split[2]
+
+		sPort, err := strconv.Atoi(portSeed)
 		if err != nil {
 			return nil, err
 		}
 
-		ips, err := net.LookupIP(split[0])
+		match, err := regexp.Match("\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\b", []byte(hostSeed))
 		if err != nil {
 			return nil, err
+		}
+
+		var ip net.IP
+		if match {
+			ip = net.ParseIP(hostSeed)
+		} else {
+			ips, err := net.LookupIP(hostSeed)
+			if err != nil {
+				return nil, err
+			}
+			ip = ips[0]
 		}
 
 		_seeds = append(_seeds, SeedConfig{
-			IP:        ips[0].String(),
+			IP:        ip.String(),
 			Port:      sPort,
-			PublicKey: split[2],
+			PublicKey: keySeed,
 		})
 	}
 
@@ -124,12 +142,7 @@ func BuildFromEnv() (*UnirisConfig, error) {
 }
 
 //BuildFromFile creates configuration from configuration file
-func BuildFromFile(confFile string) (*UnirisConfig, error) {
-	confFilePath, err := filepath.Abs(confFile)
-	if err != nil {
-		return nil, err
-	}
-
+func BuildFromFile(confFilePath string) (*UnirisConfig, error) {
 	bytes, err := ioutil.ReadFile(confFilePath)
 	if err != nil {
 		return nil, err

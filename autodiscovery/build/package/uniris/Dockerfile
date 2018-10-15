@@ -17,11 +17,3 @@ RUN apt-get update && apt-get install -y vim curl net-tools
 
 # install tools
 RUN mkdir -p /root/go/bin
-
-
-
-
-
-
-
-

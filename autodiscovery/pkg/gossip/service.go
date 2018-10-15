@@ -133,7 +133,7 @@ func (s service) spread(init discovery.Peer, seeds []discovery.Seed, dChan chan<
 
 func (s service) handleCycleReachables(c *Cycle, eChan chan<- error) {
 	for p := range c.result.reaches {
-		log.Printf("Reached peer: %s", p.Endpoint())
+		log.Printf("Gossip reached peer: %s", p.Endpoint())
 		//Remove the target from the unreachable list if it is
 		if err := s.repo.RemoveUnreachablePeer(p.Identity().PublicKey()); err != nil {
 			eChan <- err
@@ -144,7 +144,7 @@ func (s service) handleCycleReachables(c *Cycle, eChan chan<- error) {
 
 func (s service) handleCycleUnreachables(c *Cycle, uChan chan<- discovery.Peer, eChan chan<- error) {
 	for p := range c.result.unreachables {
-		log.Printf("Unreached peer: %s", p.Endpoint())
+		log.Printf("Gossip unreached peer: %s", p.Endpoint())
 		if err := s.repo.SetUnreachablePeer(p.Identity().PublicKey()); err != nil {
 			eChan <- err
 			return
@@ -162,7 +162,7 @@ func (s service) handleCycleErrors(c *Cycle, eChan chan<- error) {
 
 func (s service) handleCycleDiscoveries(c *Cycle, dChan chan<- discovery.Peer, eChan chan<- error) {
 	for p := range c.result.discoveries {
-		log.Printf("New discovery: %s", p.String())
+		log.Printf("Gossip discovered new peer: %s", p.String())
 
 		//Add or update the discovered peer
 		if err := s.repo.SetKnownPeer(p); err != nil {
