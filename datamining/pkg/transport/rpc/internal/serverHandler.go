@@ -5,21 +5,21 @@ import (
 	"golang.org/x/net/context"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
-	"github.com/uniris/uniris-core/datamining/pkg/adding"
-	"github.com/uniris/uniris-core/datamining/pkg/listing"
+	"github.com/uniris/uniris-core/datamining/pkg/walletAdding"
+	"github.com/uniris/uniris-core/datamining/pkg/walletListing"
 )
 
 type internalSrvHandler struct {
-	list                  listing.Service
-	add                   adding.Service
+	list                  walletlisting.Service
+	add                   walletadding.Service
 	sharedRobotPrivateKey []byte
 }
 
 //NewInternalServerHandler create a new GRPC server handler
-func NewInternalServerHandler(repo listing.Repository, addRepo adding.Repository, sharedRobotPrivateKey []byte) api.InternalServer {
+func NewInternalServerHandler(repo walletlisting.Repository, addRepo walletadding.Repository, sharedRobotPrivateKey []byte) api.InternalServer {
 	return internalSrvHandler{
-		list:                  listing.NewService(repo),
-		add:                   adding.NewService(addRepo, validating.NewService()),
+		list:                  walletlisting.NewService(repo),
+		add:                   walletadding.NewService(addRepo, validating.NewService()),
 		sharedRobotPrivateKey: sharedRobotPrivateKey,
 	}
 }

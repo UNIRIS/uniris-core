@@ -1,4 +1,4 @@
-package adding
+package walletadding
 
 import (
 	"github.com/uniris/uniris-core/datamining/pkg"

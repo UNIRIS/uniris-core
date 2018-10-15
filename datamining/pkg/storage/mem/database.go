@@ -2,14 +2,14 @@ package mem
 
 import (
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
-	"github.com/uniris/uniris-core/datamining/pkg/adding"
-	"github.com/uniris/uniris-core/datamining/pkg/listing"
+	"github.com/uniris/uniris-core/datamining/pkg/walletAdding"
+	"github.com/uniris/uniris-core/datamining/pkg/walletListing"
 )
 
 //Database represents a database
 type Database interface {
-	adding.Repository
-	listing.Repository
+	walletadding.Repository
+	walletlisting.Repository
 }
 
 type db struct {

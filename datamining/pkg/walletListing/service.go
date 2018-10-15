@@ -1,4 +1,4 @@
-package listing
+package walletlisting
 
 import (
 	"github.com/uniris/uniris-core/datamining/pkg"

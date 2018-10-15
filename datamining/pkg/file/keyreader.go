@@ -24,12 +24,12 @@ func NewReader() (r Reader, err error) {
 
 //SharedRobotPrivateKey return the shared privatekey between robot
 func (r Reader) SharedRobotPrivateKey() ([]byte, error) {
-	biodPvKey, err := ioutil.ReadFile(path.Join(r.keysDir, "sharedRobot.key"))
+	robotPvKey, err := ioutil.ReadFile(path.Join(r.keysDir, "sharedRobot.key"))
 	if err != nil {
 		return nil, err
 	}
 
-	b, err := hex.DecodeString(string(biodPvKey))
+	b, err := hex.DecodeString(string(robotPvKey))
 	if err != nil {
 		return nil, err
 	}
@@ -39,12 +39,12 @@ func (r Reader) SharedRobotPrivateKey() ([]byte, error) {
 
 //SharedRobotPublicKey returns the shared publickey between robot
 func (r Reader) SharedRobotPublicKey() ([]byte, error) {
-	biodPub, err := ioutil.ReadFile(path.Join(r.keysDir, "sharedRobot.pub"))
+	robotPub, err := ioutil.ReadFile(path.Join(r.keysDir, "sharedRobot.pub"))
 	if err != nil {
 		return nil, err
 	}
 
-	b, err := hex.DecodeString(string(biodPub))
+	b, err := hex.DecodeString(string(robotPub))
 	if err != nil {
 		return nil, err
 	}
@@ -54,12 +54,12 @@ func (r Reader) SharedRobotPublicKey() ([]byte, error) {
 
 //SharedBiodPublicKey returns the shared publickey between Biometric device
 func (r Reader) SharedBiodPublicKey() ([]byte, error) {
-	robotPub, err := ioutil.ReadFile(path.Join(r.keysDir, "sharedBiod.pub"))
+	biodPub, err := ioutil.ReadFile(path.Join(r.keysDir, "sharedBiod.pub"))
 	if err != nil {
 		return nil, err
 	}
 
-	b, err := hex.DecodeString(string(robotPub))
+	b, err := hex.DecodeString(string(biodPub))
 	if err != nil {
 		return nil, err
 	}
