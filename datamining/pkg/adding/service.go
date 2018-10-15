@@ -7,8 +7,8 @@ import (
 
 //Repository defines methods to add data into the database
 type Repository interface {
-	AddWallet(w datamining.Wallet) error
-	AddBioWallet(bw datamining.BioWallet) error
+	StoreWallet(w datamining.Wallet) error
+	StoreBioWallet(bw datamining.BioWallet) error
 }
 
 //Service is the interface that provide methods for wallets transactions on robot side
@@ -41,7 +41,7 @@ func (s service) AddWallet(data datamining.WalletData) error {
 	e := datamining.NewEndorsement(t, th, mv, rv)
 	w := datamining.NewWallet(data, e, oth)
 
-	if err := s.repo.AddWallet(w); err != nil {
+	if err := s.repo.StoreWallet(w); err != nil {
 		return err
 	}
 
@@ -61,7 +61,7 @@ func (s service) AddBioWallet(data datamining.BioData) error {
 	e := datamining.NewEndorsement(t, th, mv, rv)
 	w := datamining.NewBioWallet(data, e)
 
-	if err := s.repo.AddBioWallet(w); err != nil {
+	if err := s.repo.StoreBioWallet(w); err != nil {
 		return err
 	}
 

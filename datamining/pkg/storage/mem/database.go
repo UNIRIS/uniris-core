@@ -43,13 +43,13 @@ func (d *db) FindWallet(addr datamining.WalletAddr) (b datamining.Wallet, err er
 }
 
 //AddWallet add a wallet line to the database
-func (d *db) AddWallet(w datamining.Wallet) error {
+func (d *db) StoreWallet(w datamining.Wallet) error {
 	d.wallets = append(d.wallets, w)
 	return nil
 }
 
 //AddBioWallet add a biowallet line to the database
-func (d *db) AddBioWallet(bw datamining.BioWallet) error {
+func (d *db) StoreBioWallet(bw datamining.BioWallet) error {
 	d.bioWallets = append(d.bioWallets, bw)
 	return nil
 }

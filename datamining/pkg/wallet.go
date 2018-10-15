@@ -1,7 +1,6 @@
 package datamining
 
 import (
-	"hash"
 	"time"
 )
 
@@ -9,7 +8,7 @@ import (
 type BioHash []byte
 
 //Hash define
-type Hash hash.Hash64
+type Hash []byte
 
 //Timestamp describe timestamp
 type Timestamp time.Time
