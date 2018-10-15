@@ -19,7 +19,7 @@ func TestGetAccount(t *testing.T) {
 		sharedBioPub: []byte("my key"),
 	}
 
-	res, err := s.GetAccount([]byte("encrypted person pub key"), []byte("sig"))
+	res, err := s.GetAccount("encrypted person pub key", "sig")
 	assert.Nil(t, err)
 	assert.Equal(t, "encrypted_aes_key", res.EncryptedAESKey)
 	assert.Equal(t, "encrypted_wallet", res.EncryptedWallet)
@@ -39,7 +39,7 @@ func TestGetAccountInvalidSig(t *testing.T) {
 		sharedBioPub: []byte("my key"),
 	}
 
-	_, err := s.GetAccount([]byte("encrypted person pub key"), []byte("sig"))
+	_, err := s.GetAccount("encrypted person pub key", "sig")
 	assert.Equal(t, err, ErrInvalidSignature)
 }
 

@@ -34,7 +34,14 @@ func NewService(sharedBioPub []byte, cli RobotClient, val RequestValidator) Serv
 func (s service) AddAccount(req EnrollmentRequest) (EnrollmentResult, error) {
 	var res EnrollmentResult
 
-	valid, err := s.val.CheckSignature(req, s.sharedBioPub, []byte(req.SignatureRequest))
+	verifReq := EnrollmentVerifyRequest{
+		EncryptedBioData:    req.EncryptedBioData,
+		EncryptedWalletData: req.EncryptedWalletData,
+		SignaturesBio:       req.SignaturesBio,
+		SignaturesWallet:    req.SignaturesWallet,
+	}
+
+	valid, err := s.val.CheckSignature(verifReq, s.sharedBioPub, []byte(req.SignatureRequest))
 	if err != nil {
 		return res, err
 	}

@@ -7,6 +7,11 @@ type AccountResult struct {
 	EncryptedAddrPerson string `json:"encrypted_addr_person"`
 }
 
+//AccountVerifyRequest defines the account form to verify
+type AccountVerifyRequest struct {
+	EncryptedHash string `json:"encrypted_hash"`
+}
+
 //AccountRequest represents the data will be send to the robot
 type AccountRequest struct {
 	EncryptedHash    []byte

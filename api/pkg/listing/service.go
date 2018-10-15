@@ -17,7 +17,7 @@ type RequestValidator interface {
 
 //Service define methods for the listing feature
 type Service interface {
-	GetAccount(encryptedHash []byte, sig []byte) (AccountResult, error)
+	GetAccount(encryptedHash string, sig string) (AccountResult, error)
 }
 
 type service struct {
@@ -35,21 +35,23 @@ func NewService(sharedBioPub []byte, client RobotClient, val RequestValidator) S
 	}
 }
 
-func (s service) GetAccount(encryptedHash []byte, sig []byte) (AccountResult, error) {
+func (s service) GetAccount(encryptedHash string, sig string) (AccountResult, error) {
 	var res AccountResult
 
-	req := AccountRequest{
-		EncryptedHash:    encryptedHash,
-		SignatureRequest: sig,
-	}
+	verifReq := AccountVerifyRequest{EncryptedHash: encryptedHash}
 
-	valid, err := s.val.CheckSignature(req, s.sharedBioPub, sig)
+	valid, err := s.val.CheckSignature(verifReq, s.sharedBioPub, []byte(sig))
 	if err != nil {
 		return res, err
 	}
 
 	if !valid {
 		return res, ErrInvalidSignature
+	}
+
+	req := AccountRequest{
+		EncryptedHash:    []byte(encryptedHash),
+		SignatureRequest: []byte(sig),
 	}
 
 	return s.client.GetAccount(req)

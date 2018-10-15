@@ -48,7 +48,7 @@ func getAccount(l listing.Service) func(c *gin.Context) {
 		hash := c.Param("hash")
 		sig := c.Query("signature")
 
-		acc, err := l.GetAccount([]byte(hash), []byte(sig))
+		acc, err := l.GetAccount(hash, sig)
 		if err != nil {
 			if err == listing.ErrInvalidSignature {
 				c.JSON(http.StatusBadRequest, err)
