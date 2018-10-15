@@ -3,11 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"path/filepath"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
+	"github.com/uniris/uniris-core/api/pkg/adding"
 	"github.com/uniris/uniris-core/api/pkg/crypto"
 	"github.com/uniris/uniris-core/api/pkg/listing"
 	"github.com/uniris/uniris-core/api/pkg/mock"
@@ -19,36 +19,23 @@ func main() {
 	port := flag.Int("port", 8080, "API port")
 	flag.Parse()
 
-	r := mux.NewRouter()
+	r := gin.Default()
 
-	loadSwagger(r)
-	loadAPI(r)
-
-	log.Printf("Server running on port %d", *port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), r))
-}
-
-func loadSwagger(r *mux.Router) {
 	staticDir, _ := filepath.Abs("../../web/static")
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
+	r.StaticFS("/static/", http.Dir(staticDir))
 
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		rootPage, _ := filepath.Abs("../../web/index.html")
-		http.ServeFile(w, r, rootPage)
-	})
+	rootPage, _ := filepath.Abs("../../web/index.html")
+	r.StaticFile("/", rootPage)
+	swaggerFile, _ := filepath.Abs("../../api/swagger-spec/swagger.yaml")
+	r.StaticFile("/swagger.yaml", swaggerFile)
 
-	r.HandleFunc("/swagger.yaml", func(w http.ResponseWriter, r *http.Request) {
-		swaggerFile, _ := filepath.Abs("../../api/swagger-spec/swagger.yaml")
-		http.ServeFile(w, r, swaggerFile)
-	})
-}
-
-func loadAPI(r *mux.Router) {
 	sharedBioPrivKey := []byte("")
 	client := mock.NewClient()
 	validator := new(crypto.RequestValidator)
 	lister := listing.NewService(sharedBioPrivKey, client, validator)
+	adder := adding.NewService(sharedBioPrivKey, client, validator)
 
-	apiR := rest.Handler(lister)
-	r.Handle("/api", apiR)
+	rest.Handler(r, lister, adder)
+
+	r.Run(fmt.Sprintf(":%d", *port))
 }

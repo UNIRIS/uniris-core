@@ -21,7 +21,31 @@ tags:
     description: Manage and query accounts
 
 paths:
-    /account/:hash:
+  /account:
+    post:
+      tags:
+        - Account
+      summary: Enroll a new user
+      description: Creates a new wallet
+      operationId: enroll
+      parameters:
+        - name: enrollment
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/EnrollmentRequest"
+          description: Enrollment request
+      responses:
+        "201":  
+          description: Enrollment response
+          schema:
+            $ref: "#/definitions/EnrollmentResult"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/Error"
+          
+  /account/{hash}:
       get:
         tags:
         - Account
@@ -47,11 +71,9 @@ paths:
             schema:
               $ref: "#/definitions/AccountDetails"
           default:
-            description: Unexpected error
+            description: Error
             schema:
               $ref: "#/definitions/Error"
-
-
 
 definitions:
   Error:
@@ -65,11 +87,60 @@ definitions:
     required:
       - encrypted_wallet
       - encrypted_aes_key
-      - "@wallet_encrypted_person"
+      - encrypted_addr_person
     properties:
       encrypted_wallet:
+        description: Wallet details encrypted
         type: string
       encrypted_aes_key:
+        description: Encrypted key which encrypt the wallet
         type: string
-      "@wallet_encrypted_person":
+      encrypted_addr_person:
+        description: Encryted address with person key
+        type: string
+  EnrollmentRequest:
+    required:
+      - encrypted_bio_data
+      - encrypted_wal_data
+      - signatures_bio
+      - signatures_wal
+      - signature_request
+    properties:
+      encrypted_bio_data:
+        description: Biometric encrypted information about the wallet generation
+        type: string
+      encrypted_wal_data:
+        descrpition: Encrypted data wallet
+        type: string
+      signatures_bio:
+        description: Biometric information signatures
+        $ref: "#/definitions/Signatures"
+      signatures_wal:
+        description: Wallet information signatures
+        $ref: "#/definitions/Signatures"
+      signature_request:
+        description: Request signature
+        type: string
+  EnrollmentResult:
+    required:
+      - hash
+      - signature_request
+    properties:
+      hash:
+        type: string
+        description: Hash of the udpate wallet
+      signature_request:
+        description: Request signature
+        type: string
+
+  Signatures:
+    required:
+      - biod_sig
+      - person_sig
+    properties:
+      biod_sig:
+        description: Signature performed by the biometric device
+        type: string
+      person_sig:
+        description: Signature performed by the enduser
         type: string
