@@ -1,0 +1,146 @@
+swagger: "2.0"
+
+basePath: /api
+
+info:
+  description: |
+    This is the endpoints provided by the robot UNIRIS.
+    This API is documented in **OpenAPI format**
+    You can find out more about the robot code here [http://github.com/uniris/uniris-core](http://github.com/uniris/uniris-core)
+  version: 1.0
+  title: UNIRIS API
+  contact:
+    name: UNIRIS Support
+    email: dev@uniris.io
+
+produces:
+  - application/json
+
+tags:
+  - name: Account
+    description: Manage and query accounts
+
+paths:
+  /account:
+    post:
+      tags:
+        - Account
+      summary: Enroll a new user
+      description: Creates a new wallet
+      operationId: enroll
+      parameters:
+        - name: enrollment
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/EnrollmentRequest"
+          description: Enrollment request
+      responses:
+        "201":  
+          description: Enrollment response
+          schema:
+            $ref: "#/definitions/EnrollmentResult"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/Error"
+          
+  /account/{hash}:
+      get:
+        tags:
+        - Account
+        summary: Get account's details
+        description: |
+          Retrieve account details by requested the data service of the UNIRIS robot.
+          All the data are encrypted and need to be decrypted by the client.
+        operationId: getAccount
+        parameters:
+          - name: hash
+            in: path
+            required: true
+            type: string
+            description: Encrypted hash of the person's public key
+          - name: signature
+            in: query
+            required: true
+            type: string
+            description: Signature of the encrypted hash by the shared private key of client devices
+        responses:
+          "200":
+            description: Encrypted account details
+            schema:
+              $ref: "#/definitions/AccountDetails"
+          default:
+            description: Error
+            schema:
+              $ref: "#/definitions/Error"
+
+definitions:
+  Error:
+    type: object
+    required:
+      - message
+    properties:
+      message:
+        type: string
+  AccountDetails:
+    required:
+      - encrypted_wallet
+      - encrypted_aes_key
+      - encrypted_addr_person
+    properties:
+      encrypted_wallet:
+        description: Wallet details encrypted
+        type: string
+      encrypted_aes_key:
+        description: Encrypted key which encrypt the wallet
+        type: string
+      encrypted_addr_person:
+        description: Encryted address with person key
+        type: string
+  EnrollmentRequest:
+    required:
+      - encrypted_bio_data
+      - encrypted_wal_data
+      - signatures_bio
+      - signatures_wal
+      - signature_request
+    properties:
+      encrypted_bio_data:
+        description: Biometric encrypted information about the wallet generation
+        type: string
+      encrypted_wal_data:
+        descrpition: Encrypted data wallet
+        type: string
+      signatures_bio:
+        description: Biometric information signatures
+        $ref: "#/definitions/Signatures"
+      signatures_wal:
+        description: Wallet information signatures
+        $ref: "#/definitions/Signatures"
+      signature_request:
+        description: Request signature
+        type: string
+  EnrollmentResult:
+    required:
+      - hash
+      - signature_request
+    properties:
+      hash:
+        type: string
+        description: Hash of the udpate wallet
+      signature_request:
+        description: Request signature
+        type: string
+
+  Signatures:
+    required:
+      - biod_sig
+      - person_sig
+    properties:
+      biod_sig:
+        description: Signature performed by the biometric device
+        type: string
+      person_sig:
+        description: Signature performed by the enduser
+        type: string
