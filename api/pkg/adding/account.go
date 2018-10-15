@@ -21,7 +21,6 @@ type EnrollmentVerifyRequest struct {
 	EncryptedWalletData string     `json:"encrypted_wal_data"`
 	SignaturesBio       Signatures `json:"signatures_bio"`
 	SignaturesWallet    Signatures `json:"signatures_wal"`
-	SignatureRequest    string     `json:"signature_request"`
 }
 
 //Signatures represents a set of signatures for the sent data
