@@ -11,7 +11,7 @@ info:
   title: UNIRIS API
   contact:
     name: UNIRIS Support
-    email: contact@uniris.io
+    email: dev@uniris.io
 
 produces:
   - application/json
@@ -64,7 +64,7 @@ paths:
             in: query
             required: true
             type: string
-            description: Signature of the encrypted hash by the shared biometric private key
+            description: Signature of the encrypted hash by the shared private key of client devices
         responses:
           "200":
             description: Encrypted account details
