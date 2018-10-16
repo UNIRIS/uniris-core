@@ -1,6 +1,11 @@
 package datamining
 
-import "time"
+type ValidationStatus int
+
+const (
+	ValidationOK ValidationStatus = iota
+	ValidationKO ValidationStatus = 1
+)
 
 //Endorsement represents a validation
 type Endorsement struct {
@@ -20,52 +25,85 @@ func NewEndorsement(t Timestamp, h Hash, masterV MasterValidation, valids []Vali
 	}
 }
 
+func (e Endorsement) Timestamp() Timestamp {
+	return e.timeStamp
+}
+
+func (e Endorsement) TransactionHash() Hash {
+	return e.txnHash
+}
+
+func (e Endorsement) MasterValidation() MasterValidation {
+	return e.masterValidation
+}
+
+func (e Endorsement) Validations() []Validation {
+	return e.validations
+}
+
 //MasterValidation describe a validation of an elected master robot
 type MasterValidation struct {
-	lastTxnv []PublicKey
-	pow      PublicKey
-	rbv      Validation
+	lastTxRvk   []PublicKey
+	powRobotKey PublicKey
+	powValid    Validation
 }
 
-//LastTxnv ...
-func (m MasterValidation) LastTxnv() []PublicKey {
-	return m.lastTxnv
+func NewMasterValidation(lastTxRvk []PublicKey, powRobotKey PublicKey, powValid Validation) MasterValidation {
+	return MasterValidation{lastTxRvk, powRobotKey, powValid}
 }
 
-//Pow ...
-func (m MasterValidation) Pow() PublicKey {
-	return m.pow
+//ValidatorKeysOfLastTransaction returns the list of public keys which validate the last transaction
+func (m MasterValidation) ValidatorKeysOfLastTransaction() []PublicKey {
+	return m.lastTxRvk
 }
 
-//Rbv ...
-func (m MasterValidation) Rbv() Validation {
-	return m.rbv
+//ProofOfWorkRobotKey returns the public key of the robot which perform the PoW
+func (m MasterValidation) ProofOfWorkRobotKey() PublicKey {
+	return m.powRobotKey
+}
+
+//ProofOfWorkValidation returns the transaction proceed after the proof of work
+func (m MasterValidation) ProofOfWorkValidation() Validation {
+	return m.powValid
 }
 
 //Validation describe a validation of a robot
 type Validation struct {
-	status    string
-	timestamp time.Time
+	status    ValidationStatus
+	timestamp Timestamp
 	pubk      PublicKey
 	sig       DERSignature
 }
 
+//NewValidation creates a new validation
+func NewValidation(status ValidationStatus, t Timestamp, pubKey PublicKey) Validation {
+	return Validation{
+		status:    status,
+		timestamp: t,
+		pubk:      pubKey,
+	}
+}
+
+func (v *Validation) AddSignature(sig DERSignature) {
+	v.sig = sig
+}
+
 //Status ..
-func (m Validation) Status() string {
-	return m.status
+func (v Validation) Status() ValidationStatus {
+	return v.status
 }
 
 //Timestamp ...
-func (m Validation) Timestamp() time.Time {
-	return m.timestamp
+func (v Validation) Timestamp() Timestamp {
+	return v.timestamp
 }
 
 //Pubk ...
-func (m Validation) Pubk() PublicKey {
-	return m.pubk
+func (v Validation) Pubk() PublicKey {
+	return v.pubk
 }
 
 //Sig ...
-func (m Validation) Sig() DERSignature {
-	return m.sig
+func (v Validation) Sig() DERSignature {
+	return v.sig
 }

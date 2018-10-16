@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/hex"
+	"encoding/json"
 
 	"testing"
 
@@ -44,12 +45,21 @@ func TestVerify(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	puKey, _ := x509.MarshalPKIXPublicKey(key.Public())
-	encData := []byte("uxazexc")
-	sig, _ := Sign([]byte(hex.EncodeToString(pvKey)), encData)
-	err := Verify(
+	encData := fakeData{Message: "hello"}
+
+	b, _ := json.Marshal(encData)
+
+	s := NewSigner()
+	sig, _ := Sign([]byte(hex.EncodeToString(pvKey)), b)
+
+	err := s.CheckSignature(
 		[]byte(hex.EncodeToString(puKey)),
+		encData,
 		sig,
-		Hash(encData),
 	)
 	assert.Nil(t, err)
+}
+
+type fakeData struct {
+	Message string
 }

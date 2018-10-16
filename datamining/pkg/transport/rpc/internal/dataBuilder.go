@@ -1,8 +1,6 @@
 package internalrpc
 
 import (
-	"encoding/json"
-
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg"
 )
@@ -14,34 +12,6 @@ func BuildWalletResult(w datamining.Wallet, bioW datamining.BioWallet) *api.Wall
 		EncryptedWallet:        w.CipherWallet(),
 		EncryptedWalletAddress: w.WalletAddr(),
 	}
-}
-
-//DecodeBioData parse the bio JSON and verify its validity by checking the signatures
-func DecodeBioData(bioDataRaw []byte, sig *api.Signature) (bio BioDataFromJSON, err error) {
-	err = json.Unmarshal(bioDataRaw, &bio)
-	if err != nil {
-		return
-	}
-
-	if err = VerifyBioSignatures(bio, sig); err != nil {
-		return
-	}
-
-	return
-}
-
-//DecodeWalletData parse the wallet JSON and verify its validity by checking the signatures
-func DecodeWalletData(walDataRaw []byte, sig *api.Signature) (wal WalletDataFromJSON, err error) {
-	err = json.Unmarshal(walDataRaw, &wal)
-	if err != nil {
-		return
-	}
-
-	if err = VerifyWalSignatures(wal, sig); err != nil {
-		return
-	}
-
-	return
 }
 
 //BuildBioData transform json bio data into bio data

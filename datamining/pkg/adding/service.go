@@ -28,18 +28,25 @@ func NewService(repo Repository, valid validating.Service) Service {
 }
 
 func (s service) AddWallet(data datamining.WalletData) error {
-	t, oth, th, mv, err := s.valid.EndorseWalletAsMaster(data)
+	walEndor, oldTxHash, err := s.valid.EndorseWalletAsMaster(data)
 	if err != nil {
 		return err
 	}
 
-	rv, err := s.valid.EndorseWallet(data)
+	peerValidators := make([]validating.Peer, 0)
+	//TODO: retrieve the peers validators
+
+	validations, err := s.valid.AskWalletValidations(peerValidators, data)
 	if err != nil {
 		return err
 	}
 
-	e := datamining.NewEndorsement(t, th, mv, rv)
-	w := datamining.NewWallet(data, e, oth)
+	e := datamining.NewEndorsement(walEndor.Timestamp(),
+		walEndor.TransactionHash(),
+		walEndor.MasterValidation(),
+		validations)
+
+	w := datamining.NewWallet(data, e, oldTxHash)
 
 	if err := s.repo.StoreWallet(w); err != nil {
 		return err
@@ -49,18 +56,25 @@ func (s service) AddWallet(data datamining.WalletData) error {
 }
 
 func (s service) AddBioWallet(data datamining.BioData) error {
-	t, th, mv, err := s.valid.EndorseBioWalletAsMaster(data)
-	if err != nil {
-		return err
-	}
-	rv, err := s.valid.EndorseBioWallet(data)
+	masterEndors, err := s.valid.EndorseBioWalletAsMaster(data)
 	if err != nil {
 		return err
 	}
 
-	e := datamining.NewEndorsement(t, th, mv, rv)
+	peerValidators := make([]validating.Peer, 0)
+	//TODO: retrieve the peers validators
+
+	validations, err := s.valid.AskBioWalletValidations(peerValidators, data)
+	if err != nil {
+		return err
+	}
+
+	e := datamining.NewEndorsement(masterEndors.Timestamp(),
+		masterEndors.TransactionHash(),
+		masterEndors.MasterValidation(),
+		validations)
+
 	w := datamining.NewBioWallet(data, e)
-
 	if err := s.repo.StoreBioWallet(w); err != nil {
 		return err
 	}

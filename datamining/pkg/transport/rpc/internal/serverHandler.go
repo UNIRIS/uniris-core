@@ -1,8 +1,9 @@
 package internalrpc
 
 import (
+	"encoding/json"
+
 	"github.com/uniris/uniris-core/datamining/pkg/crypto"
-	"github.com/uniris/uniris-core/datamining/pkg/validating"
 	"golang.org/x/net/context"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
@@ -17,10 +18,10 @@ type internalSrvHandler struct {
 }
 
 //NewInternalServerHandler create a new GRPC server handler
-func NewInternalServerHandler(repo listing.Repository, addRepo adding.Repository, sharedRobotPrivateKey []byte) api.InternalServer {
+func NewInternalServerHandler(list listing.Service, add adding.Service, sharedRobotPublicKey []byte, sharedRobotPrivateKey []byte) api.InternalServer {
 	return internalSrvHandler{
-		list:                  listing.NewService(repo),
-		add:                   adding.NewService(addRepo, validating.NewService()),
+		list:                  list,
+		add:                   add,
 		sharedRobotPrivateKey: sharedRobotPrivateKey,
 	}
 }
@@ -46,30 +47,50 @@ func (s internalSrvHandler) GetWallet(ctx context.Context, req *api.WalletReques
 
 //StoreWallet implements the protobuf StoreWallet request handler
 func (s internalSrvHandler) StoreWallet(ctx context.Context, req *api.Wallet) (*api.StorageResult, error) {
-	bioRawData, walletRawData, err := DecryptWallet(req, s.sharedRobotPrivateKey)
+	bioRawData, err := crypto.Decrypt(s.sharedRobotPrivateKey, req.EncryptedBioData)
+	if err != nil {
+		return nil, err
+	}
+	walletRawData, err := crypto.Decrypt(s.sharedRobotPrivateKey, req.EncryptedWalletData)
 	if err != nil {
 		return nil, err
 	}
 
-	jsonBio, err := DecodeBioData(bioRawData, req.SignatureBioData)
+	var bio BioDataFromJSON
+	err = json.Unmarshal(bioRawData, &bio)
 	if err != nil {
 		return nil, err
 	}
 
-	jsonWal, err := DecodeWalletData(walletRawData, req.SignatureWalletData)
+	var wal WalletDataFromJSON
+	err = json.Unmarshal(walletRawData, &wal)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.add.AddWallet(BuildWalletData(jsonWal, req.SignatureWalletData)); err != nil {
+	if err := s.add.AddWallet(BuildWalletData(wal, req.SignatureWalletData)); err != nil {
 		return nil, err
 	}
 
-	if err := s.add.AddBioWallet(BuildBioData(jsonBio, req.SignatureBioData)); err != nil {
+	if err := s.add.AddBioWallet(BuildBioData(bio, req.SignatureBioData)); err != nil {
 		return nil, err
 	}
 
-	//TODO: calculate the updated hash wallet
+	addr, err := crypto.Decrypt(s.sharedRobotPrivateKey, []byte(bio.EncryptedAddrRobot))
+	if err != nil {
+		return nil, err
+	}
 
-	return &api.StorageResult{}, nil
+	w, err := s.list.GetWallet(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	bWallet, err := json.Marshal(w)
+	if err != nil {
+		return nil, err
+	}
+	return &api.StorageResult{
+		HashUpdatedWallet: crypto.Hash(bWallet),
+	}, nil
 }

@@ -11,6 +11,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uniris/uniris-core/datamining/pkg/adding"
+	"github.com/uniris/uniris-core/datamining/pkg/validating"
+
+	"github.com/uniris/uniris-core/datamining/pkg/listing"
+
 	"github.com/stretchr/testify/assert"
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
@@ -46,7 +51,11 @@ func TestGetWallet(t *testing.T) {
 	)
 	repo.StoreBioWallet(datamining.NewBioWallet(data, endors))
 
-	h := NewInternalServerHandler(repo, repo, []byte(hex.EncodeToString(pvKey)))
+	list := listing.NewService(repo)
+	valid := validating.NewService(mockSigner{}, mockValiationRequester{})
+	adding := adding.NewService(repo, valid)
+
+	h := NewInternalServerHandler(list, adding, []byte(hex.EncodeToString(pbKey)), []byte(hex.EncodeToString(pvKey)))
 	res, err := h.GetWallet(context.TODO(), &api.WalletRequest{
 		EncryptedHashPerson: []byte("hash"),
 	})
@@ -68,12 +77,18 @@ func TestStoreWallet(t *testing.T) {
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 
-	h := NewInternalServerHandler(repo, repo, []byte(hex.EncodeToString(pvKey)))
+	list := listing.NewService(repo)
+	valid := validating.NewService(mockSigner{}, mockValiationRequester{})
+	adding := adding.NewService(repo, valid)
+
+	h := NewInternalServerHandler(list, adding, []byte(hex.EncodeToString(pbKey)), []byte(hex.EncodeToString(pvKey)))
+
+	cipherAddr, _ := crypto.Encrypt([]byte(hex.EncodeToString(pbKey)), []byte("encrypted_addr_robot"))
 
 	bioData := BioDataFromJSON{
 		BiodPublicKey:       hex.EncodeToString(pbKey),
-		EncryptedAddrPerson: "encrypted_addr_person",
-		EncryptedAddrRobot:  "encrypted_addr_robot",
+		EncryptedAddrPerson: "encrypted_person_addr",
+		EncryptedAddrRobot:  string(cipherAddr),
 		EncryptedAESKey:     "encrypted_aes_key",
 		PersonHash:          "person_hash",
 		PersonPublicKey:     hex.EncodeToString(pbKey),
@@ -114,7 +129,7 @@ func TestStoreWallet(t *testing.T) {
 	assert.Len(t, repo.Wallets, 1)
 	assert.Len(t, repo.BioWallets, 1)
 
-	// TODO when mining: assert.NotNil(t, res.HashUpdatedWallet)
+	assert.NotNil(t, res.HashUpdatedWallet)
 }
 
 type databasemock struct {
@@ -123,9 +138,10 @@ type databasemock struct {
 }
 
 func (d *databasemock) FindBioWallet(bh datamining.BioHash) (b datamining.BioWallet, err error) {
-	for _, b := range d.BioWallets {
-		if string(b.Bhash()) == string(bh) {
-			return b, nil
+	for _, bw := range d.BioWallets {
+		if string(bw.Bhash()) == string(bh) {
+			b = bw
+			break
 		}
 	}
 	return
@@ -148,4 +164,20 @@ func (d *databasemock) StoreWallet(w datamining.Wallet) error {
 func (d *databasemock) StoreBioWallet(bw datamining.BioWallet) error {
 	d.BioWallets = append(d.BioWallets, bw)
 	return nil
+}
+
+type mockSigner struct{}
+
+func (mockSigner) CheckSignature(pubk []byte, data interface{}, der []byte) error {
+	return nil
+}
+
+type mockValiationRequester struct{}
+
+func (v mockValiationRequester) RequestWalletValidation(validating.Peer, datamining.WalletData) (datamining.Validation, error) {
+	return datamining.Validation{}, nil
+}
+
+func (v mockValiationRequester) RequestBioValidation(validating.Peer, datamining.BioData) (datamining.Validation, error) {
+	return datamining.Validation{}, nil
 }

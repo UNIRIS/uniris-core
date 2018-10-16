@@ -1,12 +1,6 @@
 package internalrpc
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
-	"encoding/hex"
-	"encoding/json"
 	"testing"
 
 	"github.com/uniris/uniris-core/datamining/api/protobuf-spec"
@@ -14,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uniris/uniris-core/datamining/pkg"
-	"github.com/uniris/uniris-core/datamining/pkg/crypto"
 )
 
 /*
@@ -41,98 +34,6 @@ func TestBuildWalletResult(t *testing.T) {
 	assert.Equal(t, "encrypted aes key", string(res.EncryptedAESkey))
 	assert.Equal(t, "encrypted wallet", string(res.EncryptedWallet))
 	assert.Equal(t, "encrypted wallet addr", string(res.EncryptedWalletAddress))
-}
-
-/*
-Scenario: Decode bio data
-	Given a encoded bio data
-	When I want to decode it
-	Then I unmarshal the bio JSON and verify its signatures
-*/
-func TestDecodeBioData(t *testing.T) {
-
-	biokey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	biokeypubKey, err := x509.MarshalPKIXPublicKey(biokey.Public())
-	biokeypvKey, _ := x509.MarshalECPrivateKey(biokey)
-
-	personkey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	personkeypubKey, _ := x509.MarshalPKIXPublicKey(personkey.Public())
-	personkeypvKey, _ := x509.MarshalECPrivateKey(personkey)
-
-	bioJSON := BioDataFromJSON{
-		BiodPublicKey:       hex.EncodeToString(biokeypubKey),
-		EncryptedAddrPerson: "encrypted addr",
-		EncryptedAddrRobot:  "encrypted addr",
-		EncryptedAESKey:     "encrypted aes key",
-		PersonHash:          "person hash",
-		PersonPublicKey:     hex.EncodeToString(personkeypubKey),
-	}
-
-	bioRaw, _ := json.Marshal(bioJSON)
-
-	sig, _ := crypto.Sign(
-		[]byte(hex.EncodeToString(biokeypvKey)),
-		bioRaw)
-
-	sig2, _ := crypto.Sign(
-		[]byte(hex.EncodeToString(personkeypvKey)),
-		bioRaw)
-
-	signatures := &api.Signature{
-		Biod:   sig,
-		Person: sig2,
-	}
-
-	decoded, err := DecodeBioData(bioRaw, signatures)
-	assert.Nil(t, err)
-
-	bDecoded, _ := json.Marshal(decoded)
-	assert.Equal(t, bioRaw, bDecoded)
-}
-
-/*
-Scenario: Decode wallet data
-	Given a encoded wallet data
-	When I want to decode it
-	Then I unmarshal the wallet JSON and verify its signatures
-*/
-func TestDecodeWalletData(t *testing.T) {
-
-	biokey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	biokeypubKey, err := x509.MarshalPKIXPublicKey(biokey.Public())
-	biokeypvKey, _ := x509.MarshalECPrivateKey(biokey)
-
-	personkey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	personkeypubKey, _ := x509.MarshalPKIXPublicKey(personkey.Public())
-	personkeypvKey, _ := x509.MarshalECPrivateKey(personkey)
-
-	walJSON := WalletDataFromJSON{
-		BiodPublicKey:      hex.EncodeToString(biokeypubKey),
-		EncryptedAddrRobot: "encrypted addr",
-		EncryptedWallet:    "encrypted wallet",
-		PersonPublicKey:    hex.EncodeToString(personkeypubKey),
-	}
-
-	walRaw, _ := json.Marshal(walJSON)
-
-	sig, _ := crypto.Sign(
-		[]byte(hex.EncodeToString(biokeypvKey)),
-		walRaw)
-
-	sig2, _ := crypto.Sign(
-		[]byte(hex.EncodeToString(personkeypvKey)),
-		walRaw)
-
-	signatures := &api.Signature{
-		Biod:   sig,
-		Person: sig2,
-	}
-
-	decoded, err := DecodeWalletData(walRaw, signatures)
-	assert.Nil(t, err)
-
-	wDecoded, _ := json.Marshal(decoded)
-	assert.Equal(t, walRaw, wDecoded)
 }
 
 /*

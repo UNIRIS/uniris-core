@@ -1,8 +1,9 @@
 package adding
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	validating "github.com/uniris/uniris-core/datamining/pkg/validating"
@@ -17,7 +18,7 @@ Scenario: Add Wallet
 func TestAddWallet(t *testing.T) {
 
 	db := new(databasemock)
-	v := validating.NewService()
+	v := validating.NewService(mockSigner{}, mockValiationRequester{})
 	s := NewService(db, v)
 
 	sigs := datamining.Signatures{
@@ -49,7 +50,7 @@ Scenario: Add BioWallet
 func TestAddBioWallet(t *testing.T) {
 
 	db := new(databasemock)
-	v := validating.NewService()
+	v := validating.NewService(mockSigner{}, mockValiationRequester{})
 	s := NewService(db, v)
 
 	sigs := datamining.Signatures{
@@ -104,4 +105,20 @@ func (d *databasemock) StoreWallet(w datamining.Wallet) error {
 func (d *databasemock) StoreBioWallet(bw datamining.BioWallet) error {
 	d.bioWallets = append(d.bioWallets, bw)
 	return nil
+}
+
+type mockSigner struct{}
+
+func (s mockSigner) CheckSignature(pubk []byte, data interface{}, der []byte) error {
+	return nil
+}
+
+type mockValiationRequester struct{}
+
+func (v mockValiationRequester) RequestWalletValidation(validating.Peer, datamining.WalletData) (datamining.Validation, error) {
+	return datamining.Validation{}, nil
+}
+
+func (v mockValiationRequester) RequestBioValidation(validating.Peer, datamining.BioData) (datamining.Validation, error) {
+	return datamining.Validation{}, nil
 }

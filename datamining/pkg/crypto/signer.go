@@ -6,19 +6,25 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/hex"
-	"errors"
+	"encoding/json"
 	"math/big"
-)
 
-//ErrBadSignature define a bad signature error
-var ErrBadSignature = errors.New("Error: Bad Signature")
+	"github.com/uniris/uniris-core/datamining/pkg/validating"
+)
 
 type ecdsaSignature struct {
 	R, S *big.Int
 }
 
+type signer struct{}
+
+//NewSigner creates a new signer
+func NewSigner() validating.Signer {
+	return signer{}
+}
+
 //Verify verify a signature and a data using a public key
-func Verify(pubk []byte, der []byte, hash []byte) error {
+func (s signer) CheckSignature(pubk []byte, data interface{}, der []byte) error {
 	var signature ecdsaSignature
 
 	decodedkey, err := hex.DecodeString(string(pubk))
@@ -39,11 +45,16 @@ func Verify(pubk []byte, der []byte, hash []byte) error {
 	ecdsaPublic := pu.(*ecdsa.PublicKey)
 	asn1.Unmarshal(decodedsig, &signature)
 
-	if ecdsa.Verify(ecdsaPublic, hash, signature.R, signature.S) {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	if ecdsa.Verify(ecdsaPublic, Hash(b), signature.R, signature.S) {
 		return nil
 	}
 
-	return ErrBadSignature
+	return validating.ErrInvalidSignature
 }
 
 //Sign data using a privatekey
