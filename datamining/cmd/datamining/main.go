@@ -53,7 +53,7 @@ func startInternalServer(port int, listService listing.Service, addService addin
 	}
 	grpcServer := grpc.NewServer()
 	api.RegisterInternalServer(grpcServer, internalrpc.NewInternalServerHandler(listService, addService, sharedRobotPrivateKey))
-	log.Printf("Server listening on 127.0.0.1:%d", port)
+	log.Printf("Internal grpc Server listening on 127.0.0.1:%d", port)
 	if err := grpcServer.Serve(lis); err != nil {
 		return err
 	}
