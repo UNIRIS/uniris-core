@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package api;
+
+service Internal {
+    rpc GetWallet (WalletRequest) returns (WalletResult) {}
+    rpc StoreWallet (Wallet) returns (StorageResult) {}
+}
+
+message WalletRequest {
+    bytes EncryptedHashPerson = 1;
+}
+
+message Wallet {
+    bytes EncryptedBioData = 1;
+    Signature SignatureBioData = 2;
+    bytes EncryptedWalletData = 3;
+    Signature SignatureWalletData = 4;
+}
+
+message StorageResult {
+    bytes HashUpdatedWallet = 1;
+}
+
+message WalletResult {
+    bytes EncryptedWallet = 1;
+    bytes EncryptedAESkey = 2;
+    bytes EncryptedWalletAddress =3;
+}
+
+message Signature {
+    bytes Biod = 1;
+    bytes Person = 2;
+}
