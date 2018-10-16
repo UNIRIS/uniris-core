@@ -1,20 +1,14 @@
 package internalrpc
 
 import (
-	"encoding/hex"
 	"encoding/json"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg"
 )
 
-//DataBuilder defines methods to transform API entities for the domain layer
-type DataBuilder struct {
-	decrypt Decrypter
-}
-
 //BuildWalletResult constitue details for the WalletResult rpc command
-func (b DataBuilder) BuildWalletResult(w datamining.Wallet, bioW datamining.BioWallet) *api.WalletResult {
+func BuildWalletResult(w datamining.Wallet, bioW datamining.BioWallet) *api.WalletResult {
 	return &api.WalletResult{
 		EncryptedAESkey:        bioW.CipherAESKey(),
 		EncryptedWallet:        w.CipherWallet(),
@@ -22,94 +16,81 @@ func (b DataBuilder) BuildWalletResult(w datamining.Wallet, bioW datamining.BioW
 	}
 }
 
-//BuildWallet constitue details for the StoreWallet rpc command
-func (b DataBuilder) BuildWallet(p *api.Wallet) (w datamining.WalletData, bw datamining.BioData, err error) {
-	bioData, err := b.decrypt.Decipher(p.EncryptedBioData)
-	if err != nil {
-		return
-	}
-	walletData, err := b.decrypt.Decipher(p.EncryptedWalletData)
+//DecodeBioData parse the bio JSON and verify its validity by checking the signatures
+func DecodeBioData(bioDataRaw []byte, sig *api.Signature) (bio BioDataFromJSON, err error) {
+	err = json.Unmarshal(bioDataRaw, &bio)
 	if err != nil {
 		return
 	}
 
-	bioDataB, err := hex.DecodeString(string(bioData))
-	if err != nil {
+	if err = VerifyBioSignatures(bio, sig); err != nil {
 		return
-	}
-
-	var bio BioDataFromJSON
-	err = json.Unmarshal(bioDataB, &bio)
-	if err != nil {
-		return
-	}
-
-	walletDataB, err := hex.DecodeString(string(walletData))
-	if err != nil {
-		return
-	}
-
-	var wallet WalletDataFromJSON
-	err = json.Unmarshal(walletDataB, &wallet)
-	if err != nil {
-		return
-	}
-
-	bioSig := Signatures{
-		Person: string(p.SignatureBioData.Person),
-		Biod:   string(p.SignatureBioData.Biod),
-	}
-
-	walletSig := Signatures{
-		Person: string(p.SignatureWalletData.Person),
-		Biod:   string(p.SignatureWalletData.Biod),
-	}
-
-	w = datamining.WalletData{
-		BiodPubk:        datamining.PublicKey(wallet.BiodPublicKey),
-		CipherAddrRobot: datamining.WalletAddr(wallet.EncryptedAddrRobot),
-		CipherWallet:    datamining.CipherWallet(wallet.EncryptedWallet),
-		EmPubk:          datamining.PublicKey(wallet.PersonPublicKey),
-		Sigs: datamining.Signatures{
-			BiodSig: []byte(walletSig.Biod),
-			EmSig:   []byte(walletSig.Person),
-		},
-	}
-
-	bw = datamining.BioData{
-		BHash:           datamining.BioHash(bio.PersonHash),
-		BiodPubk:        datamining.PublicKey(bio.BiodPublicKey),
-		CipherAddrBio:   datamining.WalletAddr(bio.EncryptedAddrPerson),
-		CipherAddrRobot: datamining.WalletAddr(bio.EncryptedAddrRobot),
-		CipherAESKey:    []byte(bio.EncryptedAESKey),
-		EmPubk:          datamining.PublicKey(bio.PersonPublicKey),
-		Sigs: datamining.Signatures{
-			BiodSig: []byte(bioSig.Biod),
-			EmSig:   []byte(bioSig.Person),
-		},
 	}
 
 	return
 }
 
+//DecodeWalletData parse the wallet JSON and verify its validity by checking the signatures
+func DecodeWalletData(walDataRaw []byte, sig *api.Signature) (wal WalletDataFromJSON, err error) {
+	err = json.Unmarshal(walDataRaw, &wal)
+	if err != nil {
+		return
+	}
+
+	if err = VerifyWalSignatures(wal, sig); err != nil {
+		return
+	}
+
+	return
+}
+
+//BuildBioData transform json bio data into bio data
+func BuildBioData(bioData BioDataFromJSON, sig *api.Signature) datamining.BioData {
+	return datamining.BioData{
+		BHash:           datamining.BioHash(bioData.PersonHash),
+		BiodPubk:        datamining.PublicKey(bioData.BiodPublicKey),
+		CipherAddrBio:   datamining.WalletAddr(bioData.EncryptedAddrPerson),
+		CipherAddrRobot: datamining.WalletAddr(bioData.EncryptedAddrRobot),
+		CipherAESKey:    []byte(bioData.EncryptedAESKey),
+		EmPubk:          datamining.PublicKey(bioData.PersonPublicKey),
+		Sigs: datamining.Signatures{
+			BiodSig: datamining.DERSignature(sig.Biod),
+			EmSig:   datamining.DERSignature(sig.Person),
+		},
+	}
+
+}
+
+//BuildWalletData transform json wallet data into wallet data
+func BuildWalletData(walletData WalletDataFromJSON, sig *api.Signature) datamining.WalletData {
+	return datamining.WalletData{
+		BiodPubk:        datamining.PublicKey(walletData.BiodPublicKey),
+		CipherAddrRobot: datamining.WalletAddr(walletData.EncryptedAddrRobot),
+		CipherWallet:    datamining.CipherWallet(walletData.EncryptedWallet),
+		EmPubk:          datamining.PublicKey(walletData.PersonPublicKey),
+		Sigs: datamining.Signatures{
+			BiodSig: datamining.DERSignature(sig.Biod),
+			EmSig:   datamining.DERSignature(sig.Person),
+		},
+	}
+}
+
 //WalletDataFromJSON represents wallet data JSON
 type WalletDataFromJSON struct {
-	PersonPublicKey    string     `json:"person_pubk"`
-	BiodPublicKey      string     `json:"biod_pubk"`
-	EncryptedWallet    string     `json:"encrypted_wallet"`
-	EncryptedAddrRobot string     `json:"encrypted_addr_robot"`
-	Sigs               Signatures `json:"signature_wallet"`
+	PersonPublicKey    string `json:"person_pubk"`
+	BiodPublicKey      string `json:"biod_pubk"`
+	EncryptedWallet    string `json:"encrypted_wallet"`
+	EncryptedAddrRobot string `json:"encrypted_addr_robot"`
 }
 
 //BioDataFromJSON represents bio data JSON
 type BioDataFromJSON struct {
-	PersonPublicKey     string     `json:"person_pubk"`
-	BiodPublicKey       string     `json:"biod_pubk"`
-	PersonHash          string     `json:"person_hash"`
-	EncryptedAESKey     string     `json:"encrypted_aes_key"`
-	EncryptedAddrPerson string     `json:"encrypted_addr_person"`
-	EncryptedAddrRobot  string     `json:"encrypted_addr_robot"`
-	Sigs                Signatures `json:"signature_bio"`
+	PersonPublicKey     string `json:"person_pubk"`
+	BiodPublicKey       string `json:"biod_pubk"`
+	PersonHash          string `json:"person_hash"`
+	EncryptedAESKey     string `json:"encrypted_aes_key"`
+	EncryptedAddrPerson string `json:"encrypted_addr_person"`
+	EncryptedAddrRobot  string `json:"encrypted_addr_robot"`
 }
 
 //Signatures represents signatures JSON

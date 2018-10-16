@@ -9,12 +9,8 @@ import (
 	"github.com/uniris/ecies/pkg"
 )
 
-//Encrypter define encryption methods
-type Encrypter struct {
-}
-
 //Encrypt encrypt data using a public key
-func (e Encrypter) Encrypt(pubk []byte, data []byte) ([]byte, error) {
+func Encrypt(pubk []byte, data []byte) ([]byte, error) {
 	decodeKey, err := hex.DecodeString(string(pubk))
 	if err != nil {
 		return nil, err
@@ -34,18 +30,18 @@ func (e Encrypter) Encrypt(pubk []byte, data []byte) ([]byte, error) {
 }
 
 //Decrypt decrypt data using a private key
-func (e Encrypter) Decrypt(privk []byte, edata []byte) ([]byte, error) {
-	decodeCipher, err := hex.DecodeString(string(edata))
-	if err != nil {
-		return nil, err
-	}
-
+func Decrypt(privk []byte, edata []byte) ([]byte, error) {
 	decodeKey, err := hex.DecodeString(string(privk))
 	if err != nil {
 		return nil, err
 	}
 
 	robotKey, err := x509.ParseECPrivateKey(decodeKey)
+	if err != nil {
+		return nil, err
+	}
+
+	decodeCipher, err := hex.DecodeString(string(edata))
 	if err != nil {
 		return nil, err
 	}

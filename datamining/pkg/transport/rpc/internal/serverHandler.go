@@ -1,6 +1,7 @@
 package internalrpc
 
 import (
+	"github.com/uniris/uniris-core/datamining/pkg/crypto"
 	"github.com/uniris/uniris-core/datamining/pkg/validating"
 	"golang.org/x/net/context"
 
@@ -26,15 +27,12 @@ func NewInternalServerHandler(repo listing.Repository, addRepo adding.Repository
 
 //GetWallet implements the protobuf GetWallet request handler
 func (s internalSrvHandler) GetWallet(ctx context.Context, req *api.WalletRequest) (*api.WalletResult, error) {
-	decrypter := NewDecrypter(s.sharedRobotPrivateKey)
-	b := DataBuilder{decrypter}
-
 	bioWallet, err := s.list.GetBioWallet(req.EncryptedHashPerson)
 	if err != nil {
 		return nil, err
 	}
 
-	clearaddr, err := decrypter.Decipher(bioWallet.CipherAddrRobot())
+	clearaddr, err := crypto.Decrypt(s.sharedRobotPrivateKey, bioWallet.CipherAddrRobot())
 	if err != nil {
 		return nil, err
 	}
@@ -43,24 +41,31 @@ func (s internalSrvHandler) GetWallet(ctx context.Context, req *api.WalletReques
 		return nil, err
 	}
 
-	return b.BuildWalletResult(wallet, bioWallet), nil
+	return BuildWalletResult(wallet, bioWallet), nil
 }
 
 //StoreWallet implements the protobuf StoreWallet request handler
 func (s internalSrvHandler) StoreWallet(ctx context.Context, req *api.Wallet) (*api.StorageResult, error) {
-	decrypter := NewDecrypter(s.sharedRobotPrivateKey)
-	b := DataBuilder{decrypter}
-
-	walletData, bioData, err := b.BuildWallet(req)
+	bioRawData, walletRawData, err := DecryptWallet(req, s.sharedRobotPrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.add.AddWallet(walletData); err != nil {
+	jsonBio, err := DecodeBioData(bioRawData, req.SignatureBioData)
+	if err != nil {
 		return nil, err
 	}
 
-	if err := s.add.AddBioWallet(bioData); err != nil {
+	jsonWal, err := DecodeWalletData(walletRawData, req.SignatureWalletData)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.add.AddWallet(BuildWalletData(jsonWal, req.SignatureWalletData)); err != nil {
+		return nil, err
+	}
+
+	if err := s.add.AddBioWallet(BuildBioData(jsonBio, req.SignatureBioData)); err != nil {
 		return nil, err
 	}
 

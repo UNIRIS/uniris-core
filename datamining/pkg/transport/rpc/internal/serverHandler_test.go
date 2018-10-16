@@ -1,6 +1,7 @@
 package internalrpc
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -10,13 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uniris/ecies/pkg"
-
-	"golang.org/x/net/context"
-
 	"github.com/stretchr/testify/assert"
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/crypto"
 )
 
 /*
@@ -33,14 +31,11 @@ func TestGetWallet(t *testing.T) {
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 
-	pu, err := x509.ParsePKIXPublicKey(pbKey)
-	robotEciesKey := ecies.ImportECDSAPublic(pu.(*ecdsa.PublicKey))
-
-	cipher, _ := ecies.Encrypt(rand.Reader, robotEciesKey, []byte("biohash"), nil, nil)
+	cipher, _ := crypto.Encrypt([]byte(hex.EncodeToString(pbKey)), []byte("biohash"))
 
 	data := datamining.BioData{
 		BHash:           []byte("hash"),
-		CipherAddrRobot: datamining.WalletAddr(hex.EncodeToString(cipher)),
+		CipherAddrRobot: datamining.WalletAddr(cipher),
 		CipherAESKey:    []byte("encrypted_aes_key"),
 	}
 	endors := datamining.NewEndorsement(
@@ -76,48 +71,39 @@ func TestStoreWallet(t *testing.T) {
 	h := NewInternalServerHandler(repo, repo, []byte(hex.EncodeToString(pvKey)))
 
 	bioData := BioDataFromJSON{
-		BiodPublicKey:       "pub key",
+		BiodPublicKey:       hex.EncodeToString(pbKey),
 		EncryptedAddrPerson: "encrypted_addr_person",
 		EncryptedAddrRobot:  "encrypted_addr_robot",
 		EncryptedAESKey:     "encrypted_aes_key",
 		PersonHash:          "person_hash",
-		PersonPublicKey:     "pub key",
-		Sigs: Signatures{
-			Biod:   "biod_sig",
-			Person: "biod_pers",
-		},
+		PersonPublicKey:     hex.EncodeToString(pbKey),
 	}
 
 	walletData := WalletDataFromJSON{
-		BiodPublicKey:      "pub key",
+		BiodPublicKey:      hex.EncodeToString(pbKey),
 		EncryptedAddrRobot: "encrypted_addr_robot",
 		EncryptedWallet:    "encrypted_wallet",
-		PersonPublicKey:    "pub key",
-		Sigs: Signatures{
-			Biod:   "biod_sig",
-			Person: "biod_pers",
-		},
+		PersonPublicKey:    hex.EncodeToString(pbKey),
 	}
 
-	pu, err := x509.ParsePKIXPublicKey(pbKey)
-	robotEciesKey := ecies.ImportECDSAPublic(pu.(*ecdsa.PublicKey))
-
 	bBData, _ := json.Marshal(bioData)
-	cipherBio, _ := ecies.Encrypt(rand.Reader, robotEciesKey, []byte(hex.EncodeToString(bBData)), nil, nil)
+	cipherBio, _ := crypto.Encrypt([]byte(hex.EncodeToString(pbKey)), bBData)
+	sigBio, _ := crypto.Sign([]byte(hex.EncodeToString(pvKey)), bBData)
 
 	bWData, _ := json.Marshal(walletData)
-	cipherWallet, _ := ecies.Encrypt(rand.Reader, robotEciesKey, []byte(hex.EncodeToString(bWData)), nil, nil)
+	cipherWallet, _ := crypto.Encrypt([]byte(hex.EncodeToString(pbKey)), bWData)
+	sigWal, _ := crypto.Sign([]byte(hex.EncodeToString(pvKey)), bWData)
 
 	req := &api.Wallet{
-		EncryptedBioData:    []byte(hex.EncodeToString(cipherBio)),
-		EncryptedWalletData: []byte(hex.EncodeToString(cipherWallet)),
+		EncryptedBioData:    cipherBio,
+		EncryptedWalletData: cipherWallet,
 		SignatureBioData: &api.Signature{
-			Biod:   []byte(bioData.Sigs.Biod),
-			Person: []byte(bioData.Sigs.Person),
+			Biod:   sigBio,
+			Person: sigBio,
 		},
 		SignatureWalletData: &api.Signature{
-			Biod:   []byte(walletData.Sigs.Biod),
-			Person: []byte(walletData.Sigs.Person),
+			Biod:   sigWal,
+			Person: sigWal,
 		},
 	}
 

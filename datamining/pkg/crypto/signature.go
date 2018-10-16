@@ -13,20 +13,25 @@ import (
 //ErrBadSignature define a bad signature error
 var ErrBadSignature = errors.New("Error: Bad Signature")
 
-//Signer defines signatures methods
-type Signer struct{}
-
 type ecdsaSignature struct {
 	R, S *big.Int
 }
 
 //Verify verify a signature and a data using a public key
-func (si Signer) Verify(pubk []byte, der []byte, hash []byte) error {
+func Verify(pubk []byte, der []byte, hash []byte) error {
 	var signature ecdsaSignature
 
-	decodedsig, _ := hex.DecodeString(string(der))
+	decodedkey, err := hex.DecodeString(string(pubk))
+	if err != nil {
+		return err
+	}
 
-	pu, err := x509.ParsePKIXPublicKey(pubk)
+	decodedsig, err := hex.DecodeString(string(der))
+	if err != nil {
+		return err
+	}
+
+	pu, err := x509.ParsePKIXPublicKey(decodedkey)
 	if err != nil {
 		return err
 	}
@@ -42,13 +47,18 @@ func (si Signer) Verify(pubk []byte, der []byte, hash []byte) error {
 }
 
 //Sign data using a privatekey
-func (si Signer) Sign(privk []byte, data []byte) ([]byte, error) {
-	pv, err := x509.ParseECPrivateKey(privk)
+func Sign(privk []byte, data []byte) ([]byte, error) {
+	pvDecoded, err := hex.DecodeString(string(privk))
 	if err != nil {
 		return nil, err
 	}
 
-	r, s, err := ecdsa.Sign(rand.Reader, pv, data)
+	pv, err := x509.ParseECPrivateKey(pvDecoded)
+	if err != nil {
+		return nil, err
+	}
+
+	r, s, err := ecdsa.Sign(rand.Reader, pv, Hash(data))
 	if err != nil {
 		return nil, err
 	}
