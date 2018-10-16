@@ -1,12 +1,11 @@
 package internalrpc
 
 import (
-	"github.com/uniris/uniris-core/datamining/pkg/crypto"
-	"github.com/uniris/uniris-core/datamining/pkg/validating"
 	"golang.org/x/net/context"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg/adding"
+	"github.com/uniris/uniris-core/datamining/pkg/crypto"
 	"github.com/uniris/uniris-core/datamining/pkg/listing"
 )
 
@@ -17,10 +16,10 @@ type internalSrvHandler struct {
 }
 
 //NewInternalServerHandler create a new GRPC server handler
-func NewInternalServerHandler(repo listing.Repository, addRepo adding.Repository, sharedRobotPrivateKey []byte) api.InternalServer {
+func NewInternalServerHandler(listservice listing.Service, addservice adding.Service, sharedRobotPrivateKey []byte) api.InternalServer {
 	return internalSrvHandler{
-		list:                  listing.NewService(repo),
-		add:                   adding.NewService(addRepo, validating.NewService()),
+		list:                  listservice,
+		add:                   addservice,
 		sharedRobotPrivateKey: sharedRobotPrivateKey,
 	}
 }

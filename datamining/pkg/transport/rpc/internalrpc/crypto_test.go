@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
+	internalrpc "github.com/uniris/uniris-core/datamining/pkg/transport/rpc/internalrpc"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,7 +15,6 @@ import (
 	"github.com/uniris/ecies/pkg"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
-	"github.com/uniris/uniris-core/datamining/pkg/crypto"
 )
 
 /*

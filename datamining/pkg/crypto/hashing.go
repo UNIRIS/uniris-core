@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 )
 
+//Hash return the hash of a bytes data
 func Hash(data []byte) []byte {
 	hash := sha256.New()
 	hash.Write(data)
