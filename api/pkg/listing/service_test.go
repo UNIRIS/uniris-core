@@ -16,7 +16,7 @@ func TestGetAccount(t *testing.T) {
 	s := service{
 		client:       mockClient{},
 		val:          mockGoodRequestValidator{},
-		sharedBioPub: []byte("my key"),
+		sharedBioPub: "my key",
 	}
 
 	res, err := s.GetAccount("encrypted person pub key", "sig")
@@ -36,7 +36,7 @@ func TestGetAccountInvalidSig(t *testing.T) {
 	s := service{
 		client:       mockClient{},
 		val:          mockBadRequestValidator{},
-		sharedBioPub: []byte("my key"),
+		sharedBioPub: "my key",
 	}
 
 	_, err := s.GetAccount("encrypted person pub key", "sig")
@@ -45,8 +45,8 @@ func TestGetAccountInvalidSig(t *testing.T) {
 
 type mockClient struct{}
 
-func (c mockClient) GetAccount(AccountRequest) (AccountResult, error) {
-	return AccountResult{
+func (c mockClient) GetAccount(AccountRequest) (*SignedAccountResult, error) {
+	return &SignedAccountResult{
 		EncryptedAESKey:     "encrypted_aes_key",
 		EncryptedAddrPerson: "addr_wallet_person",
 		EncryptedWallet:     "encrypted_wallet",
@@ -55,12 +55,12 @@ func (c mockClient) GetAccount(AccountRequest) (AccountResult, error) {
 
 type mockGoodRequestValidator struct{}
 
-func (v mockGoodRequestValidator) CheckSignature(data interface{}, pubKey []byte, sig []byte) (bool, error) {
+func (v mockGoodRequestValidator) CheckRawSignature(data string, pubKey string, sig string) (bool, error) {
 	return true, nil
 }
 
 type mockBadRequestValidator struct{}
 
-func (v mockBadRequestValidator) CheckSignature(data interface{}, pubKey []byte, sig []byte) (bool, error) {
+func (v mockBadRequestValidator) CheckRawSignature(data string, pubKey string, sig string) (bool, error) {
 	return false, nil
 }

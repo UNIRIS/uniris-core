@@ -3,38 +3,52 @@ package rest
 import (
 	"net/http"
 
+	"github.com/uniris/uniris-core/api/pkg/crypto"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/uniris/uniris-core/api/pkg/adding"
 	"github.com/uniris/uniris-core/api/pkg/listing"
 )
 
+//ErrorMessage define an HTTP error
+type ErrorMessage struct {
+	Message   string `json:"error_message"`
+	Signature string `json:"error_signature"`
+	Code      int    `json:"error_code"`
+}
+
 //Handler manages http rest methods handling
-func Handler(r *gin.Engine, l listing.Service, a adding.Service) {
+func Handler(r *gin.Engine, robotPvKey string, l listing.Service, a adding.Service) {
+
 	api := r.Group("/api")
 	{
-		api.POST("/account", enrollAccount(a))
-		api.GET("/account/:hash", getAccount(l))
+		api.POST("/account", enrollAccount(a, robotPvKey))
+		api.HEAD("/account/:hash", checkAccount(l, robotPvKey))
+		api.GET("/account/:hash", getAccount(l, robotPvKey))
 	}
 }
 
-func enrollAccount(a adding.Service) func(c *gin.Context) {
+func enrollAccount(a adding.Service, robotPvKey string) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		var req adding.EnrollmentRequest
 
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			e := createError(http.StatusBadRequest, err, robotPvKey)
+			c.JSON(e.Code, e)
 			return
 		}
 
 		res, err := a.AddAccount(req)
 		if err != nil {
 			if err == adding.ErrInvalidSignature {
-				c.JSON(http.StatusBadRequest, err)
+				e := createError(http.StatusBadRequest, err, robotPvKey)
+				c.JSON(e.Code, e)
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			e := createError(http.StatusInternalServerError, err, robotPvKey)
+			c.JSON(e.Code, e)
 			return
 		}
 
@@ -42,7 +56,31 @@ func enrollAccount(a adding.Service) func(c *gin.Context) {
 	}
 }
 
-func getAccount(l listing.Service) func(c *gin.Context) {
+func checkAccount(l listing.Service, robotPvKey string) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		hash := c.Param("hash")
+		sig := c.Query("signature")
+
+		err := l.ExistAccount(hash, sig)
+		if err != nil {
+			if err == listing.ErrInvalidSignature {
+				c.Header("Error", err.Error())
+				return
+			}
+			if err == listing.ErrAccountNotExist {
+				c.Header("Account-Exist", "false")
+				return
+			}
+			e := createError(http.StatusInternalServerError, err, robotPvKey)
+			c.JSON(e.Code, e)
+			return
+		}
+
+		c.Header("Account-Exist", "true")
+	}
+}
+
+func getAccount(l listing.Service, robotPvKey string) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		hash := c.Param("hash")
@@ -51,13 +89,35 @@ func getAccount(l listing.Service) func(c *gin.Context) {
 		acc, err := l.GetAccount(hash, sig)
 		if err != nil {
 			if err == listing.ErrInvalidSignature {
-				c.JSON(http.StatusBadRequest, err)
+				e := createError(http.StatusBadRequest, err, robotPvKey)
+				c.JSON(e.Code, e)
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			if err == listing.ErrAccountNotExist {
+				e := createError(http.StatusNotFound, err, robotPvKey)
+				c.JSON(e.Code, e)
+				return
+			}
+			e := createError(http.StatusInternalServerError, err, robotPvKey)
+			c.JSON(e.Code, e)
 			return
 		}
 
 		c.JSON(http.StatusOK, acc)
+	}
+}
+
+func createError(handleErrorCode int, handleErr error, robotPvKey string) ErrorMessage {
+	sig, err := crypto.HashAndSign(robotPvKey, handleErr.Error())
+	if err != nil {
+		return ErrorMessage{
+			Message: err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+	}
+	return ErrorMessage{
+		Message:   handleErr.Error(),
+		Signature: string(sig),
+		Code:      handleErrorCode,
 	}
 }
