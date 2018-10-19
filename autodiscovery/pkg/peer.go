@@ -23,37 +23,25 @@ type Repository interface {
 	SetKnownPeer(Peer) error
 	ListUnreachablePeers() ([]Peer, error)
 	ListReachablePeers() ([]Peer, error)
-	SetUnreachablePeer(PublicKey) error
-	RemoveUnreachablePeer(PublicKey) error
-}
-
-//PublicKey describes a public key value object
-type PublicKey []byte
-
-func (k PublicKey) String() string {
-	return string(k)
-}
-
-//Equals checks if two public key are the same
-func (k PublicKey) Equals(key PublicKey) bool {
-	return k.String() == key.String()
+	SetUnreachablePeer(pubKey string) error
+	RemoveUnreachablePeer(pubKey string) error
 }
 
 //PeerIdentity describes the peer identification the network
 type PeerIdentity interface {
 	IP() net.IP
 	Port() int
-	PublicKey() PublicKey
+	PublicKey() string
 }
 
 type peerIdentity struct {
 	ip        net.IP
 	port      int
-	publicKey PublicKey
+	publicKey string
 }
 
 //NewPeerIdentity creates a new peer identity
-func NewPeerIdentity(ip net.IP, port int, pbKey PublicKey) PeerIdentity {
+func NewPeerIdentity(ip net.IP, port int, pbKey string) PeerIdentity {
 	return peerIdentity{
 		ip:        ip,
 		port:      port,
@@ -72,7 +60,7 @@ func (p peerIdentity) Port() int {
 }
 
 //PublicKey returns the peer's public key
-func (p peerIdentity) PublicKey() PublicKey {
+func (p peerIdentity) PublicKey() string {
 	return p.publicKey
 }
 
@@ -141,7 +129,7 @@ func (p peer) String() string {
 }
 
 //NewStartupPeer creates a new peer started on the peer's machine (aka owned peer)
-func NewStartupPeer(pbKey PublicKey, ip net.IP, port int, version string, pos PeerPosition) Peer {
+func NewStartupPeer(pbKey string, ip net.IP, port int, version string, pos PeerPosition) Peer {
 	return &peer{
 		identity: peerIdentity{
 			ip:        ip,

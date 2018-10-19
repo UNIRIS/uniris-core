@@ -24,15 +24,15 @@ func NewSigner() validating.Signer {
 }
 
 //Verify verify a signature and a data using a public key
-func (s signer) CheckSignature(pubk []byte, data interface{}, der []byte) error {
+func (s signer) CheckSignature(pubk string, data interface{}, der string) error {
 	var signature ecdsaSignature
 
-	decodedkey, err := hex.DecodeString(string(pubk))
+	decodedkey, err := hex.DecodeString(pubk)
 	if err != nil {
 		return err
 	}
 
-	decodedsig, err := hex.DecodeString(string(der))
+	decodedsig, err := hex.DecodeString(der)
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,11 @@ func (s signer) CheckSignature(pubk []byte, data interface{}, der []byte) error 
 		return err
 	}
 
-	if ecdsa.Verify(ecdsaPublic, Hash(b), signature.R, signature.S) {
+	// log.Print(string(b))
+
+	hash := []byte(HashBytes(b))
+
+	if ecdsa.Verify(ecdsaPublic, hash, signature.R, signature.S) {
 		return nil
 	}
 
@@ -58,27 +62,29 @@ func (s signer) CheckSignature(pubk []byte, data interface{}, der []byte) error 
 }
 
 //Sign data using a privatekey
-func Sign(privk []byte, data []byte) ([]byte, error) {
-	pvDecoded, err := hex.DecodeString(string(privk))
+func Sign(privk string, data string) (string, error) {
+	pvDecoded, err := hex.DecodeString(privk)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	pv, err := x509.ParseECPrivateKey(pvDecoded)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	r, s, err := ecdsa.Sign(rand.Reader, pv, Hash(data))
+	hash := []byte(HashString(data))
+
+	r, s, err := ecdsa.Sign(rand.Reader, pv, hash)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	sig, err := asn1.Marshal(ecdsaSignature{r, s})
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return []byte(hex.EncodeToString(sig)), nil
+	return hex.EncodeToString(sig), nil
 
 }

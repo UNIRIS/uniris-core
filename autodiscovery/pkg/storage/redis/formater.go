@@ -13,7 +13,7 @@ import (
 //FormatPeerToHash converts a peer into a Redis hashset
 func FormatPeerToHash(p discovery.Peer) map[string]interface{} {
 	return map[string]interface{}{
-		"publicKey":             p.Identity().PublicKey().String(),
+		"publicKey":             p.Identity().PublicKey(),
 		"port":                  strconv.Itoa(p.Identity().Port()),
 		"ip":                    p.Identity().IP().String(),
 		"generationTime":        strconv.Itoa(int(p.HeartbeatState().GenerationTime().Unix())),
@@ -31,7 +31,7 @@ func FormatPeerToHash(p discovery.Peer) map[string]interface{} {
 //FormatHashToPeer converts a Redis hashset into a peer
 func FormatHashToPeer(hash map[string]string) discovery.Peer {
 
-	pbKey := []byte(hash["publicKey"])
+	pbKey := hash["publicKey"]
 	port, _ := strconv.Atoi(hash["port"])
 	ip := net.ParseIP(hash["ip"])
 
@@ -70,7 +70,7 @@ func FormatSeedToHash(seed discovery.Seed) map[string]interface{} {
 	return map[string]interface{}{
 		"ip":        seed.IP.String(),
 		"port":      strconv.Itoa(seed.Port),
-		"publicKey": seed.PublicKey.String(),
+		"publicKey": seed.PublicKey,
 	}
 }
 
@@ -80,6 +80,6 @@ func FormatHashToSeed(hash map[string]string) discovery.Seed {
 	return discovery.Seed{
 		IP:        net.ParseIP(hash["ip"]),
 		Port:      port,
-		PublicKey: discovery.PublicKey(hash["publicKey"]),
+		PublicKey: hash["publicKey"],
 	}
 }

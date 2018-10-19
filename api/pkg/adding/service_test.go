@@ -16,7 +16,7 @@ func TestAddAccount(t *testing.T) {
 	s := service{
 		client:       mockClient{},
 		val:          mockGoodRequestValidator{},
-		sharedBioPub: []byte("my key"),
+		sharedBioPub: "my key",
 	}
 
 	req := EnrollmentRequest{
@@ -35,7 +35,7 @@ func TestAddAccount(t *testing.T) {
 
 	res, err := s.AddAccount(req)
 	assert.Nil(t, err)
-	assert.Equal(t, "hash of the updated wallet", res.Hash)
+	assert.Equal(t, "transaction hash", res.TransactionHash)
 	assert.Equal(t, "signature of the response", res.SignatureRequest)
 }
 
@@ -49,7 +49,7 @@ func TestAddAccountInvalidSig(t *testing.T) {
 	s := service{
 		client:       mockClient{},
 		val:          mockBadRequestValidator{},
-		sharedBioPub: []byte("my key"),
+		sharedBioPub: "my key",
 	}
 
 	req := EnrollmentRequest{
@@ -72,21 +72,21 @@ func TestAddAccountInvalidSig(t *testing.T) {
 
 type mockClient struct{}
 
-func (c mockClient) AddAccount(EnrollmentRequest) (EnrollmentResult, error) {
-	return EnrollmentResult{
-		Hash:             "hash of the updated wallet",
+func (c mockClient) AddAccount(EnrollmentRequest) (*EnrollmentResult, error) {
+	return &EnrollmentResult{
+		TransactionHash:  "transaction hash",
 		SignatureRequest: "signature of the response",
 	}, nil
 }
 
 type mockGoodRequestValidator struct{}
 
-func (v mockGoodRequestValidator) CheckSignature(data interface{}, pubKey []byte, sig []byte) (bool, error) {
+func (v mockGoodRequestValidator) CheckDataSignature(data interface{}, pubKey string, sig string) (bool, error) {
 	return true, nil
 }
 
 type mockBadRequestValidator struct{}
 
-func (v mockBadRequestValidator) CheckSignature(data interface{}, pubKey []byte, sig []byte) (bool, error) {
+func (v mockBadRequestValidator) CheckDataSignature(data interface{}, pubKey string, sig string) (bool, error) {
 	return false, nil
 }

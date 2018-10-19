@@ -1,9 +1,11 @@
 package listing
 
 import (
-	"github.com/stretchr/testify/assert"
+	"log"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 )
@@ -20,27 +22,27 @@ func TestGetWallet(t *testing.T) {
 	s := NewService(db)
 
 	sigs := datamining.Signatures{
-		BiodSig: []byte("sig1"),
-		EmSig:   []byte("sig2"),
+		BiodSig: "sig1",
+		EmSig:   "sig2",
 	}
 
-	wdata := datamining.WalletData{
-		WalletAddr:      []byte("addr1"),
-		CipherAddrRobot: []byte("xxxx"),
-		CipherWallet:    []byte("xxxx"),
-		EmPubk:          []byte("xxxx"),
-		BiodPubk:        []byte("xxxx"),
+	wdata := &datamining.WalletData{
+		WalletAddr:      "addr1",
+		CipherAddrRobot: "xxxx",
+		CipherWallet:    "xxxx",
+		EmPubk:          "xxxx",
+		BiodPubk:        "xxxx",
 		Sigs:            sigs,
 	}
 
-	oldTxnHash := datamining.Hash([]byte("xxxx"))
+	oldTxnHash := "xxx"
 
-	endors := datamining.NewEndorsement(datamining.Timestamp(time.Now()), datamining.Hash([]byte("xxxx")), datamining.MasterValidation{}, []datamining.Validation{})
+	endors := datamining.NewEndorsement(time.Now(), "xxx", &datamining.MasterValidation{}, []datamining.Validation{})
 
 	w := datamining.NewWallet(wdata, endors, oldTxnHash)
 
 	db.StoreWallet(w)
-	wa, err := s.GetWallet([]byte("addr1"))
+	wa, err := s.GetWallet("addr1")
 	assert.Nil(t, err)
 	assert.NotNil(t, wa)
 }
@@ -57,59 +59,60 @@ func TestGetBioWallet(t *testing.T) {
 	s := NewService(db)
 
 	sigs := datamining.Signatures{
-		BiodSig: []byte("sig1"),
-		EmSig:   []byte("sig2"),
+		BiodSig: "sig1",
+		EmSig:   "sig2",
 	}
 
-	bwdata := datamining.BioData{
-		BHash:           []byte("hash1"),
-		BiodPubk:        []byte("xxxx"),
-		CipherAddrBio:   []byte("xxxx"),
-		CipherAddrRobot: []byte("xxxx"),
-		CipherAESKey:    []byte("xxxx"),
-		EmPubk:          []byte("xxxx"),
+	bdata := &datamining.BioData{
+		BHash:           "hash1",
+		BiodPubk:        "xxxx",
+		CipherAddrBio:   "xxxx",
+		CipherAddrRobot: "xxxx",
+		CipherAESKey:    "xxxx",
+		EmPubk:          "xxxx",
 		Sigs:            sigs,
 	}
 
-	endors := datamining.NewEndorsement(datamining.Timestamp(time.Now()), datamining.Hash([]byte("xxxx")), datamining.MasterValidation{}, []datamining.Validation{})
+	endors := datamining.NewEndorsement(time.Now(), "xxxx", &datamining.MasterValidation{}, []datamining.Validation{})
 
-	bw := datamining.NewBioWallet(bwdata, endors)
+	bw := datamining.NewBioWallet(bdata, endors)
 
 	db.StoreBioWallet(bw)
-	wa, err := s.GetBioWallet([]byte("hash1"))
+	wa, err := s.GetBioWallet("hash1")
 	assert.Nil(t, err)
 	assert.NotNil(t, wa)
 }
 
 type databasemock struct {
-	bioWallets []datamining.BioWallet
-	wallets    []datamining.Wallet
+	bioWallets []*datamining.BioWallet
+	wallets    []*datamining.Wallet
 }
 
-func (d *databasemock) FindBioWallet(bh datamining.BioHash) (b datamining.BioWallet, err error) {
+func (d *databasemock) FindBioWallet(bh string) (*datamining.BioWallet, error) {
 	for _, b := range d.bioWallets {
-		if string(b.Bhash()) == string(bh) {
+		if b.Bhash() == bh {
 			return b, nil
 		}
 	}
-	return
+	return nil, nil
 }
 
-func (d *databasemock) FindWallet(addr datamining.WalletAddr) (b datamining.Wallet, err error) {
+func (d *databasemock) FindWallet(addr string) (*datamining.Wallet, error) {
 	for _, b := range d.wallets {
-		if string(b.WalletAddr()) == string(addr) {
+		log.Print(b.WalletAddr())
+		if b.WalletAddr() == addr {
 			return b, nil
 		}
 	}
-	return
+	return nil, nil
 }
 
-func (d *databasemock) StoreWallet(w datamining.Wallet) error {
+func (d *databasemock) StoreWallet(w *datamining.Wallet) error {
 	d.wallets = append(d.wallets, w)
 	return nil
 }
 
-func (d *databasemock) StoreBioWallet(bw datamining.BioWallet) error {
+func (d *databasemock) StoreBioWallet(bw *datamining.BioWallet) error {
 	d.bioWallets = append(d.bioWallets, bw)
 	return nil
 }

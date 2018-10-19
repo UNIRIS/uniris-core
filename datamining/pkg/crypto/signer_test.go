@@ -23,16 +23,18 @@ Scenario: Sign encrypted data
 func TestSign(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
-	encData := []byte("uxazexc")
+	encData := "uxazexc"
 
-	sig, err := Sign([]byte(hex.EncodeToString(pvKey)), encData)
+	sig, err := Sign(hex.EncodeToString(pvKey), encData)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, sig)
 	var signature ecdsaSignature
 	decodesig, _ := hex.DecodeString(string(sig))
 	asn1.Unmarshal(decodesig, &signature)
 
-	assert.True(t, ecdsa.Verify(&key.PublicKey, Hash(encData), signature.R, signature.S))
+	hash := []byte(HashString(encData))
+
+	assert.True(t, ecdsa.Verify(&key.PublicKey, hash, signature.R, signature.S))
 }
 
 /*
@@ -50,10 +52,10 @@ func TestVerify(t *testing.T) {
 	b, _ := json.Marshal(encData)
 
 	s := NewSigner()
-	sig, _ := Sign([]byte(hex.EncodeToString(pvKey)), b)
+	sig, _ := Sign(hex.EncodeToString(pvKey), string(b))
 
 	err := s.CheckSignature(
-		[]byte(hex.EncodeToString(puKey)),
+		hex.EncodeToString(puKey),
 		encData,
 		sig,
 	)

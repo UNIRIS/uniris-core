@@ -30,13 +30,13 @@ func TestCheckSignature(t *testing.T) {
 	data := fakeObj{message: "hi"}
 	b, _ := json.Marshal(data)
 
-	r, s, _ := ecdsa.Sign(rand.Reader, key, hash(b))
+	r, s, _ := ecdsa.Sign(rand.Reader, key, []byte(hash(b)))
 
 	sig, _ := asn1.Marshal(ecdsaSignature{r, s})
 
 	val := RequestValidator{}
 
-	valid, err := val.CheckSignature(data, []byte(hex.EncodeToString(pub)), []byte(hex.EncodeToString(sig)))
+	valid, err := val.CheckDataSignature(data, hex.EncodeToString(pub), hex.EncodeToString(sig))
 	assert.Nil(t, err)
 	assert.True(t, valid)
 }

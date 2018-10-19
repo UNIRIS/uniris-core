@@ -22,31 +22,29 @@ func TestOkSignatureValidator(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
 
-	w := datamining.WalletData{
-		BiodPubk: []byte(hex.EncodeToString(pbKey)),
-		EmPubk:   []byte(hex.EncodeToString(pbKey)),
+	w := &datamining.WalletData{
+		BiodPubk: hex.EncodeToString(pbKey),
+		EmPubk:   hex.EncodeToString(pbKey),
 		Sigs: datamining.Signatures{
-			BiodSig: []byte("fake sig"),
-			EmSig:   []byte("fake sig"),
+			BiodSig: "fake sig",
+			EmSig:   "fake sig",
 		},
 	}
 
-	status, err := val.ValidWallet(w)
+	err := val.ValidWallet(w)
 	assert.Nil(t, err)
-	assert.Equal(t, datamining.ValidationOK, status)
 
-	bw := datamining.BioData{
-		BiodPubk: []byte(hex.EncodeToString(pbKey)),
-		EmPubk:   []byte(hex.EncodeToString(pbKey)),
+	bd := &datamining.BioData{
+		BiodPubk: hex.EncodeToString(pbKey),
+		EmPubk:   hex.EncodeToString(pbKey),
 		Sigs: datamining.Signatures{
-			BiodSig: []byte("fake sig"),
-			EmSig:   []byte("fake sig"),
+			BiodSig: "fake sig",
+			EmSig:   "fake sig",
 		},
 	}
 
-	status, err = val.ValidBioWallet(bw)
+	err = val.ValidBioWallet(bd)
 	assert.Nil(t, err)
-	assert.Equal(t, datamining.ValidationOK, status)
 }
 
 func TestKOSignatureValidator(t *testing.T) {
@@ -58,41 +56,39 @@ func TestKOSignatureValidator(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
 
-	w := datamining.WalletData{
-		BiodPubk: []byte(hex.EncodeToString(pbKey)),
-		EmPubk:   []byte(hex.EncodeToString(pbKey)),
+	w := &datamining.WalletData{
+		BiodPubk: hex.EncodeToString(pbKey),
+		EmPubk:   hex.EncodeToString(pbKey),
 		Sigs: datamining.Signatures{
-			BiodSig: []byte("fake sig"),
-			EmSig:   []byte("fake sig"),
+			BiodSig: "fake sig",
+			EmSig:   "fake sig",
 		},
 	}
 
-	status, err := val.ValidWallet(w)
-	assert.Nil(t, err)
-	assert.Equal(t, datamining.ValidationKO, status)
+	err := val.ValidWallet(w)
+	assert.Equal(t, err, ErrInvalidSignature)
 
-	bw := datamining.BioData{
-		BiodPubk: []byte(hex.EncodeToString(pbKey)),
-		EmPubk:   []byte(hex.EncodeToString(pbKey)),
+	bd := &datamining.BioData{
+		BiodPubk: hex.EncodeToString(pbKey),
+		EmPubk:   hex.EncodeToString(pbKey),
 		Sigs: datamining.Signatures{
-			BiodSig: []byte("fake sig"),
-			EmSig:   []byte("fake sig"),
+			BiodSig: "fake sig",
+			EmSig:   "fake sig",
 		},
 	}
 
-	status, err = val.ValidBioWallet(bw)
-	assert.Nil(t, err)
-	assert.Equal(t, datamining.ValidationKO, status)
+	err = val.ValidBioWallet(bd)
+	assert.Equal(t, err, ErrInvalidSignature)
 }
 
 type mockSigner struct{}
 
-func (s mockSigner) CheckSignature(pubk []byte, data interface{}, der []byte) error {
+func (s mockSigner) CheckSignature(pubk string, data interface{}, der string) error {
 	return nil
 }
 
 type badMockSigner struct{}
 
-func (s badMockSigner) CheckSignature(pubk []byte, data interface{}, der []byte) error {
+func (s badMockSigner) CheckSignature(pubk string, data interface{}, der string) error {
 	return ErrInvalidSignature
 }

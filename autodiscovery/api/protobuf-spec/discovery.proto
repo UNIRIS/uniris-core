@@ -40,7 +40,7 @@ message PeerDiscovered {
 }
 
 message PeerIdentity {
-    bytes PublicKey = 1;
+    string PublicKey = 1;
     string IP = 2;
     int32 Port = 3;
 }

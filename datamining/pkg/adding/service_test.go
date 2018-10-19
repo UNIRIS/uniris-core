@@ -22,16 +22,16 @@ func TestAddWallet(t *testing.T) {
 	s := NewService(db, v)
 
 	sigs := datamining.Signatures{
-		BiodSig: []byte("sig1"),
-		EmSig:   []byte("sig2"),
+		BiodSig: "sig1",
+		EmSig:   "sig2",
 	}
 
-	wdata := datamining.WalletData{
-		WalletAddr:      []byte("addr1"),
-		CipherAddrRobot: []byte("xxxx"),
-		CipherWallet:    []byte("xxxx"),
-		EmPubk:          []byte("xxxx"),
-		BiodPubk:        []byte("xxxx"),
+	wdata := &datamining.WalletData{
+		WalletAddr:      "addr1",
+		CipherAddrRobot: "xxxx",
+		CipherWallet:    "xxxx",
+		EmPubk:          "xxxx",
+		BiodPubk:        "xxxx",
 		Sigs:            sigs,
 	}
 
@@ -54,71 +54,71 @@ func TestAddBioWallet(t *testing.T) {
 	s := NewService(db, v)
 
 	sigs := datamining.Signatures{
-		BiodSig: []byte("sig1"),
-		EmSig:   []byte("sig2"),
+		BiodSig: "sig1",
+		EmSig:   "sig2",
 	}
 
-	bwdata := datamining.BioData{
-		BHash:           []byte("hash1"),
-		BiodPubk:        []byte("xxxx"),
-		CipherAddrBio:   []byte("xxxx"),
-		CipherAddrRobot: []byte("xxxx"),
-		CipherAESKey:    []byte("xxxx"),
-		EmPubk:          []byte("xxxx"),
+	bdata := &datamining.BioData{
+		BHash:           "hash1",
+		BiodPubk:        "xxxx",
+		CipherAddrBio:   "xxxx",
+		CipherAddrRobot: "xxxx",
+		CipherAESKey:    "xxxx",
+		EmPubk:          "xxxx",
 		Sigs:            sigs,
 	}
 
-	err := s.AddBioWallet(bwdata)
+	err := s.AddBioWallet(bdata)
 	assert.Nil(t, err)
 	l := len(db.bioWallets)
 	assert.Equal(t, 1, l)
 }
 
 type databasemock struct {
-	bioWallets []datamining.BioWallet
-	wallets    []datamining.Wallet
+	bioWallets []*datamining.BioWallet
+	wallets    []*datamining.Wallet
 }
 
-func (d *databasemock) FindBioWallet(bh datamining.BioHash) (b datamining.BioWallet, err error) {
+func (d *databasemock) FindBioWallet(bh string) (*datamining.BioWallet, error) {
 	for _, b := range d.bioWallets {
 		if string(b.Bhash()) == string(bh) {
 			return b, nil
 		}
 	}
-	return
+	return nil, nil
 }
 
-func (d *databasemock) FindWallet(addr datamining.WalletAddr) (b datamining.Wallet, err error) {
+func (d *databasemock) FindWallet(addr string) (*datamining.Wallet, error) {
 	for _, b := range d.wallets {
 		if string(b.WalletAddr()) == string(addr) {
 			return b, nil
 		}
 	}
-	return
+	return nil, nil
 }
 
-func (d *databasemock) StoreWallet(w datamining.Wallet) error {
+func (d *databasemock) StoreWallet(w *datamining.Wallet) error {
 	d.wallets = append(d.wallets, w)
 	return nil
 }
 
-func (d *databasemock) StoreBioWallet(bw datamining.BioWallet) error {
+func (d *databasemock) StoreBioWallet(bw *datamining.BioWallet) error {
 	d.bioWallets = append(d.bioWallets, bw)
 	return nil
 }
 
 type mockSigner struct{}
 
-func (s mockSigner) CheckSignature(pubk []byte, data interface{}, der []byte) error {
+func (s mockSigner) CheckSignature(pubk string, data interface{}, der string) error {
 	return nil
 }
 
 type mockValiationRequester struct{}
 
-func (v mockValiationRequester) RequestWalletValidation(validating.Peer, datamining.WalletData) (datamining.Validation, error) {
+func (v mockValiationRequester) RequestWalletValidation(validating.Peer, *datamining.WalletData) (datamining.Validation, error) {
 	return datamining.Validation{}, nil
 }
 
-func (v mockValiationRequester) RequestBioValidation(validating.Peer, datamining.BioData) (datamining.Validation, error) {
+func (v mockValiationRequester) RequestBioValidation(validating.Peer, *datamining.BioData) (datamining.Validation, error) {
 	return datamining.Validation{}, nil
 }

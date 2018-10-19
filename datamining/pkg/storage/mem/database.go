@@ -13,8 +13,8 @@ type Database interface {
 }
 
 type db struct {
-	bioWallets []datamining.BioWallet
-	wallets    []datamining.Wallet
+	bioWallets []*datamining.BioWallet
+	wallets    []*datamining.Wallet
 }
 
 //NewDatabase implements the database in memory
@@ -23,33 +23,33 @@ func NewDatabase() Database {
 }
 
 //FindBioWallet return the bio wallet
-func (d *db) FindBioWallet(bh datamining.BioHash) (b datamining.BioWallet, err error) {
+func (d *db) FindBioWallet(bioHash string) (*datamining.BioWallet, error) {
 	for _, b := range d.bioWallets {
-		if string(b.Bhash()) == string(bh) {
+		if b.Bhash() == bioHash {
 			return b, nil
 		}
 	}
-	return
+	return nil, nil
 }
 
 //FindWallet return the wallet
-func (d *db) FindWallet(addr datamining.WalletAddr) (b datamining.Wallet, err error) {
+func (d *db) FindWallet(addr string) (*datamining.Wallet, error) {
 	for _, b := range d.wallets {
-		if string(b.WalletAddr()) == string(addr) {
+		if b.WalletAddr() == addr {
 			return b, nil
 		}
 	}
-	return
+	return nil, nil
 }
 
 //AddWallet add a wallet line to the database
-func (d *db) StoreWallet(w datamining.Wallet) error {
+func (d *db) StoreWallet(w *datamining.Wallet) error {
 	d.wallets = append(d.wallets, w)
 	return nil
 }
 
 //AddBioWallet add a biowallet line to the database
-func (d *db) StoreBioWallet(bw datamining.BioWallet) error {
+func (d *db) StoreBioWallet(bw *datamining.BioWallet) error {
 	d.bioWallets = append(d.bioWallets, bw)
 	return nil
 }

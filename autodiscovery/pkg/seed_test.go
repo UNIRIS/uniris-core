@@ -1,7 +1,6 @@
 package discovery
 
 import (
-	"encoding/hex"
 	"net"
 	"testing"
 	"time"
@@ -32,19 +31,19 @@ func TestGetSeedDiscoveredPeer(t *testing.T) {
 	st3 := NewPeerAppState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 7)
 
 	p1 := NewDiscoveredPeer(
-		NewPeerIdentity(seed1.IP, seed1.Port, []byte("key1")),
+		NewPeerIdentity(seed1.IP, seed1.Port, "key1"),
 		NewPeerHeartbeatState(time.Now(), 0),
 		st1,
 	)
 
 	p2 := NewDiscoveredPeer(
-		NewPeerIdentity(seed2.IP, seed2.Port, []byte("key2")),
+		NewPeerIdentity(seed2.IP, seed2.Port, "key2"),
 		NewPeerHeartbeatState(time.Now(), 0),
 		st2,
 	)
 
 	p3 := NewDiscoveredPeer(
-		NewPeerIdentity(seed3.IP, seed3.Port, []byte("key3")),
+		NewPeerIdentity(seed3.IP, seed3.Port, "key3"),
 		NewPeerHeartbeatState(time.Now(), 0),
 		st3,
 	)
@@ -67,7 +66,7 @@ Scenario: check DiscoveredPeer
 
 func TestDiscoveredPeer(t *testing.T) {
 	repo := new(mockPeerRepository)
-	initP := NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "0.0", PeerPosition{})
+	initP := NewStartupPeer("key", net.ParseIP("127.0.0.1"), 3000, "0.0", PeerPosition{})
 	repo.SetKnownPeer(initP)
 	seed1 := Seed{IP: net.ParseIP("10.1.1.1"), Port: 3000}
 	seed2 := Seed{IP: net.ParseIP("10.1.1.2"), Port: 3001}
@@ -82,19 +81,19 @@ func TestDiscoveredPeer(t *testing.T) {
 	st3 := NewPeerAppState("0.0", OkStatus, PeerPosition{}, "0.0.0", 0.0, 0, 5)
 
 	p1 := NewDiscoveredPeer(
-		NewPeerIdentity(seed1.IP, seed1.Port, []byte("key1")),
+		NewPeerIdentity(seed1.IP, seed1.Port, "key1"),
 		NewPeerHeartbeatState(time.Now(), 0),
 		st1,
 	)
 
 	p2 := NewDiscoveredPeer(
-		NewPeerIdentity(seed2.IP, seed2.Port, []byte("key2")),
+		NewPeerIdentity(seed2.IP, seed2.Port, "key2"),
 		NewPeerHeartbeatState(time.Now(), 0),
 		st2,
 	)
 
 	p3 := NewDiscoveredPeer(
-		NewPeerIdentity(seed3.IP, seed3.Port, []byte("key3")),
+		NewPeerIdentity(seed3.IP, seed3.Port, "key3"),
 		NewPeerHeartbeatState(time.Now(), 0),
 		st3,
 	)
@@ -104,7 +103,7 @@ func TestDiscoveredPeer(t *testing.T) {
 	repo.SetKnownPeer(p3)
 
 	p4 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("185.123.4.9"), 4000, []byte("key4")),
+		NewPeerIdentity(net.ParseIP("185.123.4.9"), 4000, "key4"),
 		NewPeerHeartbeatState(time.Now(), 0),
 		st1)
 
@@ -121,7 +120,7 @@ func TestDiscoveredPeer(t *testing.T) {
 type mockPeerRepository struct {
 	peers             []Peer
 	seeds             []Seed
-	unreacheablePeers []PublicKey
+	unreacheablePeers []string
 }
 
 func (r *mockPeerRepository) CountKnownPeers() (int, error) {
@@ -140,7 +139,7 @@ func (r *mockPeerRepository) GetOwnedPeer() (p Peer, err error) {
 func (r *mockPeerRepository) SetKnownPeer(peer Peer) error {
 	if r.containsPeer(peer) {
 		for _, p := range r.peers {
-			if p.Identity().PublicKey().Equals(peer.Identity().PublicKey()) {
+			if p.Identity().PublicKey() == peer.Identity().PublicKey() {
 				p = peer
 				break
 			}
@@ -192,17 +191,17 @@ func (r *mockPeerRepository) GetKnownPeerByIP(ip net.IP) (p Peer, err error) {
 	return
 }
 
-func (r *mockPeerRepository) SetUnreachablePeer(pk PublicKey) error {
+func (r *mockPeerRepository) SetUnreachablePeer(pk string) error {
 	if !r.containsUnreacheablePeer(pk) {
 		r.unreacheablePeers = append(r.unreacheablePeers, pk)
 	}
 	return nil
 }
 
-func (r *mockPeerRepository) RemoveUnreachablePeer(pk PublicKey) error {
+func (r *mockPeerRepository) RemoveUnreachablePeer(pk string) error {
 	if r.containsUnreacheablePeer(pk) {
 		for i := 0; i < len(r.unreacheablePeers); i++ {
-			if r.unreacheablePeers[i].Equals(pk) {
+			if r.unreacheablePeers[i] == pk {
 				r.unreacheablePeers = r.unreacheablePeers[:i+copy(r.unreacheablePeers[i:], r.unreacheablePeers[i+1:])]
 			}
 		}
@@ -213,16 +212,16 @@ func (r *mockPeerRepository) RemoveUnreachablePeer(pk PublicKey) error {
 func (r *mockPeerRepository) containsPeer(peer Peer) bool {
 	mPeers := make(map[string]Peer, 0)
 	for _, p := range r.peers {
-		mPeers[hex.EncodeToString(p.Identity().PublicKey())] = peer
+		mPeers[p.Identity().PublicKey()] = peer
 	}
 
-	_, exist := mPeers[hex.EncodeToString(peer.Identity().PublicKey())]
+	_, exist := mPeers[peer.Identity().PublicKey()]
 	return exist
 }
 
-func (r *mockPeerRepository) containsUnreacheablePeer(pk PublicKey) bool {
+func (r *mockPeerRepository) containsUnreacheablePeer(pk string) bool {
 	for _, up := range r.unreacheablePeers {
-		if up.Equals(pk) {
+		if up == pk {
 			return true
 		}
 	}

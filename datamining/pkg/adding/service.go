@@ -7,14 +7,14 @@ import (
 
 //Repository defines methods to add data into the database
 type Repository interface {
-	StoreWallet(w datamining.Wallet) error
-	StoreBioWallet(bw datamining.BioWallet) error
+	StoreWallet(*datamining.Wallet) error
+	StoreBioWallet(*datamining.BioWallet) error
 }
 
 //Service is the interface that provide methods for wallets transactions on robot side
 type Service interface {
-	AddWallet(w datamining.WalletData) error
-	AddBioWallet(bw datamining.BioData) error
+	AddWallet(*datamining.WalletData) error
+	AddBioWallet(*datamining.BioData) error
 }
 
 type service struct {
@@ -27,7 +27,7 @@ func NewService(repo Repository, valid validating.Service) Service {
 	return service{repo, valid}
 }
 
-func (s service) AddWallet(data datamining.WalletData) error {
+func (s service) AddWallet(data *datamining.WalletData) error {
 	walEndor, oldTxHash, err := s.valid.EndorseWalletAsMaster(data)
 	if err != nil {
 		return err
@@ -55,7 +55,7 @@ func (s service) AddWallet(data datamining.WalletData) error {
 	return nil
 }
 
-func (s service) AddBioWallet(data datamining.BioData) error {
+func (s service) AddBioWallet(data *datamining.BioData) error {
 	masterEndors, err := s.valid.EndorseBioWalletAsMaster(data)
 	if err != nil {
 		return err

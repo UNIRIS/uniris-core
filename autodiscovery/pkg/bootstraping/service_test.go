@@ -44,12 +44,12 @@ func TestStartup(t *testing.T) {
 	net := new(mock.Networker)
 
 	srv := NewService(repo, pos, net)
-	p, err := srv.Startup([]byte("key"), 3000, "1.0")
+	p, err := srv.Startup("key", 3000, "1.0")
 	assert.NotNil(t, p)
 	assert.Nil(t, err)
 
 	assert.Equal(t, "127.0.0.1", p.Identity().IP().String())
-	assert.Equal(t, "key", p.Identity().PublicKey().String())
+	assert.Equal(t, "key", p.Identity().PublicKey())
 	assert.Equal(t, "1.0", p.AppState().Version())
 	assert.Equal(t, discovery.BootstrapingStatus, p.AppState().Status())
 

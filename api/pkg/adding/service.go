@@ -1,39 +1,39 @@
 package adding
 
-import "errors"
+import (
+	"errors"
+)
 
 //ErrInvalidSignature is returned when the request contains invalid signatures
 var ErrInvalidSignature = errors.New("Request contains an invalid signature")
 
 //Service defines methods to adding to the blockchain
 type Service interface {
-	AddAccount(EnrollmentRequest) (EnrollmentResult, error)
+	AddAccount(EnrollmentRequest) (*EnrollmentResult, error)
 }
 
 //RobotClient define methods to interfact with the robot
 type RobotClient interface {
-	AddAccount(EnrollmentRequest) (EnrollmentResult, error)
+	AddAccount(EnrollmentRequest) (*EnrollmentResult, error)
 }
 
 //RequestValidator defines methods to validate requests
 type RequestValidator interface {
-	CheckSignature(data interface{}, key []byte, sig []byte) (bool, error)
+	CheckDataSignature(data interface{}, key string, sig string) (bool, error)
 }
 
 type service struct {
-	sharedBioPub []byte
+	sharedBioPub string
 	client       RobotClient
 	val          RequestValidator
 }
 
 //NewService creates a new adding service
-func NewService(sharedBioPub []byte, cli RobotClient, val RequestValidator) Service {
+func NewService(sharedBioPub string, cli RobotClient, val RequestValidator) Service {
 	return service{sharedBioPub, cli, val}
 }
 
-func (s service) AddAccount(req EnrollmentRequest) (EnrollmentResult, error) {
-	var res EnrollmentResult
-
+func (s service) AddAccount(req EnrollmentRequest) (*EnrollmentResult, error) {
 	verifReq := EnrollmentVerifyRequest{
 		EncryptedBioData:    req.EncryptedBioData,
 		EncryptedWalletData: req.EncryptedWalletData,
@@ -41,13 +41,13 @@ func (s service) AddAccount(req EnrollmentRequest) (EnrollmentResult, error) {
 		SignaturesWallet:    req.SignaturesWallet,
 	}
 
-	valid, err := s.val.CheckSignature(verifReq, s.sharedBioPub, []byte(req.SignatureRequest))
+	valid, err := s.val.CheckDataSignature(verifReq, s.sharedBioPub, req.SignatureRequest)
 	if err != nil {
-		return res, err
+		return nil, err
 	}
 
 	if !valid {
-		return res, ErrInvalidSignature
+		return nil, ErrInvalidSignature
 	}
 
 	return s.client.AddAccount(req)

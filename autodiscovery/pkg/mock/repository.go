@@ -1,7 +1,6 @@
 package mock
 
 import (
-	"encoding/hex"
 	"net"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
@@ -11,7 +10,7 @@ import (
 type Repository struct {
 	SeedPeers        []discovery.Seed
 	KnownPeers       []discovery.Peer
-	UnreachablePeers []discovery.PublicKey
+	UnreachablePeers []string
 }
 
 //CountKnownPeers counts the known peers
@@ -43,7 +42,7 @@ func (r *Repository) ListKnownPeers() ([]discovery.Peer, error) {
 func (r *Repository) SetKnownPeer(peer discovery.Peer) error {
 	if r.containsPeer(peer) {
 		for _, p := range r.KnownPeers {
-			if p.Identity().PublicKey().Equals(peer.Identity().PublicKey()) {
+			if p.Identity().PublicKey() == peer.Identity().PublicKey() {
 				p = peer
 				break
 			}
@@ -90,7 +89,7 @@ func (r *Repository) SetSeedPeer(s discovery.Seed) error {
 }
 
 //SetUnreachablePeer add an unreachable peer to the repository
-func (r *Repository) SetUnreachablePeer(pk discovery.PublicKey) error {
+func (r *Repository) SetUnreachablePeer(pk string) error {
 	if !r.containsUnreachablePeer(pk) {
 		r.UnreachablePeers = append(r.UnreachablePeers, pk)
 	}
@@ -98,10 +97,10 @@ func (r *Repository) SetUnreachablePeer(pk discovery.PublicKey) error {
 }
 
 //RemoveUnreachablePeer remove an unreachable peer to the repository
-func (r *Repository) RemoveUnreachablePeer(pk discovery.PublicKey) error {
+func (r *Repository) RemoveUnreachablePeer(pk string) error {
 	if r.containsUnreachablePeer(pk) {
 		for i := 0; i < len(r.UnreachablePeers); i++ {
-			if r.UnreachablePeers[i].Equals(pk) {
+			if r.UnreachablePeers[i] == pk {
 				r.UnreachablePeers = r.UnreachablePeers[:i+copy(r.UnreachablePeers[i:], r.UnreachablePeers[i+1:])]
 			}
 		}
@@ -122,16 +121,16 @@ func (r *Repository) GetKnownPeerByIP(ip net.IP) (p discovery.Peer, err error) {
 func (r *Repository) containsPeer(p discovery.Peer) bool {
 	mdiscoveredPeers := make(map[string]discovery.Peer, 0)
 	for _, p := range r.KnownPeers {
-		mdiscoveredPeers[hex.EncodeToString(p.Identity().PublicKey())] = p
+		mdiscoveredPeers[p.Identity().PublicKey()] = p
 	}
 
-	_, exist := mdiscoveredPeers[hex.EncodeToString(p.Identity().PublicKey())]
+	_, exist := mdiscoveredPeers[p.Identity().PublicKey()]
 	return exist
 }
 
-func (r *Repository) containsUnreachablePeer(pk discovery.PublicKey) bool {
+func (r *Repository) containsUnreachablePeer(pk string) bool {
 	for _, up := range r.UnreachablePeers {
-		if up.Equals(pk) {
+		if up == pk {
 			return true
 		}
 	}

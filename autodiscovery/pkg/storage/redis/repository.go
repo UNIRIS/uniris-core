@@ -1,7 +1,6 @@
 package redis
 
 import (
-	"encoding/hex"
 	"fmt"
 	"net"
 	"sort"
@@ -67,7 +66,7 @@ func (r redisRepository) ListKnownPeers() ([]discovery.Peer, error) {
 }
 
 func (r redisRepository) SetKnownPeer(p discovery.Peer) error {
-	id := fmt.Sprintf("%s:%s", peerKey, hex.EncodeToString(p.Identity().PublicKey()))
+	id := fmt.Sprintf("%s:%s", peerKey, p.Identity().PublicKey())
 	cmd := r.client.HMSet(id, FormatPeerToHash(p))
 	if cmd.Err() != nil {
 		return cmd.Err()
@@ -76,7 +75,7 @@ func (r redisRepository) SetKnownPeer(p discovery.Peer) error {
 }
 
 func (r redisRepository) SetSeedPeer(s discovery.Seed) error {
-	id := fmt.Sprintf("%s:%s", seedKey, hex.EncodeToString(s.PublicKey))
+	id := fmt.Sprintf("%s:%s", seedKey, s.PublicKey)
 	cmd := r.client.HMSet(id, FormatSeedToHash(s))
 	if cmd.Err() != nil {
 		return cmd.Err()
@@ -109,15 +108,15 @@ func (r redisRepository) GetKnownPeerByIP(ip net.IP) (discovery.Peer, error) {
 	return nil, nil
 }
 
-func (r redisRepository) SetUnreachablePeer(pbKey discovery.PublicKey) error {
-	cmd := r.client.SAdd(unreachablesKey, hex.EncodeToString(pbKey))
+func (r redisRepository) SetUnreachablePeer(pbKey string) error {
+	cmd := r.client.SAdd(unreachablesKey, pbKey)
 	if cmd.Err() != nil {
 		return cmd.Err()
 	}
 	return nil
 }
-func (r redisRepository) RemoveUnreachablePeer(pbKey discovery.PublicKey) error {
-	boolCmd := r.client.SIsMember(unreachablesKey, hex.EncodeToString(pbKey))
+func (r redisRepository) RemoveUnreachablePeer(pbKey string) error {
+	boolCmd := r.client.SIsMember(unreachablesKey, pbKey)
 	if boolCmd.Err() != nil {
 		return boolCmd.Err()
 	}
@@ -128,7 +127,7 @@ func (r redisRepository) RemoveUnreachablePeer(pbKey discovery.PublicKey) error 
 	}
 
 	if exists {
-		cmd := r.client.SRem(unreachablesKey, hex.EncodeToString(pbKey), 0)
+		cmd := r.client.SRem(unreachablesKey, pbKey, 0)
 		if cmd.Err() != nil {
 			return cmd.Err()
 		}
@@ -158,8 +157,8 @@ func (r redisRepository) ListReachablePeers() ([]discovery.Peer, error) {
 	sort.Strings(unreachableKeys)
 
 	for i, p := range peers {
-		idx := sort.SearchStrings(unreachableKeys, p.Identity().PublicKey().String())
-		if idx >= len(unreachableKeys) || peers[i].Identity().PublicKey().String() != unreachableKeys[idx] {
+		idx := sort.SearchStrings(unreachableKeys, p.Identity().PublicKey())
+		if idx >= len(unreachableKeys) || peers[i].Identity().PublicKey() != unreachableKeys[idx] {
 			pp = append(pp, peers[i])
 		}
 	}
@@ -187,8 +186,8 @@ func (r redisRepository) ListUnreachablePeers() ([]discovery.Peer, error) {
 	sort.Strings(unreachableKeys)
 
 	for i, p := range peers {
-		idx := sort.SearchStrings(unreachableKeys, p.Identity().PublicKey().String())
-		if idx < len(unreachableKeys) && peers[i].Identity().PublicKey().String() == unreachableKeys[idx] {
+		idx := sort.SearchStrings(unreachableKeys, p.Identity().PublicKey())
+		if idx < len(unreachableKeys) && peers[i].Identity().PublicKey() == unreachableKeys[idx] {
 			pp = append(pp, peers[i])
 		}
 	}

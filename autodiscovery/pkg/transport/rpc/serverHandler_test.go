@@ -25,12 +25,12 @@ func TestHandleSynRequest(t *testing.T) {
 
 	repo := new(mock.Repository)
 	repo.SetKnownPeer(discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, []byte("key1")),
+		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, "key1"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
 	repo.SetKnownPeer(
-		discovery.NewStartupPeer([]byte("key2"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
+		discovery.NewStartupPeer("key2", net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
 
 	notif := new(mock.Notifier)
 
@@ -44,7 +44,7 @@ func TestHandleSynRequest(t *testing.T) {
 				Identity: &api.PeerIdentity{
 					IP:        "30.0.0.1",
 					Port:      3000,
-					PublicKey: []byte("key2"),
+					PublicKey: "key2",
 				},
 				HeartbeatState: &api.PeerHeartbeatState{
 					GenerationTime:    int64(time.Now().Unix()),
@@ -72,16 +72,16 @@ Scenario: Process a SYN request by returning only the new peers
 func TestHandleSynRequestNewPeers(t *testing.T) {
 	repo := new(mock.Repository)
 	repo.SetKnownPeer(discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, []byte("key1")),
+		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, "key1"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 	repo.SetKnownPeer(discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("30.0.0.1"), 3000, []byte("key2")),
+		discovery.NewPeerIdentity(net.ParseIP("30.0.0.1"), 3000, "key2"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
 	repo.SetKnownPeer(
-		discovery.NewStartupPeer([]byte("key3"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
+		discovery.NewStartupPeer("key3", net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
 
 	notif := new(mock.Notifier)
 
@@ -95,7 +95,7 @@ func TestHandleSynRequestNewPeers(t *testing.T) {
 				Identity: &api.PeerIdentity{
 					IP:        "30.0.0.1",
 					Port:      3000,
-					PublicKey: []byte("key2"),
+					PublicKey: "key2",
 				},
 				HeartbeatState: &api.PeerHeartbeatState{
 					GenerationTime:    int64(time.Now().Unix()),
@@ -122,16 +122,16 @@ Scenario: Process a SYN request by returning only the new peers recent
 func TestHandleSynRequestNewPeersRecentOnly(t *testing.T) {
 	repo := new(mock.Repository)
 	repo.SetKnownPeer(discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, []byte("key1")),
+		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, "key1"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 	repo.SetKnownPeer(discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("30.0.0.1"), 3000, []byte("key2")),
+		discovery.NewPeerIdentity(net.ParseIP("30.0.0.1"), 3000, "key2"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
 	repo.SetKnownPeer(
-		discovery.NewStartupPeer([]byte("key3"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
+		discovery.NewStartupPeer("key3", net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
 
 	notif := new(mock.Notifier)
 
@@ -145,7 +145,7 @@ func TestHandleSynRequestNewPeersRecentOnly(t *testing.T) {
 				Identity: &api.PeerIdentity{
 					IP:        "30.0.0.1",
 					Port:      3000,
-					PublicKey: []byte("key2"),
+					PublicKey: "key2",
 				},
 				HeartbeatState: &api.PeerHeartbeatState{
 					GenerationTime:    int64(time.Now().Unix()),
@@ -156,7 +156,7 @@ func TestHandleSynRequestNewPeersRecentOnly(t *testing.T) {
 				Identity: &api.PeerIdentity{
 					IP:        "20.10.0.1",
 					Port:      3000,
-					PublicKey: []byte("key2"),
+					PublicKey: "key2",
 				},
 				HeartbeatState: &api.PeerHeartbeatState{
 					GenerationTime:    int64(time.Now().Unix()),
@@ -184,12 +184,12 @@ Scenario: Process a SYN request by returning only the unknown peers
 func TestHandleSynRequestUnknownPeers(t *testing.T) {
 	repo := new(mock.Repository)
 	repo.SetKnownPeer(discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, []byte("key1")),
+		discovery.NewPeerIdentity(net.ParseIP("20.10.0.1"), 3000, "key1"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
 	repo.SetKnownPeer(
-		discovery.NewStartupPeer([]byte("key2"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
+		discovery.NewStartupPeer("key2", net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}))
 
 	notif := new(mock.Notifier)
 	h := NewServerHandler(repo, notif)
@@ -202,7 +202,7 @@ func TestHandleSynRequestUnknownPeers(t *testing.T) {
 				Identity: &api.PeerIdentity{
 					IP:        "30.0.0.1",
 					Port:      3000,
-					PublicKey: []byte("key2"),
+					PublicKey: "key2",
 				},
 				HeartbeatState: &api.PeerHeartbeatState{
 					GenerationTime:    int64(time.Now().Unix()),
@@ -213,7 +213,7 @@ func TestHandleSynRequestUnknownPeers(t *testing.T) {
 				Identity: &api.PeerIdentity{
 					IP:        "20.10.0.1",
 					Port:      3000,
-					PublicKey: []byte("key1"),
+					PublicKey: "key1",
 				},
 				HeartbeatState: &api.PeerHeartbeatState{
 					GenerationTime:    int64(time.Now().Unix()),
@@ -240,12 +240,12 @@ Scenario: Process a SYN request by returning only the unknown peers more recent
 func TestHandleSynRequestUnknownPeersRecentOnly(t *testing.T) {
 	repo := new(mock.Repository)
 	repo.SetKnownPeer(discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("30.0.0.1"), 3000, []byte("key2")),
+		discovery.NewPeerIdentity(net.ParseIP("30.0.0.1"), 3000, "key2"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	))
 
 	repo.SetKnownPeer(
-		discovery.NewStartupPeer([]byte("key1"), net.ParseIP("20.10.0.1"), 3000, "1.0", discovery.PeerPosition{}))
+		discovery.NewStartupPeer("key1", net.ParseIP("20.10.0.1"), 3000, "1.0", discovery.PeerPosition{}))
 
 	notif := new(mock.Notifier)
 
@@ -259,7 +259,7 @@ func TestHandleSynRequestUnknownPeersRecentOnly(t *testing.T) {
 				Identity: &api.PeerIdentity{
 					IP:        "30.0.0.1",
 					Port:      3000,
-					PublicKey: []byte("key2"),
+					PublicKey: "key2",
 				},
 				HeartbeatState: &api.PeerHeartbeatState{
 					GenerationTime:    int64(time.Now().Unix()),
@@ -270,7 +270,7 @@ func TestHandleSynRequestUnknownPeersRecentOnly(t *testing.T) {
 				Identity: &api.PeerIdentity{
 					IP:        "20.10.0.1",
 					Port:      3000,
-					PublicKey: []byte("key1"),
+					PublicKey: "key1",
 				},
 				HeartbeatState: &api.PeerHeartbeatState{
 					GenerationTime:    int64(time.Now().Unix()),
@@ -308,7 +308,7 @@ func TestHandlAckRequest(t *testing.T) {
 				Identity: &api.PeerIdentity{
 					IP:        "20.10.0.1",
 					Port:      3000,
-					PublicKey: []byte("key1"),
+					PublicKey: "key1",
 				},
 				HeartbeatState: &api.PeerHeartbeatState{
 					GenerationTime:    int64(time.Now().Unix()),
@@ -333,7 +333,7 @@ func TestHandlAckRequest(t *testing.T) {
 
 	kp, _ := repo.ListKnownPeers()
 	assert.Equal(t, 1, len(kp))
-	assert.Equal(t, "key1", kp[0].Identity().PublicKey().String())
+	assert.Equal(t, "key1", kp[0].Identity().PublicKey())
 	assert.Equal(t, "20.10.0.1", kp[0].Identity().IP().String())
 	assert.Equal(t, 3000, kp[0].Identity().Port())
 	assert.Equal(t, int64(1000), kp[0].HeartbeatState().ElapsedHeartbeats())
@@ -346,5 +346,5 @@ func TestHandlAckRequest(t *testing.T) {
 	assert.Equal(t, discovery.OkStatus, kp[0].AppState().Status())
 
 	assert.NotEmpty(t, notif.NotifiedPeers)
-	assert.Equal(t, "key1", notif.NotifiedPeers()[0].Identity().PublicKey().String())
+	assert.Equal(t, "key1", notif.NotifiedPeers()[0].Identity().PublicKey())
 }

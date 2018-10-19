@@ -1,7 +1,6 @@
 package discovery
 
 import (
-	"encoding/hex"
 	"fmt"
 	"net"
 )
@@ -16,7 +15,7 @@ type SeedRepository interface {
 type Seed struct {
 	IP        net.IP
 	Port      int
-	PublicKey PublicKey
+	PublicKey string
 }
 
 //AsPeer converts a seed into a peer
@@ -34,7 +33,7 @@ func (s Seed) String() string {
 	return fmt.Sprintf("IP: %s, Port: %d, Public Key: %s",
 		s.IP.String(),
 		s.Port,
-		hex.EncodeToString(s.PublicKey),
+		s.PublicKey,
 	)
 }
 

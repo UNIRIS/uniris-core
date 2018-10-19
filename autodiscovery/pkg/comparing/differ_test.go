@@ -18,12 +18,12 @@ Scenario: Compare with the same peers
 func TestDiffSameGenTime(t *testing.T) {
 
 	kp1 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, []byte("key1")),
+		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	)
 
 	comparee := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, []byte("key1")),
+		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	)
 
@@ -43,12 +43,12 @@ Scenario: Compare different peers
 func TestDiffFull(t *testing.T) {
 
 	kp1 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, []byte("key1")),
+		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	)
 
 	comparee := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 4000, []byte("key2")),
+		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 4000, "key2"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	)
 
@@ -57,10 +57,10 @@ func TestDiffFull(t *testing.T) {
 	pp := diff.ProvidePeers([]discovery.Peer{comparee})
 	assert.NotEmpty(t, up)
 	assert.Equal(t, 1, len(up))
-	assert.Equal(t, "key2", up[0].Identity().PublicKey().String())
+	assert.Equal(t, "key2", up[0].Identity().PublicKey())
 	assert.NotEmpty(t, pp)
 	assert.Equal(t, 1, len(pp))
-	assert.Equal(t, "key1", pp[0].Identity().PublicKey().String())
+	assert.Equal(t, "key1", pp[0].Identity().PublicKey())
 
 }
 
@@ -73,20 +73,20 @@ Scenario: Compare peers and gets the more recents
 func TestDiffUnknownRecentPeers(t *testing.T) {
 
 	kp1 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, []byte("key1")),
+		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	)
 	kp2 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 4000, []byte("key2")),
+		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 4000, "key2"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	)
 
 	c1 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, []byte("key1")),
+		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1200),
 	)
 	c2 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 4000, []byte("key2")),
+		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 4000, "key2"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	)
 
@@ -110,20 +110,20 @@ Scenario: Compare peers and gets the more recents
 func TestDiffNewRecentPeers(t *testing.T) {
 
 	kp1 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, []byte("key1")),
+		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	)
 	kp2 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 4000, []byte("key2")),
+		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 4000, "key2"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1200),
 	)
 
 	c1 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, []byte("key1")),
+		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	)
 	c2 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 4000, []byte("key2")),
+		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 4000, "key2"),
 		discovery.NewPeerHeartbeatState(time.Now(), 1000),
 	)
 
