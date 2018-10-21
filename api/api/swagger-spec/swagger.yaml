@@ -4,7 +4,7 @@ basePath: /api
 
 info:
   description: |
-    This is the endpoints provided by the robot UNIRIS.
+    This is the endpoints provided by the UNIRIS robot.
     This API is documented in **OpenAPI format**
     You can find out more about the robot code here [http://github.com/uniris/uniris-core](http://github.com/uniris/uniris-core)
   version: 1.0

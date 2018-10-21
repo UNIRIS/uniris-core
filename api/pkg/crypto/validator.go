@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"crypto/ecdsa"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/hex"
@@ -15,12 +14,6 @@ import (
 //RequestValidator implements the request validator
 type RequestValidator struct {
 	listing.RequestValidator
-}
-
-func hash(data []byte) string {
-	hash := sha256.New()
-	hash.Write(data)
-	return hex.EncodeToString(hash.Sum(nil))
 }
 
 type ecdsaSignature struct {
