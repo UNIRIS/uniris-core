@@ -31,7 +31,7 @@ func TestOkSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err := val.CheckDataWallet(w)
+	err := val.CheckWalletData(w)
 	assert.Nil(t, err)
 
 	bd := &datamining.BioData{
@@ -43,7 +43,7 @@ func TestOkSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err = val.CheckBioWallet(bd)
+	err = val.CheckBioData(bd)
 	assert.Nil(t, err)
 }
 
@@ -65,7 +65,7 @@ func TestKOSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err := val.CheckDataWallet(w)
+	err := val.CheckWalletData(w)
 	assert.Equal(t, err, ErrInvalidSignature)
 
 	bd := &datamining.BioData{
@@ -77,7 +77,7 @@ func TestKOSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err = val.CheckBioWallet(bd)
+	err = val.CheckBioData(bd)
 	assert.Equal(t, err, ErrInvalidSignature)
 }
 

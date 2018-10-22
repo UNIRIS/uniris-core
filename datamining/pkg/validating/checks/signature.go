@@ -16,8 +16,8 @@ type Signer interface {
 
 //SignatureChecker defines methods to check signature
 type SignatureChecker interface {
-	BioChecker
-	DataChecker
+	BioDataChecker
+	WalletDataChecker
 }
 
 type sigCheck struct {
@@ -29,7 +29,7 @@ func NewSignatureChecker(sig Signer) SignatureChecker {
 	return sigCheck{sig}
 }
 
-func (c sigCheck) CheckDataWallet(w *datamining.WalletData) error {
+func (c sigCheck) CheckWalletData(w *datamining.WalletData) error {
 	wValid := WalletData{
 		BIODPublicKey:      w.BiodPubk,
 		EncryptedAddrRobot: w.CipherAddrRobot,
@@ -54,7 +54,7 @@ func (c sigCheck) CheckDataWallet(w *datamining.WalletData) error {
 	return nil
 }
 
-func (c sigCheck) CheckBioWallet(b *datamining.BioData) error {
+func (c sigCheck) CheckBioData(b *datamining.BioData) error {
 	bValid := BioData{
 		BIODPublicKey:       b.BiodPubk,
 		EncryptedAddrPerson: b.CipherAddrBio,

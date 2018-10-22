@@ -4,12 +4,12 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg"
 )
 
-//BioChecker defines methods to validate bio data
-type BioChecker interface {
-	CheckBioWallet(*datamining.BioData) error
+//BioDataChecker defines methods to validate bio wallet
+type BioDataChecker interface {
+	CheckBioData(*datamining.BioData) error
 }
 
-//DataChecker defines methods to validate wallet data
-type DataChecker interface {
-	CheckDataWallet(*datamining.WalletData) error
+//WalletDataChecker defines methods to validate wallet data
+type WalletDataChecker interface {
+	CheckWalletData(*datamining.WalletData) error
 }
