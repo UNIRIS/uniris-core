@@ -6,14 +6,14 @@ import (
 
 //Repository defines methods to get data from the database
 type Repository interface {
-	FindBioWallet(bh datamining.BioHash) (datamining.BioWallet, error)
-	FindWallet(addr datamining.WalletAddr) (datamining.Wallet, error)
+	FindBioWallet(bioHash string) (*datamining.BioWallet, error)
+	FindWallet(addr string) (*datamining.Wallet, error)
 }
 
-//Service defines methods for the listing service
+//Service defines method for the listing service
 type Service interface {
-	GetBioWallet(bh datamining.BioHash) (datamining.BioWallet, error)
-	GetWallet(addr datamining.WalletAddr) (datamining.Wallet, error)
+	GetBioWallet(bioHash string) (*datamining.BioWallet, error)
+	GetWallet(addr string) (*datamining.Wallet, error)
 }
 
 type service struct {
@@ -25,18 +25,18 @@ func NewService(repo Repository) Service {
 	return service{repo}
 }
 
-func (s service) GetBioWallet(bh datamining.BioHash) (w datamining.BioWallet, err error) {
-	w, err = s.repo.FindBioWallet(bh)
+func (s service) GetBioWallet(bioHash string) (*datamining.BioWallet, error) {
+	w, err := s.repo.FindBioWallet(bioHash)
 	if err != nil {
-		return
+		return nil, err
 	}
-	return
+	return w, nil
 }
 
-func (s service) GetWallet(addr datamining.WalletAddr) (w datamining.Wallet, err error) {
-	w, err = s.repo.FindWallet(addr)
+func (s service) GetWallet(addr string) (*datamining.Wallet, error) {
+	w, err := s.repo.FindWallet(addr)
 	if err != nil {
-		return
+		return nil, err
 	}
-	return
+	return w, nil
 }

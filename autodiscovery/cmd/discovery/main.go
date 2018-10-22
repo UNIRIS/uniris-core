@@ -72,7 +72,7 @@ func main() {
 		seeds = append(seeds, discovery.Seed{
 			IP:        net.ParseIP(s.IP),
 			Port:      s.Port,
-			PublicKey: []byte(s.PublicKey),
+			PublicKey: s.PublicKey,
 		})
 	}
 	if err := boot.LoadSeeds(seeds); err != nil {
@@ -80,7 +80,7 @@ func main() {
 	}
 
 	//Stores the startup peer
-	startPeer, err := boot.Startup([]byte(conf.PublicKey), conf.Discovery.Port, conf.Version)
+	startPeer, err := boot.Startup(conf.PublicKey, conf.Discovery.Port, conf.Version)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func main() {
 }
 
 func loadConfiguration() (*system.UnirisConfig, error) {
-	confFile := flag.String("conf-file", defaultConfFile, "Configuration file")
+	confFile := flag.String("config", defaultConfFile, "Configuration file")
 	flag.Parse()
 
 	confFilePath, err := filepath.Abs(*confFile)

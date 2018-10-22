@@ -1,8 +1,6 @@
 package comparing
 
 import (
-	"encoding/hex"
-
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 )
 
@@ -30,7 +28,7 @@ func (d peerDiffer) UnknownPeers(comparePP []discovery.Peer) []discovery.Peer {
 	for _, p := range comparePP {
 
 		//Checks if the compared peer is include inside the repository
-		kp, exist := mapRepo[hex.EncodeToString(p.Identity().PublicKey())]
+		kp, exist := mapRepo[p.Identity().PublicKey()]
 
 		if !exist {
 			//Adds to the list if the peer is unknown
@@ -53,7 +51,7 @@ func (d peerDiffer) ProvidePeers(comparePP []discovery.Peer) []discovery.Peer {
 	for _, p := range d.source {
 
 		//Checks if the known peer is include inside the list of compared peer
-		c, exist := mapComparee[hex.EncodeToString(p.Identity().PublicKey())]
+		c, exist := mapComparee[p.Identity().PublicKey()]
 
 		if !exist {
 			//Adds to the list if the peer is unknown
@@ -70,7 +68,7 @@ func (d peerDiffer) ProvidePeers(comparePP []discovery.Peer) []discovery.Peer {
 func (d peerDiffer) mapSlice(pp []discovery.Peer) map[string]discovery.Peer {
 	mPeers := make(map[string]discovery.Peer)
 	for _, p := range pp {
-		mPeers[hex.EncodeToString(p.Identity().PublicKey())] = p
+		mPeers[p.Identity().PublicKey()] = p
 	}
 	return mPeers
 }

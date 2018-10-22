@@ -21,7 +21,7 @@ Scenario: Gets peer status when no access to internet
 func TestPeerStatusFaulty(t *testing.T) {
 	srv := NewService(new(mock.Repository), new(mock.Monitor), new(mock.NetworkerInternetFails), new(mock.RobotWatcher))
 	p := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, []byte("test")),
+		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0))
 	status, _ := srv.PeerStatus(p)
 	assert.Equal(t, discovery.FaultStatus, status)
@@ -36,7 +36,7 @@ Scenario: Gets peer status when no NTP synchro
 func TestPeerStatusStorageOnly(t *testing.T) {
 	srv := NewService(new(mock.Repository), new(mock.Monitor), new(mock.NetworkerNTPFails), new(mock.RobotWatcher))
 	p := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, []byte("test")),
+		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0))
 	status, _ := srv.PeerStatus(p)
 	assert.Equal(t, discovery.StorageOnlyStatus, status)
@@ -61,17 +61,17 @@ func TestRefresh(t *testing.T) {
 	st2 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
 	st3 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
 
-	p1 := discovery.NewStartupPeer([]byte("key1"), seed1.IP, seed1.Port, "1.0", discovery.PeerPosition{})
+	p1 := discovery.NewStartupPeer("key1", seed1.IP, seed1.Port, "1.0", discovery.PeerPosition{})
 	p1.Refresh(discovery.BootstrapingStatus, 0.0, "", 1, 5)
 
 	p2 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(seed2.IP, seed2.Port, []byte("key2")),
+		discovery.NewPeerIdentity(seed2.IP, seed2.Port, "key2"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 		st2,
 	)
 
 	p3 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(seed3.IP, seed3.Port, []byte("key3")),
+		discovery.NewPeerIdentity(seed3.IP, seed3.Port, "key3"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 		st3,
 	)
@@ -102,7 +102,7 @@ func TestPeerStatusOkStatus(t *testing.T) {
 	repo := new(mock.Repository)
 	srv := NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
 
-	initP := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "0.0", discovery.PeerPosition{})
+	initP := discovery.NewStartupPeer("key", net.ParseIP("127.0.0.1"), 3000, "0.0", discovery.PeerPosition{})
 	repo.SetKnownPeer(initP)
 
 	seed1 := discovery.Seed{IP: net.ParseIP("10.1.1.1"), Port: 3000}
@@ -121,19 +121,19 @@ func TestPeerStatusOkStatus(t *testing.T) {
 	st3 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
 
 	p1 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(seed1.IP, seed1.Port, []byte("key1")),
+		discovery.NewPeerIdentity(seed1.IP, seed1.Port, "key1"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 		st1,
 	)
 
 	p2 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(seed2.IP, seed2.Port, []byte("key2")),
+		discovery.NewPeerIdentity(seed2.IP, seed2.Port, "key2"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 		st2,
 	)
 
 	p3 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(seed3.IP, seed3.Port, []byte("key3")),
+		discovery.NewPeerIdentity(seed3.IP, seed3.Port, "key3"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 		st3,
 	)
@@ -142,7 +142,7 @@ func TestPeerStatusOkStatus(t *testing.T) {
 	repo.SetKnownPeer(p3)
 
 	p4 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("185.123.4.9"), 4000, []byte("key4")),
+		discovery.NewPeerIdentity(net.ParseIP("185.123.4.9"), 4000, "key4"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 		st1)
 

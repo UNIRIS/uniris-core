@@ -10,46 +10,46 @@ import (
 )
 
 //Encrypt encrypt data using a public key
-func Encrypt(pubk []byte, data []byte) ([]byte, error) {
+func Encrypt(pubk string, data string) (string, error) {
 	decodeKey, err := hex.DecodeString(string(pubk))
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	pu, err := x509.ParsePKIXPublicKey(decodeKey)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	robotEciesKey := ecies.ImportECDSAPublic(pu.(*ecdsa.PublicKey))
 
-	cipher, err := ecies.Encrypt(rand.Reader, robotEciesKey, data, nil, nil)
+	cipher, err := ecies.Encrypt(rand.Reader, robotEciesKey, []byte(data), nil, nil)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return []byte(hex.EncodeToString(cipher)), nil
+	return hex.EncodeToString(cipher), nil
 }
 
 //Decrypt decrypt data using a private key
-func Decrypt(privk []byte, edata []byte) ([]byte, error) {
-	decodeKey, err := hex.DecodeString(string(privk))
+func Decrypt(privk string, edata string) (string, error) {
+	decodeKey, err := hex.DecodeString(privk)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	robotKey, err := x509.ParseECPrivateKey(decodeKey)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	decodeCipher, err := hex.DecodeString(string(edata))
+	decodeCipher, err := hex.DecodeString(edata)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	robotEciesKey := ecies.ImportECDSA(robotKey)
 	message, err := robotEciesKey.Decrypt(decodeCipher, nil, nil)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return message, nil
+	return string(message), nil
 }

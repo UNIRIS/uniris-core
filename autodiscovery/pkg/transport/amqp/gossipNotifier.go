@@ -89,7 +89,7 @@ func (n notifier) serialize(p discovery.Peer) ([]byte, error) {
 		AppState       PeerAppState
 	}{
 		Identity: PeerIdentity{
-			PublicKey: p.Identity().PublicKey().String(),
+			PublicKey: p.Identity().PublicKey(),
 			IP:        p.Identity().IP().String(),
 			Port:      p.Identity().Port(),
 		},

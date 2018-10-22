@@ -15,9 +15,9 @@ Scenario: Create a startup peer
 	Then we get a new peer with the status bootstraping and specified as owned
 */
 func TestNewPeer(t *testing.T) {
-	p := NewStartupPeer(PublicKey("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{Lat: 50.0, Lon: 3.0})
+	p := NewStartupPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{Lat: 50.0, Lon: 3.0})
 	assert.NotNil(t, p)
-	assert.Equal(t, "key", p.Identity().PublicKey().String())
+	assert.Equal(t, "key", p.Identity().PublicKey())
 	assert.Equal(t, "127.0.0.1", p.Identity().IP().String())
 	assert.Equal(t, 3000, p.Identity().Port())
 	assert.Equal(t, "1.0", p.AppState().Version())
@@ -35,7 +35,7 @@ Scenario: Gets the peer's endpoint
 	Then we gets the IP followed by the port
 */
 func TestEndpoint(t *testing.T) {
-	p := NewStartupPeer(PublicKey("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{Lat: 50.0, Lon: 3.0})
+	p := NewStartupPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{Lat: 50.0, Lon: 3.0})
 	assert.Equal(t, "127.0.0.1:3000", p.Endpoint())
 }
 
@@ -46,7 +46,7 @@ Scenario: Refreshes a peer
 	Then the new info are stored
 */
 func TestRefreshPeer(t *testing.T) {
-	p := NewStartupPeer(PublicKey("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{Lat: 50.0, Lon: 3.0})
+	p := NewStartupPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", PeerPosition{Lat: 50.0, Lon: 3.0})
 	err := p.Refresh(OkStatus, 600.10, "300.200.100", 50.0, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, OkStatus, p.AppState().Status())
@@ -76,7 +76,7 @@ Scenario: Create a discovered peer
 func TestCreateDiscoveredPeer(t *testing.T) {
 
 	identity := peerIdentity{
-		publicKey: PublicKey("key"),
+		publicKey: "key",
 		ip:        net.ParseIP("127.0.0.1"),
 		port:      3000,
 	}
@@ -98,7 +98,7 @@ func TestCreateDiscoveredPeer(t *testing.T) {
 
 	p := NewDiscoveredPeer(identity, hbState, appState)
 	assert.Equal(t, int64(1000), p.HeartbeatState().ElapsedHeartbeats())
-	assert.Equal(t, "key", p.Identity().PublicKey().String())
+	assert.Equal(t, "key", p.Identity().PublicKey())
 	assert.Equal(t, "127.0.0.1", p.Identity().IP().String())
 	assert.Equal(t, 3000, p.Identity().Port())
 	assert.Equal(t, 2, p.AppState().P2PFactor())
@@ -117,10 +117,10 @@ Scenario: Convers a seed into a peer
 	Then we get a peer with the IP and the Port defined
 */
 func TestSeedToPeer(t *testing.T) {
-	s := Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000, PublicKey: []byte("key")}
+	s := Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000, PublicKey: "key"}
 	p := s.AsPeer()
 	assert.NotNil(t, p)
 	assert.Equal(t, "127.0.0.1", p.Identity().IP().String())
 	assert.Equal(t, 3000, p.Identity().Port())
-	assert.Equal(t, "key", p.Identity().PublicKey().String())
+	assert.Equal(t, "key", p.Identity().PublicKey())
 }

@@ -4,7 +4,7 @@ basePath: /api
 
 info:
   description: |
-    This is the endpoints provided by the robot UNIRIS.
+    This is the endpoints provided by the UNIRIS robot.
     This API is documented in **OpenAPI format**
     You can find out more about the robot code here [http://github.com/uniris/uniris-core](http://github.com/uniris/uniris-core)
   version: 1.0
@@ -46,6 +46,35 @@ paths:
             $ref: "#/definitions/Error"
           
   /account/{hash}:
+      head:
+        tags:
+          - Account
+        summary: Check if an account exist
+        operationId: existAccount
+        parameters:
+          - name: hash
+            in: path
+            required: true
+            type: string
+            description: Encrypted hash of the person's public key
+          - name: signature
+            in: query
+            required: true
+            type: string
+            description: Signature of the encrypted hash by the shared private key of client devices
+        responses:
+          "200":
+            description: Existance of the account
+            headers:
+              Account-Exist:
+                type: boolean
+                description: Defines if the ressource exist or not
+          default:
+            description: Error
+            headers:
+              Error:
+                type: string
+                description: Unexpected error
       get:
         tags:
         - Account
@@ -79,15 +108,24 @@ definitions:
   Error:
     type: object
     required:
-      - message
+      - error_message
+      - error_code
     properties:
-      message:
+      error_message:
         type: string
+        description: Error message
+      error_code:
+        type: int
+        description: HTTP code error
+      error_signature:
+        type: string
+        description: Signature validating the error
   AccountDetails:
     required:
       - encrypted_wallet
       - encrypted_aes_key
       - encrypted_addr_person
+      - signature_request
     properties:
       encrypted_wallet:
         description: Wallet details encrypted
@@ -97,6 +135,9 @@ definitions:
         type: string
       encrypted_addr_person:
         description: Encryted address with person key
+        type: string
+      signature_request:
+        description: Request signature
         type: string
   EnrollmentRequest:
     required:
@@ -123,12 +164,12 @@ definitions:
         type: string
   EnrollmentResult:
     required:
-      - hash
+      - transaction_hash
       - signature_request
     properties:
       hash:
         type: string
-        description: Hash of the udpate wallet
+        description: Transaction hash for the wallet creation
       signature_request:
         description: Request signature
         type: string

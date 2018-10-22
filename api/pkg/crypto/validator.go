@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"crypto/ecdsa"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/hex"
@@ -17,31 +16,13 @@ type RequestValidator struct {
 	listing.RequestValidator
 }
 
-func hash(data []byte) []byte {
-	hash := sha256.New()
-	hash.Write(data)
-	return []byte(hex.EncodeToString(hash.Sum(nil)))
-}
-
 type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-//CheckSignature validates a signature from a data
-func (v RequestValidator) CheckSignature(data interface{}, pubKey []byte, sig []byte) (bool, error) {
-	var sigBio ecdsaSignature
-	clearSig, err := hex.DecodeString(string(sig))
-	if err != nil {
-		return false, err
-	}
-
-	asn1.Unmarshal(clearSig, &sigBio)
-	b, err := json.Marshal(data)
-	if err != nil {
-		return false, err
-	}
-
-	decodeKey, err := hex.DecodeString(string(pubKey))
+//CheckRawSignature validate signed hashed data
+func (v RequestValidator) CheckRawSignature(hashedData string, pubKey string, sig string) (bool, error) {
+	decodeKey, err := hex.DecodeString(pubKey)
 	if err != nil {
 		return false, err
 	}
@@ -49,9 +30,23 @@ func (v RequestValidator) CheckSignature(data interface{}, pubKey []byte, sig []
 	key, err := x509.ParsePKIXPublicKey(decodeKey)
 	ecdsaKey := key.(*ecdsa.PublicKey)
 
+	var sigBio ecdsaSignature
+	clearSig, err := hex.DecodeString(sig)
 	if err != nil {
 		return false, err
 	}
 
-	return ecdsa.Verify(ecdsaKey, hash(b), sigBio.R, sigBio.S), nil
+	asn1.Unmarshal(clearSig, &sigBio)
+
+	return ecdsa.Verify(ecdsaKey, []byte(hashedData), sigBio.R, sigBio.S), nil
+}
+
+//CheckDataSignature validates a signature from a data
+func (v RequestValidator) CheckDataSignature(data interface{}, pubKey string, sig string) (bool, error) {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return false, err
+	}
+
+	return v.CheckRawSignature(Hash(string(b)), pubKey, sig)
 }

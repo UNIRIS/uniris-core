@@ -2,18 +2,15 @@ package listing
 
 //AccountResult defines the account's data returned from the robot
 type AccountResult struct {
-	EncryptedWallet     string `json:"encrypted_wallet"`
 	EncryptedAESKey     string `json:"encrypted_aes_key"`
+	EncryptedWallet     string `json:"encrypted_wallet"`
 	EncryptedAddrPerson string `json:"encrypted_addr_person"`
 }
 
-//AccountVerifyRequest defines the account form to verify
-type AccountVerifyRequest struct {
-	EncryptedHash string `json:"encrypted_hash"`
-}
-
-//AccountRequest represents the data will be send to the robot
-type AccountRequest struct {
-	EncryptedHash    []byte
-	SignatureRequest []byte
+//SignedAccountResult defines the account's data returned from the robot but signed
+type SignedAccountResult struct {
+	EncryptedWallet     string `json:"encrypted_wallet"`
+	EncryptedAESKey     string `json:"encrypted_aes_key"`
+	EncryptedAddrPerson string `json:"encrypted_addr_person"`
+	SignatureRequest    string `json:"signature_request"`
 }

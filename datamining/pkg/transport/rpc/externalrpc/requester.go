@@ -12,14 +12,14 @@ func NewValidatorRequest() validating.ValidationRequester {
 	return validatorRequester{}
 }
 
-func (v validatorRequester) RequestWalletValidation(validating.Peer, datamining.WalletData) (datamining.Validation, error) {
+func (v validatorRequester) RequestWalletValidation(validating.Peer, *datamining.WalletData) (datamining.Validation, error) {
 	var validation datamining.Validation
 
 	//TODO
 
 	return validation, nil
 }
-func (v validatorRequester) RequestBioValidation(validating.Peer, datamining.BioData) (datamining.Validation, error) {
+func (v validatorRequester) RequestBioValidation(validating.Peer, *datamining.BioData) (datamining.Validation, error) {
 	var validation datamining.Validation
 
 	//TODO

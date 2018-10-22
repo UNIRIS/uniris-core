@@ -1,33 +1,39 @@
 package listing
 
-import "errors"
+import (
+	"errors"
+)
 
 //ErrInvalidSignature is returned when the request contains invalid signatures
 var ErrInvalidSignature = errors.New("Invalid signature")
 
+//ErrAccountNotExist is returned when the requested account not exist
+var ErrAccountNotExist = errors.New("Account doest not exist")
+
 //RobotClient define methods to interfact with the robot
 type RobotClient interface {
-	GetAccount(AccountRequest) (AccountResult, error)
+	GetAccount(encHash string) (*SignedAccountResult, error)
 }
 
 //RequestValidator defines methods to validate requests
 type RequestValidator interface {
-	CheckSignature(data interface{}, key []byte, sig []byte) (bool, error)
+	CheckRawSignature(hashedData string, key string, sig string) (bool, error)
 }
 
 //Service define methods for the listing feature
 type Service interface {
-	GetAccount(encryptedHash string, sig string) (AccountResult, error)
+	ExistAccount(encryptedHash string, sig string) error
+	GetAccount(encryptedHash string, sig string) (*SignedAccountResult, error)
 }
 
 type service struct {
 	client       RobotClient
 	val          RequestValidator
-	sharedBioPub []byte
+	sharedBioPub string
 }
 
 //NewService creates a new listing service
-func NewService(sharedBioPub []byte, client RobotClient, val RequestValidator) Service {
+func NewService(sharedBioPub string, client RobotClient, val RequestValidator) Service {
 	return service{
 		sharedBioPub: sharedBioPub,
 		client:       client,
@@ -35,24 +41,31 @@ func NewService(sharedBioPub []byte, client RobotClient, val RequestValidator) S
 	}
 }
 
-func (s service) GetAccount(encryptedHash string, sig string) (AccountResult, error) {
-	var res AccountResult
-
-	verifReq := AccountVerifyRequest{EncryptedHash: encryptedHash}
-
-	valid, err := s.val.CheckSignature(verifReq, s.sharedBioPub, []byte(sig))
+func (s service) ExistAccount(encryptedHash string, sig string) error {
+	valid, err := s.val.CheckRawSignature(encryptedHash, s.sharedBioPub, sig)
 	if err != nil {
-		return res, err
+		return err
+	}
+	if !valid {
+		return ErrInvalidSignature
+	}
+
+	_, err = s.client.GetAccount(encryptedHash)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s service) GetAccount(encryptedHash string, sig string) (*SignedAccountResult, error) {
+	valid, err := s.val.CheckRawSignature(encryptedHash, s.sharedBioPub, sig)
+	if err != nil {
+		return nil, err
 	}
 
 	if !valid {
-		return res, ErrInvalidSignature
+		return nil, ErrInvalidSignature
 	}
 
-	req := AccountRequest{
-		EncryptedHash:    []byte(encryptedHash),
-		SignatureRequest: []byte(sig),
-	}
-
-	return s.client.GetAccount(req)
+	return s.client.GetAccount(encryptedHash)
 }

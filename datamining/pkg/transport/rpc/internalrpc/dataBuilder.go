@@ -6,41 +6,42 @@ import (
 )
 
 //BuildWalletResult constitue details for the WalletResult rpc command
-func BuildWalletResult(w datamining.Wallet, bioW datamining.BioWallet) *api.WalletResult {
+func BuildWalletResult(w *datamining.Wallet, bioW *datamining.BioWallet) *api.WalletResult {
 	return &api.WalletResult{
 		EncryptedAESkey:        bioW.CipherAESKey(),
 		EncryptedWallet:        w.CipherWallet(),
-		EncryptedWalletAddress: w.WalletAddr(),
+		EncryptedWalletAddress: bioW.CipherAddrBio(),
 	}
 }
 
 //BuildBioData transform json bio data into bio data
-func BuildBioData(bioData BioDataFromJSON, sig *api.Signature) datamining.BioData {
-	return datamining.BioData{
-		BHash:           datamining.BioHash(bioData.PersonHash),
-		BiodPubk:        datamining.PublicKey(bioData.BiodPublicKey),
-		CipherAddrBio:   datamining.WalletAddr(bioData.EncryptedAddrPerson),
-		CipherAddrRobot: datamining.WalletAddr(bioData.EncryptedAddrRobot),
-		CipherAESKey:    []byte(bioData.EncryptedAESKey),
-		EmPubk:          datamining.PublicKey(bioData.PersonPublicKey),
+func BuildBioData(bioData BioDataFromJSON, sig *api.Signature) *datamining.BioData {
+	return &datamining.BioData{
+		BHash:           bioData.PersonHash,
+		BiodPubk:        bioData.BiodPublicKey,
+		CipherAddrBio:   bioData.EncryptedAddrPerson,
+		CipherAddrRobot: bioData.EncryptedAddrRobot,
+		CipherAESKey:    bioData.EncryptedAESKey,
+		EmPubk:          bioData.PersonPublicKey,
 		Sigs: datamining.Signatures{
-			BiodSig: datamining.DERSignature(sig.Biod),
-			EmSig:   datamining.DERSignature(sig.Person),
+			BiodSig: sig.Biod,
+			EmSig:   sig.Person,
 		},
 	}
 
 }
 
 //BuildWalletData transform json wallet data into wallet data
-func BuildWalletData(walletData WalletDataFromJSON, sig *api.Signature) datamining.WalletData {
-	return datamining.WalletData{
-		BiodPubk:        datamining.PublicKey(walletData.BiodPublicKey),
-		CipherAddrRobot: datamining.WalletAddr(walletData.EncryptedAddrRobot),
-		CipherWallet:    datamining.CipherWallet(walletData.EncryptedWallet),
-		EmPubk:          datamining.PublicKey(walletData.PersonPublicKey),
+func BuildWalletData(walletData *WalletDataFromJSON, sig *api.Signature, clearAddr string) *datamining.WalletData {
+	return &datamining.WalletData{
+		WalletAddr:      clearAddr,
+		BiodPubk:        walletData.BiodPublicKey,
+		CipherAddrRobot: walletData.EncryptedAddrRobot,
+		CipherWallet:    walletData.EncryptedWallet,
+		EmPubk:          walletData.PersonPublicKey,
 		Sigs: datamining.Signatures{
-			BiodSig: datamining.DERSignature(sig.Biod),
-			EmSig:   datamining.DERSignature(sig.Person),
+			BiodSig: sig.Biod,
+			EmSig:   sig.Person,
 		},
 	}
 }
@@ -49,7 +50,7 @@ func BuildWalletData(walletData WalletDataFromJSON, sig *api.Signature) datamini
 type WalletDataFromJSON struct {
 	PersonPublicKey    string `json:"person_pubk"`
 	BiodPublicKey      string `json:"biod_pubk"`
-	EncryptedWallet    string `json:"encrypted_wallet"`
+	EncryptedWallet    string `json:"encrypted_wal"`
 	EncryptedAddrRobot string `json:"encrypted_addr_robot"`
 }
 

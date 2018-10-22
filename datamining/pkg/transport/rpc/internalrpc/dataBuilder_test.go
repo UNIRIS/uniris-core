@@ -18,22 +18,23 @@ Scenario: Build a wallet result
 */
 func TestBuildWalletResult(t *testing.T) {
 
-	bioData := datamining.BioData{
-		CipherAESKey: []byte("encrypted aes key"),
+	bioData := &datamining.BioData{
+		CipherAESKey:    "encrypted aes key",
+		CipherAddrRobot: "encrypted wallet addr",
 	}
-	bioWallet := datamining.NewBioWallet(bioData, datamining.Endorsement{})
+	bioWallet := datamining.NewBioWallet(bioData, &datamining.Endorsement{})
 
-	walData := datamining.WalletData{
-		CipherWallet: []byte("encrypted wallet"),
-		WalletAddr:   []byte("encrypted wallet addr"),
+	walData := &datamining.WalletData{
+		CipherWallet:    "encrypted wallet",
+		CipherAddrRobot: "encrypted wallet addr",
 	}
 
-	wallet := datamining.NewWallet(walData, datamining.Endorsement{}, nil)
+	wallet := datamining.NewWallet(walData, &datamining.Endorsement{}, "")
 
 	res := BuildWalletResult(wallet, bioWallet)
-	assert.Equal(t, "encrypted aes key", string(res.EncryptedAESkey))
-	assert.Equal(t, "encrypted wallet", string(res.EncryptedWallet))
-	assert.Equal(t, "encrypted wallet addr", string(res.EncryptedWalletAddress))
+	assert.Equal(t, "encrypted aes key", res.EncryptedAESkey)
+	assert.Equal(t, "encrypted wallet", res.EncryptedWallet)
+	assert.Equal(t, "encrypted wallet addr", res.EncryptedWalletAddress)
 }
 
 /*
@@ -44,7 +45,7 @@ Scenario: Build a wallet from decoded data
 */
 func TestBuildWalletData(t *testing.T) {
 
-	walJSON := WalletDataFromJSON{
+	walJSON := &WalletDataFromJSON{
 		BiodPublicKey:      "pub key",
 		EncryptedAddrRobot: "encrypted addr",
 		EncryptedWallet:    "encrypted wallet",
@@ -52,15 +53,16 @@ func TestBuildWalletData(t *testing.T) {
 	}
 
 	w := BuildWalletData(walJSON, &api.Signature{
-		Biod:   []byte("bio sig"),
-		Person: []byte("em sig"),
-	})
-	assert.Equal(t, "pub key", string(w.BiodPubk))
-	assert.Equal(t, "pub key", string(w.EmPubk))
-	assert.Equal(t, "encrypted addr", string(w.CipherAddrRobot))
-	assert.Equal(t, "encrypted wallet", string(w.CipherWallet))
-	assert.Equal(t, "bio sig", string(w.Sigs.BiodSig))
-	assert.Equal(t, "em sig", string(w.Sigs.EmSig))
+		Biod:   "bio sig",
+		Person: "em sig",
+	}, "addr")
+	assert.Equal(t, "pub key", w.BiodPubk)
+	assert.Equal(t, "pub key", w.EmPubk)
+	assert.Equal(t, "encrypted addr", w.CipherAddrRobot)
+	assert.Equal(t, "encrypted wallet", w.CipherWallet)
+	assert.Equal(t, "bio sig", w.Sigs.BiodSig)
+	assert.Equal(t, "em sig", w.Sigs.EmSig)
+	assert.Equal(t, "addr", w.WalletAddr)
 }
 
 /*
@@ -80,15 +82,15 @@ func TestBuildBioWalletData(t *testing.T) {
 	}
 
 	bw := BuildBioData(bioJSON, &api.Signature{
-		Biod:   []byte("bio sig"),
-		Person: []byte("em sig"),
+		Biod:   "bio sig",
+		Person: "em sig",
 	})
-	assert.Equal(t, "pub key", string(bw.BiodPubk))
-	assert.Equal(t, "pub key", string(bw.EmPubk))
-	assert.Equal(t, "encrypted addr", string(bw.CipherAddrRobot))
-	assert.Equal(t, "encrypted addr", string(bw.CipherAddrBio))
-	assert.Equal(t, "encrypted aes key", string(bw.CipherAESKey))
-	assert.Equal(t, "person hash", string(bw.BHash))
-	assert.Equal(t, "bio sig", string(bw.Sigs.BiodSig))
-	assert.Equal(t, "em sig", string(bw.Sigs.EmSig))
+	assert.Equal(t, "pub key", bw.BiodPubk)
+	assert.Equal(t, "pub key", bw.EmPubk)
+	assert.Equal(t, "encrypted addr", bw.CipherAddrRobot)
+	assert.Equal(t, "encrypted addr", bw.CipherAddrBio)
+	assert.Equal(t, "encrypted aes key", bw.CipherAESKey)
+	assert.Equal(t, "person hash", bw.BHash)
+	assert.Equal(t, "bio sig", bw.Sigs.BiodSig)
+	assert.Equal(t, "em sig", bw.Sigs.EmSig)
 }

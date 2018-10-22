@@ -29,7 +29,7 @@ func TestGossip(t *testing.T) {
 
 	repo.SetSeedPeer(discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000})
 
-	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	init := discovery.NewStartupPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	repo.SetKnownPeer(init)
 
 	s := service{
@@ -67,8 +67,8 @@ func TestGossip(t *testing.T) {
 	pp, _ := repo.ListKnownPeers()
 	assert.NotEmpty(t, pp)
 	assert.Len(t, pp, 2)
-	assert.Equal(t, "key", pp[0].Identity().PublicKey().String())
-	assert.Equal(t, "dKey1", pp[1].Identity().PublicKey().String())
+	assert.Equal(t, "key", pp[0].Identity().PublicKey())
+	assert.Equal(t, "dKey1", pp[1].Identity().PublicKey())
 }
 
 /*
@@ -86,7 +86,7 @@ func TestGossipFailureCatched(t *testing.T) {
 
 	repo.SetSeedPeer(discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000})
 
-	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	init := discovery.NewStartupPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	repo.SetKnownPeer(init)
 
 	s := service{
@@ -133,10 +133,10 @@ func TestAddUnreachable(t *testing.T) {
 	msg := new(mockMessengerWithSynFailure)
 	mon := monitoring.NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
 
-	seed := discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000, PublicKey: []byte("key2")}
+	seed := discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000, PublicKey: "key2"}
 	repo.SetSeedPeer(seed)
 
-	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	init := discovery.NewStartupPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	repo.SetKnownPeer(init)
 
 	s := service{
@@ -181,10 +181,10 @@ func TestRemoveUnreachable(t *testing.T) {
 	msg := new(mockMessengerWithSynFailure)
 	mon := monitoring.NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
 
-	seed := discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000, PublicKey: []byte("dKey1")}
+	seed := discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000, PublicKey: "dKey1"}
 	repo.SetSeedPeer(seed)
 
-	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	init := discovery.NewStartupPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	repo.SetKnownPeer(init)
 
 	s := service{
@@ -241,7 +241,7 @@ func TestRemoveUnreachable(t *testing.T) {
 
 	reaches, _ := repo.ListReachablePeers()
 	assert.NotEmpty(t, reaches)
-	assert.Equal(t, "dKey1", reaches[1].Identity().PublicKey().String())
+	assert.Equal(t, "dKey1", reaches[1].Identity().PublicKey())
 }
 
 /*
@@ -256,10 +256,10 @@ func TestStopTimerWhenGossipError(t *testing.T) {
 	msg := new(mockMessengerUnexpectedFailure)
 	mon := monitoring.NewService(repo, new(mock.Monitor), new(mock.Networker), new(mock.RobotWatcher))
 
-	seed := discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000, PublicKey: []byte("dKey1")}
+	seed := discovery.Seed{IP: net.ParseIP("30.0.0.1"), Port: 3000, PublicKey: "dKey1"}
 	repo.SetSeedPeer(seed)
 
-	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	init := discovery.NewStartupPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 	repo.SetKnownPeer(init)
 
 	srv := NewService(repo, msg, notif, mon)
@@ -295,14 +295,14 @@ type mockMessenger struct {
 }
 
 func (m mockMessenger) SendSyn(req SynRequest) (*SynAck, error) {
-	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
-	tar := discovery.NewStartupPeer([]byte("uKey1"), net.ParseIP("200.18.186.39"), 3000, "1.1", discovery.PeerPosition{})
+	init := discovery.NewStartupPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	tar := discovery.NewStartupPeer("uKey1", net.ParseIP("200.18.186.39"), 3000, "1.1", discovery.PeerPosition{})
 
 	hb := discovery.NewPeerHeartbeatState(time.Now(), 0)
 	as := discovery.NewPeerAppState("1.0", discovery.OkStatus, discovery.PeerPosition{}, "", 0, 1, 0)
 
 	np1 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("35.200.100.2"), 3000, []byte("dKey1")),
+		discovery.NewPeerIdentity(net.ParseIP("35.200.100.2"), 3000, "dKey1"),
 		hb, as,
 	)
 

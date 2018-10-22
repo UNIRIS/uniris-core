@@ -21,17 +21,17 @@ func TestAddUnreacheablePeer(t *testing.T) {
 	st2 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
 	st3 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
 	p1 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("10.10.0.1"), 3000, []byte("key")),
+		discovery.NewPeerIdentity(net.ParseIP("10.10.0.1"), 3000, "key"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 		st1,
 	)
 	p2 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("10.10.0.2"), 3000, []byte("key2")),
+		discovery.NewPeerIdentity(net.ParseIP("10.10.0.2"), 3000, "key2"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 		st2,
 	)
 	p3 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("10.10.0.3"), 3000, []byte("key3")),
+		discovery.NewPeerIdentity(net.ParseIP("10.10.0.3"), 3000, "key3"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 		st3,
 	)
@@ -58,17 +58,17 @@ func TestDelUnreacheablePeer(t *testing.T) {
 	st2 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
 	st3 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
 	p1 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("10.10.0.1"), 3000, []byte("key")),
+		discovery.NewPeerIdentity(net.ParseIP("10.10.0.1"), 3000, "key"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 		st1,
 	)
 	p2 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("10.10.0.2"), 3000, []byte("key2")),
+		discovery.NewPeerIdentity(net.ParseIP("10.10.0.2"), 3000, "key2"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 		st2,
 	)
 	p3 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("10.10.0.3"), 3000, []byte("key3")),
+		discovery.NewPeerIdentity(net.ParseIP("10.10.0.3"), 3000, "key3"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 		st3,
 	)
@@ -101,17 +101,17 @@ func TestReacheablePeer(t *testing.T) {
 	st2 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
 	st3 := discovery.NewPeerAppState("0.0", discovery.OkStatus, discovery.PeerPosition{}, "0.0.0", 0.0, 0, 5)
 	p1 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("10.10.0.1"), 3000, []byte("key")),
+		discovery.NewPeerIdentity(net.ParseIP("10.10.0.1"), 3000, "key"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 		st1,
 	)
 	p2 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("10.10.0.2"), 3000, []byte("key2")),
+		discovery.NewPeerIdentity(net.ParseIP("10.10.0.2"), 3000, "key2"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 		st2,
 	)
 	p3 := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP("10.10.0.3"), 3000, []byte("key3")),
+		discovery.NewPeerIdentity(net.ParseIP("10.10.0.3"), 3000, "key3"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 		st3,
 	)

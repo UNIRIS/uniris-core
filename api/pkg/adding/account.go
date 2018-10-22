@@ -2,7 +2,7 @@ package adding
 
 //EnrollmentResult represents the result of an enrollment
 type EnrollmentResult struct {
-	Hash             string `json:"hash" binding:"required"`
+	TransactionHash  string `json:"transaction_hash" binding:"required"`
 	SignatureRequest string `json:"signature_request" binding:"required"`
 }
 

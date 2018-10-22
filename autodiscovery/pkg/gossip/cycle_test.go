@@ -34,7 +34,7 @@ func TestSelectPeersWithOnlyPeers(t *testing.T) {
 	}
 
 	c := Cycle{
-		initator: discovery.NewStartupPeer([]byte("key"), net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{}),
+		initator: discovery.NewStartupPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{}),
 	}
 	pp, err := c.SelectPeers(seeds, []discovery.Peer{}, []discovery.Peer{})
 	assert.Nil(t, err)
@@ -55,7 +55,7 @@ func TestSelectPeersWithOnlyPeersExcludingOurself(t *testing.T) {
 	}
 
 	c := Cycle{
-		initator: discovery.NewStartupPeer([]byte("key"), net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}),
+		initator: discovery.NewStartupPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", discovery.PeerPosition{}),
 	}
 	pp, err := c.SelectPeers(seeds, []discovery.Peer{}, []discovery.Peer{})
 	assert.Nil(t, err)
@@ -75,11 +75,11 @@ func TestSelectPeerWithSomeReachablePeers(t *testing.T) {
 	}
 
 	p1 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, []byte("key")),
+		discovery.NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0))
 
 	c := Cycle{
-		initator: discovery.NewStartupPeer([]byte("key"), net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{}),
+		initator: discovery.NewStartupPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{}),
 	}
 
 	reachP := []discovery.Peer{p1}
@@ -103,7 +103,7 @@ func TestSelectPeerWithOurselfAsReachable(t *testing.T) {
 		discovery.Seed{IP: net.ParseIP("127.0.0.1"), Port: 3000},
 	}
 
-	me := discovery.NewStartupPeer([]byte("key"), net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	me := discovery.NewStartupPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 
 	c := Cycle{
 		initator: me,
@@ -130,11 +130,11 @@ func TestSelectPeerWithSomeUnReachablePeers(t *testing.T) {
 	}
 
 	p1 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, []byte("key")),
+		discovery.NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0))
 
 	c := Cycle{
-		initator: discovery.NewStartupPeer([]byte("key"), net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{}),
+		initator: discovery.NewStartupPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{}),
 	}
 
 	unreachP := []discovery.Peer{p1}
@@ -160,20 +160,20 @@ func TestSelectPeersFully(t *testing.T) {
 	}
 
 	p1 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, []byte("key")),
+		discovery.NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0))
 	p2 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("21.0.0.1"), 3000, []byte("key")),
+		discovery.NewPeerIdentity(net.ParseIP("21.0.0.1"), 3000, "key"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0))
 	p3 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("22.0.0.1"), 3000, []byte("key")),
+		discovery.NewPeerIdentity(net.ParseIP("22.0.0.1"), 3000, "key"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0))
 	p4 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("23.0.0.1"), 3000, []byte("key")),
+		discovery.NewPeerIdentity(net.ParseIP("23.0.0.1"), 3000, "key"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0))
 
 	c := Cycle{
-		initator: discovery.NewStartupPeer([]byte("key"), net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{}),
+		initator: discovery.NewStartupPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{}),
 	}
 
 	reachP := []discovery.Peer{p1, p2}
@@ -196,14 +196,14 @@ Scenario: Run a gossip cycle
 	Then we run it and get some discovered peers
 */
 func TestRun(t *testing.T) {
-	init := discovery.NewStartupPeer([]byte("key"), net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
+	init := discovery.NewStartupPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", discovery.PeerPosition{})
 
 	kp1 := discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, []byte("key2")),
+		discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key2"),
 		discovery.NewPeerHeartbeatState(time.Now(), 0),
 	)
 
-	seeds := []discovery.Seed{discovery.Seed{IP: net.ParseIP("20.0.0.1"), Port: 3000, PublicKey: []byte("key3")}}
+	seeds := []discovery.Seed{discovery.Seed{IP: net.ParseIP("20.0.0.1"), Port: 3000, PublicKey: "key3"}}
 
 	c := NewGossipCycle(init, mockMessenger{})
 
@@ -238,10 +238,10 @@ func TestRun(t *testing.T) {
 	assert.Equal(t, 2, len(newP))
 
 	//Peer retrieved from the kp1
-	assert.Equal(t, "dKey1", newP[0].Identity().PublicKey().String())
+	assert.Equal(t, "dKey1", newP[0].Identity().PublicKey())
 
 	//Peer retreived from the seed1
-	assert.Equal(t, "dKey1", newP[1].Identity().PublicKey().String())
+	assert.Equal(t, "dKey1", newP[1].Identity().PublicKey())
 
 	assert.Empty(t, c.result.errors)
 	assert.Empty(t, c.result.unreachables)

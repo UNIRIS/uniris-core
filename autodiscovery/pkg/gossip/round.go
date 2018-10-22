@@ -1,7 +1,6 @@
 package gossip
 
 import (
-	"encoding/hex"
 	"errors"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
@@ -66,7 +65,7 @@ func (r *Round) Spread(kp []discovery.Peer, discovP chan<- discovery.Peer, reach
 		reqPeers := make([]discovery.Peer, 0)
 		mapPeers := r.mapPeers(kp)
 		for _, p := range res.UnknownPeers {
-			if k, exist := mapPeers[hex.EncodeToString(p.Identity().PublicKey())]; exist {
+			if k, exist := mapPeers[p.Identity().PublicKey()]; exist {
 				reqPeers = append(reqPeers, k)
 			}
 		}
@@ -94,7 +93,7 @@ func (r *Round) Spread(kp []discovery.Peer, discovP chan<- discovery.Peer, reach
 func (r Round) mapPeers(pp []discovery.Peer) map[string]discovery.Peer {
 	mPeers := make(map[string]discovery.Peer, 0)
 	for _, p := range pp {
-		mPeers[hex.EncodeToString(p.Identity().PublicKey())] = p
+		mPeers[p.Identity().PublicKey()] = p
 	}
 	return mPeers
 }
