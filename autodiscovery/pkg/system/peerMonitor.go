@@ -2,6 +2,7 @@ package system
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
@@ -19,18 +20,17 @@ func (m peerMonitor) CPULoad() (string, error) {
 
 	if runtime.GOOS == "linux" {
 		cmd = exec.Command("cat", "/proc/loadavg")
-
-	} else if runtime.GOOS == "darwin" {
-		cmd = exec.Command("sysctl", "-n", "vm.loadavg")
 	} else {
 		return "", errors.New("You platform is not supported")
 	}
 
-	out, err := cmd.CombinedOutput()
+	outload, err := cmd.CombinedOutput()
 	if err != nil {
 		return "--", err
 	}
-	return string(out), nil
+
+	res := fmt.Sprintf("%d - %s", runtime.NumCPU(), string(outload))
+	return res, nil
 }
 
 //FreeDiskSpace retrieves the available free disk (k bytes) space of the peer
