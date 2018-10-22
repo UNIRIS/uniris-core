@@ -30,7 +30,7 @@ func TestCheckSignature(t *testing.T) {
 	data := fakeObj{message: "hi"}
 	b, _ := json.Marshal(data)
 
-	r, s, _ := ecdsa.Sign(rand.Reader, key, []byte(hash(b)))
+	r, s, _ := ecdsa.Sign(rand.Reader, key, []byte(HashBytes(b)))
 
 	sig, _ := asn1.Marshal(ecdsaSignature{r, s})
 

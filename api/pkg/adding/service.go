@@ -5,7 +5,7 @@ import (
 )
 
 //ErrInvalidSignature is returned when the request contains invalid signatures
-var ErrInvalidSignature = errors.New("Request contains an invalid signature")
+var ErrInvalidSignature = errors.New("Invalid signature")
 
 //Service defines methods to adding to the blockchain
 type Service interface {
