@@ -14,9 +14,3 @@ type SignedAccountResult struct {
 	EncryptedAddrPerson string `json:"encrypted_addr_person"`
 	SignatureRequest    string `json:"signature_request"`
 }
-
-//AccountRequest represents the data will be send to the robot
-type AccountRequest struct {
-	EncryptedHash    string
-	SignatureRequest string
-}

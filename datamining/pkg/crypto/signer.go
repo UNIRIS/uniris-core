@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/uniris/uniris-core/datamining/pkg/validating"
+	"github.com/uniris/uniris-core/datamining/pkg/validating/checks"
 )
 
 type ecdsaSignature struct {
@@ -19,7 +19,7 @@ type ecdsaSignature struct {
 type signer struct{}
 
 //NewSigner creates a new signer
-func NewSigner() validating.Signer {
+func NewSigner() checks.Signer {
 	return signer{}
 }
 
@@ -58,7 +58,7 @@ func (s signer) CheckSignature(pubk string, data interface{}, der string) error 
 		return nil
 	}
 
-	return validating.ErrInvalidSignature
+	return checks.ErrInvalidSignature
 }
 
 //Sign data using a privatekey

@@ -12,7 +12,7 @@ var ErrAccountNotExist = errors.New("Account doest not exist")
 
 //RobotClient define methods to interfact with the robot
 type RobotClient interface {
-	GetAccount(AccountRequest) (*SignedAccountResult, error)
+	GetAccount(encHash string) (*SignedAccountResult, error)
 }
 
 //RequestValidator defines methods to validate requests
@@ -50,12 +50,7 @@ func (s service) ExistAccount(encryptedHash string, sig string) error {
 		return ErrInvalidSignature
 	}
 
-	req := AccountRequest{
-		EncryptedHash:    encryptedHash,
-		SignatureRequest: sig,
-	}
-
-	_, err = s.client.GetAccount(req)
+	_, err = s.client.GetAccount(encryptedHash)
 	if err != nil {
 		return err
 	}
@@ -72,10 +67,5 @@ func (s service) GetAccount(encryptedHash string, sig string) (*SignedAccountRes
 		return nil, ErrInvalidSignature
 	}
 
-	req := AccountRequest{
-		EncryptedHash:    encryptedHash,
-		SignatureRequest: sig,
-	}
-
-	return s.client.GetAccount(req)
+	return s.client.GetAccount(encryptedHash)
 }

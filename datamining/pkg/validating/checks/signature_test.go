@@ -1,4 +1,4 @@
-package validating
+package checks
 
 import (
 	"crypto/ecdsa"
@@ -15,7 +15,7 @@ import (
 
 func TestOkSignatureValidator(t *testing.T) {
 
-	val := signatureValidator{
+	val := sigCheck{
 		sig: mockSigner{},
 	}
 
@@ -31,7 +31,7 @@ func TestOkSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err := val.ValidWallet(w)
+	err := val.CheckDataWallet(w)
 	assert.Nil(t, err)
 
 	bd := &datamining.BioData{
@@ -43,13 +43,13 @@ func TestOkSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err = val.ValidBioWallet(bd)
+	err = val.CheckBioWallet(bd)
 	assert.Nil(t, err)
 }
 
 func TestKOSignatureValidator(t *testing.T) {
 
-	val := signatureValidator{
+	val := sigCheck{
 		sig: badMockSigner{},
 	}
 
@@ -65,7 +65,7 @@ func TestKOSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err := val.ValidWallet(w)
+	err := val.CheckDataWallet(w)
 	assert.Equal(t, err, ErrInvalidSignature)
 
 	bd := &datamining.BioData{
@@ -77,7 +77,7 @@ func TestKOSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err = val.ValidBioWallet(bd)
+	err = val.CheckBioWallet(bd)
 	assert.Equal(t, err, ErrInvalidSignature)
 }
 

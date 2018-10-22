@@ -45,7 +45,7 @@ func TestGetAccountInvalidSig(t *testing.T) {
 
 type mockClient struct{}
 
-func (c mockClient) GetAccount(AccountRequest) (*SignedAccountResult, error) {
+func (c mockClient) GetAccount(encHash string) (*SignedAccountResult, error) {
 	return &SignedAccountResult{
 		EncryptedAESKey:     "encrypted_aes_key",
 		EncryptedAddrPerson: "addr_wallet_person",

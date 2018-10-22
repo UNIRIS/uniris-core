@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/validating/checks"
 )
 
 //Service is the interface that provide methods for wallets validation
@@ -15,20 +16,25 @@ type Service interface {
 }
 
 type service struct {
-	validators     []DataValidator
+	bioChecks      []checks.BioChecker
+	dataChecks     []checks.DataChecker
 	validRequester ValidationRequester
 }
 
 //NewService creates a approving service
-func NewService(sig Signer, validRequester ValidationRequester) Service {
-	valids := make([]DataValidator, 0)
-	valids = append(valids, NewSignatureValidator(sig))
-	return &service{validators: valids, validRequester: validRequester}
+func NewService(sig checks.Signer, validRequester ValidationRequester) Service {
+	bioChecks := make([]checks.BioChecker, 0)
+	dataChecks := make([]checks.DataChecker, 0)
+
+	bioChecks = append(bioChecks, checks.NewSignatureChecker(sig))
+	dataChecks = append(dataChecks, checks.NewSignatureChecker(sig))
+
+	return &service{bioChecks, dataChecks, validRequester}
 }
 
 func (s service) EndorseWalletAsMaster(w *datamining.WalletData) (*datamining.Endorsement, string, error) {
-	for _, validator := range s.validators {
-		err := validator.ValidWallet(w)
+	for _, c := range s.dataChecks {
+		err := c.CheckDataWallet(w)
 		if err != nil {
 			return nil, "", err
 		}
@@ -53,8 +59,8 @@ func (s service) EndorseWalletAsMaster(w *datamining.WalletData) (*datamining.En
 }
 
 func (s service) EndorseBioWalletAsMaster(bw *datamining.BioData) (*datamining.Endorsement, error) {
-	for _, validator := range s.validators {
-		err := validator.ValidBioWallet(bw)
+	for _, c := range s.bioChecks {
+		err := c.CheckBioWallet(bw)
 		if err != nil {
 			return nil, err
 		}

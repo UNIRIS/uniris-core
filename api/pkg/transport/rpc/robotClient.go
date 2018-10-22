@@ -32,7 +32,7 @@ func NewRobotClient(conf system.DataMiningConfiguration, robotSharedPrivateKey s
 	return robotClient{conf, robotSharedPrivateKey}
 }
 
-func (c robotClient) GetAccount(req listing.AccountRequest) (*listing.SignedAccountResult, error) {
+func (c robotClient) GetAccount(encHash string) (*listing.SignedAccountResult, error) {
 	serverAddr := fmt.Sprintf("localhost:%d", c.conf.InternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
@@ -44,7 +44,7 @@ func (c robotClient) GetAccount(req listing.AccountRequest) (*listing.SignedAcco
 	client := api.NewInternalClient(conn)
 
 	resGRPC, err := client.GetWallet(context.Background(), &api.WalletRequest{
-		EncryptedHashPerson: req.EncryptedHash,
+		EncryptedHashPerson: encHash,
 	})
 	if err != nil {
 		s, _ := status.FromError(err)
