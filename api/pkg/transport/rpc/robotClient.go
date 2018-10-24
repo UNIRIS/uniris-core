@@ -43,7 +43,7 @@ func (c robotClient) GetAccount(encHash string) (*listing.SignedAccountResult, e
 
 	client := api.NewInternalClient(conn)
 
-	resGRPC, err := client.GetWallet(context.Background(), &api.WalletRequest{
+	resGRPC, err := client.GetWallet(context.Background(), &api.WalletSearchRequest{
 		EncryptedHashPerson: encHash,
 	})
 	if err != nil {
@@ -55,9 +55,9 @@ func (c robotClient) GetAccount(encHash string) (*listing.SignedAccountResult, e
 	}
 
 	r := listing.AccountResult{
-		EncryptedAESKey:     string(resGRPC.EncryptedAESkey),
-		EncryptedAddrPerson: string(resGRPC.EncryptedWalletAddress),
-		EncryptedWallet:     string(resGRPC.EncryptedWallet),
+		EncryptedAESKey:     resGRPC.EncryptedAESkey,
+		EncryptedAddrPerson: resGRPC.EncryptedWalletAddress,
+		EncryptedWallet:     resGRPC.EncryptedWallet,
 	}
 
 	sig, err := crypto.SignData(c.robotSharedPrivateKey, r)
@@ -84,7 +84,7 @@ func (c robotClient) AddAccount(req adding.EnrollmentRequest) (*adding.Enrollmen
 
 	client := api.NewInternalClient(conn)
 
-	w := &api.Wallet{
+	w := &api.WalletStorageRequest{
 		EncryptedBioData:    req.EncryptedBioData,
 		EncryptedWalletData: req.EncryptedWalletData,
 		SignatureBioData: &api.Signature{
@@ -103,13 +103,18 @@ func (c robotClient) AddAccount(req adding.EnrollmentRequest) (*adding.Enrollmen
 		return nil, errors.New(s.Message())
 	}
 
-	sig, err := crypto.SignRaw(c.robotSharedPrivateKey, resGRPC.TransactionHash)
+	txs := adding.EnrollmentTransactions{
+		Biod: resGRPC.BioTransactionHash,
+		Data: resGRPC.DataTransactionHash,
+	}
+
+	sig, err := crypto.SignData(c.robotSharedPrivateKey, txs)
 	if err != nil {
 		return nil, err
 	}
 
 	return &adding.EnrollmentResult{
-		TransactionHash:  string(resGRPC.TransactionHash),
-		SignatureRequest: string(sig),
+		Transactions:     txs,
+		SignatureRequest: sig,
 	}, nil
 }

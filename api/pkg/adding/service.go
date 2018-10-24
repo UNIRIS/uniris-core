@@ -34,7 +34,7 @@ func NewService(sharedBioPub string, cli RobotClient, val RequestValidator) Serv
 }
 
 func (s service) AddAccount(req EnrollmentRequest) (*EnrollmentResult, error) {
-	verifReq := EnrollmentVerifyRequest{
+	verifReq := EnrollmentData{
 		EncryptedBioData:    req.EncryptedBioData,
 		EncryptedWalletData: req.EncryptedWalletData,
 		SignaturesBio:       req.SignaturesBio,

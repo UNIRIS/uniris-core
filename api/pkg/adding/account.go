@@ -2,8 +2,14 @@ package adding
 
 //EnrollmentResult represents the result of an enrollment
 type EnrollmentResult struct {
-	TransactionHash  string `json:"transaction_hash" binding:"required"`
-	SignatureRequest string `json:"signature_request" binding:"required"`
+	Transactions     EnrollmentTransactions `json:"transactions" binding:"required"`
+	SignatureRequest string                 `json:"signature_request" binding:"required"`
+}
+
+//EnrollmentTransactions represents the generated transactions during the enrollment
+type EnrollmentTransactions struct {
+	Biod string `json:"biod" binding:"required"`
+	Data string `json:"data" binding:"required"`
 }
 
 //EnrollmentRequest represents the data to provide to enroll an user
@@ -15,8 +21,8 @@ type EnrollmentRequest struct {
 	SignatureRequest    string     `json:"signature_request" binding:"required"`
 }
 
-//EnrollmentVerifyRequest represents the data to verify before to enroll
-type EnrollmentVerifyRequest struct {
+//EnrollmentData represents the data without signature request
+type EnrollmentData struct {
 	EncryptedBioData    string     `json:"encrypted_bio_data"`
 	EncryptedWalletData string     `json:"encrypted_wal_data"`
 	SignaturesBio       Signatures `json:"signatures_bio"`

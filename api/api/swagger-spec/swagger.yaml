@@ -164,12 +164,22 @@ definitions:
         type: string
   EnrollmentResult:
     required:
-      - transaction_hash
+      - transactions
       - signature_request
     properties:
-      hash:
-        type: string
-        description: Transaction hash for the wallet creation
+      transactions:
+        description: Transactions hash for the wallet creation
+        type: object
+        properties:
+          required:
+            - biod
+            - data
+          biod:
+            type: string
+            description: Bio wallet transaction hash
+          data:
+            type: string
+            description: Data wallet transaction hash
       signature_request:
         description: Request signature
         type: string

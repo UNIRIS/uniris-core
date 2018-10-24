@@ -35,7 +35,8 @@ func TestAddAccount(t *testing.T) {
 
 	res, err := s.AddAccount(req)
 	assert.Nil(t, err)
-	assert.Equal(t, "transaction hash", res.TransactionHash)
+	assert.Equal(t, "transaction hash", res.Transactions.Biod)
+	assert.Equal(t, "transaction hash", res.Transactions.Data)
 	assert.Equal(t, "signature of the response", res.SignatureRequest)
 }
 
@@ -74,7 +75,10 @@ type mockClient struct{}
 
 func (c mockClient) AddAccount(EnrollmentRequest) (*EnrollmentResult, error) {
 	return &EnrollmentResult{
-		TransactionHash:  "transaction hash",
+		Transactions: EnrollmentTransactions{
+			Biod: "transaction hash",
+			Data: "transaction hash",
+		},
 		SignatureRequest: "signature of the response",
 	}, nil
 }
