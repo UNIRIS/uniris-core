@@ -1,4 +1,4 @@
-package checks
+package checkers
 
 import (
 	"errors"
@@ -9,15 +9,15 @@ import (
 //ErrInvalidSignature is returned when a invalid signature is provided
 var ErrInvalidSignature = errors.New("Invalid signature")
 
-//Signer defines methods to handle signatures
-type Signer interface {
-	CheckSignature(pubKey string, data interface{}, sig string) error
-}
-
 //SignatureChecker defines methods to check signature
 type SignatureChecker interface {
 	BioDataChecker
 	WalletDataChecker
+}
+
+//Signer defines methods to handle signatures
+type Signer interface {
+	CheckSignature(pubKey string, data interface{}, sig string) error
 }
 
 type sigCheck struct {

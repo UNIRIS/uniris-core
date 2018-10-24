@@ -88,11 +88,12 @@ type Validation struct {
 }
 
 //NewValidation creates a new validation
-func NewValidation(status ValidationStatus, t time.Time, pubKey string) Validation {
+func NewValidation(status ValidationStatus, t time.Time, pubKey string, sig string) Validation {
 	return Validation{
 		status:    status,
 		timestamp: t,
 		pubk:      pubKey,
+		sig:       sig,
 	}
 }
 

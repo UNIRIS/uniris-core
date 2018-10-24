@@ -1,4 +1,4 @@
-package checks
+package checkers
 
 //BioData represents the data by will be encrypted by the biometric device
 type BioData struct {

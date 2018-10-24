@@ -8,6 +8,8 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
+	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -60,12 +62,23 @@ func TestGetWallet(t *testing.T) {
 	repo.StoreWallet(datamining.NewWallet(wdata, endors, ""))
 
 	list := listing.NewService(repo)
-	valid := validating.NewService(mockSigner{}, mockValiationRequester{})
-	adding := adding.NewService(repo, valid)
+	valid := validating.NewService(
+		mockTechRepo{},
+		mockTransactionFetcher{},
+		mockPoolDispatcher{},
+		mockPoolFinder{},
+		mockHasher{},
+		mockSigner{},
+		mockNotifier{},
+		"robotPubKey",
+		"robotPvKey",
+	)
+	d := &mockPoolDispatcher{}
+	adding := adding.NewService(valid, mockPoolFinder{}, d)
 	errors := system.DataMininingErrors{}
 
-	h := NewInternalServerHandler(list, adding, hex.EncodeToString(pvKey), errors)
-	res, err := h.GetWallet(context.TODO(), &api.WalletRequest{
+	h := NewInternalServerHandler(list, adding, hex.EncodeToString(pvKey), errors, nil)
+	res, err := h.GetWallet(context.TODO(), &api.WalletSearchRequest{
 		EncryptedHashPerson: cipherBhash,
 	})
 	assert.Nil(t, err)
@@ -87,11 +100,25 @@ func TestStoreWallet(t *testing.T) {
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 
 	list := listing.NewService(repo)
-	valid := validating.NewService(mockSigner{}, mockValiationRequester{})
-	adding := adding.NewService(repo, valid)
+	valid := validating.NewService(
+		mockTechRepo{},
+		mockTransactionFetcher{},
+		mockPoolDispatcher{},
+		mockPoolFinder{},
+		mockHasher{},
+		mockSigner{},
+		mockNotifier{},
+		"robotPubKey",
+		"robotPvKey",
+	)
+	d := &mockPoolDispatcher{
+		Repo: repo,
+	}
+	adding := adding.NewService(valid, mockPoolFinder{}, d)
 	errors := system.DataMininingErrors{}
 
-	h := NewInternalServerHandler(list, adding, hex.EncodeToString(pvKey), errors)
+	storeChan := make(chan string)
+	h := NewInternalServerHandler(list, adding, hex.EncodeToString(pvKey), errors, storeChan)
 
 	cipherAddr, _ := crypto.Encrypt(hex.EncodeToString(pbKey), "encrypted_addr_robot")
 
@@ -119,7 +146,7 @@ func TestStoreWallet(t *testing.T) {
 	cipherWallet, _ := crypto.Encrypt(hex.EncodeToString(pbKey), string(bWData))
 	sigWal, _ := crypto.Sign(hex.EncodeToString(pvKey), string(bWData))
 
-	req := &api.Wallet{
+	req := &api.WalletStorageRequest{
 		EncryptedBioData:    cipherBio,
 		EncryptedWalletData: cipherWallet,
 		SignatureBioData: &api.Signature{
@@ -136,10 +163,25 @@ func TestStoreWallet(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, res)
 
+	assert.NotNil(t, res.BioTransactionHash)
+	assert.NotNil(t, res.DataTransactionHash)
+
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+
+	go func() {
+		for range storeChan {
+			wg.Done()
+		}
+		close(storeChan)
+	}()
+
+	wg.Wait()
+
 	assert.Len(t, repo.Wallets, 1)
 	assert.Len(t, repo.BioWallets, 1)
 
-	assert.NotNil(t, res.TransactionHash)
 }
 
 type databasemock struct {
@@ -175,18 +217,103 @@ func (d *databasemock) StoreBioWallet(bw *datamining.BioWallet) error {
 	return nil
 }
 
+type mockTechRepo struct{}
+
+func (r mockTechRepo) ListBiodPubKeys() ([]string, error) {
+	return []string{"key1", "key2", "key3"}, nil
+}
+
+type mockTransactionFetcher struct{}
+
+func (f mockTransactionFetcher) FindPreviousTransactionMiners(addr string) ([]string, error) {
+	return []string{
+		"minerKey1",
+		"minerKey2",
+	}, nil
+}
+func (f mockTransactionFetcher) FindLastWalletTx(addr string) (string, error) {
+	return "last tx", nil
+}
+
 type mockSigner struct{}
 
-func (mockSigner) CheckSignature(pubk string, data interface{}, der string) error {
+func (s mockSigner) CheckSignature(pubk string, data interface{}, der string) error {
 	return nil
 }
 
-type mockValiationRequester struct{}
-
-func (v mockValiationRequester) RequestWalletValidation(validating.Peer, *datamining.WalletData) (datamining.Validation, error) {
-	return datamining.Validation{}, nil
+func (s mockSigner) SignValidation(v validating.Validation, pvKey string) (string, error) {
+	return "sig", nil
 }
 
-func (v mockValiationRequester) RequestBioValidation(validating.Peer, *datamining.BioData) (datamining.Validation, error) {
-	return datamining.Validation{}, nil
+type mockHasher struct{}
+
+func (h mockHasher) HashMasterValidation(v *datamining.MasterValidation) (string, error) {
+	return "hashed validation", nil
+}
+
+type mockPoolDispatcher struct {
+	Repo *databasemock
+}
+
+func (r mockPoolDispatcher) RequestLastTx(pool adding.Pool, txHash string) (oldTxHash string, validation *datamining.MasterValidation, err error) {
+	return "old tx hash", datamining.NewMasterValidation([]string{"key", "key2"}, "key", datamining.Validation{}), nil
+}
+
+func (r *mockPoolDispatcher) RequestWalletStorage(p adding.Pool, w *datamining.Wallet) error {
+	return r.Repo.StoreWallet(w)
+}
+
+func (r *mockPoolDispatcher) RequestBioStorage(p adding.Pool, w *datamining.BioWallet) error {
+	return r.Repo.StoreBioWallet(w)
+}
+
+func (r mockPoolDispatcher) RequestLock(validating.Pool, string) error {
+	return nil
+}
+
+func (r mockPoolDispatcher) RequestUnlock(validating.Pool, string) error {
+	return nil
+}
+
+func (r mockPoolDispatcher) RequestWalletValidation(validating.Pool, *datamining.WalletData) ([]datamining.Validation, error) {
+	return []datamining.Validation{
+		datamining.NewValidation(datamining.ValidationOK, time.Now(), "validator key", "sig"),
+	}, nil
+}
+func (r mockPoolDispatcher) RequestBioValidation(validating.Pool, *datamining.BioData) ([]datamining.Validation, error) {
+	return []datamining.Validation{
+		datamining.NewValidation(datamining.ValidationOK, time.Now(), "validator key", "sig"),
+	}, nil
+}
+
+type mockPoolFinder struct{}
+
+func (f mockPoolFinder) FindValidationPool() (validating.Pool, error) {
+	return validating.Pool{
+		Peers: []validating.Peer{
+			validating.Peer{
+				IP:        net.ParseIP("127.0.0.1"),
+				Port:      4000,
+				PublicKey: "validator key",
+			},
+		},
+	}, nil
+}
+
+func (f mockPoolFinder) FindStoragePool() (adding.Pool, error) {
+	return adding.Pool{
+		Peers: []adding.Peer{
+			adding.Peer{
+				IP:        net.ParseIP("127.0.0.1"),
+				Port:      4000,
+				PublicKey: "validator key",
+			},
+		},
+	}, nil
+}
+
+type mockNotifier struct{}
+
+func (n mockNotifier) NotifyTransactionStatus(txHash string, status validating.TransactionStatus) error {
+	return nil
 }

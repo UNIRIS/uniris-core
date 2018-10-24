@@ -1,4 +1,4 @@
-package checks
+package checkers
 
 import (
 	"crypto/ecdsa"
@@ -15,9 +15,7 @@ import (
 
 func TestOkSignatureValidator(t *testing.T) {
 
-	val := sigCheck{
-		sig: mockSigner{},
-	}
+	sigCheck := NewSignatureChecker(mockSigCheckSigner{})
 
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -31,7 +29,7 @@ func TestOkSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err := val.CheckWalletData(w)
+	err := sigCheck.CheckWalletData(w)
 	assert.Nil(t, err)
 
 	bd := &datamining.BioData{
@@ -43,15 +41,13 @@ func TestOkSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err = val.CheckBioData(bd)
+	err = sigCheck.CheckBioData(bd)
 	assert.Nil(t, err)
 }
 
 func TestKOSignatureValidator(t *testing.T) {
 
-	val := sigCheck{
-		sig: badMockSigner{},
-	}
+	sigCheck := NewSignatureChecker(mockBadSigCheckSigner{})
 
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -65,7 +61,7 @@ func TestKOSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err := val.CheckWalletData(w)
+	err := sigCheck.CheckWalletData(w)
 	assert.Equal(t, err, ErrInvalidSignature)
 
 	bd := &datamining.BioData{
@@ -77,18 +73,18 @@ func TestKOSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err = val.CheckBioData(bd)
+	err = sigCheck.CheckBioData(bd)
 	assert.Equal(t, err, ErrInvalidSignature)
 }
 
-type mockSigner struct{}
+type mockSigCheckSigner struct{}
 
-func (s mockSigner) CheckSignature(pubk string, data interface{}, der string) error {
+func (s mockSigCheckSigner) CheckSignature(pubk string, data interface{}, der string) error {
 	return nil
 }
 
-type badMockSigner struct{}
+type mockBadSigCheckSigner struct{}
 
-func (s badMockSigner) CheckSignature(pubk string, data interface{}, der string) error {
+func (s mockBadSigCheckSigner) CheckSignature(pubk string, data interface{}, der string) error {
 	return ErrInvalidSignature
 }

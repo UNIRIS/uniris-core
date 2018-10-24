@@ -2,24 +2,22 @@ package adding
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
-	validating "github.com/uniris/uniris-core/datamining/pkg/validating"
 )
 
 /*
-Scenario: Add Wallet
-	Given a empty database
-	When I add a Wallet to the database
-	Then the length of the database Wallet elements is 1
+Scenario: Store a data wallet
+	Given a data data
+	When I want to store a data wallet
+	Then the wallet is stored on the database
 */
-func TestAddWallet(t *testing.T) {
-
-	db := new(databasemock)
-	v := validating.NewService(mockSigner{}, mockValiationRequester{})
-	s := NewService(db, v)
+func TestStoreWallet(t *testing.T) {
+	repo := &databasemock{}
+	s := NewService(repo)
 
 	sigs := datamining.Signatures{
 		BiodSig: "sig1",
@@ -35,23 +33,29 @@ func TestAddWallet(t *testing.T) {
 		Sigs:            sigs,
 	}
 
-	err := s.AddWallet(wdata)
+	w := datamining.NewWallet(wdata, datamining.NewEndorsement(
+		time.Now(),
+		"hash",
+		nil,
+		nil,
+	), "old hash")
+	err := s.StoreDataWallet(w)
 	assert.Nil(t, err)
-	l := len(db.wallets)
+	l := len(repo.wallets)
 	assert.Equal(t, 1, l)
+	assert.Equal(t, "addr1", repo.wallets[0].WalletAddr())
+	assert.Equal(t, "hash", repo.wallets[0].Endorsement().TransactionHash())
 }
 
 /*
-Scenario: Add BioWallet
-	Given a empty database
-	When I add a BioWallet to the database
-	Then the length of the database BioWallet elements is 1
+Scenario: Stroe a bio wallet
+	Given a bio data
+	When I want to store a bio wallet
+	Then the bio data are stored on the database
 */
-func TestAddBioWallet(t *testing.T) {
-
-	db := new(databasemock)
-	v := validating.NewService(mockSigner{}, mockValiationRequester{})
-	s := NewService(db, v)
+func TestStoreBioWallet(t *testing.T) {
+	repo := &databasemock{}
+	s := NewService(repo)
 
 	sigs := datamining.Signatures{
 		BiodSig: "sig1",
@@ -68,33 +72,24 @@ func TestAddBioWallet(t *testing.T) {
 		Sigs:            sigs,
 	}
 
-	err := s.AddBioWallet(bdata)
+	b := datamining.NewBioWallet(bdata, datamining.NewEndorsement(
+		time.Now(),
+		"hash",
+		nil,
+		nil,
+	))
+
+	err := s.StoreBioWallet(b)
 	assert.Nil(t, err)
-	l := len(db.bioWallets)
+	l := len(repo.bioWallets)
 	assert.Equal(t, 1, l)
+	assert.Equal(t, 1, l)
+	assert.Equal(t, "hash1", repo.bioWallets[0].Bhash())
 }
 
 type databasemock struct {
 	bioWallets []*datamining.BioWallet
 	wallets    []*datamining.Wallet
-}
-
-func (d *databasemock) FindBioWallet(bh string) (*datamining.BioWallet, error) {
-	for _, b := range d.bioWallets {
-		if string(b.Bhash()) == string(bh) {
-			return b, nil
-		}
-	}
-	return nil, nil
-}
-
-func (d *databasemock) FindWallet(addr string) (*datamining.Wallet, error) {
-	for _, b := range d.wallets {
-		if string(b.WalletAddr()) == string(addr) {
-			return b, nil
-		}
-	}
-	return nil, nil
 }
 
 func (d *databasemock) StoreWallet(w *datamining.Wallet) error {
@@ -105,20 +100,4 @@ func (d *databasemock) StoreWallet(w *datamining.Wallet) error {
 func (d *databasemock) StoreBioWallet(bw *datamining.BioWallet) error {
 	d.bioWallets = append(d.bioWallets, bw)
 	return nil
-}
-
-type mockSigner struct{}
-
-func (s mockSigner) CheckSignature(pubk string, data interface{}, der string) error {
-	return nil
-}
-
-type mockValiationRequester struct{}
-
-func (v mockValiationRequester) RequestWalletValidation(validating.Peer, *datamining.WalletData) (datamining.Validation, error) {
-	return datamining.Validation{}, nil
-}
-
-func (v mockValiationRequester) RequestBioValidation(validating.Peer, *datamining.BioData) (datamining.Validation, error) {
-	return datamining.Validation{}, nil
 }

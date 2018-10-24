@@ -1,8 +1,6 @@
-package checks
+package checkers
 
-import (
-	"github.com/uniris/uniris-core/datamining/pkg"
-)
+import datamining "github.com/uniris/uniris-core/datamining/pkg"
 
 //BioDataChecker defines methods to validate bio wallet
 type BioDataChecker interface {
