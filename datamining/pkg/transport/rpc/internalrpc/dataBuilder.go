@@ -5,9 +5,9 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg"
 )
 
-//BuildWalletResult constitue details for the WalletResult rpc command
-func BuildWalletResult(w *datamining.Wallet, bioW *datamining.BioWallet) *api.WalletResult {
-	return &api.WalletResult{
+//BuildWalletSearchResult constitue details for the WalletSearchResult rpc command
+func BuildWalletSearchResult(w *datamining.Wallet, bioW *datamining.BioWallet) *api.WalletSearchResult {
+	return &api.WalletSearchResult{
 		EncryptedAESkey:        bioW.CipherAESKey(),
 		EncryptedWallet:        w.CipherWallet(),
 		EncryptedWalletAddress: bioW.CipherAddrBio(),

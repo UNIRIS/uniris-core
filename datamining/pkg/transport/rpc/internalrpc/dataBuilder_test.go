@@ -11,27 +11,26 @@ import (
 )
 
 /*
-Scenario: Build a wallet result
+Scenario: Build a wallet search result
 	Given a wallet and bio data
-	When I want build a wallet result
+	When I want build a wallet search result
 	Then I get a new object with encrypted aes, wallet and addr given
 */
-func TestBuildWalletResult(t *testing.T) {
+func TestBuildWalletSearchResult(t *testing.T) {
 
 	bioData := &datamining.BioData{
-		CipherAESKey:    "encrypted aes key",
-		CipherAddrRobot: "encrypted wallet addr",
+		CipherAESKey:  "encrypted aes key",
+		CipherAddrBio: "encrypted wallet addr",
 	}
 	bioWallet := datamining.NewBioWallet(bioData, &datamining.Endorsement{})
 
 	walData := &datamining.WalletData{
-		CipherWallet:    "encrypted wallet",
-		CipherAddrRobot: "encrypted wallet addr",
+		CipherWallet: "encrypted wallet",
 	}
 
 	wallet := datamining.NewWallet(walData, &datamining.Endorsement{}, "")
 
-	res := BuildWalletResult(wallet, bioWallet)
+	res := BuildWalletSearchResult(wallet, bioWallet)
 	assert.Equal(t, "encrypted aes key", res.EncryptedAESkey)
 	assert.Equal(t, "encrypted wallet", res.EncryptedWallet)
 	assert.Equal(t, "encrypted wallet addr", res.EncryptedWalletAddress)

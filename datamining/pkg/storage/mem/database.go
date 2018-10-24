@@ -3,6 +3,7 @@ package mem
 import (
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/adding"
+	"github.com/uniris/uniris-core/datamining/pkg/leading"
 	"github.com/uniris/uniris-core/datamining/pkg/listing"
 )
 
@@ -10,16 +11,20 @@ import (
 type Database interface {
 	adding.Repository
 	listing.Repository
+	leading.TechRepository
 }
 
 type db struct {
-	bioWallets []*datamining.BioWallet
-	wallets    []*datamining.Wallet
+	bioWallets   []*datamining.BioWallet
+	wallets      []*datamining.Wallet
+	sharedBioKey string
 }
 
 //NewDatabase implements the database in memory
-func NewDatabase() Database {
-	return &db{}
+func NewDatabase(sharedBioPubKey string) Database {
+	return &db{
+		sharedBioKey: sharedBioPubKey,
+	}
 }
 
 //FindBioWallet return the bio wallet
@@ -52,4 +57,8 @@ func (d *db) StoreWallet(w *datamining.Wallet) error {
 func (d *db) StoreBioWallet(bw *datamining.BioWallet) error {
 	d.bioWallets = append(d.bioWallets, bw)
 	return nil
+}
+
+func (d *db) ListBiodPubKeys() ([]string, error) {
+	return []string{d.sharedBioKey}, nil
 }

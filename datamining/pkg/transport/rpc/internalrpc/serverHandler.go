@@ -4,35 +4,38 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/uniris/uniris-core/datamining/pkg/crypto"
+	"github.com/uniris/uniris-core/datamining/pkg/leading"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 	"golang.org/x/net/context"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
-	"github.com/uniris/uniris-core/datamining/pkg/adding"
 	"github.com/uniris/uniris-core/datamining/pkg/listing"
 )
 
 type internalSrvHandler struct {
 	list                  listing.Service
-	add                   adding.Service
+	lead                  leading.Service
 	sharedRobotPrivateKey string
 	errors                system.DataMininingErrors
+	store                 chan string
 }
 
 //NewInternalServerHandler create a new GRPC server handler
-func NewInternalServerHandler(list listing.Service, add adding.Service, sharedRobotPrivateKey string, errors system.DataMininingErrors) api.InternalServer {
+func NewInternalServerHandler(list listing.Service, lead leading.Service, sharedRobotPrivateKey string, errors system.DataMininingErrors, storeCh chan string) api.InternalServer {
 	return internalSrvHandler{
 		list:                  list,
-		add:                   add,
+		lead:                  lead,
 		sharedRobotPrivateKey: sharedRobotPrivateKey,
 		errors:                errors,
+		store:                 storeCh,
 	}
 }
 
 //GetWallet implements the protobuf GetWallet request handler
-func (s internalSrvHandler) GetWallet(ctx context.Context, req *api.WalletRequest) (*api.WalletResult, error) {
+func (s internalSrvHandler) GetWallet(ctx context.Context, req *api.WalletSearchRequest) (*api.WalletSearchResult, error) {
 	bioHash, err := crypto.Decrypt(s.sharedRobotPrivateKey, req.EncryptedHashPerson)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt person hash - %s", err.Error())
@@ -61,11 +64,11 @@ func (s internalSrvHandler) GetWallet(ctx context.Context, req *api.WalletReques
 		return nil, errors.New(s.errors.AccountNotExist)
 	}
 
-	return BuildWalletResult(wallet, bioWallet), nil
+	return BuildWalletSearchResult(wallet, bioWallet), nil
 }
 
 //StoreWallet implements the protobuf StoreWallet request handler
-func (s internalSrvHandler) StoreWallet(ctx context.Context, req *api.Wallet) (*api.StorageResult, error) {
+func (s internalSrvHandler) StoreWallet(ctx context.Context, req *api.WalletStorageRequest) (*api.WalletStorageResult, error) {
 	bioRawData, err := crypto.Decrypt(s.sharedRobotPrivateKey, req.EncryptedBioData)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt the bio data - %s", err.Error())
@@ -92,26 +95,29 @@ func (s internalSrvHandler) StoreWallet(ctx context.Context, req *api.Wallet) (*
 		return nil, fmt.Errorf("Cannot decrypt the address - %s", err.Error())
 	}
 
-	wData := BuildWalletData(wal, req.SignatureWalletData, clearaddr)
-	if err := s.add.AddWallet(wData); err != nil {
-		return nil, err
-	}
+	txHashBio := crypto.HashString(bioRawData)
+	txHashWal := crypto.HashString(walletRawData)
 
-	bData := BuildBioData(bio, req.SignatureBioData)
-	if err := s.add.AddBioWallet(bData); err != nil {
-		return nil, err
-	}
+	go func() {
+		wData := BuildWalletData(wal, req.SignatureWalletData, clearaddr)
+		if err := s.lead.ComputeWallet(wData, txHashWal); err != nil {
+			//TODO: handle errors
+			log.Fatal(err)
+		}
+		s.store <- txHashWal
+	}()
 
-	w, err := s.list.GetWallet(clearaddr)
-	if err != nil {
-		return nil, err
-	}
+	go func() {
+		bData := BuildBioData(bio, req.SignatureBioData)
+		if err := s.lead.ComputeBio(bData, txHashBio); err != nil {
+			//TODO: handle errors
+			log.Fatal(err)
+		}
+		s.store <- txHashBio
+	}()
 
-	if w == nil {
-		return nil, fmt.Errorf("Cannot find created wallet")
-	}
-
-	return &api.StorageResult{
-		TransactionHash: w.Endorsement().TransactionHash(),
+	return &api.WalletStorageResult{
+		BioTransactionHash:  txHashBio,
+		DataTransactionHash: txHashWal,
 	}, nil
 }
