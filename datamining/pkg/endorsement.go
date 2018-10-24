@@ -64,8 +64,8 @@ func NewMasterValidation(lastTxRvk []string, powRobotKey string, powValid Valida
 	return &MasterValidation{lastTxRvk, powRobotKey, powValid}
 }
 
-//ValidatorKeysOfLastTransaction returns the list of public keys which validate the last transaction
-func (m MasterValidation) ValidatorKeysOfLastTransaction() []string {
+//LastTransactionMiners returns the list of public keys which validate the last transaction
+func (m MasterValidation) LastTransactionMiners() []string {
 	return m.lastTxRvk
 }
 

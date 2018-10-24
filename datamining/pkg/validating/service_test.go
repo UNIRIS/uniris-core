@@ -16,7 +16,7 @@ Scenario: Validate wallet data
 */
 func TestValidateWallet(t *testing.T) {
 
-	srv := NewService(mockSigner{}, "robotKey", "robotPvKey")
+	srv := NewService(mockSigner{}, mockLocker{}, "robotKey", "robotPvKey")
 
 	w := &datamining.WalletData{
 		BiodPubk: "pubKey",
@@ -27,7 +27,7 @@ func TestValidateWallet(t *testing.T) {
 		},
 	}
 
-	v, err := srv.ValidateWalletData(w)
+	v, err := srv.ValidateWalletData(w, "hash")
 	assert.Nil(t, err)
 	assert.Equal(t, datamining.ValidationOK, v.Status())
 	assert.Equal(t, "signature", v.Signature())
@@ -42,7 +42,7 @@ Scenario: Validate bio data
 */
 func TestValidatBio(t *testing.T) {
 
-	srv := NewService(mockSigner{}, "robotKey", "robotPvKey")
+	srv := NewService(mockSigner{}, mockLocker{}, "robotKey", "robotPvKey")
 
 	b := &datamining.BioData{
 		BiodPubk: "pubkey",
@@ -53,7 +53,7 @@ func TestValidatBio(t *testing.T) {
 		},
 	}
 
-	v, err := srv.ValidateBioData(b)
+	v, err := srv.ValidateBioData(b, "hash")
 	assert.Nil(t, err)
 	assert.Equal(t, datamining.ValidationOK, v.Status())
 	assert.Equal(t, "signature", v.Signature())
@@ -68,4 +68,18 @@ func (s mockSigner) SignValidation(v Validation, pvKey string) (string, error) {
 
 func (s mockSigner) CheckSignature(pubKey string, data interface{}, sig string) error {
 	return nil
+}
+
+type mockLocker struct{}
+
+func (l mockLocker) Lock(txLock TransactionLock) error {
+	return nil
+}
+
+func (l mockLocker) Unlock(txLock TransactionLock) error {
+	return nil
+}
+
+func (l mockLocker) ContainsLock(txLock TransactionLock) bool {
+	return false
 }

@@ -100,7 +100,7 @@ func (s internalSrvHandler) StoreWallet(ctx context.Context, req *api.WalletStor
 
 	go func() {
 		wData := BuildWalletData(wal, req.SignatureWalletData, clearaddr)
-		if err := s.lead.ComputeWallet(wData, txHashWal); err != nil {
+		if err := s.lead.NewWallet(wData, txHashWal); err != nil {
 			//TODO: handle errors
 			log.Fatal(err)
 		}
@@ -109,7 +109,7 @@ func (s internalSrvHandler) StoreWallet(ctx context.Context, req *api.WalletStor
 
 	go func() {
 		bData := BuildBioData(bio, req.SignatureBioData)
-		if err := s.lead.ComputeBio(bData, txHashBio); err != nil {
+		if err := s.lead.NewBio(bData, txHashBio); err != nil {
 			//TODO: handle errors
 			log.Fatal(err)
 		}

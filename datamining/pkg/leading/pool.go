@@ -4,6 +4,7 @@ import (
 	"net"
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/validating"
 )
 
 //Pool represents a pool containing peers
@@ -22,16 +23,17 @@ type Peer struct {
 type PoolFinder interface {
 	FindValidationPool() (Pool, error)
 	FindStoragePool() (Pool, error)
+	FindLastValidationPool(addr string) (Pool, error)
 }
 
 //PoolDispatcher defines methods to contact peers in the pool
 type PoolDispatcher interface {
-	RequestLock(pool Pool, txHash string) error
-	RequestUnlock(pool Pool, txHash string) error
-	RequestWalletValidation(Pool, *datamining.WalletData) ([]datamining.Validation, error)
-	RequestBioValidation(Pool, *datamining.BioData) ([]datamining.Validation, error)
+	RequestLock(lastValidPool Pool, txLock validating.TransactionLock, sig string) error
+	RequestUnlock(lastValidPool Pool, txLock validating.TransactionLock, sig string) error
+	RequestWalletValidation(validPool Pool, d *datamining.WalletData, txHash string) ([]datamining.Validation, error)
+	RequestBioValidation(validPool Pool, b *datamining.BioData, txHash string) ([]datamining.Validation, error)
 
-	RequestLastTx(pool Pool, txHash string) (oldTxHash string, validation *datamining.MasterValidation, err error)
-	RequestWalletStorage(Pool, *datamining.Wallet) error
-	RequestBioStorage(Pool, *datamining.BioWallet) error
+	RequestLastTx(storagePool Pool, txHash string) (oldTxHash string, err error)
+	RequestWalletStorage(storagePool Pool, wallet *datamining.Wallet) error
+	RequestBioStorage(storagePool Pool, bio *datamining.BioWallet) error
 }

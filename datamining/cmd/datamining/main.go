@@ -38,6 +38,7 @@ func main() {
 
 	validSrv := validating.NewService(
 		crypto.NewSigner(),
+		mock.NewTransactionLocker(),
 		config.SharedKeys.RobotPublicKey,
 		config.SharedKeys.RobotPrivateKey,
 	)

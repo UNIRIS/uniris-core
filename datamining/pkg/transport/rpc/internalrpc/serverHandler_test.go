@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uniris/uniris-core/datamining/pkg/adding"
+	"github.com/uniris/uniris-core/datamining/pkg/leading"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 	"github.com/uniris/uniris-core/datamining/pkg/validating"
 
@@ -33,7 +33,10 @@ Scenario: Retrieve a wallet from a bio hash
 */
 func TestGetWallet(t *testing.T) {
 
-	repo := &databasemock{}
+	repo := &databasemock{
+		BioWallets: make([]*datamining.BioWallet, 0),
+		Wallets:    make([]*datamining.Wallet, 0),
+	}
 
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -62,22 +65,19 @@ func TestGetWallet(t *testing.T) {
 	repo.StoreWallet(datamining.NewWallet(wdata, endors, ""))
 
 	list := listing.NewService(repo)
-	valid := validating.NewService(
-		mockTechRepo{},
-		mockTransactionFetcher{},
-		mockPoolDispatcher{},
+	errors := system.DataMininingErrors{}
+
+	leading := leading.NewService(
 		mockPoolFinder{},
-		mockHasher{},
-		mockSigner{},
+		&mockPoolDispatcher{Repo: repo},
 		mockNotifier{},
+		mockSigner{},
+		mockTechRepo{},
 		"robotPubKey",
 		"robotPvKey",
 	)
-	d := &mockPoolDispatcher{}
-	adding := adding.NewService(valid, mockPoolFinder{}, d)
-	errors := system.DataMininingErrors{}
 
-	h := NewInternalServerHandler(list, adding, hex.EncodeToString(pvKey), errors, nil)
+	h := NewInternalServerHandler(list, leading, hex.EncodeToString(pvKey), errors, nil)
 	res, err := h.GetWallet(context.TODO(), &api.WalletSearchRequest{
 		EncryptedHashPerson: cipherBhash,
 	})
@@ -93,32 +93,29 @@ Scenario: Store a wallet
 	Then the wallet is stored and the updated wallet hash is updated
 */
 func TestStoreWallet(t *testing.T) {
-	repo := &databasemock{}
+	repo := &databasemock{
+		BioWallets: make([]*datamining.BioWallet, 0),
+		Wallets:    make([]*datamining.Wallet, 0),
+	}
 
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 
 	list := listing.NewService(repo)
-	valid := validating.NewService(
-		mockTechRepo{},
-		mockTransactionFetcher{},
-		mockPoolDispatcher{},
+	leading := leading.NewService(
 		mockPoolFinder{},
-		mockHasher{},
-		mockSigner{},
+		&mockPoolDispatcher{Repo: repo},
 		mockNotifier{},
+		mockSigner{},
+		mockTechRepo{},
 		"robotPubKey",
 		"robotPvKey",
 	)
-	d := &mockPoolDispatcher{
-		Repo: repo,
-	}
-	adding := adding.NewService(valid, mockPoolFinder{}, d)
 	errors := system.DataMininingErrors{}
 
 	storeChan := make(chan string)
-	h := NewInternalServerHandler(list, adding, hex.EncodeToString(pvKey), errors, storeChan)
+	h := NewInternalServerHandler(list, leading, hex.EncodeToString(pvKey), errors, storeChan)
 
 	cipherAddr, _ := crypto.Encrypt(hex.EncodeToString(pbKey), "encrypted_addr_robot")
 
@@ -223,22 +220,22 @@ func (r mockTechRepo) ListBiodPubKeys() ([]string, error) {
 	return []string{"key1", "key2", "key3"}, nil
 }
 
-type mockTransactionFetcher struct{}
-
-func (f mockTransactionFetcher) FindPreviousTransactionMiners(addr string) ([]string, error) {
-	return []string{
-		"minerKey1",
-		"minerKey2",
-	}, nil
-}
-func (f mockTransactionFetcher) FindLastWalletTx(addr string) (string, error) {
-	return "last tx", nil
-}
-
 type mockSigner struct{}
 
 func (s mockSigner) CheckSignature(pubk string, data interface{}, der string) error {
 	return nil
+}
+
+func (s mockSigner) CheckTransactionSignature(pubk string, tx string, der string) error {
+	return nil
+}
+
+func (s mockSigner) SignLock(validating.TransactionLock, string) (string, error) {
+	return "sig", nil
+}
+
+func (s mockSigner) SignMasterValidation(v leading.Validation, pvKey string) (string, error) {
+	return "sig", nil
 }
 
 func (s mockSigner) SignValidation(v validating.Validation, pvKey string) (string, error) {
@@ -255,32 +252,32 @@ type mockPoolDispatcher struct {
 	Repo *databasemock
 }
 
-func (r mockPoolDispatcher) RequestLastTx(pool adding.Pool, txHash string) (oldTxHash string, validation *datamining.MasterValidation, err error) {
-	return "old tx hash", datamining.NewMasterValidation([]string{"key", "key2"}, "key", datamining.Validation{}), nil
+func (r mockPoolDispatcher) RequestLastTx(pool leading.Pool, txHash string) (oldTxHash string, err error) {
+	return "old tx hash", nil
 }
 
-func (r *mockPoolDispatcher) RequestWalletStorage(p adding.Pool, w *datamining.Wallet) error {
+func (r *mockPoolDispatcher) RequestWalletStorage(p leading.Pool, w *datamining.Wallet) error {
 	return r.Repo.StoreWallet(w)
 }
 
-func (r *mockPoolDispatcher) RequestBioStorage(p adding.Pool, w *datamining.BioWallet) error {
+func (r *mockPoolDispatcher) RequestBioStorage(p leading.Pool, w *datamining.BioWallet) error {
 	return r.Repo.StoreBioWallet(w)
 }
 
-func (r mockPoolDispatcher) RequestLock(validating.Pool, string) error {
+func (r mockPoolDispatcher) RequestLock(leading.Pool, validating.TransactionLock, string) error {
 	return nil
 }
 
-func (r mockPoolDispatcher) RequestUnlock(validating.Pool, string) error {
+func (r mockPoolDispatcher) RequestUnlock(leading.Pool, validating.TransactionLock, string) error {
 	return nil
 }
 
-func (r mockPoolDispatcher) RequestWalletValidation(validating.Pool, *datamining.WalletData) ([]datamining.Validation, error) {
+func (r mockPoolDispatcher) RequestWalletValidation(leading.Pool, *datamining.WalletData, string) ([]datamining.Validation, error) {
 	return []datamining.Validation{
 		datamining.NewValidation(datamining.ValidationOK, time.Now(), "validator key", "sig"),
 	}, nil
 }
-func (r mockPoolDispatcher) RequestBioValidation(validating.Pool, *datamining.BioData) ([]datamining.Validation, error) {
+func (r mockPoolDispatcher) RequestBioValidation(leading.Pool, *datamining.BioData, string) ([]datamining.Validation, error) {
 	return []datamining.Validation{
 		datamining.NewValidation(datamining.ValidationOK, time.Now(), "validator key", "sig"),
 	}, nil
@@ -288,10 +285,10 @@ func (r mockPoolDispatcher) RequestBioValidation(validating.Pool, *datamining.Bi
 
 type mockPoolFinder struct{}
 
-func (f mockPoolFinder) FindValidationPool() (validating.Pool, error) {
-	return validating.Pool{
-		Peers: []validating.Peer{
-			validating.Peer{
+func (f mockPoolFinder) FindLastValidationPool(addr string) (leading.Pool, error) {
+	return leading.Pool{
+		Peers: []leading.Peer{
+			leading.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
 				Port:      4000,
 				PublicKey: "validator key",
@@ -300,10 +297,22 @@ func (f mockPoolFinder) FindValidationPool() (validating.Pool, error) {
 	}, nil
 }
 
-func (f mockPoolFinder) FindStoragePool() (adding.Pool, error) {
-	return adding.Pool{
-		Peers: []adding.Peer{
-			adding.Peer{
+func (f mockPoolFinder) FindValidationPool() (leading.Pool, error) {
+	return leading.Pool{
+		Peers: []leading.Peer{
+			leading.Peer{
+				IP:        net.ParseIP("127.0.0.1"),
+				Port:      4000,
+				PublicKey: "validator key",
+			},
+		},
+	}, nil
+}
+
+func (f mockPoolFinder) FindStoragePool() (leading.Pool, error) {
+	return leading.Pool{
+		Peers: []leading.Peer{
+			leading.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
 				Port:      4000,
 				PublicKey: "validator key",
@@ -314,6 +323,6 @@ func (f mockPoolFinder) FindStoragePool() (adding.Pool, error) {
 
 type mockNotifier struct{}
 
-func (n mockNotifier) NotifyTransactionStatus(txHash string, status validating.TransactionStatus) error {
+func (n mockNotifier) NotifyTransactionStatus(txHash string, status leading.TransactionStatus) error {
 	return nil
 }

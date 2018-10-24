@@ -1,14 +1,11 @@
 package leading
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
-	"encoding/hex"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/uniris/uniris-core/datamining/pkg/validating"
 
 	"github.com/stretchr/testify/assert"
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
@@ -21,33 +18,35 @@ Scenario: Lead bio validation
 	Then I perform POW and returns validated transaction
 */
 func TestLeadWalletValidation(t *testing.T) {
+	repo := &mockSrvDatabase{
+		BioWallets: make([]*datamining.BioWallet, 0),
+		Wallets:    make([]*datamining.Wallet, 0),
+	}
 	srv := NewService(
 		mockSrvPoolFinder{},
-		mockSrvPoolDispatcher{},
+		&mockSrvPoolDispatcher{Repo: repo},
 		mockSrvNotifier{},
 		mockSrvSigner{},
 		mockSrvTechRepo{},
 		"robotPubKey",
 		"robotPvKey")
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
-
 	w := &datamining.WalletData{
-		BiodPubk: hex.EncodeToString(pbKey),
-		EmPubk:   hex.EncodeToString(pbKey),
+		BiodPubk: "pubkey",
+		EmPubk:   "pubkey",
 		Sigs: datamining.Signatures{
 			BiodSig: "fake sig",
 			EmSig:   "fake sig",
 		},
 	}
 
-	endorsement, err := srv.ValidateWallet(w, "hash", nil)
+	err := srv.NewWallet(w, "hash")
 	assert.Nil(t, err)
-	assert.Equal(t, "hash", endorsement.TransactionHash())
-	assert.Equal(t, "robotPubKey", endorsement.MasterValidation().ProofOfWorkRobotKey())
-	assert.Len(t, endorsement.Validations(), 1)
-	assert.Equal(t, "validator key", endorsement.Validations()[0].PublicKey())
+	assert.Len(t, repo.Wallets, 1)
+	assert.Equal(t, "hash", repo.Wallets[0].Endorsement().TransactionHash())
+	assert.Equal(t, "robotPubKey", repo.Wallets[0].Endorsement().MasterValidation().ProofOfWorkRobotKey())
+	assert.Len(t, repo.Wallets[0].Endorsement().Validations(), 1)
+	assert.Equal(t, "validator key", repo.Wallets[0].Endorsement().Validations()[0].PublicKey())
 }
 
 /*
@@ -57,33 +56,43 @@ Scenario: Lead bio validation
 	Then I perform POW and returns validated transaction
 */
 func TestLeadBioValidation(t *testing.T) {
+	repo := &mockSrvDatabase{
+		BioWallets: make([]*datamining.BioWallet, 0),
+		Wallets:    make([]*datamining.Wallet, 0),
+	}
 	srv := NewService(
 		mockSrvPoolFinder{},
-		mockSrvPoolDispatcher{},
+		&mockSrvPoolDispatcher{Repo: repo},
 		mockSrvNotifier{},
 		mockSrvSigner{},
 		mockSrvTechRepo{},
 		"robotPubKey",
 		"robotPvKey")
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
-
 	bd := &datamining.BioData{
-		BiodPubk: hex.EncodeToString(pbKey),
-		EmPubk:   hex.EncodeToString(pbKey),
+		BHash:    "bhash",
+		BiodPubk: "pubkey",
+		EmPubk:   "pubkey",
 		Sigs: datamining.Signatures{
 			BiodSig: "fake sig",
 			EmSig:   "fake sig",
 		},
 	}
 
-	endorsement, err := srv.ValidateBio(bd, "hash", nil)
+	err := srv.NewBio(bd, "hash")
 	assert.Nil(t, err)
-	assert.Equal(t, "hash", endorsement.TransactionHash())
-	assert.Equal(t, "robotPubKey", endorsement.MasterValidation().ProofOfWorkRobotKey())
-	assert.Len(t, endorsement.Validations(), 1)
-	assert.Equal(t, "validator key", endorsement.Validations()[0].PublicKey())
+	assert.Len(t, repo.BioWallets, 1)
+	assert.Equal(t, "bhash", repo.BioWallets[0].Bhash())
+}
+
+type mockSigner struct{}
+
+func (s mockSigner) SignValidation(v Validation, pvKey string) (string, error) {
+	return "signature", nil
+}
+
+func (s mockSigner) CheckSignature(pubKey string, data interface{}, sig string) error {
+	return nil
 }
 
 type mockSrvTechRepo struct{}
@@ -94,6 +103,10 @@ func (r mockSrvTechRepo) ListBiodPubKeys() ([]string, error) {
 
 type mockSrvSigner struct{}
 
+func (s mockSrvSigner) SignLock(txLock validating.TransactionLock, pvKey string) (string, error) {
+	return "signature", nil
+}
+
 func (s mockSrvSigner) CheckTransactionSignature(pubk string, tx string, der string) error {
 	return nil
 }
@@ -102,40 +115,69 @@ func (s mockSrvSigner) SignMasterValidation(v Validation, pvKey string) (string,
 	return "sig", nil
 }
 
-type mockSrvPoolDispatcher struct{}
+type mockSrvDatabase struct {
+	BioWallets []*datamining.BioWallet
+	Wallets    []*datamining.Wallet
+}
 
-func (r mockSrvPoolDispatcher) RequestLock(Pool, string) error {
+func (d *mockSrvDatabase) StoreWallet(w *datamining.Wallet) error {
+	d.Wallets = append(d.Wallets, w)
 	return nil
 }
 
-func (r mockSrvPoolDispatcher) RequestUnlock(Pool, string) error {
+func (d *mockSrvDatabase) StoreBioWallet(bw *datamining.BioWallet) error {
+	d.BioWallets = append(d.BioWallets, bw)
 	return nil
 }
 
-func (r mockSrvPoolDispatcher) RequestWalletValidation(Pool, *datamining.WalletData) ([]datamining.Validation, error) {
+type mockSrvPoolDispatcher struct {
+	Repo *mockSrvDatabase
+}
+
+func (r mockSrvPoolDispatcher) RequestLock(Pool, validating.TransactionLock, string) error {
+	return nil
+}
+
+func (r mockSrvPoolDispatcher) RequestUnlock(Pool, validating.TransactionLock, string) error {
+	return nil
+}
+
+func (r mockSrvPoolDispatcher) RequestWalletValidation(Pool, *datamining.WalletData, string) ([]datamining.Validation, error) {
 	return []datamining.Validation{
 		datamining.NewValidation(datamining.ValidationOK, time.Now(), "validator key", "sig"),
 	}, nil
 }
-func (r mockSrvPoolDispatcher) RequestBioValidation(Pool, *datamining.BioData) ([]datamining.Validation, error) {
+func (r mockSrvPoolDispatcher) RequestBioValidation(Pool, *datamining.BioData, string) ([]datamining.Validation, error) {
 	return []datamining.Validation{
 		datamining.NewValidation(datamining.ValidationOK, time.Now(), "validator key", "sig"),
 	}, nil
 }
 
-func (r mockSrvPoolDispatcher) RequestWalletStorage(Pool, *datamining.Wallet) error {
-	return nil
+func (r *mockSrvPoolDispatcher) RequestWalletStorage(p Pool, w *datamining.Wallet) error {
+	return r.Repo.StoreWallet(w)
 }
 
-func (r mockSrvPoolDispatcher) RequestBioStorage(Pool, *datamining.BioWallet) error {
-	return nil
+func (r *mockSrvPoolDispatcher) RequestBioStorage(p Pool, w *datamining.BioWallet) error {
+	return r.Repo.StoreBioWallet(w)
 }
 
-func (r mockSrvPoolDispatcher) RequestLastTx(Pool, string) (string, *datamining.MasterValidation, error) {
-	return "last", &datamining.MasterValidation{}, nil
+func (r mockSrvPoolDispatcher) RequestLastTx(Pool, string) (string, error) {
+	return "last", nil
 }
 
 type mockSrvPoolFinder struct{}
+
+func (f mockSrvPoolFinder) FindLastValidationPool(addr string) (Pool, error) {
+	return Pool{
+		Peers: []Peer{
+			Peer{
+				IP:        net.ParseIP("127.0.0.1"),
+				Port:      4000,
+				PublicKey: "validator key",
+			},
+		},
+	}, nil
+}
 
 func (f mockSrvPoolFinder) FindValidationPool() (Pool, error) {
 	return Pool{

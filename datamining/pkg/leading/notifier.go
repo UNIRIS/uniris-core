@@ -11,8 +11,14 @@ const (
 	//Locked is defined when the is received and locked
 	Locked TransactionStatus = 1
 
+	//Unlocked is defined when the is received and unlocked
+	Unlocked TransactionStatus = 2
+
 	//Approved is defined when the is received, locked and validations passed
-	Approved TransactionStatus = 2
+	Approved TransactionStatus = 3
+
+	//Replicated is defined when the is received, locked, valid and replicated
+	Replicated TransactionStatus = 4
 )
 
 func (s TransactionStatus) String() string {
@@ -21,8 +27,12 @@ func (s TransactionStatus) String() string {
 		return "Pending"
 	case Locked:
 		return "Locked"
+	case Unlocked:
+		return "Unlocked"
 	case Approved:
 		return "Approved"
+	case Replicated:
+		return "Replicated"
 	default:
 		panic("Unrecognized transactions status")
 	}

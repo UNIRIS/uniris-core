@@ -6,8 +6,8 @@ import (
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 )
 
-//Signer defines methods to handle signatures
-type Signer interface {
+//PowSigner defines methods to handle signatures
+type PowSigner interface {
 	SignMasterValidation(v Validation, pvKey string) (string, error)
 	CheckTransactionSignature(pubKey string, tx string, sig string) error
 }
@@ -19,7 +19,7 @@ type TechRepository interface {
 
 //POW defines methods for the POW
 type POW interface {
-	Execute(txHash, sig string, lastTxMinerList []string) (*datamining.MasterValidation, error)
+	Execute(txHash, sig string, lastValidationPool Pool) (*datamining.MasterValidation, error)
 }
 
 //Validation represents a validation before its signature
@@ -31,18 +31,18 @@ type Validation struct {
 
 type pow struct {
 	repo        TechRepository
-	sig         Signer
+	sig         PowSigner
 	robotPubKey string
 	robotPvKey  string
 }
 
 //NewPOW creates a new Proof Of Work handler
-func NewPOW(repo TechRepository, sig Signer, robotPubKey, robotPvKey string) POW {
+func NewPOW(repo TechRepository, sig PowSigner, robotPubKey, robotPvKey string) POW {
 	return pow{repo, sig, robotPubKey, robotPvKey}
 }
 
 //Execute the Proof Of Work
-func (p pow) Execute(txHash string, sig string, lastTxMinerList []string) (*datamining.MasterValidation, error) {
+func (p pow) Execute(txHash string, sig string, lastValidationPool Pool) (*datamining.MasterValidation, error) {
 	keys, err := p.repo.ListBiodPubKeys()
 	if err != nil {
 		return nil, err
@@ -72,5 +72,10 @@ func (p pow) Execute(txHash string, sig string, lastTxMinerList []string) (*data
 		v.PublicKey,
 		signature)
 
-	return datamining.NewMasterValidation(lastTxMinerList, p.robotPubKey, valid), nil
+	lastTxMiners := make([]string, 0)
+	for _, p := range lastValidationPool.Peers {
+		lastTxMiners = append(lastTxMiners, p.PublicKey)
+	}
+
+	return datamining.NewMasterValidation(lastTxMiners, p.robotPubKey, valid), nil
 }

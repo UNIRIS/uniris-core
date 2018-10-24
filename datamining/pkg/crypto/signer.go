@@ -90,6 +90,15 @@ func (s signer) SignMasterValidation(v leading.Validation, pvKey string) (string
 	return Sign(pvKey, string(b))
 }
 
+func (s signer) SignLock(txLock validating.TransactionLock, pvKey string) (string, error) {
+	b, err := json.Marshal(txLock)
+	if err != nil {
+		return "", err
+	}
+
+	return Sign(pvKey, string(b))
+}
+
 //Sign data using a privatekey
 func Sign(privk string, data string) (string, error) {
 	pvDecoded, err := hex.DecodeString(privk)

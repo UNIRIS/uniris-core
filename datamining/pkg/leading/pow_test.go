@@ -22,7 +22,12 @@ func TestExecutePOW(t *testing.T) {
 	repo.BioKeys = append(repo.BioKeys, "bioKey3")
 
 	pow := NewPOW(repo, mockPowSigner{}, "my key", "my pv key")
-	valid, err := pow.Execute("hash", "signature", nil)
+	lastValidPool := Pool{
+		Peers: []Peer{
+			Peer{PublicKey: "key"},
+		},
+	}
+	valid, err := pow.Execute("hash", "signature", lastValidPool)
 	assert.Nil(t, err)
 	assert.NotNil(t, valid)
 
