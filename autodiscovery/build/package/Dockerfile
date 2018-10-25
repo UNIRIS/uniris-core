@@ -29,4 +29,9 @@ EXPOSE $UNIRIS_DISCOVERY_PORT
 EXPOSE 15672
 
 # Run the app
-CMD sed -i 's/bind 127.0.0.1 ::1/bind 127.0.0.1/' /etc/redis/redis.conf ; sed -i  '/NODE_IP_ADDRESS/ s/^#NODE_IP_ADDRESS/NODE_IP_ADDRESS/g' /etc/rabbitmq/rabbitmq-env.conf ; /etc/init.d/redis-server start ; /etc/init.d/rabbitmq-server start ; go run cmd/discovery/main.go
+CMD /etc/init.d/redis-server start ; \
+/etc/init.d/rabbitmq-server start ; \
+rabbitmqctl add_user uniris uniris; \
+rabbitmqctl set_user_tags uniris administrator; \
+rabbitmqctl set_permissions -p / uniris ".*" ".*" ".*"; \
+go run cmd/discovery/main.go
