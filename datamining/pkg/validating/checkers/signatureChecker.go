@@ -9,15 +9,15 @@ import (
 //ErrInvalidSignature is returned when a invalid signature is provided
 var ErrInvalidSignature = errors.New("Invalid signature")
 
-//SignatureChecker defines methods to check signature
-type SignatureChecker interface {
-	BioDataChecker
-	WalletDataChecker
-}
-
 //Signer defines methods to handle signatures
 type Signer interface {
 	CheckSignature(pubKey string, data interface{}, sig string) error
+}
+
+//Checker defines methods for transaction data checking
+type Checker interface {
+	CheckData(interface{}) error
+	IsCatchedError(error) bool
 }
 
 type sigCheck struct {
@@ -25,11 +25,27 @@ type sigCheck struct {
 }
 
 //NewSignatureChecker creates a signature checker
-func NewSignatureChecker(sig Signer) SignatureChecker {
+func NewSignatureChecker(sig Signer) Checker {
 	return sigCheck{sig}
 }
 
-func (c sigCheck) CheckWalletData(w *datamining.WalletData) error {
+func (c sigCheck) IsCatchedError(err error) bool {
+	return err == ErrInvalidSignature
+}
+
+func (c sigCheck) CheckData(data interface{}) error {
+
+	switch data.(type) {
+	case *datamining.WalletData:
+		return c.checkWalletData(data.(*datamining.WalletData))
+	case *datamining.BioData:
+		return c.checkBioData(data.(*datamining.BioData))
+	}
+
+	return nil
+}
+
+func (c sigCheck) checkWalletData(w *datamining.WalletData) error {
 	wValid := WalletData{
 		BIODPublicKey:      w.BiodPubk,
 		EncryptedAddrRobot: w.CipherAddrRobot,
@@ -50,11 +66,10 @@ func (c sigCheck) CheckWalletData(w *datamining.WalletData) error {
 		}
 		return err
 	}
-
 	return nil
 }
 
-func (c sigCheck) CheckBioData(b *datamining.BioData) error {
+func (c sigCheck) checkBioData(b *datamining.BioData) error {
 	bValid := BioData{
 		BIODPublicKey:       b.BiodPubk,
 		EncryptedAddrPerson: b.CipherAddrBio,

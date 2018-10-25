@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/validating/checkers"
 )
 
 /*
@@ -27,9 +28,34 @@ func TestValidateWallet(t *testing.T) {
 		},
 	}
 
-	v, err := srv.ValidateWalletData(w, "hash")
+	v, err := srv.ValidateWalletData(w)
 	assert.Nil(t, err)
 	assert.Equal(t, datamining.ValidationOK, v.Status())
+	assert.Equal(t, "signature", v.Signature())
+	assert.Equal(t, "robotKey", v.PublicKey())
+}
+
+/*
+Scenario: Validate an invalid transaction
+	Given a invalid transaction
+	When we validate it
+	Then we get a validation with a KO status
+*/
+func TestValidateWalletWithKO(t *testing.T) {
+	srv := NewService(mockBadSigner{}, mockLocker{}, "robotKey", "robotPvKey")
+
+	w := &datamining.WalletData{
+		BiodPubk: "pubKey",
+		EmPubk:   "pubKey",
+		Sigs: datamining.Signatures{
+			BiodSig: "fake sig",
+			EmSig:   "fake sig",
+		},
+	}
+
+	v, err := srv.ValidateWalletData(w)
+	assert.Nil(t, err)
+	assert.Equal(t, datamining.ValidationKO, v.Status())
 	assert.Equal(t, "signature", v.Signature())
 	assert.Equal(t, "robotKey", v.PublicKey())
 }
@@ -53,7 +79,7 @@ func TestValidatBio(t *testing.T) {
 		},
 	}
 
-	v, err := srv.ValidateBioData(b, "hash")
+	v, err := srv.ValidateBioData(b)
 	assert.Nil(t, err)
 	assert.Equal(t, datamining.ValidationOK, v.Status())
 	assert.Equal(t, "signature", v.Signature())
@@ -68,6 +94,16 @@ func (s mockSigner) SignValidation(v Validation, pvKey string) (string, error) {
 
 func (s mockSigner) CheckSignature(pubKey string, data interface{}, sig string) error {
 	return nil
+}
+
+type mockBadSigner struct{}
+
+func (s mockBadSigner) SignValidation(v Validation, pvKey string) (string, error) {
+	return "signature", nil
+}
+
+func (s mockBadSigner) CheckSignature(pubKey string, data interface{}, sig string) error {
+	return checkers.ErrInvalidSignature
 }
 
 type mockLocker struct{}

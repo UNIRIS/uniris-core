@@ -39,15 +39,15 @@ type Signer interface {
 
 //Service is the interface that provide methods for wallets validation
 type Service interface {
-	ValidateWalletData(w *datamining.WalletData, txHash string) (datamining.Validation, error)
-	ValidateBioData(b *datamining.BioData, txHash string) (datamining.Validation, error)
+	ValidateWalletData(w *datamining.WalletData) (datamining.Validation, error)
+	ValidateBioData(b *datamining.BioData) (datamining.Validation, error)
 	LockTransaction(txLock TransactionLock, sig string) error
 	UnlockTransaction(txLock TransactionLock, sig string) error
 }
 
 type service struct {
-	bioChecks  []checkers.BioDataChecker
-	dataChecks []checkers.WalletDataChecker
+	bioChecks  []checkers.Checker
+	dataChecks []checkers.Checker
 	robotKey   string
 	robotPvKey string
 	sig        Signer
@@ -56,8 +56,8 @@ type service struct {
 
 //NewService creates a approving service
 func NewService(sig Signer, lock TransactionLocker, robotKey, robotPvKey string) Service {
-	bioChecks := make([]checkers.BioDataChecker, 0)
-	dataChecks := make([]checkers.WalletDataChecker, 0)
+	bioChecks := make([]checkers.Checker, 0)
+	dataChecks := make([]checkers.Checker, 0)
 
 	bioChecks = append(bioChecks, checkers.NewSignatureChecker(sig))
 	dataChecks = append(dataChecks, checkers.NewSignatureChecker(sig))
@@ -72,52 +72,30 @@ func NewService(sig Signer, lock TransactionLocker, robotKey, robotPvKey string)
 	}
 }
 
-func (s service) ValidateWalletData(w *datamining.WalletData, txHash string) (valid datamining.Validation, err error) {
+func (s service) ValidateWalletData(w *datamining.WalletData) (valid datamining.Validation, err error) {
 	for _, c := range s.dataChecks {
-		err = c.CheckWalletData(w)
+		err = c.CheckData(w)
 		if err != nil {
+			if c.IsCatchedError(err) {
+				return s.buildValidation(datamining.ValidationKO)
+			}
 			return
 		}
 	}
-	v := Validation{
-		PublicKey: s.robotKey,
-		Status:    datamining.ValidationOK,
-		Timestamp: time.Now(),
-	}
-	signature, err := s.sig.SignValidation(v, s.robotPvKey)
-	if err != nil {
-		return
-	}
-	valid = datamining.NewValidation(
-		v.Status,
-		v.Timestamp,
-		v.PublicKey,
-		signature)
-	return
+	return s.buildValidation(datamining.ValidationOK)
 }
 
-func (s service) ValidateBioData(bw *datamining.BioData, txHash string) (valid datamining.Validation, err error) {
+func (s service) ValidateBioData(bw *datamining.BioData) (valid datamining.Validation, err error) {
 	for _, c := range s.bioChecks {
-		err = c.CheckBioData(bw)
+		err = c.CheckData(bw)
 		if err != nil {
+			if c.IsCatchedError(err) {
+				return s.buildValidation(datamining.ValidationKO)
+			}
 			return
 		}
 	}
-	v := Validation{
-		PublicKey: s.robotKey,
-		Status:    datamining.ValidationOK,
-		Timestamp: time.Now(),
-	}
-	signature, err := s.sig.SignValidation(v, s.robotPvKey)
-	if err != nil {
-		return
-	}
-	valid = datamining.NewValidation(
-		v.Status,
-		v.Timestamp,
-		v.PublicKey,
-		signature)
-	return
+	return s.buildValidation(datamining.ValidationOK)
 }
 
 func (s service) LockTransaction(txLock TransactionLock, sig string) error {
@@ -138,4 +116,21 @@ func (s service) UnlockTransaction(txLock TransactionLock, sig string) error {
 	}
 
 	return s.lock.Unlock(txLock)
+}
+
+func (s service) buildValidation(status datamining.ValidationStatus) (valid datamining.Validation, err error) {
+	v := Validation{
+		PublicKey: s.robotKey,
+		Status:    status,
+		Timestamp: time.Now(),
+	}
+	signature, err := s.sig.SignValidation(v, s.robotPvKey)
+	if err != nil {
+		return
+	}
+	return datamining.NewValidation(
+		v.Status,
+		v.Timestamp,
+		v.PublicKey,
+		signature), nil
 }

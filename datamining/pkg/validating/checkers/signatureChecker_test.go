@@ -29,7 +29,7 @@ func TestOkSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err := sigCheck.CheckWalletData(w)
+	err := sigCheck.CheckData(w)
 	assert.Nil(t, err)
 
 	bd := &datamining.BioData{
@@ -41,7 +41,7 @@ func TestOkSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err = sigCheck.CheckBioData(bd)
+	err = sigCheck.CheckData(bd)
 	assert.Nil(t, err)
 }
 
@@ -61,7 +61,7 @@ func TestKOSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err := sigCheck.CheckWalletData(w)
+	err := sigCheck.CheckData(w)
 	assert.Equal(t, err, ErrInvalidSignature)
 
 	bd := &datamining.BioData{
@@ -73,7 +73,7 @@ func TestKOSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err = sigCheck.CheckBioData(bd)
+	err = sigCheck.CheckData(bd)
 	assert.Equal(t, err, ErrInvalidSignature)
 }
 
