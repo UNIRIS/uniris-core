@@ -25,6 +25,7 @@ type Repository interface {
 	ListReachablePeers() ([]Peer, error)
 	SetUnreachablePeer(pubKey string) error
 	RemoveUnreachablePeer(pubKey string) error
+	ContainsUnreachableKey(pubk string) error
 }
 
 //PeerIdentity describes the peer identification the network

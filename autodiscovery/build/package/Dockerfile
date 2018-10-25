@@ -25,6 +25,8 @@ ENV UNIRIS_DISCOVERY_AMQP_USER=guest
 ENV UNIRIS_DISCOVERY_AMQP_PWD=guest
 
 EXPOSE $UNIRIS_DISCOVERY_PORT
+#Expose Rabitmq management console
+EXPOSE 15672
 
 # Run the app
-CMD sed -i 's/bind 127.0.0.1 ::1/bind 127.0.0.1/' /etc/redis/redis.conf ; /etc/init.d/redis-server start ; /etc/init.d/rabbitmq-server start ; go run cmd/discovery/main.go
+CMD sed -i 's/bind 127.0.0.1 ::1/bind 127.0.0.1/' /etc/redis/redis.conf ; sed -i  '/NODE_IP_ADDRESS/ s/^#NODE_IP_ADDRESS/NODE_IP_ADDRESS/g' /etc/rabbitmq/rabbitmq-env.conf ; /etc/init.d/redis-server start ; /etc/init.d/rabbitmq-server start ; go run cmd/discovery/main.go

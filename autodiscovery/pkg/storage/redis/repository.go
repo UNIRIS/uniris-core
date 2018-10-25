@@ -5,10 +5,11 @@ import (
 	"net"
 	"sort"
 
-	"github.com/uniris/uniris-core/autodiscovery/pkg/system"
-
 	"github.com/go-redis/redis"
+
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
+	gossip "github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
+	"github.com/uniris/uniris-core/autodiscovery/pkg/system"
 )
 
 type redisRepository struct {
@@ -21,6 +22,7 @@ const (
 	seedKey         = "seed-peer"
 )
 
+//GetOwnedPeer return the local peer
 func (r redisRepository) GetOwnedPeer() (discovery.Peer, error) {
 	peers, err := r.ListKnownPeers()
 	if err != nil {
@@ -34,6 +36,7 @@ func (r redisRepository) GetOwnedPeer() (discovery.Peer, error) {
 	return nil, nil
 }
 
+//ListSeedPeers return all the seed on the repository
 func (r redisRepository) ListSeedPeers() ([]discovery.Seed, error) {
 	id := fmt.Sprintf("%s:*", seedKey)
 	list, err := r.fetchList(id)
@@ -50,6 +53,7 @@ func (r redisRepository) ListSeedPeers() ([]discovery.Seed, error) {
 	return seeds, nil
 }
 
+//ListKnownPeers returns all the discoveredPeers on the repository
 func (r redisRepository) ListKnownPeers() ([]discovery.Peer, error) {
 	list, err := r.fetchList(fmt.Sprintf("%s:*", peerKey))
 	if err != nil {
@@ -65,6 +69,7 @@ func (r redisRepository) ListKnownPeers() ([]discovery.Peer, error) {
 	return peers, nil
 }
 
+//SetKnownPeer add a peer to the repository
 func (r redisRepository) SetKnownPeer(p discovery.Peer) error {
 	id := fmt.Sprintf("%s:%s", peerKey, p.Identity().PublicKey())
 	cmd := r.client.HMSet(id, FormatPeerToHash(p))
@@ -74,6 +79,7 @@ func (r redisRepository) SetKnownPeer(p discovery.Peer) error {
 	return nil
 }
 
+//SetSeedPeer add a seed to the repository
 func (r redisRepository) SetSeedPeer(s discovery.Seed) error {
 	id := fmt.Sprintf("%s:%s", seedKey, s.PublicKey)
 	cmd := r.client.HMSet(id, FormatSeedToHash(s))
@@ -83,6 +89,7 @@ func (r redisRepository) SetSeedPeer(s discovery.Seed) error {
 	return nil
 }
 
+//CountKnownPeers return the number of Known peers
 func (r redisRepository) CountKnownPeers() (int, error) {
 	cmdKeys := r.client.Keys(fmt.Sprintf("%s:*", peerKey))
 	if cmdKeys.Err() != nil {
@@ -95,6 +102,7 @@ func (r redisRepository) CountKnownPeers() (int, error) {
 	return len(keys), nil
 }
 
+//GetPeerByIP get a peer from the repository using its ip
 func (r redisRepository) GetKnownPeerByIP(ip net.IP) (discovery.Peer, error) {
 	peers, err := r.ListKnownPeers()
 	if err != nil {
@@ -108,6 +116,7 @@ func (r redisRepository) GetKnownPeerByIP(ip net.IP) (discovery.Peer, error) {
 	return nil, nil
 }
 
+//SetUnreachablePeer add an unreachable peer to the repository
 func (r redisRepository) SetUnreachablePeer(pbKey string) error {
 	cmd := r.client.SAdd(unreachablesKey, pbKey)
 	if cmd.Err() != nil {
@@ -115,6 +124,8 @@ func (r redisRepository) SetUnreachablePeer(pbKey string) error {
 	}
 	return nil
 }
+
+//RemoveUnreachablePeer remove an unreachable peer to the repository
 func (r redisRepository) RemoveUnreachablePeer(pbKey string) error {
 	boolCmd := r.client.SIsMember(unreachablesKey, pbKey)
 	if boolCmd.Err() != nil {
@@ -135,6 +146,7 @@ func (r redisRepository) RemoveUnreachablePeer(pbKey string) error {
 	return nil
 }
 
+//ListReachablePeers returns all the reachable peers on the repository
 func (r redisRepository) ListReachablePeers() ([]discovery.Peer, error) {
 	peers, err := r.ListKnownPeers()
 	if err != nil {
@@ -166,6 +178,7 @@ func (r redisRepository) ListReachablePeers() ([]discovery.Peer, error) {
 	return pp, nil
 }
 
+//ListUnreacheablePeers returns all unreachable peers on the repository
 func (r redisRepository) ListUnreachablePeers() ([]discovery.Peer, error) {
 	unreachableKeys, err := r.listUnreachableKeys()
 	if err != nil {
@@ -193,6 +206,20 @@ func (r redisRepository) ListUnreachablePeers() ([]discovery.Peer, error) {
 	}
 
 	return pp, nil
+}
+
+//ContainsUnreachableKey check if the pubk is in the list of unreacheable keys
+func (r redisRepository) ContainsUnreachableKey(pubk string) error {
+	unreachableKeys, err := r.listUnreachableKeys()
+	if err != nil {
+		return err
+	}
+	sort.Strings(unreachableKeys)
+	idx := sort.SearchStrings(unreachableKeys, pubk)
+	if idx < len(unreachableKeys) {
+		return nil
+	}
+	return gossip.ErrNotFoundOnUnreachableList
 }
 
 func (r redisRepository) fetchList(key string) ([]map[string]string, error) {

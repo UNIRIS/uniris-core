@@ -4,6 +4,7 @@ import (
 	"net"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
+	gossip "github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
 )
 
 type repo struct {
@@ -17,7 +18,7 @@ func NewRepository() discovery.Repository {
 	return &repo{}
 }
 
-//CountKnownPeers
+//CountKnownPeers return the number of Known peers
 func (r *repo) CountKnownPeers() (int, error) {
 	return len(r.KnownPeers), nil
 }
@@ -42,6 +43,7 @@ func (r *repo) ListKnownPeers() ([]discovery.Peer, error) {
 	return r.KnownPeers, nil
 }
 
+//SetKnownPeer add a peer to the repository
 func (r *repo) SetKnownPeer(peer discovery.Peer) error {
 	if r.containsPeer(peer) {
 		for _, p := range r.KnownPeers {
@@ -78,6 +80,7 @@ func (r *repo) ListUnreachablePeers() ([]discovery.Peer, error) {
 	return pp, nil
 }
 
+//SetSeedPeer add a seed to the repository
 func (r *repo) SetSeedPeer(s discovery.Seed) error {
 	r.seedPeers = append(r.seedPeers, s)
 	return nil
@@ -91,7 +94,7 @@ func (r *repo) SetUnreachablePeer(pk string) error {
 	return nil
 }
 
-//DelUnreacheablePeer remove an unreachable peer to the repository
+//RemoveUnreachablePeer remove an unreachable peer to the repository
 func (r *repo) RemoveUnreachablePeer(pk string) error {
 	if r.containsUnreachablePeer(pk) {
 		for i := 0; i < len(r.UnreacheablePeers); i++ {
@@ -111,6 +114,15 @@ func (r *repo) GetKnownPeerByIP(ip net.IP) (p discovery.Peer, err error) {
 		}
 	}
 	return
+}
+
+//ContainsUnreachableKey check if the pubk is in the list of unreacheable keys
+func (r *repo) ContainsUnreachableKey(pubk string) error {
+	if r.containsUnreachablePeer(pubk) {
+		return nil
+	}
+
+	return gossip.ErrNotFoundOnUnreachableList
 }
 
 func (r *repo) containsPeer(p discovery.Peer) bool {

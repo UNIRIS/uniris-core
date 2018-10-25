@@ -1,11 +1,16 @@
 package gossip
 
 import (
+	"errors"
 	"log"
 	"time"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
+)
+
+var (
+	ErrNotFoundOnUnreachableList = errors.New("cannot found the peer in the unreachableKeys list")
 )
 
 //Service is the interface that provide gossip methods
@@ -136,15 +141,18 @@ func (s service) spread(init discovery.Peer, seeds []discovery.Seed, dChan chan<
 func (s service) handleCycleReachables(c *Cycle, eChan chan<- error) {
 	for p := range c.result.reaches {
 		log.Printf("Gossip reached peer: %s", p.Endpoint())
-		//Remove the target from the unreachable list if it is
-		if err := s.repo.RemoveUnreachablePeer(p.Identity().PublicKey()); err != nil {
-			eChan <- err
-			return
-		}
-		//Notify for the reachable peer
-		if err := s.notif.NotifyReachable(p.Identity().PublicKey()); err != nil {
-			eChan <- err
-			return
+
+		if err := s.repo.ContainsUnreachableKey(p.Identity().PublicKey()); err == nil {
+			//Remove the target from the unreachable list if it is
+			if err := s.repo.RemoveUnreachablePeer(p.Identity().PublicKey()); err != nil {
+				eChan <- err
+				return
+			}
+			//Notify for the reachable peer
+			if err := s.notif.NotifyReachable(p.Identity().PublicKey()); err != nil {
+				eChan <- err
+				return
+			}
 		}
 	}
 }
@@ -153,15 +161,22 @@ func (s service) handleCycleUnreachables(c *Cycle, uChan chan<- discovery.Peer, 
 	for p := range c.result.unreachables {
 		log.Printf("Gossip unreached peer: %s", p.Endpoint())
 
-		if err := s.repo.SetUnreachablePeer(p.Identity().PublicKey()); err != nil {
-			eChan <- err
-			return
+		if err := s.repo.ContainsUnreachableKey(p.Identity().PublicKey()); err == ErrNotFoundOnUnreachableList {
+			if err := s.repo.SetUnreachablePeer(p.Identity().PublicKey()); err != nil {
+				eChan <- err
+				return
+			}
+			if err := s.notif.NotifyUnreachable(p.Identity().PublicKey()); err != nil {
+				eChan <- err
+				return
+			}
+			uChan <- p
+		} else {
+			if err != nil {
+				eChan <- err
+				return
+			}
 		}
-		if err := s.notif.NotifyUnreachable(p.Identity().PublicKey()); err != nil {
-			eChan <- err
-			return
-		}
-		uChan <- p
 	}
 }
 
