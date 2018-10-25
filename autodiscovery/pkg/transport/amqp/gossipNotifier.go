@@ -3,6 +3,7 @@ package amqp
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/streadway/amqp"
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
@@ -11,15 +12,66 @@ import (
 )
 
 const (
-	queueName = "discoveries"
+	queueNameDiscoveries = "autodiscovery_discoveries"
+	queueNameReachable   = "autodiscovery_reacheable"
+	queueNameUnreachable = "autodiscovery_unreacheable"
 )
 
 type notifier struct {
 	amqpURI string
 }
 
-//Notify notifies a new peers has been discovered
-func (n notifier) Notify(p discovery.Peer) error {
+//NotifyDiscoveries notifies for a new peers that has been discovered
+func (n notifier) NotifyDiscoveries(p discovery.Peer) error {
+	conn, err := amqp.Dial(n.amqpURI)
+	defer conn.Close()
+
+	if err != nil {
+		return err
+	}
+	ch, err := conn.Channel()
+	defer ch.Close()
+
+	if err != nil {
+		return err
+	}
+	q, err := ch.QueueDeclare(
+		queueNameDiscoveries, // name
+		true,                 // durable
+		false,                // delete when unused
+		false,                // exclusive
+		false,                // no-wait
+		nil,                  // arguments
+	)
+	if err != nil {
+		return err
+	}
+	b, err := n.serialize(p)
+	if err != nil {
+		return err
+	}
+	if err := ch.Publish("", q.Name, false, false, amqp.Publishing{
+		ContentType:  "application/json",
+		Body:         b,
+		DeliveryMode: amqp.Persistent,
+		Timestamp:    time.Now(),
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+//NotifyReachable notifies for an unreachable peer which is now reachable
+func (n notifier) NotifyReachable(pubk string) error {
+	return n.notifyIsReachable(pubk, queueNameReachable)
+}
+
+//NotifyUnreachable notifies for an unreachable peer
+func (n notifier) NotifyUnreachable(pubk string) error {
+	return n.notifyIsReachable(pubk, queueNameUnreachable)
+}
+
+func (n notifier) notifyIsReachable(pubk string, queueName string) error {
 	conn, err := amqp.Dial(n.amqpURI)
 	defer conn.Close()
 
@@ -43,14 +95,24 @@ func (n notifier) Notify(p discovery.Peer) error {
 	if err != nil {
 		return err
 	}
-	b, err := n.serialize(p)
+
+	type peerPubk struct {
+		PublicKey string `json:"pubKey"`
+	}
+
+	b, err := json.Marshal(peerPubk{
+		PublicKey: pubk,
+	})
+
 	if err != nil {
 		return err
 	}
+
 	if err := ch.Publish("", q.Name, false, false, amqp.Publishing{
 		ContentType:  "application/json",
 		Body:         b,
 		DeliveryMode: amqp.Persistent,
+		Timestamp:    time.Now(),
 	}); err != nil {
 		return err
 	}

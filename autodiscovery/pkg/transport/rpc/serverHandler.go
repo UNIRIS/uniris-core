@@ -57,7 +57,7 @@ func (h srvHandler) Acknowledge(ctx context.Context, req *api.AckRequest) (*empt
 	//Store the peers requested
 	for _, rp := range req.RequestedPeers {
 		p := builder.FromPeerDiscovered(rp)
-		h.notif.Notify(p)
+		h.notif.NotifyDiscoveries(p)
 		h.repo.SetKnownPeer(p)
 	}
 

@@ -15,7 +15,9 @@ type Service interface {
 
 //Notifier is the interface that provides methods to notify gossip discovery
 type Notifier interface {
-	Notify(discovery.Peer) error
+	NotifyDiscoveries(discovery.Peer) error
+	NotifyReachable(pubk string) error
+	NotifyUnreachable(pubk string) error
 }
 
 type service struct {
@@ -139,13 +141,23 @@ func (s service) handleCycleReachables(c *Cycle, eChan chan<- error) {
 			eChan <- err
 			return
 		}
+		//Notify for the reachable peer
+		if err := s.notif.NotifyReachable(p.Identity().PublicKey()); err != nil {
+			eChan <- err
+			return
+		}
 	}
 }
 
 func (s service) handleCycleUnreachables(c *Cycle, uChan chan<- discovery.Peer, eChan chan<- error) {
 	for p := range c.result.unreachables {
 		log.Printf("Gossip unreached peer: %s", p.Endpoint())
+
 		if err := s.repo.SetUnreachablePeer(p.Identity().PublicKey()); err != nil {
+			eChan <- err
+			return
+		}
+		if err := s.notif.NotifyUnreachable(p.Identity().PublicKey()); err != nil {
 			eChan <- err
 			return
 		}
@@ -171,7 +183,7 @@ func (s service) handleCycleDiscoveries(c *Cycle, dChan chan<- discovery.Peer, e
 		}
 
 		//Notify the new discovery
-		if err := s.notif.Notify(p); err != nil {
+		if err := s.notif.NotifyDiscoveries(p); err != nil {
 			eChan <- err
 			return
 		}
