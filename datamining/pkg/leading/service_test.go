@@ -17,7 +17,7 @@ Scenario: Lead bio validation
 	When I want to lead the data validation
 	Then I perform POW and returns validated transaction
 */
-func TestLeadWalletValidation(t *testing.T) {
+func TestLeadWallet(t *testing.T) {
 	repo := &mockSrvDatabase{
 		BioWallets: make([]*datamining.BioWallet, 0),
 		Wallets:    make([]*datamining.Wallet, 0),
@@ -27,6 +27,7 @@ func TestLeadWalletValidation(t *testing.T) {
 		&mockSrvPoolDispatcher{Repo: repo},
 		mockSrvNotifier{},
 		mockSrvSigner{},
+		mockSrvHasher{},
 		mockSrvTechRepo{},
 		"robotPubKey",
 		"robotPvKey")
@@ -40,7 +41,7 @@ func TestLeadWalletValidation(t *testing.T) {
 		},
 	}
 
-	err := srv.NewWallet(w, "hash")
+	err := srv.LeadWalletTransaction(w, "hash")
 	assert.Nil(t, err)
 	assert.Len(t, repo.Wallets, 1)
 	assert.Equal(t, "hash", repo.Wallets[0].Endorsement().TransactionHash())
@@ -55,7 +56,7 @@ Scenario: Lead bio validation
 	When I want to lead the data validation
 	Then I perform POW and returns validated transaction
 */
-func TestLeadBioValidation(t *testing.T) {
+func TestLeadBio(t *testing.T) {
 	repo := &mockSrvDatabase{
 		BioWallets: make([]*datamining.BioWallet, 0),
 		Wallets:    make([]*datamining.Wallet, 0),
@@ -65,6 +66,7 @@ func TestLeadBioValidation(t *testing.T) {
 		&mockSrvPoolDispatcher{Repo: repo},
 		mockSrvNotifier{},
 		mockSrvSigner{},
+		mockSrvHasher{},
 		mockSrvTechRepo{},
 		"robotPubKey",
 		"robotPvKey")
@@ -79,7 +81,7 @@ func TestLeadBioValidation(t *testing.T) {
 		},
 	}
 
-	err := srv.NewBio(bd, "hash")
+	err := srv.LeadBioTransaction(bd, "hash")
 	assert.Nil(t, err)
 	assert.Len(t, repo.BioWallets, 1)
 	assert.Equal(t, "bhash", repo.BioWallets[0].Bhash())
@@ -142,12 +144,12 @@ func (r mockSrvPoolDispatcher) RequestUnlock(Pool, validating.TransactionLock, s
 	return nil
 }
 
-func (r mockSrvPoolDispatcher) RequestWalletValidation(Pool, *datamining.WalletData, string) ([]datamining.Validation, error) {
+func (r mockSrvPoolDispatcher) RequestWalletValidation(Pool, *datamining.WalletData) ([]datamining.Validation, error) {
 	return []datamining.Validation{
 		datamining.NewValidation(datamining.ValidationOK, time.Now(), "validator key", "sig"),
 	}, nil
 }
-func (r mockSrvPoolDispatcher) RequestBioValidation(Pool, *datamining.BioData, string) ([]datamining.Validation, error) {
+func (r mockSrvPoolDispatcher) RequestBioValidation(Pool, *datamining.BioData) ([]datamining.Validation, error) {
 	return []datamining.Validation{
 		datamining.NewValidation(datamining.ValidationOK, time.Now(), "validator key", "sig"),
 	}, nil
@@ -161,8 +163,18 @@ func (r *mockSrvPoolDispatcher) RequestBioStorage(p Pool, w *datamining.BioWalle
 	return r.Repo.StoreBioWallet(w)
 }
 
-func (r mockSrvPoolDispatcher) RequestLastTx(Pool, string) (string, error) {
-	return "last", nil
+func (r mockSrvPoolDispatcher) RequestLastWallet(Pool, string) ([]*datamining.Wallet, error) {
+	return []*datamining.Wallet{
+		datamining.NewWallet(
+			&datamining.WalletData{
+				BiodPubk:        "pub",
+				EmPubk:          "pub",
+				CipherAddrRobot: "addr",
+				CipherWallet:    "addr",
+			},
+			datamining.NewEndorsement(time.Now(), "hash", nil, nil),
+			"hash"),
+	}, nil
 }
 
 type mockSrvPoolFinder struct{}
@@ -172,7 +184,6 @@ func (f mockSrvPoolFinder) FindLastValidationPool(addr string) (Pool, error) {
 		Peers: []Peer{
 			Peer{
 				IP:        net.ParseIP("127.0.0.1"),
-				Port:      4000,
 				PublicKey: "validator key",
 			},
 		},
@@ -184,7 +195,6 @@ func (f mockSrvPoolFinder) FindValidationPool() (Pool, error) {
 		Peers: []Peer{
 			Peer{
 				IP:        net.ParseIP("127.0.0.1"),
-				Port:      4000,
 				PublicKey: "validator key",
 			},
 		},
@@ -196,7 +206,6 @@ func (f mockSrvPoolFinder) FindStoragePool() (Pool, error) {
 		Peers: []Peer{
 			Peer{
 				IP:        net.ParseIP("127.0.0.1"),
-				Port:      4000,
 				PublicKey: "storage key",
 			},
 		},
@@ -207,4 +216,10 @@ type mockSrvNotifier struct{}
 
 func (n mockSrvNotifier) NotifyTransactionStatus(txHash string, status TransactionStatus) error {
 	return nil
+}
+
+type mockSrvHasher struct{}
+
+func (h mockSrvHasher) HashWallet(*datamining.Wallet) (string, error) {
+	return "hash", nil
 }

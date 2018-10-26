@@ -29,9 +29,9 @@ type BioData struct {
 
 //Wallet describes the stored wallet with its endorsement
 type Wallet struct {
-	data       *WalletData
-	oldTxnHash string
-	endorsment *Endorsement
+	data        *WalletData
+	oldTxnHash  string
+	endorsement *Endorsement
 }
 
 //NewWallet creates a new wallet
@@ -41,7 +41,7 @@ func NewWallet(data *WalletData, endor *Endorsement, oldTxnHash string) *Wallet 
 
 //Endorsement returns the wallet endorsement
 func (w Wallet) Endorsement() *Endorsement {
-	return w.endorsment
+	return w.endorsement
 }
 
 //CipherWallet returns the encrypted wallet
@@ -54,15 +54,55 @@ func (w Wallet) WalletAddr() string {
 	return w.data.WalletAddr
 }
 
+//CipherAddrRobot get the wallet address encrypted for roboto
+func (w Wallet) CipherAddrRobot() string {
+	return w.data.CipherAddrRobot
+}
+
+//PersonPublicKey returns the wallet personal public key
+func (w Wallet) PersonPublicKey() string {
+	return w.data.EmPubk
+}
+
+//BiodPublicKey returns the wallet biod public key
+func (w Wallet) BiodPublicKey() string {
+	return w.data.BiodPubk
+}
+
+//Signatures return the wallet signatures
+func (w Wallet) Signatures() Signatures {
+	return w.data.Sigs
+}
+
+//OldTransactionHash returns the hash of the previous transaction
+func (w Wallet) OldTransactionHash() string {
+	return w.oldTxnHash
+}
+
 //BioWallet describes the stored biometric wallet with its endorsement
 type BioWallet struct {
-	data       *BioData
-	endorsment *Endorsement
+	data        *BioData
+	endorsement *Endorsement
 }
 
 //NewBioWallet creates a new bio wallet
 func NewBioWallet(data *BioData, endor *Endorsement) *BioWallet {
 	return &BioWallet{data, endor}
+}
+
+//BiodPublicKey return the biometric public key for the bio wallet
+func (b BioWallet) BiodPublicKey() string {
+	return b.data.BiodPubk
+}
+
+//PersonPublicKey returns person public key for the bio wallet
+func (b BioWallet) PersonPublicKey() string {
+	return b.data.EmPubk
+}
+
+//Signatures returns the bio wallet signatures
+func (b BioWallet) Signatures() Signatures {
+	return b.data.Sigs
 }
 
 //Bhash returns the biometric hash
@@ -83,4 +123,9 @@ func (b BioWallet) CipherAddrBio() string {
 //CipherAESKey returns the AES key encrypted with person keys
 func (b BioWallet) CipherAESKey() string {
 	return b.data.CipherAESKey
+}
+
+//Endorsement returns the bio wallet endorsement
+func (b BioWallet) Endorsement() *Endorsement {
+	return b.endorsement
 }

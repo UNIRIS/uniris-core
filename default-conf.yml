@@ -29,6 +29,7 @@ discovery:
 
 datamining:
   internalPort: 3546
+  externalPort: 3547
   errors:
     accountNotExist: Account does not exist
 

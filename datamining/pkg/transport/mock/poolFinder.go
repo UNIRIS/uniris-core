@@ -18,7 +18,6 @@ func (p poolFinder) FindLastValidationPool(addr string) (leading.Pool, error) {
 		Peers: []leading.Peer{
 			leading.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
-				Port:      3000,
 				PublicKey: "key",
 			},
 		},
@@ -30,7 +29,6 @@ func (p poolFinder) FindValidationPool() (leading.Pool, error) {
 		Peers: []leading.Peer{
 			leading.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
-				Port:      3000,
 				PublicKey: "key",
 			},
 		},
@@ -42,7 +40,6 @@ func (p poolFinder) FindStoragePool() (leading.Pool, error) {
 		Peers: []leading.Peer{
 			leading.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
-				Port:      3000,
 				PublicKey: "key",
 			},
 		},

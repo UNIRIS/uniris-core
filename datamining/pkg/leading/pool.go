@@ -15,7 +15,6 @@ type Pool struct {
 //Peer represents a peer in a pool
 type Peer struct {
 	IP        net.IP
-	Port      int
 	PublicKey string
 }
 
@@ -30,10 +29,15 @@ type PoolFinder interface {
 type PoolDispatcher interface {
 	RequestLock(lastValidPool Pool, txLock validating.TransactionLock, sig string) error
 	RequestUnlock(lastValidPool Pool, txLock validating.TransactionLock, sig string) error
-	RequestWalletValidation(validPool Pool, d *datamining.WalletData, txHash string) ([]datamining.Validation, error)
-	RequestBioValidation(validPool Pool, b *datamining.BioData, txHash string) ([]datamining.Validation, error)
 
-	RequestLastTx(storagePool Pool, txHash string) (oldTxHash string, err error)
+	WalletPoolDispatcher
+}
+
+//WalletPoolDispatcher defines methods to contact peers about the wallet
+type WalletPoolDispatcher interface {
+	RequestLastWallet(storagePool Pool, addr string) ([]*datamining.Wallet, error)
+	RequestWalletValidation(validPool Pool, d *datamining.WalletData) ([]datamining.Validation, error)
+	RequestBioValidation(validPool Pool, b *datamining.BioData) ([]datamining.Validation, error)
 	RequestWalletStorage(storagePool Pool, wallet *datamining.Wallet) error
 	RequestBioStorage(storagePool Pool, bio *datamining.BioWallet) error
 }

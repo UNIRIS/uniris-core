@@ -17,8 +17,11 @@ const (
 	//Approved is defined when the is received, locked and validations passed
 	Approved TransactionStatus = 3
 
+	//Invalid is defined when the is received, locked and one validation failed
+	Invalid TransactionStatus = 4
+
 	//Replicated is defined when the is received, locked, valid and replicated
-	Replicated TransactionStatus = 4
+	Replicated TransactionStatus = 5
 )
 
 func (s TransactionStatus) String() string {

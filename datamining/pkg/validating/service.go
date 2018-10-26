@@ -41,8 +41,8 @@ type Signer interface {
 type Service interface {
 	ValidateWalletData(w *datamining.WalletData) (datamining.Validation, error)
 	ValidateBioData(b *datamining.BioData) (datamining.Validation, error)
-	LockTransaction(txLock TransactionLock, sig string) error
-	UnlockTransaction(txLock TransactionLock, sig string) error
+	LockTransaction(txLock TransactionLock) error
+	UnlockTransaction(txLock TransactionLock) error
 }
 
 type service struct {
@@ -98,11 +98,7 @@ func (s service) ValidateBioData(bw *datamining.BioData) (valid datamining.Valid
 	return s.buildValidation(datamining.ValidationOK)
 }
 
-func (s service) LockTransaction(txLock TransactionLock, sig string) error {
-	if err := s.sig.CheckSignature(s.robotKey, txLock, sig); err != nil {
-		return err
-	}
-
+func (s service) LockTransaction(txLock TransactionLock) error {
 	if s.lock.ContainsLock(txLock) {
 		return ErrLockExisting
 	}
@@ -110,11 +106,7 @@ func (s service) LockTransaction(txLock TransactionLock, sig string) error {
 	return s.lock.Lock(txLock)
 }
 
-func (s service) UnlockTransaction(txLock TransactionLock, sig string) error {
-	if err := s.sig.CheckSignature(s.robotKey, txLock, sig); err != nil {
-		return err
-	}
-
+func (s service) UnlockTransaction(txLock TransactionLock) error {
 	return s.lock.Unlock(txLock)
 }
 

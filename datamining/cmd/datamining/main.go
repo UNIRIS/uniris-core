@@ -19,6 +19,8 @@ import (
 	listing "github.com/uniris/uniris-core/datamining/pkg/listing"
 	mem "github.com/uniris/uniris-core/datamining/pkg/storage/mem"
 	"github.com/uniris/uniris-core/datamining/pkg/transport/mock"
+	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
+	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc/externalrpc"
 	internalrpc "github.com/uniris/uniris-core/datamining/pkg/transport/rpc/internalrpc"
 	validating "github.com/uniris/uniris-core/datamining/pkg/validating"
 )
@@ -45,13 +47,14 @@ func main() {
 
 	poolFinder := mock.NewPoolFinder()
 	addingSrv := adding.NewService(db)
-	poolDispatcher := mock.NewPoolDispatcher(addingSrv, validSrv)
+	poolDispatcher := rpc.NewPoolDispatcher(config.Datamining)
 
 	leadService := leading.NewService(
 		poolFinder,
 		poolDispatcher,
 		mock.NewNotifier(),
 		crypto.NewSigner(),
+		crypto.NewHasher(),
 		db,
 		config.SharedKeys.RobotPublicKey,
 		config.SharedKeys.RobotPrivateKey,
@@ -61,8 +64,16 @@ func main() {
 
 	log.Print("DataMining Service starting...")
 
+	go func() {
+
+		//Starts Internal grpc server
+		if err := startInternalServer(listService, leadService, *config); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
 	//Starts Internal grpc server
-	if err := startInternalServer(listService, leadService, *config); err != nil {
+	if err := startExternalServer(listService, addingSrv, validSrv, *config); err != nil {
 		log.Fatal(err)
 	}
 
@@ -74,20 +85,30 @@ func startInternalServer(listService listing.Service, leadService leading.Servic
 		return err
 	}
 	grpcServer := grpc.NewServer()
-	stores := make(chan string)
 	handler := internalrpc.NewInternalServerHandler(listService, leadService,
 		config.SharedKeys.RobotPrivateKey,
-		config.Datamining.Errors,
-		stores)
-
-	go func() {
-		for tx := range stores {
-			log.Printf("Transaction %s stored on the database", tx)
-		}
-	}()
+		config.Datamining.Errors)
 
 	api.RegisterInternalServer(grpcServer, handler)
 	log.Printf("Internal grpc Server listening on 127.0.0.1:%d", config.Datamining.InternalPort)
+	if err := grpcServer.Serve(lis); err != nil {
+		return err
+	}
+	return nil
+}
+
+func startExternalServer(listService listing.Service, add adding.Service, val validating.Service, config system.UnirisConfig) error {
+	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", config.Datamining.ExternalPort))
+	if err != nil {
+		return err
+	}
+	grpcServer := grpc.NewServer()
+	handler := externalrpc.NewExternalServerHandler(listService, add, val,
+		config.SharedKeys.RobotPublicKey,
+		config.Datamining.Errors)
+
+	api.RegisterExternalServer(grpcServer, handler)
+	log.Printf("External grpc Server listening on 127.0.0.1:%d", config.Datamining.ExternalPort)
 	if err := grpcServer.Serve(lis); err != nil {
 		return err
 	}
