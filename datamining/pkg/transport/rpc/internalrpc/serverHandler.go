@@ -20,17 +20,15 @@ type internalSrvHandler struct {
 	lead                  leading.Service
 	sharedRobotPrivateKey string
 	errors                system.DataMininingErrors
-	store                 chan string
 }
 
 //NewInternalServerHandler create a new GRPC server handler
-func NewInternalServerHandler(list listing.Service, lead leading.Service, sharedRobotPrivateKey string, errors system.DataMininingErrors, storeCh chan string) api.InternalServer {
+func NewInternalServerHandler(list listing.Service, lead leading.Service, sharedRobotPrivateKey string, errors system.DataMininingErrors) api.InternalServer {
 	return internalSrvHandler{
 		list:                  list,
 		lead:                  lead,
 		sharedRobotPrivateKey: sharedRobotPrivateKey,
 		errors:                errors,
-		store:                 storeCh,
 	}
 }
 
@@ -67,8 +65,8 @@ func (s internalSrvHandler) GetWallet(ctx context.Context, req *api.WalletSearch
 	return BuildWalletSearchResult(wallet, bioWallet), nil
 }
 
-//StoreWallet implements the protobuf StoreWallet request handler
-func (s internalSrvHandler) StoreWallet(ctx context.Context, req *api.WalletStorageRequest) (*api.WalletStorageResult, error) {
+//CreateWallet implements the protobuf CreateWallet request handler
+func (s internalSrvHandler) CreateWallet(ctx context.Context, req *api.WalletCreationRequest) (*api.WalletCreationResult, error) {
 	bioRawData, err := crypto.Decrypt(s.sharedRobotPrivateKey, req.EncryptedBioData)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt the bio data - %s", err.Error())
@@ -100,23 +98,21 @@ func (s internalSrvHandler) StoreWallet(ctx context.Context, req *api.WalletStor
 
 	go func() {
 		wData := BuildWalletData(wal, req.SignatureWalletData, clearaddr)
-		if err := s.lead.NewWallet(wData, txHashWal); err != nil {
+		if err := s.lead.LeadWalletTransaction(wData, txHashWal); err != nil {
 			//TODO: handle errors
 			log.Fatal(err)
 		}
-		s.store <- txHashWal
 	}()
 
 	go func() {
 		bData := BuildBioData(bio, req.SignatureBioData)
-		if err := s.lead.NewBio(bData, txHashBio); err != nil {
+		if err := s.lead.LeadBioTransaction(bData, txHashBio); err != nil {
 			//TODO: handle errors
 			log.Fatal(err)
 		}
-		s.store <- txHashBio
 	}()
 
-	return &api.WalletStorageResult{
+	return &api.WalletCreationResult{
 		BioTransactionHash:  txHashBio,
 		DataTransactionHash: txHashWal,
 	}, nil

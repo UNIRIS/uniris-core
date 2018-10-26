@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net"
-	"sync"
 	"testing"
 	"time"
 
@@ -72,12 +71,13 @@ func TestGetWallet(t *testing.T) {
 		&mockPoolDispatcher{Repo: repo},
 		mockNotifier{},
 		mockSigner{},
+		mockHasher{},
 		mockTechRepo{},
 		"robotPubKey",
 		"robotPvKey",
 	)
 
-	h := NewInternalServerHandler(list, leading, hex.EncodeToString(pvKey), errors, nil)
+	h := NewInternalServerHandler(list, leading, hex.EncodeToString(pvKey), errors)
 	res, err := h.GetWallet(context.TODO(), &api.WalletSearchRequest{
 		EncryptedHashPerson: cipherBhash,
 	})
@@ -87,12 +87,12 @@ func TestGetWallet(t *testing.T) {
 }
 
 /*
-Scenario: Store a wallet
+Scenario: Create a wallet
 	Given some wallet encrypted
 	When I want to store the wallet
 	Then the wallet is stored and the updated wallet hash is updated
 */
-func TestStoreWallet(t *testing.T) {
+func TestCreateWallet(t *testing.T) {
 	repo := &databasemock{
 		BioWallets: make([]*datamining.BioWallet, 0),
 		Wallets:    make([]*datamining.Wallet, 0),
@@ -108,14 +108,14 @@ func TestStoreWallet(t *testing.T) {
 		&mockPoolDispatcher{Repo: repo},
 		mockNotifier{},
 		mockSigner{},
+		mockHasher{},
 		mockTechRepo{},
 		"robotPubKey",
 		"robotPvKey",
 	)
 	errors := system.DataMininingErrors{}
 
-	storeChan := make(chan string)
-	h := NewInternalServerHandler(list, leading, hex.EncodeToString(pvKey), errors, storeChan)
+	h := NewInternalServerHandler(list, leading, hex.EncodeToString(pvKey), errors)
 
 	cipherAddr, _ := crypto.Encrypt(hex.EncodeToString(pbKey), "encrypted_addr_robot")
 
@@ -143,7 +143,7 @@ func TestStoreWallet(t *testing.T) {
 	cipherWallet, _ := crypto.Encrypt(hex.EncodeToString(pbKey), string(bWData))
 	sigWal, _ := crypto.Sign(hex.EncodeToString(pvKey), string(bWData))
 
-	req := &api.WalletStorageRequest{
+	req := &api.WalletCreationRequest{
 		EncryptedBioData:    cipherBio,
 		EncryptedWalletData: cipherWallet,
 		SignatureBioData: &api.Signature{
@@ -156,29 +156,12 @@ func TestStoreWallet(t *testing.T) {
 		},
 	}
 
-	res, err := h.StoreWallet(context.TODO(), req)
+	res, err := h.CreateWallet(context.TODO(), req)
 	assert.Nil(t, err)
 	assert.NotNil(t, res)
 
 	assert.NotNil(t, res.BioTransactionHash)
 	assert.NotNil(t, res.DataTransactionHash)
-
-	var wg sync.WaitGroup
-
-	wg.Add(2)
-
-	go func() {
-		for range storeChan {
-			wg.Done()
-		}
-		close(storeChan)
-	}()
-
-	wg.Wait()
-
-	assert.Len(t, repo.Wallets, 1)
-	assert.Len(t, repo.BioWallets, 1)
-
 }
 
 type databasemock struct {
@@ -244,16 +227,26 @@ func (s mockSigner) SignValidation(v validating.Validation, pvKey string) (strin
 
 type mockHasher struct{}
 
-func (h mockHasher) HashMasterValidation(v *datamining.MasterValidation) (string, error) {
-	return "hashed validation", nil
+func (h mockHasher) HashWallet(w *datamining.Wallet) (string, error) {
+	return "hashed wallet", nil
 }
 
 type mockPoolDispatcher struct {
 	Repo *databasemock
 }
 
-func (r mockPoolDispatcher) RequestLastTx(pool leading.Pool, txHash string) (oldTxHash string, err error) {
-	return "old tx hash", nil
+func (r mockPoolDispatcher) RequestLastWallet(pool leading.Pool, txHash string) ([]*datamining.Wallet, error) {
+	return []*datamining.Wallet{
+		datamining.NewWallet(
+			&datamining.WalletData{
+				BiodPubk:        "pub",
+				EmPubk:          "pub",
+				CipherAddrRobot: "addr",
+				CipherWallet:    "addr",
+			},
+			datamining.NewEndorsement(time.Now(), "hashed wallet", nil, nil),
+			"hashed wallet"),
+	}, nil
 }
 
 func (r *mockPoolDispatcher) RequestWalletStorage(p leading.Pool, w *datamining.Wallet) error {
@@ -272,12 +265,12 @@ func (r mockPoolDispatcher) RequestUnlock(leading.Pool, validating.TransactionLo
 	return nil
 }
 
-func (r mockPoolDispatcher) RequestWalletValidation(leading.Pool, *datamining.WalletData, string) ([]datamining.Validation, error) {
+func (r mockPoolDispatcher) RequestWalletValidation(leading.Pool, *datamining.WalletData) ([]datamining.Validation, error) {
 	return []datamining.Validation{
 		datamining.NewValidation(datamining.ValidationOK, time.Now(), "validator key", "sig"),
 	}, nil
 }
-func (r mockPoolDispatcher) RequestBioValidation(leading.Pool, *datamining.BioData, string) ([]datamining.Validation, error) {
+func (r mockPoolDispatcher) RequestBioValidation(leading.Pool, *datamining.BioData) ([]datamining.Validation, error) {
 	return []datamining.Validation{
 		datamining.NewValidation(datamining.ValidationOK, time.Now(), "validator key", "sig"),
 	}, nil
@@ -290,7 +283,6 @@ func (f mockPoolFinder) FindLastValidationPool(addr string) (leading.Pool, error
 		Peers: []leading.Peer{
 			leading.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
-				Port:      4000,
 				PublicKey: "validator key",
 			},
 		},
@@ -302,7 +294,6 @@ func (f mockPoolFinder) FindValidationPool() (leading.Pool, error) {
 		Peers: []leading.Peer{
 			leading.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
-				Port:      4000,
 				PublicKey: "validator key",
 			},
 		},
@@ -314,7 +305,6 @@ func (f mockPoolFinder) FindStoragePool() (leading.Pool, error) {
 		Peers: []leading.Peer{
 			leading.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
-				Port:      4000,
 				PublicKey: "validator key",
 			},
 		},
