@@ -2,8 +2,14 @@ package externalrpc
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 
-	"github.com/uniris/uniris-core/datamining/pkg/validating"
+	"github.com/uniris/uniris-core/datamining/pkg"
+
+	"github.com/uniris/uniris-core/datamining/pkg/mining"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/lock"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/transactions"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
@@ -15,97 +21,83 @@ import (
 type externalSrvHandler struct {
 	list              listing.Service
 	add               adding.Service
-	valid             validating.Service
+	mining            mining.Service
 	sharedRobotPubKey string
 	errors            system.DataMininingErrors
 }
 
 //NewExternalServerHandler creates a new External GRPC handler
-func NewExternalServerHandler(list listing.Service, add adding.Service, valid validating.Service, sharedRobotPubKey string, errors system.DataMininingErrors) api.ExternalServer {
-	return externalSrvHandler{list, add, valid, sharedRobotPubKey, errors}
-}
-
-func (s externalSrvHandler) GetLastWallet(ctx context.Context, req *api.LastWalletRequest) (*api.LastWalletResponse, error) {
-	wallet, err := s.list.GetWallet(req.Address)
-	if err != nil {
-		return nil, err
-	}
-	return &api.LastWalletResponse{
-		Wallet: BuildAPIWallet(wallet),
-	}, nil
+func NewExternalServerHandler(list listing.Service, add adding.Service, mine mining.Service, sharedRobotPubKey string, errors system.DataMininingErrors) api.ExternalServer {
+	return externalSrvHandler{list, add, mine, sharedRobotPubKey, errors}
 }
 
 func (s externalSrvHandler) LockTransaction(ctx context.Context, req *api.LockRequest) (*empty.Empty, error) {
 	//TODO: verify signature
 
-	if err := s.valid.LockTransaction(validating.TransactionLock{
+	if err := s.mining.LockTransaction(lock.TransactionLock{
 		TxHash:         req.TransactionHash,
 		MasterRobotKey: req.MasterRobotKey,
 	}); err != nil {
 		return nil, err
 	}
 
-	return nil, nil
+	return &empty.Empty{}, nil
 }
 
 func (s externalSrvHandler) UnlockTransaction(ctx context.Context, req *api.LockRequest) (*empty.Empty, error) {
 	//TODO: verify signature
 
-	if err := s.valid.UnlockTransaction(validating.TransactionLock{
+	if err := s.mining.UnlockTransaction(lock.TransactionLock{
 		TxHash:         req.TransactionHash,
 		MasterRobotKey: req.MasterRobotKey,
 	}); err != nil {
 		return nil, err
 	}
 
-	return nil, nil
+	return &empty.Empty{}, nil
 }
 
-func (s externalSrvHandler) ValidateBio(ctx context.Context, req *api.BioValidationRequest) (*api.ValidationResponse, error) {
-	v, err := s.valid.ValidateBioData(BuildBioDataFromValidation(req))
+func (s externalSrvHandler) Validate(ctx context.Context, req *api.ValidationRequest) (*api.ValidationResponse, error) {
+	var data interface{}
+	err := json.Unmarshal(req.Data.Value, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	valid, err := s.mining.Validate(data, transactions.Type(req.TransactionType))
 	if err != nil {
 		return nil, err
 	}
 
 	return &api.ValidationResponse{
-		Validation: BuildAPIValidation(v),
+		Validation: BuildAPIValidation(valid),
 	}, nil
 }
 
-func (s externalSrvHandler) ValidateWallet(ctx context.Context, req *api.WalletValidationRequest) (*api.ValidationResponse, error) {
-	v, err := s.valid.ValidateWalletData(BuildWalletFromValidation(req))
-	if err != nil {
-		return nil, err
-	}
-
-	return &api.ValidationResponse{
-		Validation: BuildAPIValidation(v),
-	}, nil
-}
-
-func (s externalSrvHandler) StoreBio(ctx context.Context, req *api.BioStorageRequest) (*empty.Empty, error) {
-	w := BuilBioDataFromStoreRequest(req)
+func (s externalSrvHandler) Store(ctx context.Context, req *api.StorageRequest) (*empty.Empty, error) {
 
 	//TODO: verify signatures
 
-	if err := s.add.StoreBioWallet(w); err != nil {
-		return nil, err
+	switch req.TransactionType {
+	case api.TransactionType_CreateWallet:
+		w := &datamining.Wallet{}
+		if err := w.UnmarshalJSON(req.Data.Value); err != nil {
+			return nil, err
+		}
+		if err := s.add.StoreWallet(w); err != nil {
+			return nil, err
+		}
+		return &empty.Empty{}, nil
+	case api.TransactionType_CreateBio:
+		bw := &datamining.BioWallet{}
+		if err := bw.UnmarshalJSON(req.Data.Value); err != nil {
+			return nil, err
+		}
+		if err := s.add.StoreBioWallet(bw); err != nil {
+			return nil, err
+		}
+		return &empty.Empty{}, nil
 	}
 
-	//TODO: handle store pending/ko
-
-	return nil, nil
-}
-
-func (s externalSrvHandler) StoreWallet(ctx context.Context, req *api.WalletStoreRequest) (*empty.Empty, error) {
-	w := BuildWalletDataFromStorageRequest(req)
-
-	//TODO: verify signatures
-
-	if err := s.add.StoreDataWallet(w); err != nil {
-		return nil, err
-	}
-
-	//TODO: handle store pending/ko
-	return nil, nil
+	return nil, errors.New("Unsupported operation")
 }

@@ -39,7 +39,7 @@ func TestStoreWallet(t *testing.T) {
 		nil,
 		nil,
 	), "old hash")
-	err := s.StoreDataWallet(w)
+	err := s.StoreWallet(w)
 	assert.Nil(t, err)
 	l := len(repo.wallets)
 	assert.Equal(t, 1, l)

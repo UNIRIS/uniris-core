@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package api;
 
-import "common.proto";
-
 service Internal {
     rpc GetWallet (WalletSearchRequest) returns (WalletSearchResult) {}
     rpc CreateWallet (WalletCreationRequest) returns (WalletCreationResult) {}
@@ -31,3 +29,9 @@ message WalletSearchResult {
     string EncryptedWalletAddress =3;
 }
 
+
+
+message Signature {
+    string Biod = 1;
+    string Person = 2;
+}

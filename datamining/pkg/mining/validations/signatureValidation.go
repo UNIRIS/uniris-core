@@ -1,4 +1,4 @@
-package checkers
+package validations
 
 import (
 	"errors"
@@ -14,26 +14,20 @@ type Signer interface {
 	CheckSignature(pubKey string, data interface{}, sig string) error
 }
 
-//Checker defines methods for transaction data checking
-type Checker interface {
-	CheckData(interface{}) error
-	IsCatchedError(error) bool
-}
-
-type sigCheck struct {
+type sigValid struct {
 	sig Signer
 }
 
-//NewSignatureChecker creates a signature checker
-func NewSignatureChecker(sig Signer) Checker {
-	return sigCheck{sig}
+//NewSignatureValidation creates a signature validation
+func NewSignatureValidation(sig Signer) Handler {
+	return sigValid{sig}
 }
 
-func (c sigCheck) IsCatchedError(err error) bool {
+func (c sigValid) IsCatchedError(err error) bool {
 	return err == ErrInvalidSignature
 }
 
-func (c sigCheck) CheckData(data interface{}) error {
+func (c sigValid) CheckData(data interface{}) error {
 
 	switch data.(type) {
 	case *datamining.WalletData:
@@ -45,7 +39,7 @@ func (c sigCheck) CheckData(data interface{}) error {
 	return nil
 }
 
-func (c sigCheck) checkWalletData(w *datamining.WalletData) error {
+func (c sigValid) checkWalletData(w *datamining.WalletData) error {
 	wValid := WalletData{
 		BIODPublicKey:      w.BiodPubk,
 		EncryptedAddrRobot: w.CipherAddrRobot,
@@ -69,7 +63,7 @@ func (c sigCheck) checkWalletData(w *datamining.WalletData) error {
 	return nil
 }
 
-func (c sigCheck) checkBioData(b *datamining.BioData) error {
+func (c sigValid) checkBioData(b *datamining.BioData) error {
 	bValid := BioData{
 		BIODPublicKey:       b.BiodPubk,
 		EncryptedAddrPerson: b.CipherAddrBio,

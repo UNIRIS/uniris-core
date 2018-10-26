@@ -1,5 +1,9 @@
 package datamining
 
+import (
+	"encoding/json"
+)
+
 //Signatures describe differnet needed signatures
 type Signatures struct {
 	EmSig   string
@@ -79,6 +83,37 @@ func (w Wallet) OldTransactionHash() string {
 	return w.oldTxnHash
 }
 
+func (w Wallet) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Data                *WalletData  `json:"data"`
+		Endorsement         *Endorsement `json:"endorsment"`
+		LastTransactionHash string       `json:"last_transaction_hash"`
+	}{
+		Data:                w.data,
+		Endorsement:         w.endorsement,
+		LastTransactionHash: w.oldTxnHash,
+	})
+}
+
+func (w *Wallet) UnmarshalJSON(b []byte) error {
+
+	bData := struct {
+		Data                *WalletData  `json:"data"`
+		Endorsement         *Endorsement `json:"endorsment"`
+		LastTransactionHash string       `json:"last_transaction_hash"`
+	}{}
+
+	if err := json.Unmarshal(b, &bData); err != nil {
+		return err
+	}
+
+	w.data = bData.Data
+	w.endorsement = bData.Endorsement
+	w.oldTxnHash = bData.LastTransactionHash
+
+	return nil
+}
+
 //BioWallet describes the stored biometric wallet with its endorsement
 type BioWallet struct {
 	data        *BioData
@@ -128,4 +163,28 @@ func (b BioWallet) CipherAESKey() string {
 //Endorsement returns the bio wallet endorsement
 func (b BioWallet) Endorsement() *Endorsement {
 	return b.endorsement
+}
+
+func (b BioWallet) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Data        *BioData     `json:"data"`
+		Endorsement *Endorsement `json:"endorsment"`
+	}{
+		Data:        b.data,
+		Endorsement: b.endorsement,
+	})
+}
+
+func (b *BioWallet) UnmarshalJSON(bytes []byte) error {
+	bData := struct {
+		Data        *BioData     `json:"data"`
+		Endorsement *Endorsement `json:"endorsment"`
+	}{}
+	if err := json.Unmarshal(bytes, &bData); err != nil {
+		return err
+	}
+
+	b.data = bData.Data
+	b.endorsement = bData.Endorsement
+	return nil
 }

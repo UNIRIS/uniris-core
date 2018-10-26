@@ -107,6 +107,10 @@ func (d *databasemock) FindWallet(addr string) (*datamining.Wallet, error) {
 	return nil, nil
 }
 
+func (d *databasemock) ListBiodPubKeys() ([]string, error) {
+	return []string{}, nil
+}
+
 func (d *databasemock) StoreWallet(w *datamining.Wallet) error {
 	d.wallets = append(d.wallets, w)
 	return nil

@@ -7,7 +7,8 @@ import (
 	"log"
 
 	"github.com/uniris/uniris-core/datamining/pkg/crypto"
-	"github.com/uniris/uniris-core/datamining/pkg/leading"
+	"github.com/uniris/uniris-core/datamining/pkg/mining"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/transactions"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 	"golang.org/x/net/context"
 
@@ -17,16 +18,16 @@ import (
 
 type internalSrvHandler struct {
 	list                  listing.Service
-	lead                  leading.Service
+	mine                  mining.Service
 	sharedRobotPrivateKey string
 	errors                system.DataMininingErrors
 }
 
 //NewInternalServerHandler create a new GRPC server handler
-func NewInternalServerHandler(list listing.Service, lead leading.Service, sharedRobotPrivateKey string, errors system.DataMininingErrors) api.InternalServer {
+func NewInternalServerHandler(list listing.Service, mine mining.Service, sharedRobotPrivateKey string, errors system.DataMininingErrors) api.InternalServer {
 	return internalSrvHandler{
 		list:                  list,
-		lead:                  lead,
+		mine:                  mine,
 		sharedRobotPrivateKey: sharedRobotPrivateKey,
 		errors:                errors,
 	}
@@ -98,7 +99,7 @@ func (s internalSrvHandler) CreateWallet(ctx context.Context, req *api.WalletCre
 
 	go func() {
 		wData := BuildWalletData(wal, req.SignatureWalletData, clearaddr)
-		if err := s.lead.LeadWalletTransaction(wData, txHashWal); err != nil {
+		if err := s.mine.Lead(txHashWal, wData.CipherAddrRobot, wData.Sigs.BiodSig, wData, transactions.CreateWallet); err != nil {
 			//TODO: handle errors
 			log.Fatal(err)
 		}
@@ -106,7 +107,7 @@ func (s internalSrvHandler) CreateWallet(ctx context.Context, req *api.WalletCre
 
 	go func() {
 		bData := BuildBioData(bio, req.SignatureBioData)
-		if err := s.lead.LeadBioTransaction(bData, txHashBio); err != nil {
+		if err := s.mine.Lead(txHashBio, bData.CipherAddrRobot, bData.Sigs.BiodSig, bData, transactions.CreateBio); err != nil {
 			//TODO: handle errors
 			log.Fatal(err)
 		}

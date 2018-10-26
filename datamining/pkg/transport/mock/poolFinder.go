@@ -3,20 +3,20 @@ package mock
 import (
 	"net"
 
-	"github.com/uniris/uniris-core/datamining/pkg/leading"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/pool"
 )
 
 //NewPoolFinder creates a new pool finder
-func NewPoolFinder() leading.PoolFinder {
+func NewPoolFinder() pool.Finder {
 	return poolFinder{}
 }
 
 type poolFinder struct{}
 
-func (p poolFinder) FindLastValidationPool(addr string) (leading.Pool, error) {
-	return leading.Pool{
-		Peers: []leading.Peer{
-			leading.Peer{
+func (p poolFinder) FindLastValidationPool(addr string) (pool.PeerCluster, error) {
+	return pool.PeerCluster{
+		Peers: []pool.Peer{
+			pool.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
 				PublicKey: "key",
 			},
@@ -24,10 +24,10 @@ func (p poolFinder) FindLastValidationPool(addr string) (leading.Pool, error) {
 	}, nil
 }
 
-func (p poolFinder) FindValidationPool() (leading.Pool, error) {
-	return leading.Pool{
-		Peers: []leading.Peer{
-			leading.Peer{
+func (p poolFinder) FindValidationPool() (pool.PeerCluster, error) {
+	return pool.PeerCluster{
+		Peers: []pool.Peer{
+			pool.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
 				PublicKey: "key",
 			},
@@ -35,10 +35,10 @@ func (p poolFinder) FindValidationPool() (leading.Pool, error) {
 	}, nil
 }
 
-func (p poolFinder) FindStoragePool() (leading.Pool, error) {
-	return leading.Pool{
-		Peers: []leading.Peer{
-			leading.Peer{
+func (p poolFinder) FindStoragePool() (pool.PeerCluster, error) {
+	return pool.PeerCluster{
+		Peers: []pool.Peer{
+			pool.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
 				PublicKey: "key",
 			},

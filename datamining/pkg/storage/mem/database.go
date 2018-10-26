@@ -3,7 +3,6 @@ package mem
 import (
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/adding"
-	"github.com/uniris/uniris-core/datamining/pkg/leading"
 	"github.com/uniris/uniris-core/datamining/pkg/listing"
 )
 
@@ -11,7 +10,6 @@ import (
 type Database interface {
 	adding.Repository
 	listing.Repository
-	leading.TechRepository
 }
 
 type db struct {

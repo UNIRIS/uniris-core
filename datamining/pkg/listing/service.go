@@ -8,12 +8,14 @@ import (
 type Repository interface {
 	FindBioWallet(bioHash string) (*datamining.BioWallet, error)
 	FindWallet(addr string) (*datamining.Wallet, error)
+	ListBiodPubKeys() ([]string, error)
 }
 
 //Service defines method for the listing service
 type Service interface {
 	GetBioWallet(bioHash string) (*datamining.BioWallet, error)
 	GetWallet(addr string) (*datamining.Wallet, error)
+	ListBiodPubKeys() ([]string, error)
 }
 
 type service struct {
@@ -39,4 +41,8 @@ func (s service) GetWallet(addr string) (*datamining.Wallet, error) {
 		return nil, err
 	}
 	return w, nil
+}
+
+func (s service) ListBiodPubKeys() ([]string, error) {
+	return s.repo.ListBiodPubKeys()
 }

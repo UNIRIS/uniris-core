@@ -1,18 +1,15 @@
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
-import "common.proto";
+import "google/protobuf/any.proto";
 
 package api;
 
 service External {
     rpc LockTransaction(LockRequest) returns (google.protobuf.Empty) {}
     rpc UnlockTransaction(LockRequest) returns (google.protobuf.Empty) {}
-    rpc ValidateWallet(WalletValidationRequest) returns (ValidationResponse) {}
-    rpc ValidateBio(BioValidationRequest) returns (ValidationResponse) {}
-    rpc GetLastWallet(LastWalletRequest) returns(LastWalletResponse) {}
-    rpc StoreWallet(WalletStoreRequest) returns (google.protobuf.Empty) {}
-    rpc StoreBio(BioStorageRequest) returns (google.protobuf.Empty) {}
+    rpc Validate(ValidationRequest) returns (ValidationResponse) {}
+    rpc Store(StorageRequest) returns (google.protobuf.Empty) {}
 }
 
 message LockRequest {
@@ -21,31 +18,27 @@ message LockRequest {
     string Signature = 3;
 }
 
-message WalletValidationRequest {
-    string EncryptedAddrRobot = 1;
-    string EncryptedWallet = 2;
-    string PersonPubKey = 3;
-    string BiodPublicKey = 4;
-    Signature Signatures = 5;
+enum TransactionType {
+    CreateWallet = 0;
+    CreateBio = 1;
 }
 
-message BioValidationRequest {
-    string BiometricHash = 1;
-    string EncryptedAddrRobot = 2;
-    string EncryptedAddrBiod = 3;
-    string EncryptedAESKey = 4;
-    string PersonPubKey = 5;
-    string BiodPubKey = 6;
-    Signature Signatures = 7;
+
+message StorageRequest {
+    google.protobuf.Any Data = 1;
+    TransactionType TransactionType = 2;
 }
 
+message ValidationRequest {
+    google.protobuf.Any Data = 1;
+    TransactionType TransactionType = 2;
+}
 
 message ValidationResponse {
     Validation Validation = 1;
 }
 
 message Validation {
-
     ValidationStatus Status = 1;
     int64 Timestamp = 2;
     string PublicKey = 3;
@@ -55,60 +48,4 @@ message Validation {
         OK = 0;
         KO = 1;
     }
-}
-
-message LastWalletRequest {
-    string Address = 1;
-}
-
-message LastWalletResponse {
-    Wallet Wallet = 1;
-}
-
-message WalletStoreRequest {
-    WalletData Data = 1;
-    string LastTransactionHash = 2;
-    Endorsement Endorsement = 3; 
-}
-
-message WalletData {
-    string EncryptedAddrRobot = 1;
-    string EncryptedWallet = 2;
-    string PersonPubKey = 3;
-    string BiodPublicKey = 4;
-    Signature Signatures = 5;
-}
-
-message BioStorageRequest {
-    BioData Data = 1;
-    Endorsement Endorsement = 2;
-}
-
-message BioData {
-    string BiometricHash = 1;
-    string EncryptedAddrRobot = 2;
-    string EncryptedAddrBiod = 3;
-    string EncryptedAESKey = 4;
-    string PersonPubKey = 5;
-    string BiodPubKey = 6;
-    Signature Signatures = 7;
-}
-
-message Endorsement {
-    int64 Timestamp = 1;
-    string TransactionHash = 2;
-    MasterValidation MasterValidation = 3;
-    repeated Validation Validations = 4;
-}
-
-message MasterValidation {
-    repeated string LastTransactionMiners = 1;
-    string PowMasterKey = 2;
-    Validation PowValidation = 3;
-}
-
-message Wallet {
-    WalletData Data = 1;
-    Endorsement Endorsement = 2;
-    string LastTransactionHash = 3;
 }

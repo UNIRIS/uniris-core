@@ -6,13 +6,12 @@ import (
 	"encoding/json"
 
 	"github.com/uniris/uniris-core/datamining/pkg"
-
-	"github.com/uniris/uniris-core/datamining/pkg/leading"
+	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
 //Hasher defines methods for hashing
 type Hasher interface {
-	leading.PreviousDataHasher
+	mining.PreviousDataHasher
 }
 
 type hasher struct{}

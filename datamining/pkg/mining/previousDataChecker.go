@@ -1,4 +1,4 @@
-package leading
+package mining
 
 import (
 	"errors"

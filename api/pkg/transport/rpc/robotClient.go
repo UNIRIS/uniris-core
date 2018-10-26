@@ -84,7 +84,7 @@ func (c robotClient) AddAccount(req adding.EnrollmentRequest) (*adding.Enrollmen
 
 	client := api.NewInternalClient(conn)
 
-	w := &api.WalletStorageRequest{
+	w := &api.WalletCreationRequest{
 		EncryptedBioData:    req.EncryptedBioData,
 		EncryptedWalletData: req.EncryptedWalletData,
 		SignatureBioData: &api.Signature{
@@ -97,7 +97,7 @@ func (c robotClient) AddAccount(req adding.EnrollmentRequest) (*adding.Enrollmen
 		},
 	}
 
-	resGRPC, err := client.StoreWallet(context.Background(), w)
+	resGRPC, err := client.CreateWallet(context.Background(), w)
 	if err != nil {
 		s, _ := status.FromError(err)
 		return nil, errors.New(s.Message())

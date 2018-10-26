@@ -1,4 +1,10 @@
-package checkers
+package validations
+
+//Handler defines methods for transaction data validation
+type Handler interface {
+	CheckData(interface{}) error
+	IsCatchedError(error) bool
+}
 
 //BioData represents the data by will be encrypted by the biometric device
 type BioData struct {

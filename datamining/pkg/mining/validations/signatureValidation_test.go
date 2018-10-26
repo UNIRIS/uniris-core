@@ -1,4 +1,4 @@
-package checkers
+package validations
 
 import (
 	"crypto/ecdsa"
@@ -15,7 +15,7 @@ import (
 
 func TestOkSignatureValidator(t *testing.T) {
 
-	sigCheck := NewSignatureChecker(mockSigCheckSigner{})
+	sigCheck := NewSignatureValidation(mockSigCheckSigner{})
 
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -47,7 +47,7 @@ func TestOkSignatureValidator(t *testing.T) {
 
 func TestKOSignatureValidator(t *testing.T) {
 
-	sigCheck := NewSignatureChecker(mockBadSigCheckSigner{})
+	sigCheck := NewSignatureValidation(mockBadSigCheckSigner{})
 
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())

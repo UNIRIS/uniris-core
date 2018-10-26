@@ -1,9 +1,11 @@
-package leading
+package mining
 
 import (
 	"time"
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/listing"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/pool"
 )
 
 //PowSigner defines methods to handle signatures
@@ -12,14 +14,9 @@ type PowSigner interface {
 	CheckTransactionSignature(pubKey string, tx string, sig string) error
 }
 
-//TechRepository defines methods to query the bank repository
-type TechRepository interface {
-	ListBiodPubKeys() ([]string, error)
-}
-
 //POW defines methods for the POW
 type POW interface {
-	Execute(txHash, sig string, lastValidationPool Pool) (*datamining.MasterValidation, error)
+	Execute(txHash, sig string, lastValidationPool pool.PeerCluster) (*datamining.MasterValidation, error)
 }
 
 //Validation represents a validation before its signature
@@ -30,20 +27,20 @@ type Validation struct {
 }
 
 type pow struct {
-	repo        TechRepository
+	list        listing.Service
 	sig         PowSigner
 	robotPubKey string
 	robotPvKey  string
 }
 
 //NewPOW creates a new Proof Of Work handler
-func NewPOW(repo TechRepository, sig PowSigner, robotPubKey, robotPvKey string) POW {
-	return pow{repo, sig, robotPubKey, robotPvKey}
+func NewPOW(list listing.Service, sig PowSigner, robotPubKey, robotPvKey string) POW {
+	return pow{list, sig, robotPubKey, robotPvKey}
 }
 
 //Execute the Proof Of Work
-func (p pow) Execute(txHash string, sig string, lastValidationPool Pool) (*datamining.MasterValidation, error) {
-	keys, err := p.repo.ListBiodPubKeys()
+func (p pow) Execute(txHash string, sig string, lastValidationPool pool.PeerCluster) (*datamining.MasterValidation, error) {
+	keys, err := p.list.ListBiodPubKeys()
 	if err != nil {
 		return nil, err
 	}
