@@ -5,6 +5,7 @@ import (
 
 	"github.com/uniris/uniris-core/datamining/pkg/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/mining/pool"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/validations"
 
 	"github.com/uniris/uniris-core/datamining/pkg"
 
@@ -35,6 +36,32 @@ func TestExecutePOW(t *testing.T) {
 	assert.Equal(t, "my key", valid.ProofOfWorkRobotKey())
 	assert.Equal(t, "my key", valid.ProofOfWorkValidation().PublicKey())
 	assert.Equal(t, datamining.ValidationOK, valid.ProofOfWorkValidation().Status())
+}
+
+/*
+Scenario: Execute the POW and not find a match
+	Given a biod key
+	When I execute the POW, and I lookup the tech repository to find it
+	Then I not find it and return the validation but with KO
+*/
+func TestExecutePOW_KO(t *testing.T) {
+
+	repo := &mockDatabase{}
+	list := listing.NewService(repo)
+
+	pow := NewPOW(list, mockBadPowSigner{}, "my key", "my pv key")
+	lastValidPool := pool.PeerCluster{
+		Peers: []pool.Peer{
+			pool.Peer{PublicKey: "key"},
+		},
+	}
+	valid, err := pow.Execute("hash", "signature", lastValidPool)
+	assert.Nil(t, err)
+	assert.NotNil(t, valid)
+
+	assert.Equal(t, "my key", valid.ProofOfWorkRobotKey())
+	assert.Equal(t, "my key", valid.ProofOfWorkValidation().PublicKey())
+	assert.Equal(t, datamining.ValidationKO, valid.ProofOfWorkValidation().Status())
 }
 
 type mockDatabase struct {
@@ -71,5 +98,15 @@ func (s mockPowSigner) CheckTransactionSignature(pubk string, tx string, der str
 }
 
 func (s mockPowSigner) SignMasterValidation(v Validation, pvKey string) (string, error) {
+	return "sig", nil
+}
+
+type mockBadPowSigner struct{}
+
+func (s mockBadPowSigner) CheckTransactionSignature(pubk string, tx string, der string) error {
+	return validations.ErrInvalidSignature
+}
+
+func (s mockBadPowSigner) SignMasterValidation(v Validation, pvKey string) (string, error) {
 	return "sig", nil
 }

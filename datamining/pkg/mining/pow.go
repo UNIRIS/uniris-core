@@ -46,16 +46,18 @@ func (p pow) Execute(txHash string, sig string, lastValidationPool pool.PeerClus
 	}
 
 	//Find the public key which matches the transaction signature
+	status := datamining.ValidationKO
 	for _, k := range keys {
 		err := p.sig.CheckTransactionSignature(k, txHash, sig)
 		if err == nil {
+			status = datamining.ValidationOK
 			break
 		}
 	}
 
 	v := Validation{
 		PublicKey: p.robotPubKey,
-		Status:    datamining.ValidationOK,
+		Status:    status,
 		Timestamp: time.Now(),
 	}
 	signature, err := p.sig.SignMasterValidation(v, p.robotPvKey)
