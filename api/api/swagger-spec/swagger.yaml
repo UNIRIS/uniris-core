@@ -165,7 +165,7 @@ definitions:
   EnrollmentResult:
     required:
       - transactions
-      - signature_request
+      - signature
     properties:
       transactions:
         description: Transactions hash for the wallet creation
