@@ -2,8 +2,8 @@ package adding
 
 //EnrollmentResult represents the result of an enrollment
 type EnrollmentResult struct {
-	Transactions     EnrollmentTransactions `json:"transactions" binding:"required"`
-	SignatureRequest string                 `json:"signature_request" binding:"required"`
+	Transactions EnrollmentTransactions `json:"transactions" binding:"required"`
+	Signature    string                 `json:"signature" binding:"required"`
 }
 
 //EnrollmentTransactions represents the generated transactions during the enrollment

@@ -180,8 +180,8 @@ definitions:
           data:
             type: string
             description: Data wallet transaction hash
-      signature_request:
-        description: Request signature
+      signature:
+        description: Signature
         type: string
 
   Signatures:

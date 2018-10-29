@@ -114,7 +114,7 @@ func (c robotClient) AddAccount(req adding.EnrollmentRequest) (*adding.Enrollmen
 	}
 
 	return &adding.EnrollmentResult{
-		Transactions:     txs,
-		SignatureRequest: sig,
+		Transactions: txs,
+		Signature:    sig,
 	}, nil
 }
