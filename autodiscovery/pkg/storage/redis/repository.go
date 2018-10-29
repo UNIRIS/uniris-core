@@ -216,7 +216,7 @@ func (r redisRepository) ContainsUnreachableKey(pubk string) error {
 	}
 	sort.Strings(unreachableKeys)
 	idx := sort.SearchStrings(unreachableKeys, pubk)
-	if idx < len(unreachableKeys) {
+	if idx < len(unreachableKeys) && unreachableKeys[idx] == pubk {
 		return nil
 	}
 	return gossip.ErrNotFoundOnUnreachableList
