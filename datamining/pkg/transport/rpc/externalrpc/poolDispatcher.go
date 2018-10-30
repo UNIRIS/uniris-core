@@ -25,7 +25,7 @@ func NewPoolDispatcher(conf system.DataMiningConfiguration) pool.Requester {
 	return poolD{conf}
 }
 
-func (pd poolD) RequestLock(lastValidPool pool.Cluster, txLock pool.TransactionLock, sig string) error {
+func (pd poolD) RequestLock(lastValidPool pool.PeerGroup, txLock pool.TransactionLock, sig string) error {
 
 	//TODO: using goroutines
 	for _, p := range lastValidPool.Peers {
@@ -52,7 +52,7 @@ func (pd poolD) RequestLock(lastValidPool pool.Cluster, txLock pool.TransactionL
 
 	return nil
 }
-func (pd poolD) RequestUnlock(lastValidPool pool.Cluster, txLock pool.TransactionLock, sig string) error {
+func (pd poolD) RequestUnlock(lastValidPool pool.PeerGroup, txLock pool.TransactionLock, sig string) error {
 
 	//TODO: using goroutines
 	for _, p := range lastValidPool.Peers {
@@ -80,7 +80,7 @@ func (pd poolD) RequestUnlock(lastValidPool pool.Cluster, txLock pool.Transactio
 	return nil
 }
 
-func (pd poolD) RequestValidations(validPool pool.Cluster, data interface{}, txType datamining.TransactionType) ([]datamining.Validation, error) {
+func (pd poolD) RequestValidations(validPool pool.PeerGroup, data interface{}, txType datamining.TransactionType) ([]datamining.Validation, error) {
 
 	valids := make([]datamining.Validation, 0)
 
@@ -118,7 +118,7 @@ func (pd poolD) RequestValidations(validPool pool.Cluster, data interface{}, txT
 	return valids, nil
 }
 
-func (pd poolD) RequestStorage(sPool pool.Cluster, data interface{}, txType datamining.TransactionType) error {
+func (pd poolD) RequestStorage(sPool pool.PeerGroup, data interface{}, txType datamining.TransactionType) error {
 
 	//TODO: using goroutines
 	for _, p := range sPool.Peers {

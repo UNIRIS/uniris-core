@@ -7,6 +7,6 @@ import (
 
 //Handler defines methods a transaction handler have to define
 type Handler interface {
-	RequestValidations(poolD pool.Requester, vPool pool.Cluster, data interface{}) ([]datamining.Validation, error)
-	RequestStorage(poolD pool.Requester, sPool pool.Cluster, data interface{}, e *datamining.Endorsement) error
+	RequestValidations(poolD pool.Requester, vPool pool.PeerGroup, data interface{}) ([]datamining.Validation, error)
+	RequestStorage(poolD pool.Requester, sPool pool.PeerGroup, data interface{}, e *datamining.Endorsement) error
 }

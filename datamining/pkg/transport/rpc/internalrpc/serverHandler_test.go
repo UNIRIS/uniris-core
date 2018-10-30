@@ -241,15 +241,15 @@ type mockPoolDispatcher struct {
 	Repo *databasemock
 }
 
-func (r mockPoolDispatcher) RequestLock(pool.Cluster, pool.TransactionLock, string) error {
+func (r mockPoolDispatcher) RequestLock(pool.PeerGroup, pool.TransactionLock, string) error {
 	return nil
 }
 
-func (r mockPoolDispatcher) RequestUnlock(pool.Cluster, pool.TransactionLock, string) error {
+func (r mockPoolDispatcher) RequestUnlock(pool.PeerGroup, pool.TransactionLock, string) error {
 	return nil
 }
 
-func (r mockPoolDispatcher) RequestValidations(sPool pool.Cluster, data interface{}, txType datamining.TransactionType) ([]datamining.Validation, error) {
+func (r mockPoolDispatcher) RequestValidations(sPool pool.PeerGroup, data interface{}, txType datamining.TransactionType) ([]datamining.Validation, error) {
 	return []datamining.Validation{
 		datamining.NewValidation(
 			datamining.ValidationOK,
@@ -259,7 +259,7 @@ func (r mockPoolDispatcher) RequestValidations(sPool pool.Cluster, data interfac
 		)}, nil
 }
 
-func (r mockPoolDispatcher) RequestStorage(sPool pool.Cluster, data interface{}, txType datamining.TransactionType) error {
+func (r mockPoolDispatcher) RequestStorage(sPool pool.PeerGroup, data interface{}, txType datamining.TransactionType) error {
 	switch data.(type) {
 	case *datamining.Keychain:
 		r.Repo.StoreKeychain(data.(*datamining.Keychain))
@@ -272,8 +272,8 @@ func (r mockPoolDispatcher) RequestStorage(sPool pool.Cluster, data interface{},
 
 type mockPoolFinder struct{}
 
-func (f mockPoolFinder) FindLastValidationPool(addr string) (pool.Cluster, error) {
-	return pool.Cluster{
+func (f mockPoolFinder) FindLastValidationPool(addr string) (pool.PeerGroup, error) {
+	return pool.PeerGroup{
 		Peers: []pool.Peer{
 			pool.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
@@ -283,8 +283,8 @@ func (f mockPoolFinder) FindLastValidationPool(addr string) (pool.Cluster, error
 	}, nil
 }
 
-func (f mockPoolFinder) FindValidationPool() (pool.Cluster, error) {
-	return pool.Cluster{
+func (f mockPoolFinder) FindValidationPool() (pool.PeerGroup, error) {
+	return pool.PeerGroup{
 		Peers: []pool.Peer{
 			pool.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
@@ -294,8 +294,8 @@ func (f mockPoolFinder) FindValidationPool() (pool.Cluster, error) {
 	}, nil
 }
 
-func (f mockPoolFinder) FindStoragePool() (pool.Cluster, error) {
-	return pool.Cluster{
+func (f mockPoolFinder) FindStoragePool() (pool.PeerGroup, error) {
+	return pool.PeerGroup{
 		Peers: []pool.Peer{
 			pool.Peer{
 				IP:        net.ParseIP("127.0.0.1"),

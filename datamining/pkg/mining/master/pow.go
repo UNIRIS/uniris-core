@@ -17,7 +17,7 @@ type PowSigner interface {
 
 //POW defines methods for the POW
 type POW interface {
-	Execute(txHash, sig string, lastValidationPool pool.Cluster) (*datamining.MasterValidation, error)
+	Execute(txHash, sig string, lastValidationPool pool.PeerGroup) (*datamining.MasterValidation, error)
 }
 
 //Validation represents a validation before its signature
@@ -40,7 +40,7 @@ func NewPOW(list listing.Service, sig PowSigner, robotPubKey, robotPvKey string)
 }
 
 //Execute the Proof Of Work
-func (p pow) Execute(txHash string, sig string, lastValidationPool pool.Cluster) (*datamining.MasterValidation, error) {
+func (p pow) Execute(txHash string, sig string, lastValidationPool pool.PeerGroup) (*datamining.MasterValidation, error) {
 	keys, err := p.list.ListBiodPubKeys()
 	if err != nil {
 		return nil, err

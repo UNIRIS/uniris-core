@@ -80,7 +80,7 @@ func (s service) LeadMining(txHash string, addr string, bioSig string, data inte
 	return s.requestStorage(txHash, data, s.txHandlers[txType], masterValid, valids, lastVPool, sPool)
 }
 
-func (s service) mine(txHash string, data interface{}, bioSig string, lastVPool, vPool pool.Cluster, txType datamining.TransactionType) (*datamining.MasterValidation, []datamining.Validation, error) {
+func (s service) mine(txHash string, data interface{}, bioSig string, lastVPool, vPool pool.PeerGroup, txType datamining.TransactionType) (*datamining.MasterValidation, []datamining.Validation, error) {
 	//Check data before to perform POW
 	for _, c := range s.txCheckers[txType] {
 		if err := c.CheckData(data, txHash); err != nil {
@@ -102,7 +102,7 @@ func (s service) mine(txHash string, data interface{}, bioSig string, lastVPool,
 	return masterValid, valids, nil
 }
 
-func (s service) requestValidations(vPool pool.Cluster, txHash string, data interface{}, txHandler transactions.Handler) ([]datamining.Validation, error) {
+func (s service) requestValidations(vPool pool.PeerGroup, txHash string, data interface{}, txHandler transactions.Handler) ([]datamining.Validation, error) {
 	valids, err := txHandler.RequestValidations(s.poolD, vPool, data)
 	if err != nil {
 		return nil, err
@@ -117,7 +117,7 @@ func (s service) requestValidations(vPool pool.Cluster, txHash string, data inte
 	return valids, nil
 }
 
-func (s service) requestStorage(txHash string, data interface{}, txHandler transactions.Handler, masterValid *datamining.MasterValidation, valids []datamining.Validation, lastVPool, sPool pool.Cluster) error {
+func (s service) requestStorage(txHash string, data interface{}, txHandler transactions.Handler, masterValid *datamining.MasterValidation, valids []datamining.Validation, lastVPool, sPool pool.PeerGroup) error {
 
 	endorsement := datamining.NewEndorsement(time.Now(), txHash, masterValid, valids)
 
@@ -132,7 +132,7 @@ func (s service) requestStorage(txHash string, data interface{}, txHandler trans
 	return s.notif.NotifyTransactionStatus(txHash, Replicated)
 }
 
-func (s service) requestLock(txHash string, lastVPool pool.Cluster) error {
+func (s service) requestLock(txHash string, lastVPool pool.PeerGroup) error {
 	lock := pool.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey}
 	sigLock, err := s.sig.SignLock(lock, s.robotPvKey)
 	if err != nil {
@@ -149,7 +149,7 @@ func (s service) requestLock(txHash string, lastVPool pool.Cluster) error {
 	return err
 }
 
-func (s service) requestUnlock(txHash string, lastVPool pool.Cluster) error {
+func (s service) requestUnlock(txHash string, lastVPool pool.PeerGroup) error {
 	lock := pool.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey}
 	sigLock, err := s.sig.SignLock(lock, s.robotPvKey)
 	if err != nil {

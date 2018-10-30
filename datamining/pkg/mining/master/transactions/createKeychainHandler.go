@@ -13,7 +13,7 @@ func NewCreateKeychainHandler() Handler {
 	return createKeychainHandler{}
 }
 
-func (h createKeychainHandler) RequestValidations(poolD pool.Requester, vPool pool.Cluster, data interface{}) ([]datamining.Validation, error) {
+func (h createKeychainHandler) RequestValidations(poolD pool.Requester, vPool pool.PeerGroup, data interface{}) ([]datamining.Validation, error) {
 	valids, err := poolD.RequestValidations(vPool, data.(*datamining.KeyChainData), datamining.CreateKeychainTransaction)
 	if err != nil {
 		return nil, err
@@ -22,7 +22,7 @@ func (h createKeychainHandler) RequestValidations(poolD pool.Requester, vPool po
 	return valids, nil
 }
 
-func (h createKeychainHandler) RequestStorage(poolD pool.Requester, sPool pool.Cluster, data interface{}, e *datamining.Endorsement) error {
+func (h createKeychainHandler) RequestStorage(poolD pool.Requester, sPool pool.PeerGroup, data interface{}, e *datamining.Endorsement) error {
 	w := datamining.NewKeychain(data.(*datamining.KeyChainData), e, "")
 	if err := poolD.RequestStorage(sPool, w, datamining.CreateKeychainTransaction); err != nil {
 		return err

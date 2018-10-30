@@ -23,7 +23,7 @@ func TestExecutePOW(t *testing.T) {
 	list := listing.NewService(repo)
 
 	pow := NewPOW(list, mockPowSigner{}, "my key", "my pv key")
-	lastValidPool := pool.Cluster{
+	lastValidPool := pool.PeerGroup{
 		Peers: []pool.Peer{
 			pool.Peer{PublicKey: "key"},
 		},
@@ -49,7 +49,7 @@ func TestExecutePOW_KO(t *testing.T) {
 	list := listing.NewService(repo)
 
 	pow := NewPOW(list, mockBadPowSigner{}, "my key", "my pv key")
-	lastValidPool := pool.Cluster{
+	lastValidPool := pool.PeerGroup{
 		Peers: []pool.Peer{
 			pool.Peer{PublicKey: "key"},
 		},

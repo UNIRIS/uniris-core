@@ -13,8 +13,8 @@ func NewPoolFinder() pool.Finder {
 
 type poolFinder struct{}
 
-func (p poolFinder) FindLastValidationPool(addr string) (pool.Cluster, error) {
-	return pool.Cluster{
+func (p poolFinder) FindLastValidationPool(addr string) (pool.PeerGroup, error) {
+	return pool.PeerGroup{
 		Peers: []pool.Peer{
 			pool.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
@@ -24,8 +24,8 @@ func (p poolFinder) FindLastValidationPool(addr string) (pool.Cluster, error) {
 	}, nil
 }
 
-func (p poolFinder) FindValidationPool() (pool.Cluster, error) {
-	return pool.Cluster{
+func (p poolFinder) FindValidationPool() (pool.PeerGroup, error) {
+	return pool.PeerGroup{
 		Peers: []pool.Peer{
 			pool.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
@@ -35,8 +35,8 @@ func (p poolFinder) FindValidationPool() (pool.Cluster, error) {
 	}, nil
 }
 
-func (p poolFinder) FindStoragePool() (pool.Cluster, error) {
-	return pool.Cluster{
+func (p poolFinder) FindStoragePool() (pool.PeerGroup, error) {
+	return pool.PeerGroup{
 		Peers: []pool.Peer{
 			pool.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
