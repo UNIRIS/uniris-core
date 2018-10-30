@@ -27,19 +27,19 @@ paths:
         - Account
       summary: Enroll a new user
       description: Creates a new wallet
-      operationId: enroll
+      operationId: createAccount
       parameters:
-        - name: enrollment
+        - name: account
           in: body
           required: true
           schema:
-            $ref: "#/definitions/EnrollmentRequest"
-          description: Enrollment request
+            $ref: "#/definitions/AccountCreationRequest"
+          description: Account creation request
       responses:
         "201":  
-          description: Enrollment response
+          description: Account creation response
           schema:
-            $ref: "#/definitions/EnrollmentResult"
+            $ref: "#/definitions/AccountCreationResult"
         default:
           description: Error
           schema:
@@ -124,7 +124,7 @@ definitions:
     required:
       - encrypted_wallet
       - encrypted_aes_key
-      - encrypted_addr_person
+      - encrypted_address
       - signature_request
     properties:
       encrypted_wallet:
@@ -133,36 +133,36 @@ definitions:
       encrypted_aes_key:
         description: Encrypted key which encrypt the wallet
         type: string
-      encrypted_addr_person:
-        description: Encryted address with person key
+      encrypted_address:
+        description: Encryted address with EM key
         type: string
       signature_request:
         description: Request signature
         type: string
-  EnrollmentRequest:
+  AccountCreationRequest:
     required:
       - encrypted_bio_data
-      - encrypted_wal_data
+      - encrypted_keychain_data
       - signatures_bio
-      - signatures_wal
+      - signatures_keychain
       - signature_request
     properties:
       encrypted_bio_data:
-        description: Encrypted Biometric information about the wallet generation
+        description: Encrypted Biometric data
         type: string
-      encrypted_wal_data:
-        descrpition: Encrypted data wallet
+      encrypted_keychain_data:
+        descrpition: Encrypted Keychain data
         type: string
       signatures_bio:
-        description: Biometric information signatures
+        description: Biometric data signatures
         $ref: "#/definitions/Signatures"
-      signatures_wal:
-        description: Wallet information signatures
+      signatures_keychain:
+        description: Keychain data signatures
         $ref: "#/definitions/Signatures"
       signature_request:
         description: Request signature
         type: string
-  EnrollmentResult:
+  AccountCreationResult:
     required:
       - transactions
       - signature
@@ -172,14 +172,14 @@ definitions:
         type: object
         properties:
           required:
-            - biod
-            - data
-          biod:
+            - biometric
+            - keychain
+          biometric:
             type: string
-            description: Bio wallet transaction hash
-          data:
+            description: Biometric transaction hash
+          keychain:
             type: string
-            description: Data wallet transaction hash
+            description: Keychain transaction hash
       signature:
         description: Signature
         type: string
@@ -193,5 +193,5 @@ definitions:
         description: Signature performed by the biometric device
         type: string
       person_sig:
-        description: Signature performed by the enduser
+        description: Signature performed by the person
         type: string

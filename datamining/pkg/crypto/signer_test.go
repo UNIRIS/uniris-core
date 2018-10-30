@@ -51,7 +51,7 @@ func TestVerify(t *testing.T) {
 
 	b, _ := json.Marshal(encData)
 
-	s := NewSigner()
+	s := signer{}
 	sig, _ := Sign(hex.EncodeToString(pvKey), string(b))
 
 	err := s.CheckSignature(

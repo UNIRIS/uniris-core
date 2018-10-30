@@ -1,4 +1,4 @@
-package validations
+package checks
 
 import (
 	"errors"
@@ -14,24 +14,24 @@ type Signer interface {
 	CheckSignature(pubKey string, data interface{}, sig string) error
 }
 
-type sigValid struct {
+type sigCheck struct {
 	sig Signer
 }
 
-//NewSignatureValidation creates a signature validation
-func NewSignatureValidation(sig Signer) Handler {
-	return sigValid{sig}
+//NewSignatureChecker creates a signature validation
+func NewSignatureChecker(sig Signer) Handler {
+	return sigCheck{sig}
 }
 
-func (c sigValid) IsCatchedError(err error) bool {
+func (c sigCheck) IsCatchedError(err error) bool {
 	return err == ErrInvalidSignature
 }
 
-func (c sigValid) CheckData(data interface{}) error {
+func (c sigCheck) CheckData(data interface{}) error {
 
 	switch data.(type) {
-	case *datamining.WalletData:
-		return c.checkWalletData(data.(*datamining.WalletData))
+	case *datamining.KeyChainData:
+		return c.checkKeychainData(data.(*datamining.KeyChainData))
 	case *datamining.BioData:
 		return c.checkBioData(data.(*datamining.BioData))
 	}
@@ -39,22 +39,22 @@ func (c sigValid) CheckData(data interface{}) error {
 	return nil
 }
 
-func (c sigValid) checkWalletData(w *datamining.WalletData) error {
-	wValid := WalletData{
-		BIODPublicKey:      w.BiodPubk,
-		EncryptedAddrRobot: w.CipherAddrRobot,
-		EncryptedWallet:    w.CipherWallet,
-		PersonPublicKey:    w.EmPubk,
+func (c sigCheck) checkKeychainData(kc *datamining.KeyChainData) error {
+	kcValid := KeychainData{
+		BIODPublicKey:      kc.BiodPubk,
+		EncryptedAddrRobot: kc.CipherAddrRobot,
+		EncryptedWallet:    kc.CipherWallet,
+		PersonPublicKey:    kc.PersonPubk,
 	}
 
-	if err := c.sig.CheckSignature(w.BiodPubk, wValid, w.Sigs.BiodSig); err != nil {
+	if err := c.sig.CheckSignature(kc.BiodPubk, kcValid, kc.Sigs.BiodSig); err != nil {
 		if err == ErrInvalidSignature {
 			return ErrInvalidSignature
 		}
 		return err
 	}
 
-	if err := c.sig.CheckSignature(w.EmPubk, wValid, w.Sigs.EmSig); err != nil {
+	if err := c.sig.CheckSignature(kc.PersonPubk, kcValid, kc.Sigs.PersonSig); err != nil {
 		if err == ErrInvalidSignature {
 			return ErrInvalidSignature
 		}
@@ -63,14 +63,14 @@ func (c sigValid) checkWalletData(w *datamining.WalletData) error {
 	return nil
 }
 
-func (c sigValid) checkBioData(b *datamining.BioData) error {
+func (c sigCheck) checkBioData(b *datamining.BioData) error {
 	bValid := BioData{
 		BIODPublicKey:       b.BiodPubk,
 		EncryptedAddrPerson: b.CipherAddrBio,
 		EncryptedAddrRobot:  b.CipherAddrRobot,
 		EncryptedAESKey:     b.CipherAESKey,
-		PersonHash:          b.BHash,
-		PersonPublicKey:     b.EmPubk,
+		PersonHash:          b.PersonHash,
+		PersonPublicKey:     b.PersonPubk,
 	}
 
 	if err := c.sig.CheckSignature(b.BiodPubk, bValid, b.Sigs.BiodSig); err != nil {
@@ -80,7 +80,7 @@ func (c sigValid) checkBioData(b *datamining.BioData) error {
 		return err
 	}
 
-	if err := c.sig.CheckSignature(b.EmPubk, bValid, b.Sigs.EmSig); err != nil {
+	if err := c.sig.CheckSignature(b.PersonPubk, bValid, b.Sigs.PersonSig); err != nil {
 		if err == ErrInvalidSignature {
 			return ErrInvalidSignature
 		}

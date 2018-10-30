@@ -1,4 +1,4 @@
-package mining
+package master
 
 //TransactionStatus defines the status of a transaction
 type TransactionStatus int
@@ -34,6 +34,8 @@ func (s TransactionStatus) String() string {
 		return "Unlocked"
 	case Approved:
 		return "Approved"
+	case Invalid:
+		return "Invalid"
 	case Replicated:
 		return "Replicated"
 	default:

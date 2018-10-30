@@ -3,7 +3,7 @@ package mock
 import (
 	"net"
 
-	"github.com/uniris/uniris-core/datamining/pkg/mining/pool"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/master/pool"
 )
 
 //NewPoolFinder creates a new pool finder
@@ -13,8 +13,8 @@ func NewPoolFinder() pool.Finder {
 
 type poolFinder struct{}
 
-func (p poolFinder) FindLastValidationPool(addr string) (pool.PeerCluster, error) {
-	return pool.PeerCluster{
+func (p poolFinder) FindLastValidationPool(addr string) (pool.Cluster, error) {
+	return pool.Cluster{
 		Peers: []pool.Peer{
 			pool.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
@@ -24,8 +24,8 @@ func (p poolFinder) FindLastValidationPool(addr string) (pool.PeerCluster, error
 	}, nil
 }
 
-func (p poolFinder) FindValidationPool() (pool.PeerCluster, error) {
-	return pool.PeerCluster{
+func (p poolFinder) FindValidationPool() (pool.Cluster, error) {
+	return pool.Cluster{
 		Peers: []pool.Peer{
 			pool.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
@@ -35,8 +35,8 @@ func (p poolFinder) FindValidationPool() (pool.PeerCluster, error) {
 	}, nil
 }
 
-func (p poolFinder) FindStoragePool() (pool.PeerCluster, error) {
-	return pool.PeerCluster{
+func (p poolFinder) FindStoragePool() (pool.Cluster, error) {
+	return pool.Cluster{
 		Peers: []pool.Peer{
 			pool.Peer{
 				IP:        net.ParseIP("127.0.0.1"),

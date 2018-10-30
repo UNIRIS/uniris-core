@@ -1,11 +1,12 @@
-package mining
+package master
 
 import (
 	"time"
 
+	"github.com/uniris/uniris-core/datamining/pkg/mining/master/pool"
+
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/listing"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/pool"
 )
 
 //PowSigner defines methods to handle signatures
@@ -16,7 +17,7 @@ type PowSigner interface {
 
 //POW defines methods for the POW
 type POW interface {
-	Execute(txHash, sig string, lastValidationPool pool.PeerCluster) (*datamining.MasterValidation, error)
+	Execute(txHash, sig string, lastValidationPool pool.Cluster) (*datamining.MasterValidation, error)
 }
 
 //Validation represents a validation before its signature
@@ -39,7 +40,7 @@ func NewPOW(list listing.Service, sig PowSigner, robotPubKey, robotPvKey string)
 }
 
 //Execute the Proof Of Work
-func (p pow) Execute(txHash string, sig string, lastValidationPool pool.PeerCluster) (*datamining.MasterValidation, error) {
+func (p pow) Execute(txHash string, sig string, lastValidationPool pool.Cluster) (*datamining.MasterValidation, error) {
 	keys, err := p.list.ListBiodPubKeys()
 	if err != nil {
 		return nil, err

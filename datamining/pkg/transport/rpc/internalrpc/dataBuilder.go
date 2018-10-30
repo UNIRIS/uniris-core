@@ -5,49 +5,49 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg"
 )
 
-//BuildWalletSearchResult constitue details for the WalletSearchResult rpc command
-func BuildWalletSearchResult(w *datamining.Wallet, bioW *datamining.BioWallet) *api.WalletSearchResult {
-	return &api.WalletSearchResult{
-		EncryptedAESkey:        bioW.CipherAESKey(),
-		EncryptedWallet:        w.CipherWallet(),
-		EncryptedWalletAddress: bioW.CipherAddrBio(),
+//BuildAccountSearchResult constitue details for the KeychainSearchResult rpc command
+func BuildAccountSearchResult(kc *datamining.Keychain, biometric *datamining.Biometric) *api.AccountSearchResult {
+	return &api.AccountSearchResult{
+		EncryptedAESkey:  biometric.CipherAESKey(),
+		EncryptedWallet:  kc.CipherWallet(),
+		EncryptedAddress: biometric.CipherAddrBio(),
 	}
 }
 
 //BuildBioData transform json bio data into bio data
 func BuildBioData(bioData BioDataFromJSON, sig *api.Signature) *datamining.BioData {
 	return &datamining.BioData{
-		BHash:           bioData.PersonHash,
+		PersonHash:      bioData.PersonHash,
 		BiodPubk:        bioData.BiodPublicKey,
 		CipherAddrBio:   bioData.EncryptedAddrPerson,
 		CipherAddrRobot: bioData.EncryptedAddrRobot,
 		CipherAESKey:    bioData.EncryptedAESKey,
-		EmPubk:          bioData.PersonPublicKey,
+		PersonPubk:      bioData.PersonPublicKey,
 		Sigs: datamining.Signatures{
-			BiodSig: sig.Biod,
-			EmSig:   sig.Person,
+			BiodSig:   sig.Biod,
+			PersonSig: sig.Person,
 		},
 	}
 
 }
 
-//BuildWalletData transform json wallet data into wallet data
-func BuildWalletData(walletData *WalletDataFromJSON, sig *api.Signature, clearAddr string) *datamining.WalletData {
-	return &datamining.WalletData{
+//BuildKeychainData transform json keychain data into keychain data
+func BuildKeychainData(keychainData *KeychainDataFromJSON, sig *api.Signature, clearAddr string) *datamining.KeyChainData {
+	return &datamining.KeyChainData{
 		WalletAddr:      clearAddr,
-		BiodPubk:        walletData.BiodPublicKey,
-		CipherAddrRobot: walletData.EncryptedAddrRobot,
-		CipherWallet:    walletData.EncryptedWallet,
-		EmPubk:          walletData.PersonPublicKey,
+		BiodPubk:        keychainData.BiodPublicKey,
+		CipherAddrRobot: keychainData.EncryptedAddrRobot,
+		CipherWallet:    keychainData.EncryptedWallet,
+		PersonPubk:      keychainData.PersonPublicKey,
 		Sigs: datamining.Signatures{
-			BiodSig: sig.Biod,
-			EmSig:   sig.Person,
+			BiodSig:   sig.Biod,
+			PersonSig: sig.Person,
 		},
 	}
 }
 
-//WalletDataFromJSON represents wallet data JSON
-type WalletDataFromJSON struct {
+//KeychainDataFromJSON represents keychain data JSON
+type KeychainDataFromJSON struct {
 	PersonPublicKey    string `json:"person_pubk"`
 	BiodPublicKey      string `json:"biod_pubk"`
 	EncryptedWallet    string `json:"encrypted_wal"`

@@ -1,7 +1,6 @@
 package listing
 
 import (
-	"log"
 	"testing"
 	"time"
 
@@ -11,26 +10,26 @@ import (
 )
 
 /*
-Scenario: List Wallet
+Scenario: Get keychain
 	Given a empty database
-	When I add a Wallet
-	Then return values of a GetWallet  are the exepeted ones
+	When I add a keychain
+	Then return values of a GetKeychain  are the exepeted ones
 */
-func TestGetWallet(t *testing.T) {
+func TestGetKeychain(t *testing.T) {
 
 	db := new(databasemock)
 	s := NewService(db)
 
 	sigs := datamining.Signatures{
-		BiodSig: "sig1",
-		EmSig:   "sig2",
+		BiodSig:   "sig1",
+		PersonSig: "sig2",
 	}
 
-	wdata := &datamining.WalletData{
+	wdata := &datamining.KeyChainData{
 		WalletAddr:      "addr1",
 		CipherAddrRobot: "xxxx",
 		CipherWallet:    "xxxx",
-		EmPubk:          "xxxx",
+		PersonPubk:      "xxxx",
 		BiodPubk:        "xxxx",
 		Sigs:            sigs,
 	}
@@ -39,67 +38,66 @@ func TestGetWallet(t *testing.T) {
 
 	endors := datamining.NewEndorsement(time.Now(), "xxx", &datamining.MasterValidation{}, []datamining.Validation{})
 
-	w := datamining.NewWallet(wdata, endors, oldTxnHash)
+	w := datamining.NewKeychain(wdata, endors, oldTxnHash)
 
-	db.StoreWallet(w)
-	wa, err := s.GetWallet("addr1")
+	db.StoreKeychain(w)
+	wa, err := s.GetKeychain("addr1")
 	assert.Nil(t, err)
 	assert.NotNil(t, wa)
 }
 
 /*
-Scenario: List BioWallet
+Scenario: Get biometric
 	Given a empty database
-	When I add a BioWallet
-	Then return values of a GetBioWallet are the exepeted ones
+	When I add a Biometric
+	Then return values of a GetBiometric are the exepeted ones
 */
-func TestGetBioWallet(t *testing.T) {
+func TestGetBiometric(t *testing.T) {
 
 	db := new(databasemock)
 	s := NewService(db)
 
 	sigs := datamining.Signatures{
-		BiodSig: "sig1",
-		EmSig:   "sig2",
+		BiodSig:   "sig1",
+		PersonSig: "sig2",
 	}
 
 	bdata := &datamining.BioData{
-		BHash:           "hash1",
+		PersonHash:      "hash1",
 		BiodPubk:        "xxxx",
 		CipherAddrBio:   "xxxx",
 		CipherAddrRobot: "xxxx",
 		CipherAESKey:    "xxxx",
-		EmPubk:          "xxxx",
+		PersonPubk:      "xxxx",
 		Sigs:            sigs,
 	}
 
 	endors := datamining.NewEndorsement(time.Now(), "xxxx", &datamining.MasterValidation{}, []datamining.Validation{})
 
-	bw := datamining.NewBioWallet(bdata, endors)
+	bw := datamining.NewBiometric(bdata, endors)
 
-	db.StoreBioWallet(bw)
-	wa, err := s.GetBioWallet("hash1")
+	db.StoreBiometric(bw)
+	wa, err := s.GetBiometric("hash1")
 	assert.Nil(t, err)
 	assert.NotNil(t, wa)
 }
 
 type databasemock struct {
-	bioWallets []*datamining.BioWallet
-	wallets    []*datamining.Wallet
+	biometrics []*datamining.Biometric
+	keychains  []*datamining.Keychain
 }
 
-func (d *databasemock) FindBioWallet(bh string) (*datamining.BioWallet, error) {
-	for _, b := range d.bioWallets {
-		if b.Bhash() == bh {
+func (d *databasemock) FindBiometric(bh string) (*datamining.Biometric, error) {
+	for _, b := range d.biometrics {
+		if b.PersonHash() == bh {
 			return b, nil
 		}
 	}
 	return nil, nil
 }
 
-func (d *databasemock) FindWallet(addr string) (*datamining.Wallet, error) {
-	for _, b := range d.wallets {
-		log.Print(b.WalletAddr())
+func (d *databasemock) FindKeychain(addr string) (*datamining.Keychain, error) {
+	for _, b := range d.keychains {
 		if b.WalletAddr() == addr {
 			return b, nil
 		}
@@ -111,12 +109,12 @@ func (d *databasemock) ListBiodPubKeys() ([]string, error) {
 	return []string{}, nil
 }
 
-func (d *databasemock) StoreWallet(w *datamining.Wallet) error {
-	d.wallets = append(d.wallets, w)
+func (d *databasemock) StoreKeychain(k *datamining.Keychain) error {
+	d.keychains = append(d.keychains, k)
 	return nil
 }
 
-func (d *databasemock) StoreBioWallet(bw *datamining.BioWallet) error {
-	d.bioWallets = append(d.bioWallets, bw)
+func (d *databasemock) StoreBiometric(b *datamining.Biometric) error {
+	d.biometrics = append(d.biometrics, b)
 	return nil
 }

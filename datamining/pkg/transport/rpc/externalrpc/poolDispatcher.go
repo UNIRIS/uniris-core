@@ -4,16 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
+	"github.com/uniris/uniris-core/datamining/pkg/mining/master/pool"
+	"github.com/uniris/uniris-core/datamining/pkg/system"
 
 	"github.com/golang/protobuf/ptypes/any"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
-	"github.com/uniris/uniris-core/datamining/pkg/mining"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/lock"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/pool"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/transactions"
-	"github.com/uniris/uniris-core/datamining/pkg/system"
 	"google.golang.org/grpc"
 )
 
@@ -22,11 +21,11 @@ type poolD struct {
 }
 
 //NewPoolDispatcher creates a new pool dispatcher using GRPC
-func NewPoolDispatcher(conf system.DataMiningConfiguration) mining.PoolDispatcher {
+func NewPoolDispatcher(conf system.DataMiningConfiguration) pool.Requester {
 	return poolD{conf}
 }
 
-func (pd poolD) RequestLock(lastValidPool pool.PeerCluster, txLock lock.TransactionLock, sig string) error {
+func (pd poolD) RequestLock(lastValidPool pool.Cluster, txLock pool.TransactionLock, sig string) error {
 
 	//TODO: using goroutines
 	for _, p := range lastValidPool.Peers {
@@ -53,7 +52,7 @@ func (pd poolD) RequestLock(lastValidPool pool.PeerCluster, txLock lock.Transact
 
 	return nil
 }
-func (pd poolD) RequestUnlock(lastValidPool pool.PeerCluster, txLock lock.TransactionLock, sig string) error {
+func (pd poolD) RequestUnlock(lastValidPool pool.Cluster, txLock pool.TransactionLock, sig string) error {
 
 	//TODO: using goroutines
 	for _, p := range lastValidPool.Peers {
@@ -81,7 +80,7 @@ func (pd poolD) RequestUnlock(lastValidPool pool.PeerCluster, txLock lock.Transa
 	return nil
 }
 
-func (pd poolD) RequestValidations(validPool pool.PeerCluster, data interface{}, txType transactions.Type) ([]datamining.Validation, error) {
+func (pd poolD) RequestValidations(validPool pool.Cluster, data interface{}, txType datamining.TransactionType) ([]datamining.Validation, error) {
 
 	valids := make([]datamining.Validation, 0)
 
@@ -109,13 +108,17 @@ func (pd poolD) RequestValidations(validPool pool.PeerCluster, data interface{},
 			return nil, err
 		}
 
-		valids = append(valids, BuildDomainValidation(res.Validation))
+		valids = append(valids, datamining.NewValidation(
+			datamining.ValidationStatus(res.Validation.Status),
+			time.Unix(res.Validation.Timestamp, 0),
+			res.Validation.PublicKey,
+			res.Validation.Signature))
 	}
 
 	return valids, nil
 }
 
-func (pd poolD) RequestStorage(sPool pool.PeerCluster, data interface{}, txType transactions.Type) error {
+func (pd poolD) RequestStorage(sPool pool.Cluster, data interface{}, txType datamining.TransactionType) error {
 
 	//TODO: using goroutines
 	for _, p := range sPool.Peers {

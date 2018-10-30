@@ -23,202 +23,202 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type WalletSearchRequest struct {
+type AccountSearchRequest struct {
 	EncryptedHashPerson  string   `protobuf:"bytes,1,opt,name=EncryptedHashPerson,proto3" json:"EncryptedHashPerson,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *WalletSearchRequest) Reset()         { *m = WalletSearchRequest{} }
-func (m *WalletSearchRequest) String() string { return proto.CompactTextString(m) }
-func (*WalletSearchRequest) ProtoMessage()    {}
-func (*WalletSearchRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_internal_ea05a05e5ff0fa63, []int{0}
+func (m *AccountSearchRequest) Reset()         { *m = AccountSearchRequest{} }
+func (m *AccountSearchRequest) String() string { return proto.CompactTextString(m) }
+func (*AccountSearchRequest) ProtoMessage()    {}
+func (*AccountSearchRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_internal_d1a396bbd6cb8f5c, []int{0}
 }
-func (m *WalletSearchRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_WalletSearchRequest.Unmarshal(m, b)
+func (m *AccountSearchRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_AccountSearchRequest.Unmarshal(m, b)
 }
-func (m *WalletSearchRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_WalletSearchRequest.Marshal(b, m, deterministic)
+func (m *AccountSearchRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_AccountSearchRequest.Marshal(b, m, deterministic)
 }
-func (dst *WalletSearchRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_WalletSearchRequest.Merge(dst, src)
+func (dst *AccountSearchRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AccountSearchRequest.Merge(dst, src)
 }
-func (m *WalletSearchRequest) XXX_Size() int {
-	return xxx_messageInfo_WalletSearchRequest.Size(m)
+func (m *AccountSearchRequest) XXX_Size() int {
+	return xxx_messageInfo_AccountSearchRequest.Size(m)
 }
-func (m *WalletSearchRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_WalletSearchRequest.DiscardUnknown(m)
+func (m *AccountSearchRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_AccountSearchRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_WalletSearchRequest proto.InternalMessageInfo
+var xxx_messageInfo_AccountSearchRequest proto.InternalMessageInfo
 
-func (m *WalletSearchRequest) GetEncryptedHashPerson() string {
+func (m *AccountSearchRequest) GetEncryptedHashPerson() string {
 	if m != nil {
 		return m.EncryptedHashPerson
 	}
 	return ""
 }
 
-type WalletCreationRequest struct {
-	EncryptedBioData     string     `protobuf:"bytes,1,opt,name=EncryptedBioData,proto3" json:"EncryptedBioData,omitempty"`
-	SignatureBioData     *Signature `protobuf:"bytes,2,opt,name=SignatureBioData,proto3" json:"SignatureBioData,omitempty"`
-	EncryptedWalletData  string     `protobuf:"bytes,3,opt,name=EncryptedWalletData,proto3" json:"EncryptedWalletData,omitempty"`
-	SignatureWalletData  *Signature `protobuf:"bytes,4,opt,name=SignatureWalletData,proto3" json:"SignatureWalletData,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}   `json:"-"`
-	XXX_unrecognized     []byte     `json:"-"`
-	XXX_sizecache        int32      `json:"-"`
+type AccountCreationRequest struct {
+	EncryptedBioData      string     `protobuf:"bytes,1,opt,name=EncryptedBioData,proto3" json:"EncryptedBioData,omitempty"`
+	SignatureBioData      *Signature `protobuf:"bytes,2,opt,name=SignatureBioData,proto3" json:"SignatureBioData,omitempty"`
+	EncryptedKeychainData string     `protobuf:"bytes,3,opt,name=EncryptedKeychainData,proto3" json:"EncryptedKeychainData,omitempty"`
+	SignatureKeychainData *Signature `protobuf:"bytes,4,opt,name=SignatureKeychainData,proto3" json:"SignatureKeychainData,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}   `json:"-"`
+	XXX_unrecognized      []byte     `json:"-"`
+	XXX_sizecache         int32      `json:"-"`
 }
 
-func (m *WalletCreationRequest) Reset()         { *m = WalletCreationRequest{} }
-func (m *WalletCreationRequest) String() string { return proto.CompactTextString(m) }
-func (*WalletCreationRequest) ProtoMessage()    {}
-func (*WalletCreationRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_internal_ea05a05e5ff0fa63, []int{1}
+func (m *AccountCreationRequest) Reset()         { *m = AccountCreationRequest{} }
+func (m *AccountCreationRequest) String() string { return proto.CompactTextString(m) }
+func (*AccountCreationRequest) ProtoMessage()    {}
+func (*AccountCreationRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_internal_d1a396bbd6cb8f5c, []int{1}
 }
-func (m *WalletCreationRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_WalletCreationRequest.Unmarshal(m, b)
+func (m *AccountCreationRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_AccountCreationRequest.Unmarshal(m, b)
 }
-func (m *WalletCreationRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_WalletCreationRequest.Marshal(b, m, deterministic)
+func (m *AccountCreationRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_AccountCreationRequest.Marshal(b, m, deterministic)
 }
-func (dst *WalletCreationRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_WalletCreationRequest.Merge(dst, src)
+func (dst *AccountCreationRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AccountCreationRequest.Merge(dst, src)
 }
-func (m *WalletCreationRequest) XXX_Size() int {
-	return xxx_messageInfo_WalletCreationRequest.Size(m)
+func (m *AccountCreationRequest) XXX_Size() int {
+	return xxx_messageInfo_AccountCreationRequest.Size(m)
 }
-func (m *WalletCreationRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_WalletCreationRequest.DiscardUnknown(m)
+func (m *AccountCreationRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_AccountCreationRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_WalletCreationRequest proto.InternalMessageInfo
+var xxx_messageInfo_AccountCreationRequest proto.InternalMessageInfo
 
-func (m *WalletCreationRequest) GetEncryptedBioData() string {
+func (m *AccountCreationRequest) GetEncryptedBioData() string {
 	if m != nil {
 		return m.EncryptedBioData
 	}
 	return ""
 }
 
-func (m *WalletCreationRequest) GetSignatureBioData() *Signature {
+func (m *AccountCreationRequest) GetSignatureBioData() *Signature {
 	if m != nil {
 		return m.SignatureBioData
 	}
 	return nil
 }
 
-func (m *WalletCreationRequest) GetEncryptedWalletData() string {
+func (m *AccountCreationRequest) GetEncryptedKeychainData() string {
 	if m != nil {
-		return m.EncryptedWalletData
+		return m.EncryptedKeychainData
 	}
 	return ""
 }
 
-func (m *WalletCreationRequest) GetSignatureWalletData() *Signature {
+func (m *AccountCreationRequest) GetSignatureKeychainData() *Signature {
 	if m != nil {
-		return m.SignatureWalletData
+		return m.SignatureKeychainData
 	}
 	return nil
 }
 
-type WalletCreationResult struct {
-	BioTransactionHash   string   `protobuf:"bytes,1,opt,name=BioTransactionHash,proto3" json:"BioTransactionHash,omitempty"`
-	DataTransactionHash  string   `protobuf:"bytes,2,opt,name=DataTransactionHash,proto3" json:"DataTransactionHash,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+type AccountCreationResult struct {
+	BioTransactionHash      string   `protobuf:"bytes,1,opt,name=BioTransactionHash,proto3" json:"BioTransactionHash,omitempty"`
+	KeychainTransactionHash string   `protobuf:"bytes,2,opt,name=KeychainTransactionHash,proto3" json:"KeychainTransactionHash,omitempty"`
+	XXX_NoUnkeyedLiteral    struct{} `json:"-"`
+	XXX_unrecognized        []byte   `json:"-"`
+	XXX_sizecache           int32    `json:"-"`
 }
 
-func (m *WalletCreationResult) Reset()         { *m = WalletCreationResult{} }
-func (m *WalletCreationResult) String() string { return proto.CompactTextString(m) }
-func (*WalletCreationResult) ProtoMessage()    {}
-func (*WalletCreationResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_internal_ea05a05e5ff0fa63, []int{2}
+func (m *AccountCreationResult) Reset()         { *m = AccountCreationResult{} }
+func (m *AccountCreationResult) String() string { return proto.CompactTextString(m) }
+func (*AccountCreationResult) ProtoMessage()    {}
+func (*AccountCreationResult) Descriptor() ([]byte, []int) {
+	return fileDescriptor_internal_d1a396bbd6cb8f5c, []int{2}
 }
-func (m *WalletCreationResult) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_WalletCreationResult.Unmarshal(m, b)
+func (m *AccountCreationResult) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_AccountCreationResult.Unmarshal(m, b)
 }
-func (m *WalletCreationResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_WalletCreationResult.Marshal(b, m, deterministic)
+func (m *AccountCreationResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_AccountCreationResult.Marshal(b, m, deterministic)
 }
-func (dst *WalletCreationResult) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_WalletCreationResult.Merge(dst, src)
+func (dst *AccountCreationResult) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AccountCreationResult.Merge(dst, src)
 }
-func (m *WalletCreationResult) XXX_Size() int {
-	return xxx_messageInfo_WalletCreationResult.Size(m)
+func (m *AccountCreationResult) XXX_Size() int {
+	return xxx_messageInfo_AccountCreationResult.Size(m)
 }
-func (m *WalletCreationResult) XXX_DiscardUnknown() {
-	xxx_messageInfo_WalletCreationResult.DiscardUnknown(m)
+func (m *AccountCreationResult) XXX_DiscardUnknown() {
+	xxx_messageInfo_AccountCreationResult.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_WalletCreationResult proto.InternalMessageInfo
+var xxx_messageInfo_AccountCreationResult proto.InternalMessageInfo
 
-func (m *WalletCreationResult) GetBioTransactionHash() string {
+func (m *AccountCreationResult) GetBioTransactionHash() string {
 	if m != nil {
 		return m.BioTransactionHash
 	}
 	return ""
 }
 
-func (m *WalletCreationResult) GetDataTransactionHash() string {
+func (m *AccountCreationResult) GetKeychainTransactionHash() string {
 	if m != nil {
-		return m.DataTransactionHash
+		return m.KeychainTransactionHash
 	}
 	return ""
 }
 
-type WalletSearchResult struct {
-	EncryptedWallet        string   `protobuf:"bytes,1,opt,name=EncryptedWallet,proto3" json:"EncryptedWallet,omitempty"`
-	EncryptedAESkey        string   `protobuf:"bytes,2,opt,name=EncryptedAESkey,proto3" json:"EncryptedAESkey,omitempty"`
-	EncryptedWalletAddress string   `protobuf:"bytes,3,opt,name=EncryptedWalletAddress,proto3" json:"EncryptedWalletAddress,omitempty"`
-	XXX_NoUnkeyedLiteral   struct{} `json:"-"`
-	XXX_unrecognized       []byte   `json:"-"`
-	XXX_sizecache          int32    `json:"-"`
+type AccountSearchResult struct {
+	EncryptedWallet      string   `protobuf:"bytes,1,opt,name=EncryptedWallet,proto3" json:"EncryptedWallet,omitempty"`
+	EncryptedAESkey      string   `protobuf:"bytes,2,opt,name=EncryptedAESkey,proto3" json:"EncryptedAESkey,omitempty"`
+	EncryptedAddress     string   `protobuf:"bytes,3,opt,name=EncryptedAddress,proto3" json:"EncryptedAddress,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *WalletSearchResult) Reset()         { *m = WalletSearchResult{} }
-func (m *WalletSearchResult) String() string { return proto.CompactTextString(m) }
-func (*WalletSearchResult) ProtoMessage()    {}
-func (*WalletSearchResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_internal_ea05a05e5ff0fa63, []int{3}
+func (m *AccountSearchResult) Reset()         { *m = AccountSearchResult{} }
+func (m *AccountSearchResult) String() string { return proto.CompactTextString(m) }
+func (*AccountSearchResult) ProtoMessage()    {}
+func (*AccountSearchResult) Descriptor() ([]byte, []int) {
+	return fileDescriptor_internal_d1a396bbd6cb8f5c, []int{3}
 }
-func (m *WalletSearchResult) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_WalletSearchResult.Unmarshal(m, b)
+func (m *AccountSearchResult) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_AccountSearchResult.Unmarshal(m, b)
 }
-func (m *WalletSearchResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_WalletSearchResult.Marshal(b, m, deterministic)
+func (m *AccountSearchResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_AccountSearchResult.Marshal(b, m, deterministic)
 }
-func (dst *WalletSearchResult) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_WalletSearchResult.Merge(dst, src)
+func (dst *AccountSearchResult) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AccountSearchResult.Merge(dst, src)
 }
-func (m *WalletSearchResult) XXX_Size() int {
-	return xxx_messageInfo_WalletSearchResult.Size(m)
+func (m *AccountSearchResult) XXX_Size() int {
+	return xxx_messageInfo_AccountSearchResult.Size(m)
 }
-func (m *WalletSearchResult) XXX_DiscardUnknown() {
-	xxx_messageInfo_WalletSearchResult.DiscardUnknown(m)
+func (m *AccountSearchResult) XXX_DiscardUnknown() {
+	xxx_messageInfo_AccountSearchResult.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_WalletSearchResult proto.InternalMessageInfo
+var xxx_messageInfo_AccountSearchResult proto.InternalMessageInfo
 
-func (m *WalletSearchResult) GetEncryptedWallet() string {
+func (m *AccountSearchResult) GetEncryptedWallet() string {
 	if m != nil {
 		return m.EncryptedWallet
 	}
 	return ""
 }
 
-func (m *WalletSearchResult) GetEncryptedAESkey() string {
+func (m *AccountSearchResult) GetEncryptedAESkey() string {
 	if m != nil {
 		return m.EncryptedAESkey
 	}
 	return ""
 }
 
-func (m *WalletSearchResult) GetEncryptedWalletAddress() string {
+func (m *AccountSearchResult) GetEncryptedAddress() string {
 	if m != nil {
-		return m.EncryptedWalletAddress
+		return m.EncryptedAddress
 	}
 	return ""
 }
@@ -235,7 +235,7 @@ func (m *Signature) Reset()         { *m = Signature{} }
 func (m *Signature) String() string { return proto.CompactTextString(m) }
 func (*Signature) ProtoMessage()    {}
 func (*Signature) Descriptor() ([]byte, []int) {
-	return fileDescriptor_internal_ea05a05e5ff0fa63, []int{4}
+	return fileDescriptor_internal_d1a396bbd6cb8f5c, []int{4}
 }
 func (m *Signature) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Signature.Unmarshal(m, b)
@@ -270,10 +270,10 @@ func (m *Signature) GetPerson() string {
 }
 
 func init() {
-	proto.RegisterType((*WalletSearchRequest)(nil), "api.WalletSearchRequest")
-	proto.RegisterType((*WalletCreationRequest)(nil), "api.WalletCreationRequest")
-	proto.RegisterType((*WalletCreationResult)(nil), "api.WalletCreationResult")
-	proto.RegisterType((*WalletSearchResult)(nil), "api.WalletSearchResult")
+	proto.RegisterType((*AccountSearchRequest)(nil), "api.AccountSearchRequest")
+	proto.RegisterType((*AccountCreationRequest)(nil), "api.AccountCreationRequest")
+	proto.RegisterType((*AccountCreationResult)(nil), "api.AccountCreationResult")
+	proto.RegisterType((*AccountSearchResult)(nil), "api.AccountSearchResult")
 	proto.RegisterType((*Signature)(nil), "api.Signature")
 }
 
@@ -289,8 +289,8 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type InternalClient interface {
-	GetWallet(ctx context.Context, in *WalletSearchRequest, opts ...grpc.CallOption) (*WalletSearchResult, error)
-	CreateWallet(ctx context.Context, in *WalletCreationRequest, opts ...grpc.CallOption) (*WalletCreationResult, error)
+	GetAccount(ctx context.Context, in *AccountSearchRequest, opts ...grpc.CallOption) (*AccountSearchResult, error)
+	CreateAccount(ctx context.Context, in *AccountCreationRequest, opts ...grpc.CallOption) (*AccountCreationResult, error)
 }
 
 type internalClient struct {
@@ -301,18 +301,18 @@ func NewInternalClient(cc *grpc.ClientConn) InternalClient {
 	return &internalClient{cc}
 }
 
-func (c *internalClient) GetWallet(ctx context.Context, in *WalletSearchRequest, opts ...grpc.CallOption) (*WalletSearchResult, error) {
-	out := new(WalletSearchResult)
-	err := c.cc.Invoke(ctx, "/api.Internal/GetWallet", in, out, opts...)
+func (c *internalClient) GetAccount(ctx context.Context, in *AccountSearchRequest, opts ...grpc.CallOption) (*AccountSearchResult, error) {
+	out := new(AccountSearchResult)
+	err := c.cc.Invoke(ctx, "/api.Internal/GetAccount", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *internalClient) CreateWallet(ctx context.Context, in *WalletCreationRequest, opts ...grpc.CallOption) (*WalletCreationResult, error) {
-	out := new(WalletCreationResult)
-	err := c.cc.Invoke(ctx, "/api.Internal/CreateWallet", in, out, opts...)
+func (c *internalClient) CreateAccount(ctx context.Context, in *AccountCreationRequest, opts ...grpc.CallOption) (*AccountCreationResult, error) {
+	out := new(AccountCreationResult)
+	err := c.cc.Invoke(ctx, "/api.Internal/CreateAccount", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -321,46 +321,46 @@ func (c *internalClient) CreateWallet(ctx context.Context, in *WalletCreationReq
 
 // InternalServer is the server API for Internal service.
 type InternalServer interface {
-	GetWallet(context.Context, *WalletSearchRequest) (*WalletSearchResult, error)
-	CreateWallet(context.Context, *WalletCreationRequest) (*WalletCreationResult, error)
+	GetAccount(context.Context, *AccountSearchRequest) (*AccountSearchResult, error)
+	CreateAccount(context.Context, *AccountCreationRequest) (*AccountCreationResult, error)
 }
 
 func RegisterInternalServer(s *grpc.Server, srv InternalServer) {
 	s.RegisterService(&_Internal_serviceDesc, srv)
 }
 
-func _Internal_GetWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(WalletSearchRequest)
+func _Internal_GetAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AccountSearchRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InternalServer).GetWallet(ctx, in)
+		return srv.(InternalServer).GetAccount(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api.Internal/GetWallet",
+		FullMethod: "/api.Internal/GetAccount",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InternalServer).GetWallet(ctx, req.(*WalletSearchRequest))
+		return srv.(InternalServer).GetAccount(ctx, req.(*AccountSearchRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Internal_CreateWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(WalletCreationRequest)
+func _Internal_CreateAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AccountCreationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InternalServer).CreateWallet(ctx, in)
+		return srv.(InternalServer).CreateAccount(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api.Internal/CreateWallet",
+		FullMethod: "/api.Internal/CreateAccount",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InternalServer).CreateWallet(ctx, req.(*WalletCreationRequest))
+		return srv.(InternalServer).CreateAccount(ctx, req.(*AccountCreationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -370,43 +370,44 @@ var _Internal_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*InternalServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetWallet",
-			Handler:    _Internal_GetWallet_Handler,
+			MethodName: "GetAccount",
+			Handler:    _Internal_GetAccount_Handler,
 		},
 		{
-			MethodName: "CreateWallet",
-			Handler:    _Internal_CreateWallet_Handler,
+			MethodName: "CreateAccount",
+			Handler:    _Internal_CreateAccount_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "internal.proto",
 }
 
-func init() { proto.RegisterFile("internal.proto", fileDescriptor_internal_ea05a05e5ff0fa63) }
+func init() { proto.RegisterFile("internal.proto", fileDescriptor_internal_d1a396bbd6cb8f5c) }
 
-var fileDescriptor_internal_ea05a05e5ff0fa63 = []byte{
-	// 358 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x53, 0x4f, 0x4f, 0x3a, 0x31,
-	0x10, 0xfd, 0x2d, 0x10, 0xf2, 0x63, 0x34, 0x48, 0x06, 0x45, 0xe4, 0x44, 0xf6, 0x44, 0x3c, 0x6c,
-	0x0c, 0x26, 0x9a, 0x78, 0x02, 0x94, 0xa0, 0x37, 0x03, 0x26, 0x9e, 0x2b, 0xdb, 0x48, 0xe3, 0xa6,
-	0x5d, 0xdb, 0x92, 0xc8, 0x07, 0xf1, 0xee, 0x77, 0xf4, 0x0b, 0x98, 0xed, 0x96, 0x95, 0x2d, 0xf5,
-	0xb6, 0x3b, 0x6f, 0xe6, 0xbd, 0x37, 0x7f, 0x0a, 0x4d, 0xc6, 0x35, 0x95, 0x9c, 0x24, 0x51, 0x2a,
-	0x85, 0x16, 0x58, 0x25, 0x29, 0x0b, 0x67, 0xd0, 0x7e, 0x26, 0x49, 0x42, 0xf5, 0x82, 0x12, 0xb9,
-	0x5c, 0xcd, 0xe9, 0xfb, 0x9a, 0x2a, 0x8d, 0x17, 0xd0, 0x9e, 0xf2, 0xa5, 0xdc, 0xa4, 0x9a, 0xc6,
-	0xf7, 0x44, 0xad, 0x1e, 0xa9, 0x54, 0x82, 0x77, 0x83, 0x7e, 0x30, 0x68, 0xcc, 0x7d, 0x50, 0xf8,
-	0x1d, 0xc0, 0x49, 0xce, 0x74, 0x2b, 0x29, 0xd1, 0x4c, 0xf0, 0x2d, 0xd7, 0x39, 0xb4, 0x8a, 0x82,
-	0x09, 0x13, 0x77, 0x44, 0x13, 0x4b, 0xb4, 0x17, 0xc7, 0x1b, 0x68, 0x2d, 0xd8, 0x2b, 0x27, 0x7a,
-	0x2d, 0xe9, 0x36, 0xb7, 0xd2, 0x0f, 0x06, 0x07, 0xc3, 0x66, 0x44, 0x52, 0x16, 0x15, 0xe0, 0x7c,
-	0x2f, 0xaf, 0xe4, 0x39, 0x77, 0x62, 0xca, 0xab, 0x8e, 0xe7, 0x5f, 0x08, 0x47, 0xd0, 0x2e, 0x58,
-	0x76, 0x2a, 0x6a, 0x5e, 0x41, 0x5f, 0x6a, 0xf8, 0x01, 0xc7, 0x6e, 0xd3, 0x6a, 0x9d, 0x68, 0x8c,
-	0x00, 0x27, 0x4c, 0x3c, 0x49, 0xc2, 0x15, 0x59, 0x66, 0xf1, 0x6c, 0x52, 0xb6, 0x6b, 0x0f, 0x92,
-	0x79, 0xcf, 0xf8, 0xdc, 0x82, 0x4a, 0xee, 0xdd, 0x03, 0x85, 0x5f, 0x01, 0x60, 0x79, 0x73, 0x46,
-	0x78, 0x00, 0x47, 0x4e, 0xa7, 0x56, 0xd5, 0x0d, 0x97, 0x32, 0xc7, 0xd3, 0xc5, 0x1b, 0xdd, 0x58,
-	0x39, 0x37, 0x8c, 0x57, 0xd0, 0x71, 0x8a, 0xc7, 0x71, 0x2c, 0xa9, 0x52, 0x76, 0xb6, 0x7f, 0xa0,
-	0xe1, 0x35, 0x34, 0x8a, 0x99, 0x21, 0x42, 0x6d, 0xc2, 0x44, 0x6c, 0xdd, 0x98, 0x6f, 0xec, 0x40,
-	0xdd, 0x1e, 0x56, 0xae, 0x6c, 0xff, 0x86, 0x9f, 0x01, 0xfc, 0x7f, 0xb0, 0xc7, 0x8a, 0x23, 0x68,
-	0xcc, 0xa8, 0xb6, 0xa6, 0xbb, 0x66, 0x29, 0x9e, 0x8b, 0xed, 0x9d, 0x7a, 0x90, 0x6c, 0x22, 0xe1,
-	0x3f, 0x9c, 0xc1, 0xa1, 0x59, 0x8f, 0x5d, 0x1c, 0xf6, 0x76, 0x52, 0x9d, 0x63, 0xed, 0x9d, 0x79,
-	0xb1, 0x9c, 0xe8, 0xa5, 0x6e, 0x1e, 0xce, 0xe5, 0x4f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x66, 0x02,
-	0x3b, 0xa7, 0x4a, 0x03, 0x00, 0x00,
+var fileDescriptor_internal_d1a396bbd6cb8f5c = []byte{
+	// 370 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x53, 0x4d, 0x4f, 0xea, 0x40,
+	0x14, 0x7d, 0x05, 0x42, 0x1e, 0xf7, 0xe5, 0x21, 0x19, 0x04, 0x11, 0x37, 0xa4, 0x2b, 0xe2, 0xa2,
+	0x31, 0x68, 0xa2, 0x71, 0xc7, 0x57, 0x44, 0xdd, 0x18, 0x30, 0x71, 0x3d, 0xb6, 0x37, 0x32, 0xb1,
+	0x99, 0xa9, 0x33, 0xd3, 0x05, 0x4b, 0x7f, 0x84, 0x2b, 0xff, 0xaa, 0x0b, 0xc3, 0x30, 0x6d, 0xa4,
+	0x1d, 0x77, 0x70, 0xce, 0xb9, 0xe7, 0xcc, 0xfd, 0x28, 0x34, 0x19, 0xd7, 0x28, 0x39, 0x8d, 0x83,
+	0x44, 0x0a, 0x2d, 0x48, 0x95, 0x26, 0xcc, 0x5f, 0xc0, 0xe1, 0x38, 0x0c, 0x45, 0xca, 0xf5, 0x0a,
+	0xa9, 0x0c, 0xd7, 0x4b, 0x7c, 0x4b, 0x51, 0x69, 0x72, 0x06, 0xed, 0x39, 0x0f, 0xe5, 0x26, 0xd1,
+	0x18, 0x2d, 0xa8, 0x5a, 0x3f, 0xa0, 0x54, 0x82, 0xf7, 0xbc, 0x81, 0x37, 0x6c, 0x2c, 0x5d, 0x94,
+	0xff, 0xe5, 0x41, 0xd7, 0x5a, 0x4d, 0x25, 0x52, 0xcd, 0x04, 0xcf, 0xcc, 0x4e, 0xa1, 0x95, 0x57,
+	0x4c, 0x98, 0x98, 0x51, 0x4d, 0xad, 0x53, 0x09, 0x27, 0xd7, 0xd0, 0x5a, 0xb1, 0x17, 0x4e, 0x75,
+	0x2a, 0x31, 0xd3, 0x56, 0x06, 0xde, 0xf0, 0xdf, 0xa8, 0x19, 0xd0, 0x84, 0x05, 0x39, 0xb9, 0x2c,
+	0xe9, 0xc8, 0x05, 0x74, 0x72, 0xbf, 0x7b, 0xdc, 0x84, 0x6b, 0xca, 0xb8, 0x31, 0xa8, 0x9a, 0x30,
+	0x37, 0x49, 0x66, 0xd0, 0xc9, 0x9d, 0xf6, 0xaa, 0x6a, 0xce, 0x58, 0xb7, 0xd8, 0x7f, 0xf7, 0xa0,
+	0x53, 0x6a, 0x5f, 0xa5, 0xb1, 0x26, 0x01, 0x90, 0x09, 0x13, 0x8f, 0x92, 0x72, 0x45, 0xc3, 0x2d,
+	0xbe, 0x1d, 0x9a, 0xed, 0xdf, 0xc1, 0x90, 0x2b, 0x38, 0xca, 0x9c, 0x8b, 0x45, 0x15, 0x53, 0xf4,
+	0x1b, 0xed, 0x7f, 0x78, 0xd0, 0x2e, 0x6c, 0xd3, 0xbc, 0x60, 0x08, 0x07, 0x79, 0xeb, 0x4f, 0x34,
+	0x8e, 0x51, 0xdb, 0xf8, 0x22, 0xbc, 0xa7, 0x1c, 0xcf, 0x57, 0xaf, 0xb8, 0xb1, 0x99, 0x45, 0x78,
+	0x6f, 0xa7, 0xe3, 0x28, 0x92, 0xa8, 0x94, 0x1d, 0x73, 0x09, 0xf7, 0x2f, 0xa1, 0x91, 0x0f, 0x8d,
+	0x10, 0xa8, 0x4d, 0x98, 0x88, 0xec, 0x0b, 0xcc, 0x6f, 0xd2, 0x85, 0xba, 0x3d, 0xb0, 0x5d, 0x9a,
+	0xfd, 0x37, 0xfa, 0xf4, 0xe0, 0xef, 0xad, 0xbd, 0x5a, 0x32, 0x05, 0xb8, 0x41, 0x6d, 0xfb, 0x23,
+	0xc7, 0x66, 0x2d, 0xae, 0xdb, 0xed, 0xf7, 0x5c, 0xd4, 0x76, 0x10, 0xfe, 0x1f, 0x72, 0x07, 0xff,
+	0xcd, 0x7a, 0x30, 0xf3, 0x39, 0xf9, 0x29, 0x2e, 0x1c, 0x6e, 0xbf, 0xef, 0x26, 0x77, 0x5e, 0xcf,
+	0x75, 0xf3, 0x1d, 0x9d, 0x7f, 0x07, 0x00, 0x00, 0xff, 0xff, 0x85, 0x63, 0x89, 0x36, 0x59, 0x03,
+	0x00, 0x00,
 }

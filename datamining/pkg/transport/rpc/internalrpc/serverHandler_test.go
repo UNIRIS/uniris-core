@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uniris/uniris-core/datamining/pkg/mining"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/lock"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/pool"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/transactions"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/master"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/master/pool"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/slave"
+
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 
 	"github.com/uniris/uniris-core/datamining/pkg/listing"
@@ -35,8 +35,8 @@ Scenario: Retrieve a wallet from a bio hash
 func TestGetWallet(t *testing.T) {
 
 	repo := &databasemock{
-		BioWallets: make([]*datamining.BioWallet, 0),
-		Wallets:    make([]*datamining.Wallet, 0),
+		Biometrics: make([]*datamining.Biometric, 0),
+		Keychains:  make([]*datamining.Keychain, 0),
 	}
 
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -47,7 +47,7 @@ func TestGetWallet(t *testing.T) {
 	cipherBhash, _ := crypto.Encrypt(hex.EncodeToString(pbKey), "hash")
 
 	bdata := &datamining.BioData{
-		BHash:           "hash",
+		PersonHash:      "hash",
 		CipherAddrRobot: cipherAddr,
 		CipherAESKey:    "encrypted_aes_key",
 	}
@@ -57,31 +57,30 @@ func TestGetWallet(t *testing.T) {
 		&datamining.MasterValidation{},
 		[]datamining.Validation{},
 	)
-	repo.StoreBioWallet(datamining.NewBioWallet(bdata, endors))
+	repo.StoreBiometric(datamining.NewBiometric(bdata, endors))
 
-	wdata := &datamining.WalletData{
+	kdata := &datamining.KeyChainData{
 		WalletAddr:      "addr",
 		CipherAddrRobot: cipherAddr,
 	}
-	repo.StoreWallet(datamining.NewWallet(wdata, endors, ""))
+	repo.StoreKeychain(datamining.NewKeychain(kdata, endors, ""))
 
 	list := listing.NewService(repo)
 	errors := system.DataMininingErrors{}
 
-	leading := mining.NewService(
-		list,
+	master := master.NewService(
 		mockPoolFinder{},
 		&mockPoolDispatcher{Repo: repo},
-		mockTxLocker{},
 		mockNotifier{},
 		mockSigner{},
 		mockHasher{},
+		list,
 		"robotPubKey",
 		"robotPvKey",
 	)
 
-	h := NewInternalServerHandler(list, leading, hex.EncodeToString(pvKey), errors)
-	res, err := h.GetWallet(context.TODO(), &api.WalletSearchRequest{
+	h := NewInternalServerHandler(list, master, hex.EncodeToString(pvKey), errors)
+	res, err := h.GetAccount(context.TODO(), &api.AccountSearchRequest{
 		EncryptedHashPerson: cipherBhash,
 	})
 	assert.Nil(t, err)
@@ -97,8 +96,8 @@ Scenario: Create a wallet
 */
 func TestCreateWallet(t *testing.T) {
 	repo := &databasemock{
-		BioWallets: make([]*datamining.BioWallet, 0),
-		Wallets:    make([]*datamining.Wallet, 0),
+		Biometrics: make([]*datamining.Biometric, 0),
+		Keychains:  make([]*datamining.Keychain, 0),
 	}
 
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -106,14 +105,13 @@ func TestCreateWallet(t *testing.T) {
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 
 	list := listing.NewService(repo)
-	leading := mining.NewService(
-		list,
+	leading := master.NewService(
 		mockPoolFinder{},
 		&mockPoolDispatcher{Repo: repo},
-		mockTxLocker{},
 		mockNotifier{},
 		mockSigner{},
 		mockHasher{},
+		list,
 		"robotPubKey",
 		"robotPvKey",
 	)
@@ -128,62 +126,62 @@ func TestCreateWallet(t *testing.T) {
 		EncryptedAddrPerson: "encrypted_person_addr",
 		EncryptedAddrRobot:  cipherAddr,
 		EncryptedAESKey:     "encrypted_aes_key",
-		PersonHash:          "person_hash",
+		PersonHash:          "person hash",
 		PersonPublicKey:     hex.EncodeToString(pbKey),
 	}
 
-	walletData := WalletDataFromJSON{
+	keychainData := KeychainDataFromJSON{
 		BiodPublicKey:      hex.EncodeToString(pbKey),
 		EncryptedAddrRobot: cipherAddr,
 		EncryptedWallet:    "encrypted_wallet",
 		PersonPublicKey:    hex.EncodeToString(pbKey),
 	}
 
-	bBData, _ := json.Marshal(bioData)
-	cipherBio, _ := crypto.Encrypt(hex.EncodeToString(pbKey), string(bBData))
-	sigBio, _ := crypto.Sign(hex.EncodeToString(pvKey), string(bBData))
+	bioBytes, _ := json.Marshal(bioData)
+	cipherBio, _ := crypto.Encrypt(hex.EncodeToString(pbKey), string(bioBytes))
+	sigBio, _ := crypto.Sign(hex.EncodeToString(pvKey), string(bioBytes))
 
-	bWData, _ := json.Marshal(walletData)
-	cipherWallet, _ := crypto.Encrypt(hex.EncodeToString(pbKey), string(bWData))
-	sigWal, _ := crypto.Sign(hex.EncodeToString(pvKey), string(bWData))
+	keychainBytes, _ := json.Marshal(keychainData)
+	cipherWallet, _ := crypto.Encrypt(hex.EncodeToString(pbKey), string(keychainBytes))
+	sigKeychain, _ := crypto.Sign(hex.EncodeToString(pvKey), string(keychainBytes))
 
-	req := &api.WalletCreationRequest{
-		EncryptedBioData:    cipherBio,
-		EncryptedWalletData: cipherWallet,
+	req := &api.AccountCreationRequest{
+		EncryptedBioData:      cipherBio,
+		EncryptedKeychainData: cipherWallet,
 		SignatureBioData: &api.Signature{
 			Biod:   sigBio,
 			Person: sigBio,
 		},
-		SignatureWalletData: &api.Signature{
-			Biod:   sigWal,
-			Person: sigWal,
+		SignatureKeychainData: &api.Signature{
+			Biod:   sigKeychain,
+			Person: sigKeychain,
 		},
 	}
 
-	res, err := h.CreateWallet(context.TODO(), req)
+	res, err := h.CreateAccount(context.TODO(), req)
 	assert.Nil(t, err)
 	assert.NotNil(t, res)
 
 	assert.NotNil(t, res.BioTransactionHash)
-	assert.NotNil(t, res.DataTransactionHash)
+	assert.NotNil(t, res.KeychainTransactionHash)
 }
 
 type databasemock struct {
-	BioWallets []*datamining.BioWallet
-	Wallets    []*datamining.Wallet
+	Biometrics []*datamining.Biometric
+	Keychains  []*datamining.Keychain
 }
 
-func (d *databasemock) FindBioWallet(bh string) (*datamining.BioWallet, error) {
-	for _, bw := range d.BioWallets {
-		if bw.Bhash() == bh {
-			return bw, nil
+func (d *databasemock) FindBiometric(hash string) (*datamining.Biometric, error) {
+	for _, b := range d.Biometrics {
+		if b.PersonHash() == hash {
+			return b, nil
 		}
 	}
 	return nil, nil
 }
 
-func (d *databasemock) FindWallet(addr string) (*datamining.Wallet, error) {
-	for _, w := range d.Wallets {
+func (d *databasemock) FindKeychain(addr string) (*datamining.Keychain, error) {
+	for _, w := range d.Keychains {
 		if w.WalletAddr() == addr {
 			return w, nil
 		}
@@ -195,13 +193,13 @@ func (d *databasemock) ListBiodPubKeys() ([]string, error) {
 	return []string{}, nil
 }
 
-func (d *databasemock) StoreWallet(w *datamining.Wallet) error {
-	d.Wallets = append(d.Wallets, w)
+func (d *databasemock) StoreKeychain(w *datamining.Keychain) error {
+	d.Keychains = append(d.Keychains, w)
 	return nil
 }
 
-func (d *databasemock) StoreBioWallet(bw *datamining.BioWallet) error {
-	d.BioWallets = append(d.BioWallets, bw)
+func (d *databasemock) StoreBiometric(bw *datamining.Biometric) error {
+	d.Biometrics = append(d.Biometrics, bw)
 	return nil
 }
 
@@ -221,37 +219,37 @@ func (s mockSigner) CheckTransactionSignature(pubk string, tx string, der string
 	return nil
 }
 
-func (s mockSigner) SignLock(lock.TransactionLock, string) (string, error) {
+func (s mockSigner) SignLock(pool.TransactionLock, string) (string, error) {
 	return "sig", nil
 }
 
-func (s mockSigner) SignMasterValidation(v mining.Validation, pvKey string) (string, error) {
+func (s mockSigner) SignMasterValidation(v master.Validation, pvKey string) (string, error) {
 	return "sig", nil
 }
 
-func (s mockSigner) SignValidation(v mining.Validation, pvKey string) (string, error) {
+func (s mockSigner) SignValidation(v slave.Validation, pvKey string) (string, error) {
 	return "sig", nil
 }
 
 type mockHasher struct{}
 
-func (h mockHasher) HashWallet(w *datamining.Wallet) (string, error) {
-	return "hashed wallet", nil
+func (h mockHasher) HashTransactionData(data interface{}) (string, error) {
+	return crypto.NewHasher().HashTransactionData(data)
 }
 
 type mockPoolDispatcher struct {
 	Repo *databasemock
 }
 
-func (r mockPoolDispatcher) RequestLock(pool.PeerCluster, lock.TransactionLock, string) error {
+func (r mockPoolDispatcher) RequestLock(pool.Cluster, pool.TransactionLock, string) error {
 	return nil
 }
 
-func (r mockPoolDispatcher) RequestUnlock(pool.PeerCluster, lock.TransactionLock, string) error {
+func (r mockPoolDispatcher) RequestUnlock(pool.Cluster, pool.TransactionLock, string) error {
 	return nil
 }
 
-func (r mockPoolDispatcher) RequestValidations(sPool pool.PeerCluster, data interface{}, txType transactions.Type) ([]datamining.Validation, error) {
+func (r mockPoolDispatcher) RequestValidations(sPool pool.Cluster, data interface{}, txType datamining.TransactionType) ([]datamining.Validation, error) {
 	return []datamining.Validation{
 		datamining.NewValidation(
 			datamining.ValidationOK,
@@ -261,12 +259,12 @@ func (r mockPoolDispatcher) RequestValidations(sPool pool.PeerCluster, data inte
 		)}, nil
 }
 
-func (r mockPoolDispatcher) RequestStorage(sPool pool.PeerCluster, data interface{}, txType transactions.Type) error {
+func (r mockPoolDispatcher) RequestStorage(sPool pool.Cluster, data interface{}, txType datamining.TransactionType) error {
 	switch data.(type) {
-	case *datamining.Wallet:
-		r.Repo.StoreWallet(data.(*datamining.Wallet))
-	case *datamining.BioWallet:
-		r.Repo.StoreBioWallet(data.(*datamining.BioWallet))
+	case *datamining.Keychain:
+		r.Repo.StoreKeychain(data.(*datamining.Keychain))
+	case *datamining.Biometric:
+		r.Repo.StoreBiometric(data.(*datamining.Biometric))
 	}
 
 	return nil
@@ -274,8 +272,8 @@ func (r mockPoolDispatcher) RequestStorage(sPool pool.PeerCluster, data interfac
 
 type mockPoolFinder struct{}
 
-func (f mockPoolFinder) FindLastValidationPool(addr string) (pool.PeerCluster, error) {
-	return pool.PeerCluster{
+func (f mockPoolFinder) FindLastValidationPool(addr string) (pool.Cluster, error) {
+	return pool.Cluster{
 		Peers: []pool.Peer{
 			pool.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
@@ -285,8 +283,8 @@ func (f mockPoolFinder) FindLastValidationPool(addr string) (pool.PeerCluster, e
 	}, nil
 }
 
-func (f mockPoolFinder) FindValidationPool() (pool.PeerCluster, error) {
-	return pool.PeerCluster{
+func (f mockPoolFinder) FindValidationPool() (pool.Cluster, error) {
+	return pool.Cluster{
 		Peers: []pool.Peer{
 			pool.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
@@ -296,8 +294,8 @@ func (f mockPoolFinder) FindValidationPool() (pool.PeerCluster, error) {
 	}, nil
 }
 
-func (f mockPoolFinder) FindStoragePool() (pool.PeerCluster, error) {
-	return pool.PeerCluster{
+func (f mockPoolFinder) FindStoragePool() (pool.Cluster, error) {
+	return pool.Cluster{
 		Peers: []pool.Peer{
 			pool.Peer{
 				IP:        net.ParseIP("127.0.0.1"),
@@ -309,20 +307,20 @@ func (f mockPoolFinder) FindStoragePool() (pool.PeerCluster, error) {
 
 type mockNotifier struct{}
 
-func (n mockNotifier) NotifyTransactionStatus(txHash string, status mining.TransactionStatus) error {
+func (n mockNotifier) NotifyTransactionStatus(txHash string, status master.TransactionStatus) error {
 	return nil
 }
 
 type mockTxLocker struct{}
 
-func (l mockTxLocker) Lock(txLock lock.TransactionLock) error {
+func (l mockTxLocker) Lock(txLock pool.TransactionLock) error {
 	return nil
 }
 
-func (l mockTxLocker) Unlock(txLock lock.TransactionLock) error {
+func (l mockTxLocker) Unlock(txLock pool.TransactionLock) error {
 	return nil
 }
 
-func (l mockTxLocker) ContainsLock(txLock lock.TransactionLock) bool {
+func (l mockTxLocker) ContainsLock(txLock pool.TransactionLock) bool {
 	return false
 }

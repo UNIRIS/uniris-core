@@ -1,4 +1,4 @@
-package validations
+package checks
 
 import (
 	"crypto/ecdsa"
@@ -15,17 +15,17 @@ import (
 
 func TestOkSignatureValidator(t *testing.T) {
 
-	sigCheck := NewSignatureValidation(mockSigCheckSigner{})
+	sigCheck := NewSignatureChecker(mockSigCheckSigner{})
 
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
 
-	w := &datamining.WalletData{
-		BiodPubk: hex.EncodeToString(pbKey),
-		EmPubk:   hex.EncodeToString(pbKey),
+	w := &datamining.KeyChainData{
+		BiodPubk:   hex.EncodeToString(pbKey),
+		PersonPubk: hex.EncodeToString(pbKey),
 		Sigs: datamining.Signatures{
-			BiodSig: "fake sig",
-			EmSig:   "fake sig",
+			BiodSig:   "fake sig",
+			PersonSig: "fake sig",
 		},
 	}
 
@@ -33,11 +33,11 @@ func TestOkSignatureValidator(t *testing.T) {
 	assert.Nil(t, err)
 
 	bd := &datamining.BioData{
-		BiodPubk: hex.EncodeToString(pbKey),
-		EmPubk:   hex.EncodeToString(pbKey),
+		BiodPubk:   hex.EncodeToString(pbKey),
+		PersonPubk: hex.EncodeToString(pbKey),
 		Sigs: datamining.Signatures{
-			BiodSig: "fake sig",
-			EmSig:   "fake sig",
+			BiodSig:   "fake sig",
+			PersonSig: "fake sig",
 		},
 	}
 
@@ -47,17 +47,17 @@ func TestOkSignatureValidator(t *testing.T) {
 
 func TestKOSignatureValidator(t *testing.T) {
 
-	sigCheck := NewSignatureValidation(mockBadSigCheckSigner{})
+	sigCheck := NewSignatureChecker(mockBadSigCheckSigner{})
 
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
 
-	w := &datamining.WalletData{
-		BiodPubk: hex.EncodeToString(pbKey),
-		EmPubk:   hex.EncodeToString(pbKey),
+	w := &datamining.KeyChainData{
+		BiodPubk:   hex.EncodeToString(pbKey),
+		PersonPubk: hex.EncodeToString(pbKey),
 		Sigs: datamining.Signatures{
-			BiodSig: "fake sig",
-			EmSig:   "fake sig",
+			BiodSig:   "fake sig",
+			PersonSig: "fake sig",
 		},
 	}
 
@@ -65,11 +65,11 @@ func TestKOSignatureValidator(t *testing.T) {
 	assert.Equal(t, err, ErrInvalidSignature)
 
 	bd := &datamining.BioData{
-		BiodPubk: hex.EncodeToString(pbKey),
-		EmPubk:   hex.EncodeToString(pbKey),
+		BiodPubk:   hex.EncodeToString(pbKey),
+		PersonPubk: hex.EncodeToString(pbKey),
 		Sigs: datamining.Signatures{
-			BiodSig: "fake sig",
-			EmSig:   "fake sig",
+			BiodSig:   "fake sig",
+			PersonSig: "fake sig",
 		},
 	}
 

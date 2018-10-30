@@ -10,7 +10,8 @@ import (
 
 	"github.com/uniris/uniris-core/datamining/pkg/adding"
 	"github.com/uniris/uniris-core/datamining/pkg/crypto"
-	"github.com/uniris/uniris-core/datamining/pkg/mining"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/master"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/slave"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 
 	"google.golang.org/grpc"
@@ -42,14 +43,20 @@ func main() {
 
 	listService := listing.NewService(db)
 
-	mineService := mining.NewService(
-		listService,
+	masterMiningSrv := master.NewService(
 		poolFinder,
 		poolDispatcher,
-		mock.NewTransactionLocker(),
 		mock.NewNotifier(),
 		crypto.NewSigner(),
 		crypto.NewHasher(),
+		listService,
+		config.SharedKeys.RobotPublicKey,
+		config.SharedKeys.RobotPrivateKey,
+	)
+
+	slaveMiningSrv := slave.NewService(
+		mock.NewTransactionLocker(),
+		crypto.NewSigner(),
 		config.SharedKeys.RobotPublicKey,
 		config.SharedKeys.RobotPrivateKey,
 	)
@@ -59,19 +66,19 @@ func main() {
 	go func() {
 
 		//Starts Internal grpc server
-		if err := startInternalServer(listService, mineService, *config); err != nil {
+		if err := startInternalServer(listService, masterMiningSrv, *config); err != nil {
 			log.Fatal(err)
 		}
 	}()
 
 	//Starts Internal grpc server
-	if err := startExternalServer(listService, addingSrv, mineService, *config); err != nil {
+	if err := startExternalServer(listService, addingSrv, slaveMiningSrv, *config); err != nil {
 		log.Fatal(err)
 	}
 
 }
 
-func startInternalServer(listService listing.Service, mineService mining.Service, config system.UnirisConfig) error {
+func startInternalServer(listService listing.Service, mineService master.Service, config system.UnirisConfig) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", config.Datamining.InternalPort))
 	if err != nil {
 		return err
@@ -89,7 +96,7 @@ func startInternalServer(listService listing.Service, mineService mining.Service
 	return nil
 }
 
-func startExternalServer(listService listing.Service, add adding.Service, mineService mining.Service, config system.UnirisConfig) error {
+func startExternalServer(listService listing.Service, add adding.Service, mineService slave.Service, config system.UnirisConfig) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", config.Datamining.ExternalPort))
 	if err != nil {
 		return err

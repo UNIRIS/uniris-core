@@ -9,12 +9,12 @@ var ErrInvalidSignature = errors.New("Invalid signature")
 
 //Service defines methods to adding to the blockchain
 type Service interface {
-	AddAccount(EnrollmentRequest) (*EnrollmentResult, error)
+	AddAccount(AccountCreationRequest) (*AccountCreationResult, error)
 }
 
 //RobotClient define methods to interfact with the robot
 type RobotClient interface {
-	AddAccount(EnrollmentRequest) (*EnrollmentResult, error)
+	AddAccount(AccountCreationRequest) (*AccountCreationResult, error)
 }
 
 //RequestValidator defines methods to validate requests
@@ -33,12 +33,12 @@ func NewService(sharedBioPub string, cli RobotClient, val RequestValidator) Serv
 	return service{sharedBioPub, cli, val}
 }
 
-func (s service) AddAccount(req EnrollmentRequest) (*EnrollmentResult, error) {
-	verifReq := EnrollmentData{
-		EncryptedBioData:    req.EncryptedBioData,
-		EncryptedWalletData: req.EncryptedWalletData,
-		SignaturesBio:       req.SignaturesBio,
-		SignaturesWallet:    req.SignaturesWallet,
+func (s service) AddAccount(req AccountCreationRequest) (*AccountCreationResult, error) {
+	verifReq := AccountCreationData{
+		EncryptedBioData:      req.EncryptedBioData,
+		EncryptedKeychainData: req.EncryptedKeychainData,
+		SignaturesBio:         req.SignaturesBio,
+		SignaturesKeychain:    req.SignaturesKeychain,
 	}
 
 	valid, err := s.val.CheckDataSignature(verifReq, s.sharedBioPub, req.SignatureRequest)

@@ -10,94 +10,94 @@ import (
 )
 
 /*
-Scenario: Store a data wallet
+Scenario: Store a keychain
 	Given a data data
-	When I want to store a data wallet
+	When I want to store a keychain
 	Then the wallet is stored on the database
 */
-func TestStoreWallet(t *testing.T) {
+func TestStoreKeychain(t *testing.T) {
 	repo := &databasemock{}
 	s := NewService(repo)
 
 	sigs := datamining.Signatures{
-		BiodSig: "sig1",
-		EmSig:   "sig2",
+		BiodSig:   "sig1",
+		PersonSig: "sig2",
 	}
 
-	wdata := &datamining.WalletData{
+	wdata := &datamining.KeyChainData{
 		WalletAddr:      "addr1",
 		CipherAddrRobot: "xxxx",
 		CipherWallet:    "xxxx",
-		EmPubk:          "xxxx",
+		PersonPubk:      "xxxx",
 		BiodPubk:        "xxxx",
 		Sigs:            sigs,
 	}
 
-	w := datamining.NewWallet(wdata, datamining.NewEndorsement(
+	w := datamining.NewKeychain(wdata, datamining.NewEndorsement(
 		time.Now(),
 		"hash",
 		nil,
 		nil,
 	), "old hash")
-	err := s.StoreWallet(w)
+	err := s.StoreKeychain(w)
 	assert.Nil(t, err)
-	l := len(repo.wallets)
+	l := len(repo.keychains)
 	assert.Equal(t, 1, l)
-	assert.Equal(t, "addr1", repo.wallets[0].WalletAddr())
-	assert.Equal(t, "hash", repo.wallets[0].Endorsement().TransactionHash())
+	assert.Equal(t, "addr1", repo.keychains[0].WalletAddr())
+	assert.Equal(t, "hash", repo.keychains[0].Endorsement().TransactionHash())
 }
 
 /*
-Scenario: Stroe a bio wallet
+Scenario: Stroe a biometric
 	Given a bio data
-	When I want to store a bio wallet
+	When I want to store a biometric data
 	Then the bio data are stored on the database
 */
-func TestStoreBioWallet(t *testing.T) {
+func TestStoreBiometric(t *testing.T) {
 	repo := &databasemock{}
 	s := NewService(repo)
 
 	sigs := datamining.Signatures{
-		BiodSig: "sig1",
-		EmSig:   "sig2",
+		BiodSig:   "sig1",
+		PersonSig: "sig2",
 	}
 
 	bdata := &datamining.BioData{
-		BHash:           "hash1",
+		PersonHash:      "hash1",
 		BiodPubk:        "xxxx",
 		CipherAddrBio:   "xxxx",
 		CipherAddrRobot: "xxxx",
 		CipherAESKey:    "xxxx",
-		EmPubk:          "xxxx",
+		PersonPubk:      "xxxx",
 		Sigs:            sigs,
 	}
 
-	b := datamining.NewBioWallet(bdata, datamining.NewEndorsement(
+	b := datamining.NewBiometric(bdata, datamining.NewEndorsement(
 		time.Now(),
 		"hash",
 		nil,
 		nil,
 	))
 
-	err := s.StoreBioWallet(b)
+	err := s.StoreBiometric(b)
 	assert.Nil(t, err)
-	l := len(repo.bioWallets)
+	l := len(repo.biometrics)
 	assert.Equal(t, 1, l)
 	assert.Equal(t, 1, l)
-	assert.Equal(t, "hash1", repo.bioWallets[0].Bhash())
+	assert.Equal(t, "hash1", repo.biometrics[0].PersonHash())
 }
 
 type databasemock struct {
-	bioWallets []*datamining.BioWallet
-	wallets    []*datamining.Wallet
+	biometrics []*datamining.Biometric
+	keychains  []*datamining.Keychain
 }
 
-func (d *databasemock) StoreWallet(w *datamining.Wallet) error {
-	d.wallets = append(d.wallets, w)
+func (d *databasemock) StoreKeychain(w *datamining.Keychain) error {
+	d.keychains = append(d.keychains, w)
 	return nil
 }
 
-func (d *databasemock) StoreBioWallet(bw *datamining.BioWallet) error {
-	d.bioWallets = append(d.bioWallets, bw)
+func (d *databasemock) StoreBiometric(bw *datamining.Biometric) error {
+	d.biometrics = append(d.biometrics, bw)
 	return nil
 }

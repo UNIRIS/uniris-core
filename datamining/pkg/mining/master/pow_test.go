@@ -1,13 +1,12 @@
-package mining
+package master
 
 import (
+	"errors"
 	"testing"
 
-	"github.com/uniris/uniris-core/datamining/pkg/listing"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/pool"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/validations"
-
 	"github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/listing"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/master/pool"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -24,7 +23,7 @@ func TestExecutePOW(t *testing.T) {
 	list := listing.NewService(repo)
 
 	pow := NewPOW(list, mockPowSigner{}, "my key", "my pv key")
-	lastValidPool := pool.PeerCluster{
+	lastValidPool := pool.Cluster{
 		Peers: []pool.Peer{
 			pool.Peer{PublicKey: "key"},
 		},
@@ -50,7 +49,7 @@ func TestExecutePOW_KO(t *testing.T) {
 	list := listing.NewService(repo)
 
 	pow := NewPOW(list, mockBadPowSigner{}, "my key", "my pv key")
-	lastValidPool := pool.PeerCluster{
+	lastValidPool := pool.Cluster{
 		Peers: []pool.Peer{
 			pool.Peer{PublicKey: "key"},
 		},
@@ -65,15 +64,15 @@ func TestExecutePOW_KO(t *testing.T) {
 }
 
 type mockDatabase struct {
-	BioWallets []*datamining.BioWallet
-	Wallets    []*datamining.Wallet
+	Biometrics []*datamining.Biometric
+	Keychains  []*datamining.Keychain
 }
 
-func (d *mockDatabase) FindBioWallet(bh string) (*datamining.BioWallet, error) {
+func (d *mockDatabase) FindBiometric(bh string) (*datamining.Biometric, error) {
 	return nil, nil
 }
 
-func (d *mockDatabase) FindWallet(addr string) (*datamining.Wallet, error) {
+func (d *mockDatabase) FindKeychain(addr string) (*datamining.Keychain, error) {
 	return nil, nil
 }
 
@@ -81,13 +80,13 @@ func (d *mockDatabase) ListBiodPubKeys() ([]string, error) {
 	return []string{"key1", "key2", "key3"}, nil
 }
 
-func (d *mockDatabase) StoreWallet(w *datamining.Wallet) error {
-	d.Wallets = append(d.Wallets, w)
+func (d *mockDatabase) StoreKeychain(w *datamining.Keychain) error {
+	d.Keychains = append(d.Keychains, w)
 	return nil
 }
 
-func (d *mockDatabase) StoreBioWallet(bw *datamining.BioWallet) error {
-	d.BioWallets = append(d.BioWallets, bw)
+func (d *mockDatabase) StoreBiometric(b *datamining.Biometric) error {
+	d.Biometrics = append(d.Biometrics, b)
 	return nil
 }
 
@@ -104,7 +103,7 @@ func (s mockPowSigner) SignMasterValidation(v Validation, pvKey string) (string,
 type mockBadPowSigner struct{}
 
 func (s mockBadPowSigner) CheckTransactionSignature(pubk string, tx string, der string) error {
-	return validations.ErrInvalidSignature
+	return errors.New("Invalid signature")
 }
 
 func (s mockBadPowSigner) SignMasterValidation(v Validation, pvKey string) (string, error) {

@@ -23,7 +23,7 @@ func TestGetAccount(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "encrypted_aes_key", res.EncryptedAESKey)
 	assert.Equal(t, "encrypted_wallet", res.EncryptedWallet)
-	assert.Equal(t, "addr_wallet_person", res.EncryptedAddrPerson)
+	assert.Equal(t, "encrypted_address", res.EncryptedAddress)
 }
 
 /*
@@ -47,9 +47,9 @@ type mockClient struct{}
 
 func (c mockClient) GetAccount(encHash string) (*SignedAccountResult, error) {
 	return &SignedAccountResult{
-		EncryptedAESKey:     "encrypted_aes_key",
-		EncryptedAddrPerson: "addr_wallet_person",
-		EncryptedWallet:     "encrypted_wallet",
+		EncryptedAESKey:  "encrypted_aes_key",
+		EncryptedAddress: "encrypted_address",
+		EncryptedWallet:  "encrypted_wallet",
 	}, nil
 }
 

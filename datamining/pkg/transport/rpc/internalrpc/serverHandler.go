@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/uniris/uniris-core/datamining/pkg"
+
 	"github.com/uniris/uniris-core/datamining/pkg/crypto"
-	"github.com/uniris/uniris-core/datamining/pkg/mining"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/transactions"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/master"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 	"golang.org/x/net/context"
 
@@ -18,13 +19,13 @@ import (
 
 type internalSrvHandler struct {
 	list                  listing.Service
-	mine                  mining.Service
+	mine                  master.Service
 	sharedRobotPrivateKey string
 	errors                system.DataMininingErrors
 }
 
 //NewInternalServerHandler create a new GRPC server handler
-func NewInternalServerHandler(list listing.Service, mine mining.Service, sharedRobotPrivateKey string, errors system.DataMininingErrors) api.InternalServer {
+func NewInternalServerHandler(list listing.Service, mine master.Service, sharedRobotPrivateKey string, errors system.DataMininingErrors) api.InternalServer {
 	return internalSrvHandler{
 		list:                  list,
 		mine:                  mine,
@@ -33,14 +34,14 @@ func NewInternalServerHandler(list listing.Service, mine mining.Service, sharedR
 	}
 }
 
-//GetWallet implements the protobuf GetWallet request handler
-func (s internalSrvHandler) GetWallet(ctx context.Context, req *api.WalletSearchRequest) (*api.WalletSearchResult, error) {
-	bioHash, err := crypto.Decrypt(s.sharedRobotPrivateKey, req.EncryptedHashPerson)
+//GetAccount implements the protobuf GetAccount request handler
+func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSearchRequest) (*api.AccountSearchResult, error) {
+	personHash, err := crypto.Decrypt(s.sharedRobotPrivateKey, req.EncryptedHashPerson)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt person hash - %s", err.Error())
 	}
 
-	bioWallet, err := s.list.GetBioWallet(bioHash)
+	bioWallet, err := s.list.GetBiometric(personHash)
 	if err != nil {
 		return nil, err
 	}
@@ -54,67 +55,74 @@ func (s internalSrvHandler) GetWallet(ctx context.Context, req *api.WalletSearch
 		return nil, fmt.Errorf("Cannot decrypt the address - %s", err.Error())
 	}
 
-	wallet, err := s.list.GetWallet(clearaddr)
+	keychain, err := s.list.GetKeychain(clearaddr)
 	if err != nil {
 		return nil, err
 	}
 
-	if wallet == nil {
+	if keychain == nil {
 		return nil, errors.New(s.errors.AccountNotExist)
 	}
 
-	return BuildWalletSearchResult(wallet, bioWallet), nil
+	return BuildAccountSearchResult(keychain, bioWallet), nil
 }
 
-//CreateWallet implements the protobuf CreateWallet request handler
-func (s internalSrvHandler) CreateWallet(ctx context.Context, req *api.WalletCreationRequest) (*api.WalletCreationResult, error) {
+//CreateAccount implements the protobuf CreateAccount request handler
+func (s internalSrvHandler) CreateAccount(ctx context.Context, req *api.AccountCreationRequest) (*api.AccountCreationResult, error) {
 	bioRawData, err := crypto.Decrypt(s.sharedRobotPrivateKey, req.EncryptedBioData)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt the bio data - %s", err.Error())
 	}
-	walletRawData, err := crypto.Decrypt(s.sharedRobotPrivateKey, req.EncryptedWalletData)
+	keychainRawData, err := crypto.Decrypt(s.sharedRobotPrivateKey, req.EncryptedKeychainData)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt the wallet data - %s", err.Error())
 	}
 
-	var bio BioDataFromJSON
-	err = json.Unmarshal([]byte(bioRawData), &bio)
+	var bioData BioDataFromJSON
+	err = json.Unmarshal([]byte(bioRawData), &bioData)
 	if err != nil {
 		return nil, err
 	}
 
-	var wal *WalletDataFromJSON
-	err = json.Unmarshal([]byte(walletRawData), &wal)
+	var keychain *KeychainDataFromJSON
+	err = json.Unmarshal([]byte(keychainRawData), &keychain)
 	if err != nil {
 		return nil, err
 	}
 
-	clearaddr, err := crypto.Decrypt(s.sharedRobotPrivateKey, wal.EncryptedAddrRobot)
+	clearaddr, err := crypto.Decrypt(s.sharedRobotPrivateKey, keychain.EncryptedAddrRobot)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt the address - %s", err.Error())
 	}
 
-	txHashBio := crypto.HashString(bioRawData)
-	txHashWal := crypto.HashString(walletRawData)
+	bData := BuildBioData(bioData, req.SignatureBioData)
+	txHashBio, err := crypto.NewHasher().HashTransactionData(bData)
+	if err != nil {
+		return nil, err
+	}
+
+	keychainData := BuildKeychainData(keychain, req.SignatureKeychainData, clearaddr)
+	txHashKeychain, err := crypto.NewHasher().HashTransactionData(keychainData)
+	if err != nil {
+		return nil, err
+	}
 
 	go func() {
-		wData := BuildWalletData(wal, req.SignatureWalletData, clearaddr)
-		if err := s.mine.Lead(txHashWal, wData.CipherAddrRobot, wData.Sigs.BiodSig, wData, transactions.CreateWallet); err != nil {
+		if err := s.mine.LeadMining(txHashKeychain, keychainData.CipherAddrRobot, keychainData.Sigs.BiodSig, keychainData, datamining.CreateKeychainTransaction); err != nil {
 			//TODO: handle errors
 			log.Fatal(err)
 		}
 	}()
 
 	go func() {
-		bData := BuildBioData(bio, req.SignatureBioData)
-		if err := s.mine.Lead(txHashBio, bData.CipherAddrRobot, bData.Sigs.BiodSig, bData, transactions.CreateBio); err != nil {
+		if err := s.mine.LeadMining(txHashBio, bData.CipherAddrRobot, bData.Sigs.BiodSig, bData, datamining.CreateBioTransaction); err != nil {
 			//TODO: handle errors
 			log.Fatal(err)
 		}
 	}()
 
-	return &api.WalletCreationResult{
-		BioTransactionHash:  txHashBio,
-		DataTransactionHash: txHashWal,
+	return &api.AccountCreationResult{
+		BioTransactionHash:      txHashBio,
+		KeychainTransactionHash: txHashKeychain,
 	}, nil
 }

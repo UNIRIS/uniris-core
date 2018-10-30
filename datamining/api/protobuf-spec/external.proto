@@ -19,7 +19,7 @@ message LockRequest {
 }
 
 enum TransactionType {
-    CreateWallet = 0;
+    CreateKeychain = 0;
     CreateBio = 1;
 }
 

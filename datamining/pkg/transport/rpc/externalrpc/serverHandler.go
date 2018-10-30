@@ -5,11 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/slave"
 
-	"github.com/uniris/uniris-core/datamining/pkg/mining"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/lock"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/transactions"
+	"github.com/uniris/uniris-core/datamining/pkg"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
@@ -21,20 +19,20 @@ import (
 type externalSrvHandler struct {
 	list              listing.Service
 	add               adding.Service
-	mining            mining.Service
+	mining            slave.Service
 	sharedRobotPubKey string
 	errors            system.DataMininingErrors
 }
 
 //NewExternalServerHandler creates a new External GRPC handler
-func NewExternalServerHandler(list listing.Service, add adding.Service, mine mining.Service, sharedRobotPubKey string, errors system.DataMininingErrors) api.ExternalServer {
+func NewExternalServerHandler(list listing.Service, add adding.Service, mine slave.Service, sharedRobotPubKey string, errors system.DataMininingErrors) api.ExternalServer {
 	return externalSrvHandler{list, add, mine, sharedRobotPubKey, errors}
 }
 
 func (s externalSrvHandler) LockTransaction(ctx context.Context, req *api.LockRequest) (*empty.Empty, error) {
 	//TODO: verify signature
 
-	if err := s.mining.LockTransaction(lock.TransactionLock{
+	if err := s.mining.LockTransaction(slave.TransactionLock{
 		TxHash:         req.TransactionHash,
 		MasterRobotKey: req.MasterRobotKey,
 	}); err != nil {
@@ -47,7 +45,7 @@ func (s externalSrvHandler) LockTransaction(ctx context.Context, req *api.LockRe
 func (s externalSrvHandler) UnlockTransaction(ctx context.Context, req *api.LockRequest) (*empty.Empty, error) {
 	//TODO: verify signature
 
-	if err := s.mining.UnlockTransaction(lock.TransactionLock{
+	if err := s.mining.UnlockTransaction(slave.TransactionLock{
 		TxHash:         req.TransactionHash,
 		MasterRobotKey: req.MasterRobotKey,
 	}); err != nil {
@@ -58,19 +56,27 @@ func (s externalSrvHandler) UnlockTransaction(ctx context.Context, req *api.Lock
 }
 
 func (s externalSrvHandler) Validate(ctx context.Context, req *api.ValidationRequest) (*api.ValidationResponse, error) {
+
+	//TODO: verify signatures
+
 	var data interface{}
 	err := json.Unmarshal(req.Data.Value, &data)
 	if err != nil {
 		return nil, err
 	}
 
-	valid, err := s.mining.Validate(data, transactions.Type(req.TransactionType))
+	valid, err := s.mining.Validate(data, datamining.TransactionType(req.TransactionType))
 	if err != nil {
 		return nil, err
 	}
 
 	return &api.ValidationResponse{
-		Validation: BuildAPIValidation(valid),
+		Validation: &api.Validation{
+			PublicKey: valid.PublicKey(),
+			Signature: valid.Signature(),
+			Status:    api.Validation_ValidationStatus(valid.Status()),
+			Timestamp: valid.Timestamp().Unix(),
+		},
 	}, nil
 }
 
@@ -79,21 +85,21 @@ func (s externalSrvHandler) Store(ctx context.Context, req *api.StorageRequest) 
 	//TODO: verify signatures
 
 	switch req.TransactionType {
-	case api.TransactionType_CreateWallet:
-		w := &datamining.Wallet{}
+	case api.TransactionType_CreateKeychain:
+		w := &datamining.Keychain{}
 		if err := w.UnmarshalJSON(req.Data.Value); err != nil {
 			return nil, err
 		}
-		if err := s.add.StoreWallet(w); err != nil {
+		if err := s.add.StoreKeychain(w); err != nil {
 			return nil, err
 		}
 		return &empty.Empty{}, nil
 	case api.TransactionType_CreateBio:
-		bw := &datamining.BioWallet{}
+		bw := &datamining.Biometric{}
 		if err := bw.UnmarshalJSON(req.Data.Value); err != nil {
 			return nil, err
 		}
-		if err := s.add.StoreBioWallet(bw); err != nil {
+		if err := s.add.StoreBiometric(bw); err != nil {
 			return nil, err
 		}
 		return &empty.Empty{}, nil

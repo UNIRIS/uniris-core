@@ -1,6 +1,6 @@
-package validations
+package checks
 
-//Handler defines methods for transaction data validation
+//Handler define methods to handle
 type Handler interface {
 	CheckData(interface{}) error
 	IsCatchedError(error) bool
@@ -16,8 +16,8 @@ type BioData struct {
 	EncryptedAddrRobot  string `json:"encrypted_addr_robot"`
 }
 
-//WalletData represents the data will be encrypted by the person
-type WalletData struct {
+//KeychainData represents the data will be encrypted by the person
+type KeychainData struct {
 	PersonPublicKey    string `json:"person_pubk"`
 	BIODPublicKey      string `json:"biod_pubk"`
 	EncryptedWallet    string `json:"encrypted_wal"`
