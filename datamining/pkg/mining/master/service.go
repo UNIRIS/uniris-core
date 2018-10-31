@@ -13,7 +13,7 @@ import (
 
 //Service defines methods for the master mining
 type Service interface {
-	LeadMining(txHash string, addr string, bioSig string, data interface{}, txType datamining.TransactionType) error
+	LeadMining(txHash string, addr string, biodSig string, data interface{}, txType datamining.TransactionType) error
 }
 
 type service struct {
@@ -49,7 +49,7 @@ func NewService(poolF pool.Finder, poolD pool.Requester, n Notifier, sig Signer,
 	return service{poolF, poolD, n, sig, listSrv, robotKey, robotPvKey, txHandlers, txCheckers}
 }
 
-func (s service) LeadMining(txHash string, addr string, bioSig string, data interface{}, txType datamining.TransactionType) error {
+func (s service) LeadMining(txHash string, addr string, biodSig string, data interface{}, txType datamining.TransactionType) error {
 	if err := s.notif.NotifyTransactionStatus(txHash, Pending); err != nil {
 		return err
 	}
@@ -59,11 +59,11 @@ func (s service) LeadMining(txHash string, addr string, bioSig string, data inte
 		return err
 	}
 
-	if err := s.requestLock(txHash, lastVPool); err != nil {
+	if err := s.requestLock(txHash, addr, lastVPool); err != nil {
 		return err
 	}
 
-	masterValid, valids, err := s.mine(txHash, data, bioSig, lastVPool, vPool, txType)
+	masterValid, valids, err := s.mine(txHash, data, biodSig, lastVPool, vPool, txType)
 	if err != nil {
 		if err == checks.ErrInvalidTransaction {
 			if err := s.notif.NotifyTransactionStatus(txHash, Invalid); err != nil {
@@ -78,10 +78,10 @@ func (s service) LeadMining(txHash string, addr string, bioSig string, data inte
 		return err
 	}
 
-	return s.requestStorage(txHash, data, s.txHandlers[txType], masterValid, valids, lastVPool, sPool)
+	return s.requestStorage(txHash, addr, data, s.txHandlers[txType], masterValid, valids, lastVPool, sPool)
 }
 
-func (s service) mine(txHash string, data interface{}, bioSig string, lastVPool, vPool pool.PeerGroup, txType datamining.TransactionType) (*datamining.MasterValidation, []datamining.Validation, error) {
+func (s service) mine(txHash string, data interface{}, biodSig string, lastVPool, vPool pool.PeerGroup, txType datamining.TransactionType) (*datamining.MasterValidation, []datamining.Validation, error) {
 	//Check data before to perform POW
 	for _, c := range s.txCheckers[txType] {
 		if err := c.CheckData(data, txHash); err != nil {
@@ -89,7 +89,7 @@ func (s service) mine(txHash string, data interface{}, bioSig string, lastVPool,
 		}
 	}
 
-	masterValid, err := NewPOW(s.listSrv, s.sig, s.robotKey, s.robotPvKey).Execute(txHash, bioSig, lastVPool)
+	masterValid, err := NewPOW(s.listSrv, s.sig, s.robotKey, s.robotPvKey).Execute(txHash, biodSig, lastVPool)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -118,7 +118,7 @@ func (s service) requestValidations(vPool pool.PeerGroup, txHash string, data in
 	return valids, nil
 }
 
-func (s service) requestStorage(txHash string, data interface{}, txHandler transactions.Handler, masterValid *datamining.MasterValidation, valids []datamining.Validation, lastVPool, sPool pool.PeerGroup) error {
+func (s service) requestStorage(txHash string, addr string, data interface{}, txHandler transactions.Handler, masterValid *datamining.MasterValidation, valids []datamining.Validation, lastVPool, sPool pool.PeerGroup) error {
 
 	endorsement := datamining.NewEndorsement(time.Now(), txHash, masterValid, valids)
 
@@ -127,14 +127,14 @@ func (s service) requestStorage(txHash string, data interface{}, txHandler trans
 		return err
 	}
 
-	if err := s.requestUnlock(txHash, lastVPool); err != nil {
+	if err := s.requestUnlock(txHash, addr, lastVPool); err != nil {
 		return err
 	}
 	return s.notif.NotifyTransactionStatus(txHash, Replicated)
 }
 
-func (s service) requestLock(txHash string, lastVPool pool.PeerGroup) error {
-	lock := locking.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey}
+func (s service) requestLock(txHash string, addr string, lastVPool pool.PeerGroup) error {
+	lock := locking.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey, Address: addr}
 	sigLock, err := s.sig.SignLock(lock, s.robotPvKey)
 	if err != nil {
 		return err
@@ -150,8 +150,8 @@ func (s service) requestLock(txHash string, lastVPool pool.PeerGroup) error {
 	return err
 }
 
-func (s service) requestUnlock(txHash string, lastVPool pool.PeerGroup) error {
-	lock := locking.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey}
+func (s service) requestUnlock(txHash string, addr string, lastVPool pool.PeerGroup) error {
+	lock := locking.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey, Address: addr}
 	sigLock, err := s.sig.SignLock(lock, s.robotPvKey)
 	if err != nil {
 		return err

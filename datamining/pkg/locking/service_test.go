@@ -20,6 +20,7 @@ func TestLockTransaction(t *testing.T) {
 	assert.Nil(t, service.LockTransaction(TransactionLock{
 		MasterRobotKey: "robokey",
 		TxHash:         "txhash",
+		Address:        "address",
 	}))
 
 	assert.Len(t, locker.locks, 1)
@@ -39,11 +40,13 @@ func TestCannotAlreadyLockTransaction(t *testing.T) {
 	assert.Nil(t, service.LockTransaction(TransactionLock{
 		MasterRobotKey: "robokey",
 		TxHash:         "txhash",
+		Address:        "address",
 	}))
 
 	assert.Equal(t, ErrLockExisting, service.LockTransaction(TransactionLock{
 		MasterRobotKey: "robokey",
 		TxHash:         "txhash",
+		Address:        "address",
 	}))
 
 	assert.Len(t, locker.locks, 1)
@@ -63,16 +66,19 @@ func TestUnlockTransaction(t *testing.T) {
 	assert.Nil(t, service.LockTransaction(TransactionLock{
 		MasterRobotKey: "robokey",
 		TxHash:         "txhash",
+		Address:        "address",
 	}))
 
 	service.LockTransaction(TransactionLock{
 		MasterRobotKey: "robokey",
 		TxHash:         "txhash",
+		Address:        "address",
 	})
 
 	assert.Nil(t, service.UnlockTransaction(TransactionLock{
 		MasterRobotKey: "robokey",
 		TxHash:         "txhash",
+		Address:        "address",
 	}))
 
 	assert.Len(t, locker.locks, 0)
@@ -95,7 +101,7 @@ func (l *mockLocker) Unlock(txLock TransactionLock) error {
 }
 func (l mockLocker) ContainsLock(txLock TransactionLock) bool {
 	for _, lock := range l.locks {
-		if lock.TxHash == txLock.TxHash && txLock.MasterRobotKey == lock.MasterRobotKey {
+		if lock.TxHash == txLock.TxHash && txLock.MasterRobotKey == lock.MasterRobotKey && lock.Address == txLock.Address {
 			return true
 		}
 	}

@@ -9,6 +9,7 @@ var ErrLockExisting = errors.New("A lock already exist for this transaction")
 type TransactionLock struct {
 	TxHash         string
 	MasterRobotKey string
+	Address        string
 }
 
 //Locker defines methods to manage locks

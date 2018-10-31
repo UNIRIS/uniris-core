@@ -16,7 +16,7 @@ type PowSigner interface {
 
 //POW defines methods for the POW
 type POW interface {
-	Execute(txHash, sig string, lastValidationPool pool.PeerGroup) (*datamining.MasterValidation, error)
+	Execute(txHash, biodSig string, lastValidationPool pool.PeerGroup) (*datamining.MasterValidation, error)
 }
 
 //Validation represents a validation before its signature
@@ -27,20 +27,20 @@ type Validation struct {
 }
 
 type pow struct {
-	list        listing.Service
-	sig         PowSigner
+	lister      listing.Service
+	signer      PowSigner
 	robotPubKey string
 	robotPvKey  string
 }
 
 //NewPOW creates a new Proof Of Work handler
-func NewPOW(list listing.Service, sig PowSigner, robotPubKey, robotPvKey string) POW {
-	return pow{list, sig, robotPubKey, robotPvKey}
+func NewPOW(lister listing.Service, signer PowSigner, robotPubKey, robotPvKey string) POW {
+	return pow{lister, signer, robotPubKey, robotPvKey}
 }
 
 //Execute the Proof Of Work
-func (p pow) Execute(txHash string, sig string, lastValidationPool pool.PeerGroup) (*datamining.MasterValidation, error) {
-	keys, err := p.list.ListBiodPubKeys()
+func (p pow) Execute(txHash string, biodSig string, lastValidationPool pool.PeerGroup) (*datamining.MasterValidation, error) {
+	keys, err := p.lister.ListBiodPubKeys()
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (p pow) Execute(txHash string, sig string, lastValidationPool pool.PeerGrou
 	//Find the public key which matches the transaction signature
 	status := datamining.ValidationKO
 	for _, k := range keys {
-		err := p.sig.CheckTransactionSignature(k, txHash, sig)
+		err := p.signer.CheckTransactionSignature(k, txHash, biodSig)
 		if err == nil {
 			status = datamining.ValidationOK
 			break
@@ -60,7 +60,7 @@ func (p pow) Execute(txHash string, sig string, lastValidationPool pool.PeerGrou
 		Status:    status,
 		Timestamp: time.Now(),
 	}
-	signature, err := p.sig.SignMasterValidation(v, p.robotPvKey)
+	signature, err := p.signer.SignMasterValidation(v, p.robotPvKey)
 	if err != nil {
 		return nil, err
 	}
