@@ -10,8 +10,18 @@ import (
 
 type notifier struct{}
 
-func (n notifier) Notify(p discovery.Peer) error {
+func (n notifier) NotifyDiscoveries(p discovery.Peer) error {
 	log.Printf("New peer discovered %s", p.Endpoint())
+	return nil
+}
+
+func (n notifier) NotifyReachable(pubk string) error {
+	log.Printf("New reachable Peer %s", pubk)
+	return nil
+}
+
+func (n notifier) NotifyUnreachable(pubk string) error {
+	log.Printf("New Unreachable Peer %s", pubk)
 	return nil
 }
 

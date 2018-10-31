@@ -1,11 +1,16 @@
 package discovery
 
 import (
+	"errors"
 	"net"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+)
+
+var (
+	ErrNotFoundOnUnreachableList = errors.New("cannot found the peer in the unreachableKeys list")
 )
 
 /*
@@ -165,7 +170,7 @@ func (r *mockPeerRepository) ListSeedPeers() ([]Seed, error) {
 func (r *mockPeerRepository) ListReachablePeers() ([]Peer, error) {
 	rp := make([]Peer, 0)
 	for i := 0; i < len(r.peers); i++ {
-		if !r.containsUnreacheablePeer(r.peers[i].Identity().PublicKey()) {
+		if !r.containsUnreachablePeer(r.peers[i].Identity().PublicKey()) {
 			rp = append(rp, r.peers[i])
 		}
 	}
@@ -175,7 +180,7 @@ func (r *mockPeerRepository) ListReachablePeers() ([]Peer, error) {
 func (r *mockPeerRepository) ListUnreachablePeers() ([]Peer, error) {
 	unrp := make([]Peer, 0)
 	for i := 0; i < len(r.peers); i++ {
-		if r.containsUnreacheablePeer(r.peers[i].Identity().PublicKey()) {
+		if r.containsUnreachablePeer(r.peers[i].Identity().PublicKey()) {
 			unrp = append(unrp, r.peers[i])
 		}
 	}
@@ -192,14 +197,14 @@ func (r *mockPeerRepository) GetKnownPeerByIP(ip net.IP) (p Peer, err error) {
 }
 
 func (r *mockPeerRepository) SetUnreachablePeer(pk string) error {
-	if !r.containsUnreacheablePeer(pk) {
+	if !r.containsUnreachablePeer(pk) {
 		r.unreacheablePeers = append(r.unreacheablePeers, pk)
 	}
 	return nil
 }
 
 func (r *mockPeerRepository) RemoveUnreachablePeer(pk string) error {
-	if r.containsUnreacheablePeer(pk) {
+	if r.containsUnreachablePeer(pk) {
 		for i := 0; i < len(r.unreacheablePeers); i++ {
 			if r.unreacheablePeers[i] == pk {
 				r.unreacheablePeers = r.unreacheablePeers[:i+copy(r.unreacheablePeers[i:], r.unreacheablePeers[i+1:])]
@@ -207,6 +212,13 @@ func (r *mockPeerRepository) RemoveUnreachablePeer(pk string) error {
 		}
 	}
 	return nil
+}
+
+func (r *mockPeerRepository) ContainsUnreachableKey(pubk string) error {
+	if r.containsUnreachablePeer(pubk) {
+		return nil
+	}
+	return ErrNotFoundOnUnreachableList
 }
 
 func (r *mockPeerRepository) containsPeer(peer Peer) bool {
@@ -219,7 +231,7 @@ func (r *mockPeerRepository) containsPeer(peer Peer) bool {
 	return exist
 }
 
-func (r *mockPeerRepository) containsUnreacheablePeer(pk string) bool {
+func (r *mockPeerRepository) containsUnreachablePeer(pk string) bool {
 	for _, up := range r.unreacheablePeers {
 		if up == pk {
 			return true
