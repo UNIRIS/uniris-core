@@ -4,6 +4,7 @@ import (
 	"errors"
 )
 
+//ErrInvalidTransaction is returned a transaction is invalid
 var ErrInvalidTransaction = errors.New("Invalid transaction")
 
 //TransactionDataHasher define methods to hash transaction data

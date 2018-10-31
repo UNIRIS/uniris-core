@@ -1,25 +1,18 @@
 package slave
 
 import (
-	"errors"
 	"time"
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/mining/slave/checks"
 )
 
-//ErrLockExisting is returned when a lock already exist
-var ErrLockExisting = errors.New("A lock already exist for this transaction")
-
 //Service define for the slave mining process
 type Service interface {
 	Validate(data interface{}, txType datamining.TransactionType) (valid datamining.Validation, err error)
-	LockTransaction(txLock TransactionLock) error
-	UnlockTransaction(txLock TransactionLock) error
 }
 
 type service struct {
-	locker     Locker
 	sig        Signer
 	robotKey   string
 	robotPvKey string
@@ -27,7 +20,7 @@ type service struct {
 }
 
 //NewService creates slave mining service
-func NewService(l Locker, sig Signer, robotKey, robotPvKey string) Service {
+func NewService(sig Signer, robotKey, robotPvKey string) Service {
 	checks := map[datamining.TransactionType][]checks.Handler{
 		datamining.CreateKeychainTransaction: []checks.Handler{
 			checks.NewSignatureChecker(sig),
@@ -36,7 +29,7 @@ func NewService(l Locker, sig Signer, robotKey, robotPvKey string) Service {
 			checks.NewSignatureChecker(sig),
 		},
 	}
-	return service{l, sig, robotKey, robotPvKey, checks}
+	return service{sig, robotKey, robotPvKey, checks}
 }
 
 func (s service) Validate(data interface{}, txType datamining.TransactionType) (valid datamining.Validation, err error) {
@@ -50,18 +43,6 @@ func (s service) Validate(data interface{}, txType datamining.TransactionType) (
 		}
 	}
 	return s.buildValidation(datamining.ValidationOK)
-}
-
-func (s service) LockTransaction(txLock TransactionLock) error {
-	if s.locker.ContainsLock(txLock) {
-		return ErrLockExisting
-	}
-
-	return s.locker.Lock(txLock)
-}
-
-func (s service) UnlockTransaction(txLock TransactionLock) error {
-	return s.locker.Unlock(txLock)
 }
 
 func (s service) buildValidation(status datamining.ValidationStatus) (valid datamining.Validation, err error) {

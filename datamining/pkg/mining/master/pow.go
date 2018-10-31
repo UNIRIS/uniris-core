@@ -3,10 +3,9 @@ package master
 import (
 	"time"
 
-	"github.com/uniris/uniris-core/datamining/pkg/mining/master/pool"
-
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/listing"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/master/pool"
 )
 
 //PowSigner defines methods to handle signatures

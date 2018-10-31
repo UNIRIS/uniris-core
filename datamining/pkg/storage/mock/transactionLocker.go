@@ -1,26 +1,26 @@
 package mock
 
 import (
-	"github.com/uniris/uniris-core/datamining/pkg/mining/slave"
+	"github.com/uniris/uniris-core/datamining/pkg/locking"
 )
 
 type locker struct {
-	locks []slave.TransactionLock
+	locks []locking.TransactionLock
 }
 
 //NewTransactionLocker creates a transaction locker
-func NewTransactionLocker() slave.Locker {
-	return locker{
-		locks: make([]slave.TransactionLock, 0),
+func NewTransactionLocker() locking.Locker {
+	return &locker{
+		locks: make([]locking.TransactionLock, 0),
 	}
 }
 
-func (l locker) Lock(txLock slave.TransactionLock) error {
+func (l *locker) Lock(txLock locking.TransactionLock) error {
 	l.locks = append(l.locks, txLock)
 	return nil
 }
 
-func (l locker) Unlock(txLock slave.TransactionLock) error {
+func (l *locker) Unlock(txLock locking.TransactionLock) error {
 	pos := l.findLockPosition(txLock)
 	if pos > -1 {
 		l.locks = append(l.locks[:pos], l.locks[pos+1:]...)
@@ -28,7 +28,7 @@ func (l locker) Unlock(txLock slave.TransactionLock) error {
 	return nil
 }
 
-func (l locker) ContainsLock(txLock slave.TransactionLock) bool {
+func (l locker) ContainsLock(txLock locking.TransactionLock) bool {
 	for _, lock := range l.locks {
 		if lock.TxHash == txLock.TxHash && txLock.MasterRobotKey == lock.MasterRobotKey {
 			return true
@@ -37,7 +37,7 @@ func (l locker) ContainsLock(txLock slave.TransactionLock) bool {
 	return false
 }
 
-func (l locker) findLockPosition(txLock slave.TransactionLock) int {
+func (l locker) findLockPosition(txLock locking.TransactionLock) int {
 	for i, lock := range l.locks {
 		if lock.TxHash == txLock.TxHash && txLock.MasterRobotKey == lock.MasterRobotKey {
 			return i

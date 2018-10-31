@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/uniris/uniris-core/datamining/pkg/locking"
+
 	"github.com/uniris/uniris-core/datamining/pkg/adding"
 	"github.com/uniris/uniris-core/datamining/pkg/crypto"
 	"github.com/uniris/uniris-core/datamining/pkg/mining/master"
@@ -15,6 +17,8 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 
 	"google.golang.org/grpc"
+
+	mockstorage "github.com/uniris/uniris-core/datamining/pkg/storage/mock"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	listing "github.com/uniris/uniris-core/datamining/pkg/listing"
@@ -41,7 +45,10 @@ func main() {
 	addingSrv := adding.NewService(db)
 	poolDispatcher := externalrpc.NewPoolDispatcher(config.Datamining)
 
+	txLocker := mockstorage.NewTransactionLocker()
+
 	listService := listing.NewService(db)
+	lockSrv := locking.NewService(txLocker)
 
 	masterMiningSrv := master.NewService(
 		poolFinder,
@@ -55,7 +62,6 @@ func main() {
 	)
 
 	slaveMiningSrv := slave.NewService(
-		mock.NewTransactionLocker(),
 		crypto.NewSigner(),
 		config.SharedKeys.RobotPublicKey,
 		config.SharedKeys.RobotPrivateKey,
@@ -72,7 +78,7 @@ func main() {
 	}()
 
 	//Starts Internal grpc server
-	if err := startExternalServer(listService, addingSrv, slaveMiningSrv, *config); err != nil {
+	if err := startExternalServer(listService, addingSrv, slaveMiningSrv, lockSrv, *config); err != nil {
 		log.Fatal(err)
 	}
 
@@ -96,13 +102,14 @@ func startInternalServer(listService listing.Service, mineService master.Service
 	return nil
 }
 
-func startExternalServer(listService listing.Service, add adding.Service, mineService slave.Service, config system.UnirisConfig) error {
+func startExternalServer(listService listing.Service, add adding.Service, mineService slave.Service, lockSrv locking.Service, config system.UnirisConfig) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", config.Datamining.ExternalPort))
 	if err != nil {
 		return err
 	}
+
 	grpcServer := grpc.NewServer()
-	handler := externalrpc.NewExternalServerHandler(listService, add, mineService,
+	handler := externalrpc.NewExternalServerHandler(listService, add, mineService, lockSrv,
 		config.SharedKeys.RobotPublicKey,
 		config.Datamining.Errors)
 

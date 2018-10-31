@@ -8,7 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/listing"
+	"github.com/uniris/uniris-core/datamining/pkg/locking"
 	"github.com/uniris/uniris-core/datamining/pkg/mining/master/pool"
+	"github.com/uniris/uniris-core/datamining/pkg/storage/mock"
 )
 
 /*
@@ -18,10 +20,7 @@ Scenario: Lead wallet creation
 	Then I perform POW and process validations and create the wallet
 */
 func TestLeadWallet(t *testing.T) {
-	repo := &mockSrvDatabase{
-		Biometrics: make([]*datamining.Biometric, 0),
-		Keychains:  make([]*datamining.Keychain, 0),
-	}
+	repo := mock.NewDatabase()
 	srv := NewService(
 		mockSrvPoolFinder{},
 		&mockSrvPoolDispatcher{Repo: repo},
@@ -58,10 +57,7 @@ Scenario: Lead bio validation
 	Then I perform POW and returns validated transaction
 */
 func TestLeadBio(t *testing.T) {
-	repo := &mockSrvDatabase{
-		Biometrics: make([]*datamining.Biometric, 0),
-		Keychains:  make([]*datamining.Keychain, 0),
-	}
+	repo := mock.NewDatabase()
 	srv := NewService(
 		mockSrvPoolFinder{},
 		&mockSrvPoolDispatcher{Repo: repo},
@@ -89,42 +85,15 @@ func TestLeadBio(t *testing.T) {
 	assert.Equal(t, "bhash", repo.Biometrics[0].PersonHash())
 }
 
-type mockSrvDatabase struct {
-	Biometrics []*datamining.Biometric
-	Keychains  []*datamining.Keychain
-}
-
-func (d *mockSrvDatabase) FindBiometric(bh string) (*datamining.Biometric, error) {
-	return nil, nil
-}
-
-func (d *mockSrvDatabase) FindKeychain(addr string) (*datamining.Keychain, error) {
-	return nil, nil
-}
-
-func (d *mockSrvDatabase) ListBiodPubKeys() ([]string, error) {
-	return []string{}, nil
-}
-
-func (d *mockSrvDatabase) StoreKeychain(k *datamining.Keychain) error {
-	d.Keychains = append(d.Keychains, k)
-	return nil
-}
-
-func (d *mockSrvDatabase) StoreBiometric(b *datamining.Biometric) error {
-	d.Biometrics = append(d.Biometrics, b)
-	return nil
-}
-
 type mockSrvPoolDispatcher struct {
-	Repo *mockSrvDatabase
+	Repo *mock.Databasemock
 }
 
-func (r mockSrvPoolDispatcher) RequestLock(pool.PeerGroup, pool.TransactionLock, string) error {
+func (r mockSrvPoolDispatcher) RequestLock(pool.PeerGroup, locking.TransactionLock, string) error {
 	return nil
 }
 
-func (r mockSrvPoolDispatcher) RequestUnlock(pool.PeerGroup, pool.TransactionLock, string) error {
+func (r mockSrvPoolDispatcher) RequestUnlock(pool.PeerGroup, locking.TransactionLock, string) error {
 	return nil
 }
 
@@ -192,21 +161,21 @@ func (n mockSrvNotifier) NotifyTransactionStatus(txHash string, status Transacti
 
 type mockTxLocker struct{}
 
-func (l mockTxLocker) Lock(txLock pool.TransactionLock) error {
+func (l mockTxLocker) Lock(txLock locking.TransactionLock) error {
 	return nil
 }
 
-func (l mockTxLocker) Unlock(txLock pool.TransactionLock) error {
+func (l mockTxLocker) Unlock(txLock locking.TransactionLock) error {
 	return nil
 }
 
-func (l mockTxLocker) ContainsLock(txLock pool.TransactionLock) bool {
+func (l mockTxLocker) ContainsLock(txLock locking.TransactionLock) bool {
 	return false
 }
 
 type mockSrvSigner struct{}
 
-func (s mockSrvSigner) SignLock(txLock pool.TransactionLock, pvKey string) (string, error) {
+func (s mockSrvSigner) SignLock(txLock locking.TransactionLock, pvKey string) (string, error) {
 	return "signature", nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uniris/uniris-core/datamining/pkg/locking"
 	"github.com/uniris/uniris-core/datamining/pkg/mining/master/pool"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 
@@ -25,7 +26,7 @@ func NewPoolDispatcher(conf system.DataMiningConfiguration) pool.Requester {
 	return poolD{conf}
 }
 
-func (pd poolD) RequestLock(lastValidPool pool.PeerGroup, txLock pool.TransactionLock, sig string) error {
+func (pd poolD) RequestLock(lastValidPool pool.PeerGroup, txLock locking.TransactionLock, sig string) error {
 
 	//TODO: using goroutines
 	for _, p := range lastValidPool.Peers {
@@ -52,7 +53,7 @@ func (pd poolD) RequestLock(lastValidPool pool.PeerGroup, txLock pool.Transactio
 
 	return nil
 }
-func (pd poolD) RequestUnlock(lastValidPool pool.PeerGroup, txLock pool.TransactionLock, sig string) error {
+func (pd poolD) RequestUnlock(lastValidPool pool.PeerGroup, txLock locking.TransactionLock, sig string) error {
 
 	//TODO: using goroutines
 	for _, p := range lastValidPool.Peers {

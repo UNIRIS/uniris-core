@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/uniris/uniris-core/datamining/pkg/locking"
+
 	"github.com/uniris/uniris-core/datamining/pkg/mining/slave"
 
 	"github.com/uniris/uniris-core/datamining/pkg"
@@ -19,20 +21,21 @@ import (
 type externalSrvHandler struct {
 	list              listing.Service
 	add               adding.Service
-	mining            slave.Service
+	slave             slave.Service
+	lock              locking.Service
 	sharedRobotPubKey string
 	errors            system.DataMininingErrors
 }
 
 //NewExternalServerHandler creates a new External GRPC handler
-func NewExternalServerHandler(list listing.Service, add adding.Service, mine slave.Service, sharedRobotPubKey string, errors system.DataMininingErrors) api.ExternalServer {
-	return externalSrvHandler{list, add, mine, sharedRobotPubKey, errors}
+func NewExternalServerHandler(list listing.Service, add adding.Service, slave slave.Service, lock locking.Service, sharedRobotPubKey string, errors system.DataMininingErrors) api.ExternalServer {
+	return externalSrvHandler{list, add, slave, lock, sharedRobotPubKey, errors}
 }
 
 func (s externalSrvHandler) LockTransaction(ctx context.Context, req *api.LockRequest) (*empty.Empty, error) {
 	//TODO: verify signature
 
-	if err := s.mining.LockTransaction(slave.TransactionLock{
+	if err := s.lock.LockTransaction(locking.TransactionLock{
 		TxHash:         req.TransactionHash,
 		MasterRobotKey: req.MasterRobotKey,
 	}); err != nil {
@@ -45,7 +48,7 @@ func (s externalSrvHandler) LockTransaction(ctx context.Context, req *api.LockRe
 func (s externalSrvHandler) UnlockTransaction(ctx context.Context, req *api.LockRequest) (*empty.Empty, error) {
 	//TODO: verify signature
 
-	if err := s.mining.UnlockTransaction(slave.TransactionLock{
+	if err := s.lock.UnlockTransaction(locking.TransactionLock{
 		TxHash:         req.TransactionHash,
 		MasterRobotKey: req.MasterRobotKey,
 	}); err != nil {
@@ -65,7 +68,7 @@ func (s externalSrvHandler) Validate(ctx context.Context, req *api.ValidationReq
 		return nil, err
 	}
 
-	valid, err := s.mining.Validate(data, datamining.TransactionType(req.TransactionType))
+	valid, err := s.slave.Validate(data, datamining.TransactionType(req.TransactionType))
 	if err != nil {
 		return nil, err
 	}

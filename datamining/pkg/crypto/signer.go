@@ -10,8 +10,8 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/uniris/uniris-core/datamining/pkg/locking"
 	"github.com/uniris/uniris-core/datamining/pkg/mining/master"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/master/pool"
 	"github.com/uniris/uniris-core/datamining/pkg/mining/slave"
 )
 
@@ -90,7 +90,7 @@ func (s signer) SignMasterValidation(v master.Validation, pvKey string) (string,
 	return Sign(pvKey, string(b))
 }
 
-func (s signer) SignLock(txLock pool.TransactionLock, pvKey string) (string, error) {
+func (s signer) SignLock(txLock locking.TransactionLock, pvKey string) (string, error) {
 	b, err := json.Marshal(txLock)
 	if err != nil {
 		return "", err

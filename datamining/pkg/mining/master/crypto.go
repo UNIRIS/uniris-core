@@ -1,8 +1,8 @@
 package master
 
 import (
+	"github.com/uniris/uniris-core/datamining/pkg/locking"
 	"github.com/uniris/uniris-core/datamining/pkg/mining/master/checks"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/master/pool"
 )
 
 //Hasher wraps transaction type hasher
@@ -12,6 +12,6 @@ type Hasher interface {
 
 //Signer defines methods to handle signatures
 type Signer interface {
-	SignLock(lock pool.TransactionLock, pvKey string) (string, error)
+	SignLock(lock locking.TransactionLock, pvKey string) (string, error)
 	PowSigner
 }

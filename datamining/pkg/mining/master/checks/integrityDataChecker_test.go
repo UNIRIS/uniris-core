@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,7 +27,7 @@ func TestIntegrityCheckDataFails(t *testing.T) {
 	c := NewIntegrityChecker(mockHasher{})
 	err := c.CheckData("data", "hash000")
 	assert.NotNil(t, err)
-	assert.Equal(t, errors.New("Invalid transaction"), err)
+	assert.Equal(t, ErrInvalidTransaction, err)
 }
 
 type mockHasher struct{}

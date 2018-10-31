@@ -5,6 +5,7 @@ import (
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/listing"
+	"github.com/uniris/uniris-core/datamining/pkg/locking"
 	"github.com/uniris/uniris-core/datamining/pkg/mining/master/checks"
 	"github.com/uniris/uniris-core/datamining/pkg/mining/master/pool"
 	"github.com/uniris/uniris-core/datamining/pkg/mining/master/transactions"
@@ -53,7 +54,7 @@ func (s service) LeadMining(txHash string, addr string, bioSig string, data inte
 		return err
 	}
 
-	lastVPool, vPool, sPool, err := pool.Lookup(addr, s.poolF)
+	lastVPool, vPool, sPool, err := s.findPools(addr, s.poolF)
 	if err != nil {
 		return err
 	}
@@ -133,7 +134,7 @@ func (s service) requestStorage(txHash string, data interface{}, txHandler trans
 }
 
 func (s service) requestLock(txHash string, lastVPool pool.PeerGroup) error {
-	lock := pool.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey}
+	lock := locking.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey}
 	sigLock, err := s.sig.SignLock(lock, s.robotPvKey)
 	if err != nil {
 		return err
@@ -150,7 +151,7 @@ func (s service) requestLock(txHash string, lastVPool pool.PeerGroup) error {
 }
 
 func (s service) requestUnlock(txHash string, lastVPool pool.PeerGroup) error {
-	lock := pool.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey}
+	lock := locking.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey}
 	sigLock, err := s.sig.SignLock(lock, s.robotPvKey)
 	if err != nil {
 		return err
@@ -163,4 +164,24 @@ func (s service) requestUnlock(txHash string, lastVPool pool.PeerGroup) error {
 	}
 
 	return err
+}
+
+//Lookup find storage, validation and last validation pool
+func (s service) findPools(addr string, f pool.Finder) (lastVPool pool.PeerGroup, vPool pool.PeerGroup, sPool pool.PeerGroup, err error) {
+	lastVPool, err = f.FindLastValidationPool(addr)
+	if err != nil {
+		return
+	}
+
+	vPool, err = f.FindValidationPool()
+	if err != nil {
+		return
+	}
+
+	sPool, err = f.FindStoragePool()
+	if err != nil {
+		return
+	}
+
+	return
 }
