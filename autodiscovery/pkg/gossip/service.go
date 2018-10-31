@@ -143,10 +143,11 @@ func (s service) handleCycleReachables(c *Cycle, eChan chan<- error) {
 		log.Printf("Gossip reached peer: %s", p.Endpoint())
 
 		err := s.repo.ContainsUnreachableKey(p.Identity().PublicKey())
-		if err != nil {
+		if err != nil && err != ErrNotFoundOnUnreachableList {
 			eChan <- err
 			return
-		} else {
+		}
+		if err == nil {
 			//Remove the target from the unreachable list if it is
 			if err := s.repo.RemoveUnreachablePeer(p.Identity().PublicKey()); err != nil {
 				eChan <- err
@@ -158,6 +159,7 @@ func (s service) handleCycleReachables(c *Cycle, eChan chan<- error) {
 				return
 			}
 		}
+
 	}
 }
 

@@ -27,28 +27,20 @@ func (n notifier) NotifyDiscoveries(p discovery.Peer) error {
 	if err != nil {
 		return err
 	}
-	return n.notifyQueue(b, queueNameDiscoveries)
+	return n.notifyQueue(b, "application/json", queueNameDiscoveries)
 }
 
 //NotifyReachable notifies for an unreachable peer which is now reachable
 func (n notifier) NotifyReachable(pubk string) error {
-	b, err := n.serializePublicKey(pubk)
-	if err != nil {
-		return err
-	}
-	return n.notifyQueue(b, queueNameReachable)
+	return n.notifyQueue([]byte(pubk), "text/plain", queueNameReachable)
 }
 
 //NotifyUnreachable notifies for an unreachable peer
 func (n notifier) NotifyUnreachable(pubk string) error {
-	b, err := n.serializePublicKey(pubk)
-	if err != nil {
-		return err
-	}
-	return n.notifyQueue(b, queueNameUnreachable)
+	return n.notifyQueue([]byte(pubk), "text/plain", queueNameUnreachable)
 }
 
-func (n notifier) notifyQueue(data []byte, queueName string) error {
+func (n notifier) notifyQueue(data []byte, contentType string, queueName string) error {
 	conn, err := amqp.Dial(n.amqpURI)
 	defer conn.Close()
 
@@ -74,7 +66,7 @@ func (n notifier) notifyQueue(data []byte, queueName string) error {
 	}
 
 	if err := ch.Publish("", q.Name, false, false, amqp.Publishing{
-		ContentType:  "application/json",
+		ContentType:  contentType,
 		Body:         data,
 		DeliveryMode: amqp.Persistent,
 		Timestamp:    time.Now(),
@@ -82,22 +74,6 @@ func (n notifier) notifyQueue(data []byte, queueName string) error {
 		return err
 	}
 	return nil
-}
-
-func (n notifier) serializePublicKey(pubk string) ([]byte, error) {
-	type peerPubk struct {
-		PublicKey string `json:"pubKey"`
-	}
-
-	puk := peerPubk{
-		PublicKey: pubk,
-	}
-
-	b, err := json.Marshal(puk)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
 }
 
 func (n notifier) serialize(p discovery.Peer) ([]byte, error) {
