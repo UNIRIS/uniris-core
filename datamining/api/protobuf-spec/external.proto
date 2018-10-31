@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/any.proto";
+
+package api;
+
+service External {
+    rpc LockTransaction(LockRequest) returns (google.protobuf.Empty) {}
+    rpc UnlockTransaction(LockRequest) returns (google.protobuf.Empty) {}
+    rpc Validate(ValidationRequest) returns (ValidationResponse) {}
+    rpc Store(StorageRequest) returns (google.protobuf.Empty) {}
+}
+
+message LockRequest {
+    string TransactionHash = 1;
+    string MasterRobotKey = 2;
+    string Signature = 3;
+}
+
+enum TransactionType {
+    CreateKeychain = 0;
+    CreateBio = 1;
+}
+
+
+message StorageRequest {
+    google.protobuf.Any Data = 1;
+    TransactionType TransactionType = 2;
+}
+
+message ValidationRequest {
+    google.protobuf.Any Data = 1;
+    TransactionType TransactionType = 2;
+}
+
+message ValidationResponse {
+    Validation Validation = 1;
+}
+
+message Validation {
+    ValidationStatus Status = 1;
+    int64 Timestamp = 2;
+    string PublicKey = 3;
+    string Signature = 4;
+
+    enum ValidationStatus {
+        OK = 0;
+        KO = 1;
+    }
+}

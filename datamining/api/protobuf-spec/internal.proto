@@ -3,29 +3,30 @@ syntax = "proto3";
 package api;
 
 service Internal {
-    rpc GetWallet (WalletRequest) returns (WalletResult) {}
-    rpc StoreWallet (Wallet) returns (StorageResult) {}
+    rpc GetAccount (AccountSearchRequest) returns (AccountSearchResult) {}
+    rpc CreateAccount (AccountCreationRequest) returns (AccountCreationResult) {}
 }
 
-message WalletRequest {
+message AccountSearchRequest {
     string EncryptedHashPerson = 1;
 }
 
-message Wallet {
+message AccountCreationRequest {
     string EncryptedBioData = 1;
     Signature SignatureBioData = 2;
-    string EncryptedWalletData = 3;
-    Signature SignatureWalletData = 4;
+    string EncryptedKeychainData = 3;
+    Signature SignatureKeychainData = 4;
 }
 
-message StorageResult {
-    string TransactionHash = 1;
+message AccountCreationResult {
+    string BioTransactionHash = 1;
+    string KeychainTransactionHash = 2;
 }
 
-message WalletResult {
+message AccountSearchResult {
     string EncryptedWallet = 1;
     string EncryptedAESkey = 2;
-    string EncryptedWalletAddress =3;
+    string EncryptedAddress =3;
 }
 
 message Signature {

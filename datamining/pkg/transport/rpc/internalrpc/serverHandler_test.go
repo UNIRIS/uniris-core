@@ -11,9 +11,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uniris/uniris-core/datamining/pkg/adding"
+	mockcrypto "github.com/uniris/uniris-core/datamining/pkg/crypto/mock"
+	"github.com/uniris/uniris-core/datamining/pkg/mining/master"
+	mockstorage "github.com/uniris/uniris-core/datamining/pkg/storage/mock"
+	mocktransport "github.com/uniris/uniris-core/datamining/pkg/transport/mock"
+
 	"github.com/uniris/uniris-core/datamining/pkg/system"
-	"github.com/uniris/uniris-core/datamining/pkg/validating"
 
 	"github.com/uniris/uniris-core/datamining/pkg/listing"
 
@@ -24,14 +27,14 @@ import (
 )
 
 /*
-Scenario: Retrieve a wallet from a bio hash
-	Given a bio wallet store and a bio hash
-	When i want to retrieve the wallet associated
-	Then i can retrieve the wallet stored
+Scenario: Retrieve an account from a bio hash
+	Given a biometric stored and a bio hash
+	When i want to retrieve the account associated
+	Then i can retrieve the account stored
 */
-func TestGetWallet(t *testing.T) {
+func TestGetAccount(t *testing.T) {
 
-	repo := &databasemock{}
+	repo := mockstorage.NewDatabase()
 
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -41,7 +44,7 @@ func TestGetWallet(t *testing.T) {
 	cipherBhash, _ := crypto.Encrypt(hex.EncodeToString(pbKey), "hash")
 
 	bdata := &datamining.BioData{
-		BHash:           "hash",
+		PersonHash:      "hash",
 		CipherAddrRobot: cipherAddr,
 		CipherAESKey:    "encrypted_aes_key",
 	}
@@ -51,21 +54,30 @@ func TestGetWallet(t *testing.T) {
 		&datamining.MasterValidation{},
 		[]datamining.Validation{},
 	)
-	repo.StoreBioWallet(datamining.NewBioWallet(bdata, endors))
+	repo.StoreBiometric(datamining.NewBiometric(bdata, endors))
 
-	wdata := &datamining.WalletData{
+	kdata := &datamining.KeyChainData{
 		WalletAddr:      "addr",
 		CipherAddrRobot: cipherAddr,
 	}
-	repo.StoreWallet(datamining.NewWallet(wdata, endors, ""))
+	repo.StoreKeychain(datamining.NewKeychain(kdata, endors, ""))
 
 	list := listing.NewService(repo)
-	valid := validating.NewService(mockSigner{}, mockValiationRequester{})
-	adding := adding.NewService(repo, valid)
 	errors := system.DataMininingErrors{}
 
-	h := NewInternalServerHandler(list, adding, hex.EncodeToString(pvKey), errors)
-	res, err := h.GetWallet(context.TODO(), &api.WalletRequest{
+	master := master.NewService(
+		mocktransport.NewPoolFinder(),
+		mocktransport.NewPoolRequester(),
+		mocktransport.NewNotifier(),
+		mockcrypto.NewSigner(),
+		mockcrypto.NewHasher(),
+		list,
+		"robotPubKey",
+		"robotPvKey",
+	)
+
+	h := NewInternalServerHandler(list, master, hex.EncodeToString(pvKey), errors)
+	res, err := h.GetAccount(context.TODO(), &api.AccountSearchRequest{
 		EncryptedHashPerson: cipherBhash,
 	})
 	assert.Nil(t, err)
@@ -74,24 +86,32 @@ func TestGetWallet(t *testing.T) {
 }
 
 /*
-Scenario: Store a wallet
-	Given some wallet encrypted
-	When I want to store the wallet
-	Then the wallet is stored and the updated wallet hash is updated
+Scenario: Create an account
+	Given some keychain data and biometric data encrypted
+	When I want to store the account
+	Then the account is stored and the transactions hash are returned
 */
-func TestStoreWallet(t *testing.T) {
-	repo := &databasemock{}
+func TestCreateAccount(t *testing.T) {
+	repo := mockstorage.NewDatabase()
 
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 
 	list := listing.NewService(repo)
-	valid := validating.NewService(mockSigner{}, mockValiationRequester{})
-	adding := adding.NewService(repo, valid)
+	leading := master.NewService(
+		mocktransport.NewPoolFinder(),
+		mocktransport.NewPoolRequester(),
+		mocktransport.NewNotifier(),
+		mockcrypto.NewSigner(),
+		mockcrypto.NewHasher(),
+		list,
+		"robotPubKey",
+		"robotPvKey",
+	)
 	errors := system.DataMininingErrors{}
 
-	h := NewInternalServerHandler(list, adding, hex.EncodeToString(pvKey), errors)
+	h := NewInternalServerHandler(list, leading, hex.EncodeToString(pvKey), errors)
 
 	cipherAddr, _ := crypto.Encrypt(hex.EncodeToString(pbKey), "encrypted_addr_robot")
 
@@ -100,93 +120,42 @@ func TestStoreWallet(t *testing.T) {
 		EncryptedAddrPerson: "encrypted_person_addr",
 		EncryptedAddrRobot:  cipherAddr,
 		EncryptedAESKey:     "encrypted_aes_key",
-		PersonHash:          "person_hash",
+		PersonHash:          "person hash",
 		PersonPublicKey:     hex.EncodeToString(pbKey),
 	}
 
-	walletData := WalletDataFromJSON{
+	keychainData := KeychainDataFromJSON{
 		BiodPublicKey:      hex.EncodeToString(pbKey),
 		EncryptedAddrRobot: cipherAddr,
 		EncryptedWallet:    "encrypted_wallet",
 		PersonPublicKey:    hex.EncodeToString(pbKey),
 	}
 
-	bBData, _ := json.Marshal(bioData)
-	cipherBio, _ := crypto.Encrypt(hex.EncodeToString(pbKey), string(bBData))
-	sigBio, _ := crypto.Sign(hex.EncodeToString(pvKey), string(bBData))
+	bioBytes, _ := json.Marshal(bioData)
+	cipherBio, _ := crypto.Encrypt(hex.EncodeToString(pbKey), string(bioBytes))
+	sigBio, _ := crypto.Sign(hex.EncodeToString(pvKey), string(bioBytes))
 
-	bWData, _ := json.Marshal(walletData)
-	cipherWallet, _ := crypto.Encrypt(hex.EncodeToString(pbKey), string(bWData))
-	sigWal, _ := crypto.Sign(hex.EncodeToString(pvKey), string(bWData))
+	keychainBytes, _ := json.Marshal(keychainData)
+	cipherWallet, _ := crypto.Encrypt(hex.EncodeToString(pbKey), string(keychainBytes))
+	sigKeychain, _ := crypto.Sign(hex.EncodeToString(pvKey), string(keychainBytes))
 
-	req := &api.Wallet{
-		EncryptedBioData:    cipherBio,
-		EncryptedWalletData: cipherWallet,
+	req := &api.AccountCreationRequest{
+		EncryptedBioData:      cipherBio,
+		EncryptedKeychainData: cipherWallet,
 		SignatureBioData: &api.Signature{
 			Biod:   sigBio,
 			Person: sigBio,
 		},
-		SignatureWalletData: &api.Signature{
-			Biod:   sigWal,
-			Person: sigWal,
+		SignatureKeychainData: &api.Signature{
+			Biod:   sigKeychain,
+			Person: sigKeychain,
 		},
 	}
 
-	res, err := h.StoreWallet(context.TODO(), req)
+	res, err := h.CreateAccount(context.TODO(), req)
 	assert.Nil(t, err)
 	assert.NotNil(t, res)
 
-	assert.Len(t, repo.Wallets, 1)
-	assert.Len(t, repo.BioWallets, 1)
-
-	assert.NotNil(t, res.TransactionHash)
-}
-
-type databasemock struct {
-	BioWallets []*datamining.BioWallet
-	Wallets    []*datamining.Wallet
-}
-
-func (d *databasemock) FindBioWallet(bh string) (*datamining.BioWallet, error) {
-	for _, bw := range d.BioWallets {
-		if bw.Bhash() == bh {
-			return bw, nil
-		}
-	}
-	return nil, nil
-}
-
-func (d *databasemock) FindWallet(addr string) (*datamining.Wallet, error) {
-	for _, w := range d.Wallets {
-		if w.WalletAddr() == addr {
-			return w, nil
-		}
-	}
-	return nil, nil
-}
-
-func (d *databasemock) StoreWallet(w *datamining.Wallet) error {
-	d.Wallets = append(d.Wallets, w)
-	return nil
-}
-
-func (d *databasemock) StoreBioWallet(bw *datamining.BioWallet) error {
-	d.BioWallets = append(d.BioWallets, bw)
-	return nil
-}
-
-type mockSigner struct{}
-
-func (mockSigner) CheckSignature(pubk string, data interface{}, der string) error {
-	return nil
-}
-
-type mockValiationRequester struct{}
-
-func (v mockValiationRequester) RequestWalletValidation(validating.Peer, *datamining.WalletData) (datamining.Validation, error) {
-	return datamining.Validation{}, nil
-}
-
-func (v mockValiationRequester) RequestBioValidation(validating.Peer, *datamining.BioData) (datamining.Validation, error) {
-	return datamining.Validation{}, nil
+	assert.NotNil(t, res.BioTransactionHash)
+	assert.NotNil(t, res.KeychainTransactionHash)
 }

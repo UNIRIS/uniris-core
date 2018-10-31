@@ -24,6 +24,7 @@ type SharedKeys struct {
 //DataMiningConfiguration describes the datamining configuration
 type DataMiningConfiguration struct {
 	InternalPort int                `yaml:"internalPort"`
+	ExternalPort int                `yaml:"externalPort"`
 	Errors       DataMininingErrors `yaml:"errors"`
 }
 

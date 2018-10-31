@@ -23,16 +23,16 @@ func Handler(r *gin.Engine, robotPvKey string, l listing.Service, a adding.Servi
 
 	api := r.Group("/api")
 	{
-		api.POST("/account", enrollAccount(a, robotPvKey))
+		api.POST("/account", createAccount(a, robotPvKey))
 		api.HEAD("/account/:hash", checkAccount(l, robotPvKey))
 		api.GET("/account/:hash", getAccount(l, robotPvKey))
 	}
 }
 
-func enrollAccount(a adding.Service, robotPvKey string) func(c *gin.Context) {
+func createAccount(a adding.Service, robotPvKey string) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
-		var req adding.EnrollmentRequest
+		var req adding.AccountCreationRequest
 
 		if err := c.ShouldBindJSON(&req); err != nil {
 			e := createError(http.StatusBadRequest, err, robotPvKey)

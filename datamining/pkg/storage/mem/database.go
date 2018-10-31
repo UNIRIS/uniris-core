@@ -8,33 +8,37 @@ import (
 
 //Database represents a database
 type Database interface {
-	adding.Repository
-	listing.Repository
+	adding.AccountRepository
+	listing.AccountRepository
+	listing.TechRepository
 }
 
 type db struct {
-	bioWallets []*datamining.BioWallet
-	wallets    []*datamining.Wallet
+	biometrics   []*datamining.Biometric
+	keychains    []*datamining.Keychain
+	sharedBioKey string
 }
 
 //NewDatabase implements the database in memory
-func NewDatabase() Database {
-	return &db{}
+func NewDatabase(sharedBioPubKey string) Database {
+	return &db{
+		sharedBioKey: sharedBioPubKey,
+	}
 }
 
-//FindBioWallet return the bio wallet
-func (d *db) FindBioWallet(bioHash string) (*datamining.BioWallet, error) {
-	for _, b := range d.bioWallets {
-		if b.Bhash() == bioHash {
+//FindBiometric return the biometric from the given person hash
+func (d *db) FindBiometric(personHash string) (*datamining.Biometric, error) {
+	for _, b := range d.biometrics {
+		if b.PersonHash() == personHash {
 			return b, nil
 		}
 	}
 	return nil, nil
 }
 
-//FindWallet return the wallet
-func (d *db) FindWallet(addr string) (*datamining.Wallet, error) {
-	for _, b := range d.wallets {
+//FindKeychain return the keychain from the given address
+func (d *db) FindKeychain(addr string) (*datamining.Keychain, error) {
+	for _, b := range d.keychains {
 		if b.WalletAddr() == addr {
 			return b, nil
 		}
@@ -42,14 +46,18 @@ func (d *db) FindWallet(addr string) (*datamining.Wallet, error) {
 	return nil, nil
 }
 
-//AddWallet add a wallet line to the database
-func (d *db) StoreWallet(w *datamining.Wallet) error {
-	d.wallets = append(d.wallets, w)
+//StoreKeychain add a keychain line to the database
+func (d *db) StoreKeychain(kc *datamining.Keychain) error {
+	d.keychains = append(d.keychains, kc)
 	return nil
 }
 
-//AddBioWallet add a biowallet line to the database
-func (d *db) StoreBioWallet(bw *datamining.BioWallet) error {
-	d.bioWallets = append(d.bioWallets, bw)
+//StoreBiometric add a biometric line to the database
+func (d *db) StoreBiometric(b *datamining.Biometric) error {
+	d.biometrics = append(d.biometrics, b)
 	return nil
+}
+
+func (d *db) ListBiodPubKeys() ([]string, error) {
+	return []string{d.sharedBioKey}, nil
 }

@@ -2,123 +2,102 @@ package adding
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
-	validating "github.com/uniris/uniris-core/datamining/pkg/validating"
 )
 
 /*
-Scenario: Add Wallet
-	Given a empty database
-	When I add a Wallet to the database
-	Then the length of the database Wallet elements is 1
+Scenario: Store a keychain
+	Given a data data
+	When I want to store a keychain
+	Then the wallet is stored on the database
 */
-func TestAddWallet(t *testing.T) {
-
-	db := new(databasemock)
-	v := validating.NewService(mockSigner{}, mockValiationRequester{})
-	s := NewService(db, v)
+func TestStoreKeychain(t *testing.T) {
+	repo := &databasemock{}
+	s := NewService(repo)
 
 	sigs := datamining.Signatures{
-		BiodSig: "sig1",
-		EmSig:   "sig2",
+		BiodSig:   "sig1",
+		PersonSig: "sig2",
 	}
 
-	wdata := &datamining.WalletData{
+	wdata := &datamining.KeyChainData{
 		WalletAddr:      "addr1",
 		CipherAddrRobot: "xxxx",
 		CipherWallet:    "xxxx",
-		EmPubk:          "xxxx",
+		PersonPubk:      "xxxx",
 		BiodPubk:        "xxxx",
 		Sigs:            sigs,
 	}
 
-	err := s.AddWallet(wdata)
+	w := datamining.NewKeychain(wdata, datamining.NewEndorsement(
+		time.Now(),
+		"hash",
+		nil,
+		nil,
+	), "old hash")
+	err := s.StoreKeychain(w)
 	assert.Nil(t, err)
-	l := len(db.wallets)
+	l := len(repo.keychains)
 	assert.Equal(t, 1, l)
+	assert.Equal(t, "addr1", repo.keychains[0].WalletAddr())
+	assert.Equal(t, "hash", repo.keychains[0].Endorsement().TransactionHash())
 }
 
 /*
-Scenario: Add BioWallet
-	Given a empty database
-	When I add a BioWallet to the database
-	Then the length of the database BioWallet elements is 1
+Scenario: Stroe a biometric
+	Given a bio data
+	When I want to store a biometric data
+	Then the bio data are stored on the database
 */
-func TestAddBioWallet(t *testing.T) {
-
-	db := new(databasemock)
-	v := validating.NewService(mockSigner{}, mockValiationRequester{})
-	s := NewService(db, v)
+func TestStoreBiometric(t *testing.T) {
+	repo := &databasemock{}
+	s := NewService(repo)
 
 	sigs := datamining.Signatures{
-		BiodSig: "sig1",
-		EmSig:   "sig2",
+		BiodSig:   "sig1",
+		PersonSig: "sig2",
 	}
 
 	bdata := &datamining.BioData{
-		BHash:           "hash1",
+		PersonHash:      "hash1",
 		BiodPubk:        "xxxx",
 		CipherAddrBio:   "xxxx",
 		CipherAddrRobot: "xxxx",
 		CipherAESKey:    "xxxx",
-		EmPubk:          "xxxx",
+		PersonPubk:      "xxxx",
 		Sigs:            sigs,
 	}
 
-	err := s.AddBioWallet(bdata)
+	b := datamining.NewBiometric(bdata, datamining.NewEndorsement(
+		time.Now(),
+		"hash",
+		nil,
+		nil,
+	))
+
+	err := s.StoreBiometric(b)
 	assert.Nil(t, err)
-	l := len(db.bioWallets)
+	l := len(repo.biometrics)
 	assert.Equal(t, 1, l)
+	assert.Equal(t, 1, l)
+	assert.Equal(t, "hash1", repo.biometrics[0].PersonHash())
 }
 
 type databasemock struct {
-	bioWallets []*datamining.BioWallet
-	wallets    []*datamining.Wallet
+	biometrics []*datamining.Biometric
+	keychains  []*datamining.Keychain
 }
 
-func (d *databasemock) FindBioWallet(bh string) (*datamining.BioWallet, error) {
-	for _, b := range d.bioWallets {
-		if string(b.Bhash()) == string(bh) {
-			return b, nil
-		}
-	}
-	return nil, nil
-}
-
-func (d *databasemock) FindWallet(addr string) (*datamining.Wallet, error) {
-	for _, b := range d.wallets {
-		if string(b.WalletAddr()) == string(addr) {
-			return b, nil
-		}
-	}
-	return nil, nil
-}
-
-func (d *databasemock) StoreWallet(w *datamining.Wallet) error {
-	d.wallets = append(d.wallets, w)
+func (d *databasemock) StoreKeychain(w *datamining.Keychain) error {
+	d.keychains = append(d.keychains, w)
 	return nil
 }
 
-func (d *databasemock) StoreBioWallet(bw *datamining.BioWallet) error {
-	d.bioWallets = append(d.bioWallets, bw)
+func (d *databasemock) StoreBiometric(bw *datamining.Biometric) error {
+	d.biometrics = append(d.biometrics, bw)
 	return nil
-}
-
-type mockSigner struct{}
-
-func (s mockSigner) CheckSignature(pubk string, data interface{}, der string) error {
-	return nil
-}
-
-type mockValiationRequester struct{}
-
-func (v mockValiationRequester) RequestWalletValidation(validating.Peer, *datamining.WalletData) (datamining.Validation, error) {
-	return datamining.Validation{}, nil
-}
-
-func (v mockValiationRequester) RequestBioValidation(validating.Peer, *datamining.BioData) (datamining.Validation, error) {
-	return datamining.Validation{}, nil
 }

@@ -19,15 +19,15 @@ func TestAddAccount(t *testing.T) {
 		sharedBioPub: "my key",
 	}
 
-	req := EnrollmentRequest{
-		EncryptedBioData:    "encrypted bio data",
-		EncryptedWalletData: "encrypted wallet data",
-		SignatureRequest:    "signature request",
+	req := AccountCreationRequest{
+		EncryptedBioData:      "encrypted bio data",
+		EncryptedKeychainData: "encrypted wallet data",
+		SignatureRequest:      "signature request",
 		SignaturesBio: Signatures{
 			BiodSig:   "biod signature",
 			PersonSig: "person sig",
 		},
-		SignaturesWallet: Signatures{
+		SignaturesKeychain: Signatures{
 			BiodSig:   "biod signature",
 			PersonSig: "person sig",
 		},
@@ -35,8 +35,9 @@ func TestAddAccount(t *testing.T) {
 
 	res, err := s.AddAccount(req)
 	assert.Nil(t, err)
-	assert.Equal(t, "transaction hash", res.TransactionHash)
-	assert.Equal(t, "signature of the response", res.SignatureRequest)
+	assert.Equal(t, "transaction hash", res.Transactions.Biod)
+	assert.Equal(t, "transaction hash", res.Transactions.Keychain)
+	assert.Equal(t, "signature of the response", res.Signature)
 }
 
 /*
@@ -52,15 +53,15 @@ func TestAddAccountInvalidSig(t *testing.T) {
 		sharedBioPub: "my key",
 	}
 
-	req := EnrollmentRequest{
-		EncryptedBioData:    "encrypted bio data",
-		EncryptedWalletData: "encrypted wallet data",
-		SignatureRequest:    "signature request",
+	req := AccountCreationRequest{
+		EncryptedBioData:      "encrypted bio data",
+		EncryptedKeychainData: "encrypted wallet data",
+		SignatureRequest:      "signature request",
 		SignaturesBio: Signatures{
 			BiodSig:   "biod signature",
 			PersonSig: "person sig",
 		},
-		SignaturesWallet: Signatures{
+		SignaturesKeychain: Signatures{
 			BiodSig:   "biod signature",
 			PersonSig: "person sig",
 		},
@@ -72,10 +73,13 @@ func TestAddAccountInvalidSig(t *testing.T) {
 
 type mockClient struct{}
 
-func (c mockClient) AddAccount(EnrollmentRequest) (*EnrollmentResult, error) {
-	return &EnrollmentResult{
-		TransactionHash:  "transaction hash",
-		SignatureRequest: "signature of the response",
+func (c mockClient) AddAccount(AccountCreationRequest) (*AccountCreationResult, error) {
+	return &AccountCreationResult{
+		Transactions: AccountCreationTransactions{
+			Biod:     "transaction hash",
+			Keychain: "transaction hash",
+		},
+		Signature: "signature of the response",
 	}, nil
 }
 
