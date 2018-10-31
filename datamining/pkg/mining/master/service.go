@@ -127,10 +127,11 @@ func (s service) requestStorage(txHash string, addr string, data interface{}, tx
 		return err
 	}
 
-	if err := s.requestUnlock(txHash, addr, lastVPool); err != nil {
+	if err := s.notif.NotifyTransactionStatus(txHash, Replicated); err != nil {
 		return err
 	}
-	return s.notif.NotifyTransactionStatus(txHash, Replicated)
+
+	return s.requestUnlock(txHash, addr, lastVPool)
 }
 
 func (s service) requestLock(txHash string, addr string, lastVPool pool.PeerGroup) error {
