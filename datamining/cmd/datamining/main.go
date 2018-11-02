@@ -8,9 +8,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/uniris/uniris-core/datamining/pkg/account/adding"
+	"github.com/uniris/uniris-core/datamining/pkg/biod/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/locking"
 
-	"github.com/uniris/uniris-core/datamining/pkg/adding"
 	"github.com/uniris/uniris-core/datamining/pkg/crypto"
 	"github.com/uniris/uniris-core/datamining/pkg/mining/master"
 	"github.com/uniris/uniris-core/datamining/pkg/mining/slave"
@@ -21,7 +22,6 @@ import (
 	mockstorage "github.com/uniris/uniris-core/datamining/pkg/storage/mock"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
-	listing "github.com/uniris/uniris-core/datamining/pkg/listing"
 	mem "github.com/uniris/uniris-core/datamining/pkg/storage/mem"
 	"github.com/uniris/uniris-core/datamining/pkg/transport/mock"
 	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc/externalrpc"
