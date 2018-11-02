@@ -13,6 +13,7 @@ var ErrAccountNotExist = errors.New("Account doest not exist")
 //RobotClient define methods to interfact with the robot
 type RobotClient interface {
 	GetAccount(encHash string) (*SignedAccountResult, error)
+	GetMasterPeer() (MasterPeer, error)
 }
 
 //RequestValidator defines methods to validate requests
@@ -24,6 +25,7 @@ type RequestValidator interface {
 type Service interface {
 	ExistAccount(encryptedHash string, sig string) error
 	GetAccount(encryptedHash string, sig string) (*SignedAccountResult, error)
+	GetMasterPeer() (MasterPeer, error)
 }
 
 type service struct {
@@ -68,4 +70,8 @@ func (s service) GetAccount(encryptedHash string, sig string) (*SignedAccountRes
 	}
 
 	return s.client.GetAccount(encryptedHash)
+}
+
+func (s service) GetMasterPeer() (MasterPeer, error) {
+	return s.client.GetMasterPeer()
 }

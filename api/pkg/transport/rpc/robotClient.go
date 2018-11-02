@@ -118,3 +118,10 @@ func (c robotClient) AddAccount(req adding.AccountCreationRequest) (*adding.Acco
 		Signature:    sig,
 	}, nil
 }
+
+func (c robotClient) GetMasterPeer() (listing.MasterPeer, error) {
+	//TODO: implement with AI GRPC
+	return listing.MasterPeer{
+		IP: "127.0.0.1",
+	}, nil
+}

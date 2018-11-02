@@ -21,6 +21,22 @@ tags:
     description: Manage and query accounts
 
 paths:
+  /peer/master:
+    get:
+      tags:
+        - peer
+      operationId: getMasterPeer
+      summary: Get a master peer
+      description: Performs a master peer election based on IA prediction
+      responses:
+        "200":
+          description: Master peer details
+          schema:
+            $ref: "#/definitions/MasterPeerDetails"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/Error"
   /account:
     post:
       tags:
@@ -194,4 +210,12 @@ definitions:
         type: string
       person_sig:
         description: Signature performed by the person
+        type: string
+
+  MasterPeerDetails:
+    required:
+      - ip
+    properties:
+      ip:
+        description: Master peer IP address
         type: string

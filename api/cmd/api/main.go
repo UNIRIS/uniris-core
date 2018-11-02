@@ -42,7 +42,7 @@ func main() {
 	lister := listing.NewService(config.SharedKeys.BiodPublicKey, client, validator)
 	adder := adding.NewService(config.SharedKeys.BiodPublicKey, client, validator)
 
-	rest.Handler(r, config.SharedKeys.RobotPrivateKey, lister, adder)
+	rest.BuildAPI(r, config.SharedKeys.RobotPrivateKey, lister, adder)
 
 	r.Run(fmt.Sprintf(":%d", config.API.Port))
 }
