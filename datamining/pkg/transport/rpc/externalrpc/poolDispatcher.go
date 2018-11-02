@@ -6,14 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uniris/uniris-core/datamining/pkg/locking"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/master/pool"
-	"github.com/uniris/uniris-core/datamining/pkg/system"
-
 	"github.com/golang/protobuf/ptypes/any"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/system"
 	"google.golang.org/grpc"
 )
 
@@ -26,7 +23,7 @@ func NewPoolDispatcher(conf system.DataMiningConfiguration) pool.Requester {
 	return poolD{conf}
 }
 
-func (pd poolD) RequestLock(lastValidPool pool.PeerGroup, txLock locking.TransactionLock, sig string) error {
+func (pd poolD) RequestLock(lastValidPool datamining.Pool, txLock datamining.TransactionLock, sig string) error {
 
 	//TODO: using goroutines
 	for _, p := range lastValidPool.Peers {
@@ -53,7 +50,7 @@ func (pd poolD) RequestLock(lastValidPool pool.PeerGroup, txLock locking.Transac
 
 	return nil
 }
-func (pd poolD) RequestUnlock(lastValidPool pool.PeerGroup, txLock locking.TransactionLock, sig string) error {
+func (pd poolD) RequestUnlock(lastValidPool datamining.Pool, txLock datamining.TransactionLock, sig string) error {
 
 	//TODO: using goroutines
 	for _, p := range lastValidPool.Peers {
@@ -81,7 +78,7 @@ func (pd poolD) RequestUnlock(lastValidPool pool.PeerGroup, txLock locking.Trans
 	return nil
 }
 
-func (pd poolD) RequestValidations(validPool pool.PeerGroup, data interface{}, txType datamining.TransactionType) ([]datamining.Validation, error) {
+func (pd poolD) RequestValidations(validPool datamining.Pool, data interface{}, txType datamining.TransactionType) ([]datamining.Validation, error) {
 
 	valids := make([]datamining.Validation, 0)
 
@@ -119,7 +116,7 @@ func (pd poolD) RequestValidations(validPool pool.PeerGroup, data interface{}, t
 	return valids, nil
 }
 
-func (pd poolD) RequestStorage(sPool pool.PeerGroup, data interface{}, txType datamining.TransactionType) error {
+func (pd poolD) RequestStorage(sPool datamining.Pool, data interface{}, txType datamining.TransactionType) error {
 
 	//TODO: using goroutines
 	for _, p := range sPool.Peers {
