@@ -5,29 +5,31 @@ import (
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
+	"github.com/uniris/uniris-core/datamining/pkg/lock"
+	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	"github.com/uniris/uniris-core/datamining/pkg/storage/mock"
 )
 
 //NewPoolRequester create a mock pool requester
-func NewPoolRequester() datamining.PoolRequester {
+func NewPoolRequester() mining.PoolRequester {
 	return mockPoolRequester{
 		Repo: mock.NewDatabase(),
 	}
 }
 
 type mockPoolRequester struct {
-	Repo *mock.Databasemock
+	Repo mock.Repo
 }
 
-func (r mockPoolRequester) RequestLock(datamining.Pool, datamining.TransactionLock, string) error {
+func (r mockPoolRequester) RequestLock(mining.Pool, lock.TransactionLock, string) error {
 	return nil
 }
 
-func (r mockPoolRequester) RequestUnlock(datamining.Pool, datamining.TransactionLock, string) error {
+func (r mockPoolRequester) RequestUnlock(mining.Pool, lock.TransactionLock, string) error {
 	return nil
 }
 
-func (r mockPoolRequester) RequestValidations(sPool datamining.Pool, data interface{}, txType datamining.TransactionType) ([]datamining.Validation, error) {
+func (r mockPoolRequester) RequestValidations(sPool mining.Pool, data interface{}, txType mining.TransactionType) ([]datamining.Validation, error) {
 	return []datamining.Validation{
 		datamining.NewValidation(
 			datamining.ValidationOK,
@@ -37,12 +39,16 @@ func (r mockPoolRequester) RequestValidations(sPool datamining.Pool, data interf
 		)}, nil
 }
 
-func (r mockPoolRequester) RequestStorage(sPool datamining.Pool, data interface{}, txType datamining.TransactionType) error {
+func (r mockPoolRequester) RequestStorage(sPool mining.Pool, data interface{}, end datamining.Endorsement, txType mining.TransactionType) error {
 	switch data.(type) {
-	case *datamining.Keychain:
-		r.Repo.StoreKeychain(data.(*account.Keychain))
-	case *datamining.Biometric:
-		r.Repo.StoreBiometric(data.(*account.Biometric))
+	case *account.KeyChainData:
+		data := data.(*account.KeyChainData)
+		kc := account.NewKeychain(data, end, "")
+		r.Repo.StoreKeychain(kc)
+	case *account.BioData:
+		data := data.(*account.BioData)
+		bio := account.NewBiometric(data, end)
+		r.Repo.StoreBiometric(bio)
 	}
 
 	return nil

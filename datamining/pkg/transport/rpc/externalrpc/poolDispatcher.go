@@ -2,32 +2,32 @@ package externalrpc
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
-	"github.com/golang/protobuf/ptypes/any"
-
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/account"
+	"github.com/uniris/uniris-core/datamining/pkg/lock"
+	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 	"google.golang.org/grpc"
 )
 
-type poolD struct {
+type poolR struct {
 	conf system.DataMiningConfiguration
 }
 
-//NewPoolDispatcher creates a new pool dispatcher using GRPC
-func NewPoolDispatcher(conf system.DataMiningConfiguration) pool.Requester {
-	return poolD{conf}
+//NewPoolRequester creates a new pool requester using GRPC
+func NewPoolRequester(conf system.DataMiningConfiguration) mining.PoolRequester {
+	return poolR{conf}
 }
 
-func (pd poolD) RequestLock(lastValidPool datamining.Pool, txLock datamining.TransactionLock, sig string) error {
+func (pR poolR) RequestLock(lastValidPool mining.Pool, txLock lock.TransactionLock, sig string) error {
 
 	//TODO: using goroutines
-	for _, p := range lastValidPool.Peers {
-		serverAddr := fmt.Sprintf("%s:%d", p.IP.String(), pd.conf.ExternalPort)
+	for _, p := range lastValidPool.Peers() {
+		serverAddr := fmt.Sprintf("%s:%d", p.IP.String(), pR.conf.ExternalPort)
 		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 		defer conn.Close()
 
@@ -50,11 +50,11 @@ func (pd poolD) RequestLock(lastValidPool datamining.Pool, txLock datamining.Tra
 
 	return nil
 }
-func (pd poolD) RequestUnlock(lastValidPool datamining.Pool, txLock datamining.TransactionLock, sig string) error {
+func (pR poolR) RequestUnlock(lastValidPool mining.Pool, txLock lock.TransactionLock, sig string) error {
 
 	//TODO: using goroutines
-	for _, p := range lastValidPool.Peers {
-		serverAddr := fmt.Sprintf("%s:%d", p.IP.String(), pd.conf.ExternalPort)
+	for _, p := range lastValidPool.Peers() {
+		serverAddr := fmt.Sprintf("%s:%d", p.IP.String(), pR.conf.ExternalPort)
 		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 		defer conn.Close()
 
@@ -78,13 +78,13 @@ func (pd poolD) RequestUnlock(lastValidPool datamining.Pool, txLock datamining.T
 	return nil
 }
 
-func (pd poolD) RequestValidations(validPool datamining.Pool, data interface{}, txType datamining.TransactionType) ([]datamining.Validation, error) {
+func (pR poolR) RequestValidations(validPool mining.Pool, data interface{}, txType mining.TransactionType) ([]datamining.Validation, error) {
 
 	valids := make([]datamining.Validation, 0)
 
 	//TODO: using goroutines
-	for _, p := range validPool.Peers {
-		serverAddr := fmt.Sprintf("%s:%d", p.IP.String(), pd.conf.ExternalPort)
+	for _, p := range validPool.Peers() {
+		serverAddr := fmt.Sprintf("%s:%d", p.IP.String(), pR.conf.ExternalPort)
 		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 		defer conn.Close()
 
@@ -93,15 +93,19 @@ func (pd poolD) RequestValidations(validPool datamining.Pool, data interface{}, 
 		}
 
 		client := api.NewExternalClient(conn)
-		b, err := json.Marshal(data)
-		if err != nil {
-			return nil, err
+		var res *api.ValidationResponse
+
+		switch txType {
+		case mining.CreateKeychainTransaction:
+			res, err = client.ValidateKeychain(context.Background(), &api.KeychainValidationRequest{
+				Data: createKeychainData(data.(*account.KeyChainData)),
+			})
+		case mining.CreateBioTransaction:
+			res, err = client.ValidateBiometric(context.Background(), &api.BiometricValidationRequest{
+				Data: createBiometricData(data.(*account.BioData)),
+			})
 		}
 
-		res, err := client.Validate(context.Background(), &api.ValidationRequest{
-			Data:            &any.Any{Value: b},
-			TransactionType: api.TransactionType(txType),
-		})
 		if err != nil {
 			return nil, err
 		}
@@ -116,11 +120,11 @@ func (pd poolD) RequestValidations(validPool datamining.Pool, data interface{}, 
 	return valids, nil
 }
 
-func (pd poolD) RequestStorage(sPool datamining.Pool, data interface{}, txType datamining.TransactionType) error {
+func (pR poolR) RequestStorage(sPool mining.Pool, data interface{}, end datamining.Endorsement, txType mining.TransactionType) error {
 
 	//TODO: using goroutines
-	for _, p := range sPool.Peers {
-		serverAddr := fmt.Sprintf("%s:%d", p.IP.String(), pd.conf.ExternalPort)
+	for _, p := range sPool.Peers() {
+		serverAddr := fmt.Sprintf("%s:%d", p.IP.String(), pR.conf.ExternalPort)
 		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 		defer conn.Close()
 
@@ -130,15 +134,19 @@ func (pd poolD) RequestStorage(sPool datamining.Pool, data interface{}, txType d
 
 		client := api.NewExternalClient(conn)
 
-		b, err := json.Marshal(data)
-		if err != nil {
-			return err
+		switch txType {
+		case mining.CreateKeychainTransaction:
+			_, err = client.StoreKeychain(context.Background(), &api.KeychainStorageRequest{
+				Data:        createKeychainData(data.(*account.KeyChainData)),
+				Endorsement: createEndorsement(end.(datamining.Endorsement)),
+			})
+		case mining.CreateBioTransaction:
+			_, err = client.StoreBiometric(context.Background(), &api.BiometricStorageRequest{
+				Data:        createBiometricData(data.(*account.BioData)),
+				Endorsement: createEndorsement(end.(datamining.Endorsement)),
+			})
 		}
 
-		_, err = client.Store(context.Background(), &api.StorageRequest{
-			Data:            &any.Any{Value: b},
-			TransactionType: api.TransactionType(txType),
-		})
 		if err != nil {
 			return err
 		}

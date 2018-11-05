@@ -1,15 +1,60 @@
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
-import "google/protobuf/any.proto";
+
+import "common.proto";
 
 package api;
 
 service External {
+
     rpc LockTransaction(LockRequest) returns (google.protobuf.Empty) {}
     rpc UnlockTransaction(LockRequest) returns (google.protobuf.Empty) {}
-    rpc Validate(ValidationRequest) returns (ValidationResponse) {}
-    rpc Store(StorageRequest) returns (google.protobuf.Empty) {}
+
+    rpc LeadKeychainMining(KeychainLeadRequest) returns (google.protobuf.Empty) {}
+    rpc LeadBiometricMining(BiometricLeadRequest) returns (google.protobuf.Empty) {}
+    
+    rpc ValidateKeychain(KeychainValidationRequest) returns (ValidationResponse) {}
+    rpc ValidateBiometric(BiometricValidationRequest) returns (ValidationResponse) {}
+
+    rpc StoreKeychain(KeychainStorageRequest) returns (google.protobuf.Empty) {}
+    rpc StoreBiometric(BiometricStorageRequest) returns (google.protobuf.Empty) {}
+}
+
+message KeychainLeadRequest {
+    string TransactionHash = 1;
+    repeated string ValidatorPeerIPs = 2;
+    string EncryptedKeychainData = 3;
+    Signature SignatureKeychainData = 4;
+}
+
+message BiometricLeadRequest {
+    string TransactionHash = 1;
+    repeated string ValidatorPeerIPs = 2;
+    string EncryptedBioData = 3;
+    Signature SignatureBioData = 4;
+}
+
+message KeychainValidationRequest {
+    string TransactionHash = 1;
+    KeychainData Data = 2;
+}
+
+message BiometricValidationRequest {
+    string TransactionHash = 1;
+    BiometricData Data = 2;
+}
+
+message KeychainStorageRequest {
+    string TransactionHash = 1;
+    KeychainData Data = 2;
+    Endorsement Endorsement = 4;
+}
+
+message BiometricStorageRequest {
+    string TransactionHash = 1;
+    BiometricData Data = 2;
+    Endorsement Endorsement = 3;
 }
 
 message LockRequest {
@@ -18,20 +63,35 @@ message LockRequest {
     string Signature = 3;
 }
 
-enum TransactionType {
-    CreateKeychain = 0;
-    CreateBio = 1;
+message KeychainData {
+	string CipherAddrRobot = 1;
+	string CipherWallet = 2;
+	string PersonPubk = 3;
+	string BiodPubk = 4;
+    Signature Signature = 5;
 }
 
-
-message StorageRequest {
-    google.protobuf.Any Data = 1;
-    TransactionType TransactionType = 2;
+message BiometricData {
+    string PersonHash = 1;
+    string CipherAddrRobot = 2;
+    string CipherAddrBio = 3;
+	string CipherAESKey = 4;
+	string PersonPubk = 5;
+	string BiodPubk = 6;
+    Signature Signature = 7;
 }
 
-message ValidationRequest {
-    google.protobuf.Any Data = 1;
-    TransactionType TransactionType = 2;
+message Endorsement {
+    int64 Timestamp = 1;
+    string TransactionHash = 2;
+    MasterValidation MasterValidation = 3;
+    repeated Validation Validations = 4;
+}
+
+message MasterValidation {
+    string ProofOfWorkRobotKey = 1;
+    Validation ProofOfWorkValidation = 2;
+    repeated string LastTransactionMiners = 3;
 }
 
 message ValidationResponse {
@@ -49,3 +109,4 @@ message Validation {
         KO = 1;
     }
 }
+

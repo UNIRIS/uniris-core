@@ -1,8 +1,6 @@
 package account
 
 import (
-	"encoding/json"
-
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 )
 
@@ -77,28 +75,4 @@ func (b biometric) CipherAESKey() string {
 //Endorsement returns the bio wallet endorsement
 func (b biometric) Endorsement() datamining.Endorsement {
 	return b.endorsement
-}
-
-func (b biometric) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Data        *BioData               `json:"data"`
-		Endorsement datamining.Endorsement `json:"endorsment"`
-	}{
-		Data:        b.data,
-		Endorsement: b.endorsement,
-	})
-}
-
-func (b *biometric) UnmarshalJSON(bytes []byte) error {
-	bData := struct {
-		Data        *BioData               `json:"data"`
-		Endorsement datamining.Endorsement `json:"endorsment"`
-	}{}
-	if err := json.Unmarshal(bytes, &bData); err != nil {
-		return err
-	}
-
-	b.data = bData.Data
-	b.endorsement = bData.Endorsement
-	return nil
 }

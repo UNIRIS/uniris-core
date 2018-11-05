@@ -2,8 +2,6 @@ package lock
 
 import (
 	"errors"
-
-	datamining "github.com/uniris/uniris-core/datamining/pkg"
 )
 
 //ErrLockExisting is returned when a lock already exist
@@ -11,15 +9,15 @@ var ErrLockExisting = errors.New("A lock already exist for this transaction")
 
 //Repository defines methods to manage locks
 type Repository interface {
-	NewLock(datamining.TransactionLock) error
-	RemoveLock(datamining.TransactionLock) error
-	ContainsLock(datamining.TransactionLock) bool
+	NewLock(TransactionLock) error
+	RemoveLock(TransactionLock) error
+	ContainsLock(TransactionLock) bool
 }
 
 //Service defines methods to handle lock and unlock transactions
 type Service interface {
-	LockTransaction(datamining.TransactionLock) error
-	UnlockTransaction(datamining.TransactionLock) error
+	LockTransaction(TransactionLock) error
+	UnlockTransaction(TransactionLock) error
 }
 
 type service struct {
@@ -31,7 +29,7 @@ func NewService(repo Repository) Service {
 	return service{repo}
 }
 
-func (s service) LockTransaction(txLock datamining.TransactionLock) error {
+func (s service) LockTransaction(txLock TransactionLock) error {
 	if s.repo.ContainsLock(txLock) {
 		return ErrLockExisting
 	}
@@ -39,6 +37,6 @@ func (s service) LockTransaction(txLock datamining.TransactionLock) error {
 	return s.repo.NewLock(txLock)
 }
 
-func (s service) UnlockTransaction(txLock datamining.TransactionLock) error {
+func (s service) UnlockTransaction(txLock TransactionLock) error {
 	return s.repo.RemoveLock(txLock)
 }

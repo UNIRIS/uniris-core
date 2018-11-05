@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package api;
+
+message Signature {
+    string Biod = 1;
+    string Person = 2;
+}
+
+enum TransactionType {
+    CreateKeychain = 0;
+    CreateBiometric = 1;
+}

@@ -1,6 +1,7 @@
 package adding
 
 import (
+	"github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 )
 
@@ -12,8 +13,8 @@ type Repository interface {
 
 //Service is the interface that provide methods for wallets transactions on robot side
 type Service interface {
-	StoreKeychain(account.Keychain) error
-	StoreBiometric(account.Biometric) error
+	StoreKeychain(data *account.KeyChainData, endorsement datamining.Endorsement) error
+	StoreBiometric(data *account.BioData, endorsement datamining.Endorsement) error
 }
 
 type service struct {
@@ -25,17 +26,21 @@ func NewService(repo Repository) Service {
 	return service{repo}
 }
 
-func (s service) StoreKeychain(kc account.Keychain) error {
+func (s service) StoreKeychain(data *account.KeyChainData, end datamining.Endorsement) error {
 
 	//TODO: check integrity of keychain
+
+	kc := account.NewKeychain(data, end, "")
 
 	//TODO: handle store pending/ko
 	return s.repo.StoreKeychain(kc)
 }
 
-func (s service) StoreBiometric(b account.Biometric) error {
+func (s service) StoreBiometric(data *account.BioData, end datamining.Endorsement) error {
 
 	//TODO: check integrity of biometric
+
+	b := account.NewBiometric(data, end)
 
 	//TODO: handle store pending/ko
 	return s.repo.StoreBiometric(b)

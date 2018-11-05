@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/biod/listing"
 )
 
@@ -20,18 +21,14 @@ func TestExecutePOW(t *testing.T) {
 	list := listing.NewService(repo)
 
 	pow := NewPOW(list, mockPowSigner{}, "my key", "my pv key")
-	lastValidPool := Pool{
-		Peers: []Peer{
-			Peer{PublicKey: "key"},
-		},
-	}
+	lastValidPool := NewPool(Peer{PublicKey: "key"})
 	valid, err := pow.Execute("hash", "signature", lastValidPool)
 	assert.Nil(t, err)
 	assert.NotNil(t, valid)
 
 	assert.Equal(t, "my key", valid.ProofOfWorkRobotKey())
 	assert.Equal(t, "my key", valid.ProofOfWorkValidation().PublicKey())
-	assert.Equal(t, ValidationOK, valid.ProofOfWorkValidation().Status())
+	assert.Equal(t, datamining.ValidationOK, valid.ProofOfWorkValidation().Status())
 }
 
 /*
@@ -46,18 +43,15 @@ func TestExecutePOW_KO(t *testing.T) {
 	list := listing.NewService(repo)
 
 	pow := NewPOW(list, mockBadPowSigner{}, "my key", "my pv key")
-	lastValidPool := Pool{
-		Peers: []Peer{
-			Peer{PublicKey: "key"},
-		},
-	}
+	lastValidPool := NewPool(Peer{PublicKey: "key"})
+
 	valid, err := pow.Execute("hash", "signature", lastValidPool)
 	assert.Nil(t, err)
 	assert.NotNil(t, valid)
 
 	assert.Equal(t, "my key", valid.ProofOfWorkRobotKey())
 	assert.Equal(t, "my key", valid.ProofOfWorkValidation().PublicKey())
-	assert.Equal(t, ValidationKO, valid.ProofOfWorkValidation().Status())
+	assert.Equal(t, datamining.ValidationKO, valid.ProofOfWorkValidation().Status())
 }
 
 type mockDatabase struct {
@@ -73,7 +67,7 @@ func (s mockPowSigner) CheckTransactionSignature(pubk string, tx string, der str
 	return nil
 }
 
-func (s mockPowSigner) SignMasterValidation(v UnsignedValidation, pvKey string) (string, error) {
+func (s mockPowSigner) SignValidation(v UnsignedValidation, pvKey string) (string, error) {
 	return "sig", nil
 }
 
@@ -83,6 +77,6 @@ func (s mockBadPowSigner) CheckTransactionSignature(pubk string, tx string, der 
 	return errors.New("Invalid signature")
 }
 
-func (s mockBadPowSigner) SignMasterValidation(v UnsignedValidation, pvKey string) (string, error) {
+func (s mockBadPowSigner) SignValidation(v UnsignedValidation, pvKey string) (string, error) {
 	return "sig", nil
 }

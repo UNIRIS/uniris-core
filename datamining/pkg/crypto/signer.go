@@ -7,12 +7,12 @@ import (
 	"encoding/asn1"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"math/big"
 
-	"github.com/uniris/uniris-core/datamining/pkg/locking"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/master"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/slave"
+	"github.com/uniris/uniris-core/datamining/pkg/lock"
+	"github.com/uniris/uniris-core/datamining/pkg/mining"
+
+	"github.com/uniris/uniris-core/datamining/pkg/account/mining/checks"
 )
 
 type ecdsaSignature struct {
@@ -21,8 +21,8 @@ type ecdsaSignature struct {
 
 //Signer defines methods to handle signatures
 type Signer interface {
-	master.Signer
-	slave.Signer
+	checks.Signer
+	mining.Signer
 }
 
 type signer struct{}
@@ -69,10 +69,10 @@ func (s signer) CheckSignature(pubk string, data interface{}, sig string) error 
 		return nil
 	}
 
-	return errors.New("Invalid signature")
+	return checks.ErrInvalidSignature
 }
 
-func (s signer) SignValidation(v slave.Validation, pvKey string) (string, error) {
+func (s signer) SignValidation(v mining.UnsignedValidation, pvKey string) (string, error) {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return "", err
@@ -81,16 +81,7 @@ func (s signer) SignValidation(v slave.Validation, pvKey string) (string, error)
 	return Sign(pvKey, string(b))
 }
 
-func (s signer) SignMasterValidation(v master.Validation, pvKey string) (string, error) {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return "", err
-	}
-
-	return Sign(pvKey, string(b))
-}
-
-func (s signer) SignLock(txLock locking.TransactionLock, pvKey string) (string, error) {
+func (s signer) SignLock(txLock lock.TransactionLock, pvKey string) (string, error) {
 	b, err := json.Marshal(txLock)
 	if err != nil {
 		return "", err

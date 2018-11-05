@@ -1,4 +1,4 @@
-package datamining
+package mining
 
 //TransactionStatus defines the status of a transaction
 type TransactionStatus int

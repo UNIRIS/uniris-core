@@ -175,11 +175,11 @@ definitions:
             - biometric
             - keychain
           biometric:
-            type: string
-            description: Biometric transaction hash
+            $ref: "#/definitions/CreationResponse"
+            description: Biometric creation response
           keychain:
-            type: string
-            description: Keychain transaction hash
+            $ref: "#/definitions/CreationResponse"
+            description: Keychain creation response hash
       signature:
         description: Signature
         type: string
@@ -195,3 +195,16 @@ definitions:
       person_sig:
         description: Signature performed by the person
         type: string
+
+
+  CreationResponse:
+    required:
+      - transaction_hash
+      - master_peer_ip
+    properties:
+      transaction_hash:
+        type: string
+        description: Transaction hash
+      master_peer_ip:
+        type: string
+        description: IP of the master peer which lead the transaction processing

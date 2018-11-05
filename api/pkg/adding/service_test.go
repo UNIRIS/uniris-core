@@ -35,8 +35,8 @@ func TestAddAccount(t *testing.T) {
 
 	res, err := s.AddAccount(req)
 	assert.Nil(t, err)
-	assert.Equal(t, "transaction hash", res.Transactions.Biod)
-	assert.Equal(t, "transaction hash", res.Transactions.Keychain)
+	assert.Equal(t, "transaction hash", res.Transactions.Biometric.TransactionHash)
+	assert.Equal(t, "transaction hash", res.Transactions.Keychain.TransactionHash)
 	assert.Equal(t, "signature of the response", res.Signature)
 }
 
@@ -76,8 +76,12 @@ type mockClient struct{}
 func (c mockClient) AddAccount(AccountCreationRequest) (*AccountCreationResult, error) {
 	return &AccountCreationResult{
 		Transactions: AccountCreationTransactions{
-			Biod:     "transaction hash",
-			Keychain: "transaction hash",
+			Biometric: CreationTransaction{
+				TransactionHash: "transaction hash",
+			},
+			Keychain: CreationTransaction{
+				TransactionHash: "transaction hash",
+			},
 		},
 		Signature: "signature of the response",
 	}, nil

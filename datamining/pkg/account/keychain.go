@@ -1,8 +1,6 @@
 package account
 
 import (
-	"encoding/json"
-
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 )
 
@@ -78,35 +76,4 @@ func (k keychain) Signatures() datamining.Signatures {
 //OldTransactionHash returns the hash of the previous transaction
 func (k keychain) OldTransactionHash() string {
 	return k.oldTxnHash
-}
-
-func (k keychain) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Data                *KeyChainData          `json:"data"`
-		Endorsement         datamining.Endorsement `json:"endorsment"`
-		LastTransactionHash string                 `json:"last_transaction_hash"`
-	}{
-		Data:                k.data,
-		Endorsement:         k.endorsement,
-		LastTransactionHash: k.oldTxnHash,
-	})
-}
-
-func (k *keychain) UnmarshalJSON(b []byte) error {
-
-	bData := struct {
-		Data                *KeyChainData          `json:"data"`
-		Endorsement         datamining.Endorsement `json:"endorsment"`
-		LastTransactionHash string                 `json:"last_transaction_hash"`
-	}{}
-
-	if err := json.Unmarshal(b, &bData); err != nil {
-		return err
-	}
-
-	k.data = bData.Data
-	k.endorsement = bData.Endorsement
-	k.oldTxnHash = bData.LastTransactionHash
-
-	return nil
 }

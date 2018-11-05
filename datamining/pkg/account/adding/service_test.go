@@ -25,7 +25,7 @@ func TestStoreKeychain(t *testing.T) {
 		PersonSig: "sig2",
 	}
 
-	wdata := &account.KeyChainData{
+	data := &account.KeyChainData{
 		WalletAddr:      "addr1",
 		CipherAddrRobot: "xxxx",
 		CipherWallet:    "xxxx",
@@ -34,13 +34,12 @@ func TestStoreKeychain(t *testing.T) {
 		Sigs:            sigs,
 	}
 
-	kc := account.NewKeychain(wdata, datamining.NewEndorsement(
+	err := s.StoreKeychain(data, datamining.NewEndorsement(
 		time.Now(),
 		"hash",
 		nil,
 		nil,
-	), "old hash")
-	err := s.StoreKeychain(kc)
+	))
 	assert.Nil(t, err)
 	l := len(repo.keychains)
 	assert.Equal(t, 1, l)
@@ -73,14 +72,12 @@ func TestStoreBiometric(t *testing.T) {
 		Sigs:            sigs,
 	}
 
-	b := account.NewBiometric(bdata, datamining.NewEndorsement(
+	err := s.StoreBiometric(bdata, datamining.NewEndorsement(
 		time.Now(),
 		"hash",
 		nil,
 		nil,
 	))
-
-	err := s.StoreBiometric(b)
 	assert.Nil(t, err)
 	l := len(repo.biometrics)
 	assert.Equal(t, 1, l)
