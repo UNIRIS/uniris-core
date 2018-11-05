@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	datamining "github.com/uniris/uniris-core/datamining/pkg"
 )
 
 /*
@@ -18,7 +17,7 @@ func TestLockTransaction(t *testing.T) {
 	repo := new(mockRepository)
 
 	service := NewService(repo)
-	assert.Nil(t, service.LockTransaction(datamining.TransactionLock{
+	assert.Nil(t, service.LockTransaction(TransactionLock{
 		MasterRobotKey: "robokey",
 		TxHash:         "txhash",
 		Address:        "address",
@@ -38,13 +37,13 @@ func TestCannotAlreadyLockTransaction(t *testing.T) {
 	repo := new(mockRepository)
 
 	service := NewService(repo)
-	assert.Nil(t, service.LockTransaction(datamining.TransactionLock{
+	assert.Nil(t, service.LockTransaction(TransactionLock{
 		MasterRobotKey: "robokey",
 		TxHash:         "txhash",
 		Address:        "address",
 	}))
 
-	assert.Equal(t, ErrLockExisting, service.LockTransaction(datamining.TransactionLock{
+	assert.Equal(t, ErrLockExisting, service.LockTransaction(TransactionLock{
 		MasterRobotKey: "robokey",
 		TxHash:         "txhash",
 		Address:        "address",
@@ -64,19 +63,19 @@ func TestUnlockTransaction(t *testing.T) {
 	repo := new(mockRepository)
 
 	service := NewService(repo)
-	assert.Nil(t, service.LockTransaction(datamining.TransactionLock{
+	assert.Nil(t, service.LockTransaction(TransactionLock{
 		MasterRobotKey: "robokey",
 		TxHash:         "txhash",
 		Address:        "address",
 	}))
 
-	service.LockTransaction(datamining.TransactionLock{
+	service.LockTransaction(TransactionLock{
 		MasterRobotKey: "robokey",
 		TxHash:         "txhash",
 		Address:        "address",
 	})
 
-	assert.Nil(t, service.UnlockTransaction(datamining.TransactionLock{
+	assert.Nil(t, service.UnlockTransaction(TransactionLock{
 		MasterRobotKey: "robokey",
 		TxHash:         "txhash",
 		Address:        "address",
@@ -86,22 +85,22 @@ func TestUnlockTransaction(t *testing.T) {
 }
 
 type mockRepository struct {
-	locks []datamining.TransactionLock
+	locks []TransactionLock
 }
 
-func (r *mockRepository) NewLock(txLock datamining.TransactionLock) error {
+func (r *mockRepository) NewLock(txLock TransactionLock) error {
 	r.locks = append(r.locks, txLock)
 	return nil
 }
 
-func (r *mockRepository) RemoveLock(txLock datamining.TransactionLock) error {
+func (r *mockRepository) RemoveLock(txLock TransactionLock) error {
 	pos := r.findLockPosition(txLock)
 	if pos > -1 {
 		r.locks = append(r.locks[:pos], r.locks[pos+1:]...)
 	}
 	return nil
 }
-func (r mockRepository) ContainsLock(txLock datamining.TransactionLock) bool {
+func (r mockRepository) ContainsLock(txLock TransactionLock) bool {
 	for _, lock := range r.locks {
 		if lock.TxHash == txLock.TxHash && txLock.MasterRobotKey == lock.MasterRobotKey && lock.Address == txLock.Address {
 			return true
@@ -110,7 +109,7 @@ func (r mockRepository) ContainsLock(txLock datamining.TransactionLock) bool {
 	return false
 }
 
-func (r mockRepository) findLockPosition(txLock datamining.TransactionLock) int {
+func (r mockRepository) findLockPosition(txLock TransactionLock) int {
 	for i, lock := range r.locks {
 		if lock.TxHash == txLock.TxHash && txLock.MasterRobotKey == lock.MasterRobotKey {
 			return i

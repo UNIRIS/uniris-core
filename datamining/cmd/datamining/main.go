@@ -8,18 +8,17 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/uniris/uniris-core/datamining/pkg/account/adding"
-	"github.com/uniris/uniris-core/datamining/pkg/biod/listing"
-	"github.com/uniris/uniris-core/datamining/pkg/locking"
+	accountAdding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
+	accountListing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
+	accountMining "github.com/uniris/uniris-core/datamining/pkg/account/mining"
+	biodlisting "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
+	"github.com/uniris/uniris-core/datamining/pkg/lock"
+	"github.com/uniris/uniris-core/datamining/pkg/mining"
 
 	"github.com/uniris/uniris-core/datamining/pkg/crypto"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/master"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/slave"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 
 	"google.golang.org/grpc"
-
-	mockstorage "github.com/uniris/uniris-core/datamining/pkg/storage/mock"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	mem "github.com/uniris/uniris-core/datamining/pkg/storage/mem"
@@ -39,60 +38,60 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db := mem.NewDatabase(config.SharedKeys.BiodPublicKey)
+	db := mem.NewDatabase()
 
 	poolFinder := mock.NewPoolFinder()
-	addingSrv := adding.NewService(db)
-	poolDispatcher := externalrpc.NewPoolDispatcher(config.Datamining)
+	poolRequester := externalrpc.NewPoolRequester(config.Datamining)
 
-	txLocker := mockstorage.NewTransactionLocker()
+	biodLister := biodlisting.NewService(db)
+	lockSrv := lock.NewService(db)
+	signer := crypto.NewSigner()
+	hasher := crypto.NewHasher()
 
-	listService := listing.NewService(db)
-	lockSrv := locking.NewService(txLocker)
+	accountLister := accountListing.NewService(db)
+	accountAdder := accountAdding.NewService(db)
 
-	masterMiningSrv := master.NewService(
-		poolFinder,
-		poolDispatcher,
+	checks := map[mining.TransactionType]mining.Checker{
+		mining.CreateKeychainTransaction: accountMining.NewKeychainChecker(signer, hasher),
+		mining.CreateBioTransaction:      accountMining.NewBiometricChecker(signer, hasher),
+	}
+
+	miningSrv := mining.NewService(
 		mock.NewNotifier(),
-		crypto.NewSigner(),
-		crypto.NewHasher(),
-		listService,
+		poolFinder,
+		poolRequester,
+		signer,
+		biodLister,
 		config.SharedKeys.RobotPublicKey,
 		config.SharedKeys.RobotPrivateKey,
-	)
-
-	slaveMiningSrv := slave.NewService(
-		crypto.NewSigner(),
-		config.SharedKeys.RobotPublicKey,
-		config.SharedKeys.RobotPrivateKey,
+		checks,
 	)
 
 	log.Print("DataMining Service starting...")
 
 	go func() {
-
 		//Starts Internal grpc server
-		if err := startInternalServer(listService, masterMiningSrv, *config); err != nil {
+		if err := startInternalServer(accountLister, miningSrv, *config); err != nil {
 			log.Fatal(err)
 		}
 	}()
 
 	//Starts Internal grpc server
-	if err := startExternalServer(listService, addingSrv, slaveMiningSrv, lockSrv, *config); err != nil {
+	if err := startExternalServer(lockSrv, miningSrv, accountAdder, *config); err != nil {
 		log.Fatal(err)
 	}
 
 }
 
-func startInternalServer(listService listing.Service, mineService master.Service, config system.UnirisConfig) error {
+func startInternalServer(accountLister accountListing.Service, mineService mining.Service, config system.UnirisConfig) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", config.Datamining.InternalPort))
 	if err != nil {
 		return err
 	}
 	grpcServer := grpc.NewServer()
-	handler := internalrpc.NewInternalServerHandler(listService, mineService,
+	handler := internalrpc.NewInternalServerHandler(accountLister, mineService,
 		config.SharedKeys.RobotPrivateKey,
-		config.Datamining.Errors)
+		config.Datamining)
 
 	api.RegisterInternalServer(grpcServer, handler)
 	log.Printf("Internal grpc Server listening on 127.0.0.1:%d", config.Datamining.InternalPort)
@@ -102,15 +101,16 @@ func startInternalServer(listService listing.Service, mineService master.Service
 	return nil
 }
 
-func startExternalServer(listService listing.Service, add adding.Service, mineService slave.Service, lockSrv locking.Service, config system.UnirisConfig) error {
+func startExternalServer(lockSrv lock.Service, mineSrv mining.Service, accountAdder accountAdding.Service, config system.UnirisConfig) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", config.Datamining.ExternalPort))
 	if err != nil {
 		return err
 	}
 
 	grpcServer := grpc.NewServer()
-	handler := externalrpc.NewExternalServerHandler(listService, add, mineService, lockSrv,
+	handler := externalrpc.NewExternalServerHandler(lockSrv, mineSrv, accountAdder,
 		config.SharedKeys.RobotPublicKey,
+		config.SharedKeys.RobotPrivateKey,
 		config.Datamining.Errors)
 
 	api.RegisterExternalServer(grpcServer, handler)

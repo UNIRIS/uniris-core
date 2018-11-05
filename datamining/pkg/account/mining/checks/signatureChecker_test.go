@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/account"
 )
 
 func TestOkSignatureValidator(t *testing.T) {
@@ -20,7 +21,7 @@ func TestOkSignatureValidator(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
 
-	w := &datamining.KeyChainData{
+	w := &account.KeyChainData{
 		BiodPubk:   hex.EncodeToString(pbKey),
 		PersonPubk: hex.EncodeToString(pbKey),
 		Sigs: datamining.Signatures{
@@ -29,10 +30,10 @@ func TestOkSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err := sigCheck.CheckData(w)
+	err := sigCheck.CheckData(w, "hash")
 	assert.Nil(t, err)
 
-	bd := &datamining.BioData{
+	bd := &account.BioData{
 		BiodPubk:   hex.EncodeToString(pbKey),
 		PersonPubk: hex.EncodeToString(pbKey),
 		Sigs: datamining.Signatures{
@@ -41,7 +42,7 @@ func TestOkSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err = sigCheck.CheckData(bd)
+	err = sigCheck.CheckData(bd, "hash")
 	assert.Nil(t, err)
 }
 
@@ -52,7 +53,7 @@ func TestKOSignatureValidator(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pbKey, _ := x509.MarshalPKIXPublicKey(key.Public())
 
-	w := &datamining.KeyChainData{
+	w := &account.KeyChainData{
 		BiodPubk:   hex.EncodeToString(pbKey),
 		PersonPubk: hex.EncodeToString(pbKey),
 		Sigs: datamining.Signatures{
@@ -61,10 +62,10 @@ func TestKOSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err := sigCheck.CheckData(w)
+	err := sigCheck.CheckData(w, "hash")
 	assert.Equal(t, err, ErrInvalidSignature)
 
-	bd := &datamining.BioData{
+	bd := &account.BioData{
 		BiodPubk:   hex.EncodeToString(pbKey),
 		PersonPubk: hex.EncodeToString(pbKey),
 		Sigs: datamining.Signatures{
@@ -73,7 +74,7 @@ func TestKOSignatureValidator(t *testing.T) {
 		},
 	}
 
-	err = sigCheck.CheckData(bd)
+	err = sigCheck.CheckData(bd, "hash")
 	assert.Equal(t, err, ErrInvalidSignature)
 }
 

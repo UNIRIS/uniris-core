@@ -5,8 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"github.com/uniris/uniris-core/datamining/pkg"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/master/checks"
+	"github.com/uniris/uniris-core/datamining/pkg/account/mining/checks"
 )
 
 //Hasher defines methods for hashing
@@ -23,14 +22,6 @@ func NewHasher() Hasher {
 
 func (h hasher) HashTransactionData(data interface{}) (string, error) {
 	b, err := json.Marshal(data)
-	if err != nil {
-		return "", err
-	}
-	return HashBytes(b), nil
-}
-
-func (h hasher) HashWallet(k *datamining.Keychain) (string, error) {
-	b, err := json.Marshal(k)
 	if err != nil {
 		return "", err
 	}

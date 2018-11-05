@@ -1,4 +1,4 @@
-package datamining
+package mining
 
 //TransactionType represents the transaction type
 type TransactionType int
@@ -10,10 +10,3 @@ const (
 	//CreateBioTransaction represents a bio creation transaction
 	CreateBioTransaction TransactionType = 1
 )
-
-//TransactionLock represents lock data
-type TransactionLock struct {
-	TxHash         string
-	MasterRobotKey string
-	Address        string
-}

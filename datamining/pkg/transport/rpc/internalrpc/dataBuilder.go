@@ -2,11 +2,12 @@ package internalrpc
 
 import (
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
-	"github.com/uniris/uniris-core/datamining/pkg"
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/account"
 )
 
 //BuildAccountSearchResult constitue details for the KeychainSearchResult rpc command
-func BuildAccountSearchResult(kc *datamining.Keychain, biometric *datamining.Biometric) *api.AccountSearchResult {
+func BuildAccountSearchResult(kc account.Keychain, biometric account.Biometric) *api.AccountSearchResult {
 	return &api.AccountSearchResult{
 		EncryptedAESkey:  biometric.CipherAESKey(),
 		EncryptedWallet:  kc.CipherWallet(),
@@ -15,8 +16,8 @@ func BuildAccountSearchResult(kc *datamining.Keychain, biometric *datamining.Bio
 }
 
 //BuildBioData transform json bio data into bio data
-func BuildBioData(bioData BioDataFromJSON, sig *api.Signature) *datamining.BioData {
-	return &datamining.BioData{
+func BuildBioData(bioData BioDataFromJSON, sig *api.Signature) *account.BioData {
+	return &account.BioData{
 		PersonHash:      bioData.PersonHash,
 		BiodPubk:        bioData.BiodPublicKey,
 		CipherAddrBio:   bioData.EncryptedAddrPerson,
@@ -32,8 +33,8 @@ func BuildBioData(bioData BioDataFromJSON, sig *api.Signature) *datamining.BioDa
 }
 
 //BuildKeychainData transform json keychain data into keychain data
-func BuildKeychainData(keychainData *KeychainDataFromJSON, sig *api.Signature, clearAddr string) *datamining.KeyChainData {
-	return &datamining.KeyChainData{
+func BuildKeychainData(keychainData *KeychainDataFromJSON, sig *api.Signature, clearAddr string) *account.KeyChainData {
+	return &account.KeyChainData{
 		WalletAddr:      clearAddr,
 		BiodPubk:        keychainData.BiodPublicKey,
 		CipherAddrRobot: keychainData.EncryptedAddrRobot,

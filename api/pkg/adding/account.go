@@ -8,8 +8,14 @@ type AccountCreationResult struct {
 
 //AccountCreationTransactions represents the generated transactions during the account creation
 type AccountCreationTransactions struct {
-	Biod     string `json:"biod" binding:"required"`
-	Keychain string `json:"keychain" binding:"required"`
+	Biometric CreationTransaction `json:"biometric" binding:"required"`
+	Keychain  CreationTransaction `json:"keychain" binding:"required"`
+}
+
+//CreationTransaction represents the result for a transaction
+type CreationTransaction struct {
+	TransactionHash string `json:"transaction_hash" binding:"required"`
+	MasterPeerIP    string `json:"master_peer_ip" binding:"required"`
 }
 
 //AccountCreationRequest represents the data to provide to create an account

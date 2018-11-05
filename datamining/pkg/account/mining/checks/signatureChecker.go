@@ -3,17 +3,11 @@ package checks
 import (
 	"errors"
 
-	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 )
 
 //ErrInvalidSignature is returned when a invalid signature is provided
 var ErrInvalidSignature = errors.New("Invalid signature")
-
-//Signer defines methods to handle signatures
-type Signer interface {
-	CheckSignature(pubKey string, data interface{}, sig string) error
-}
 
 type sigCheck struct {
 	sig Signer
@@ -24,25 +18,20 @@ func NewSignatureChecker(sig Signer) Handler {
 	return sigCheck{sig}
 }
 
-func (c sigCheck) IsCatchedError(err error) bool {
-	return err == ErrInvalidSignature
-}
-
-func (c sigCheck) CheckData(data interface{}) error {
-
+func (c sigCheck) CheckData(data interface{}, txHash string) error {
 	switch data.(type) {
-	case *datamining.KeyChainData:
-		return c.checkKeychainData(data.(*datamining.KeyChainData))
-	case *datamining.BioData:
-		return c.checkBioData(data.(*datamining.BioData))
+	case *account.KeyChainData:
+		return c.checkKeychainData(data.(*account.KeyChainData))
+	case *account.BioData:
+		return c.checkBioData(data.(*account.BioData))
 	}
 
-	return nil
+	return errors.New("Unsupported data")
 }
 
 func (c sigCheck) checkKeychainData(kc *account.KeyChainData) error {
-	kcValid := KeychainData{
-		BIODPublicKey:      kc.BiodPubk,
+	kcValid := rawKeychainData{
+		BiodPublicKey:      kc.BiodPubk,
 		EncryptedAddrRobot: kc.CipherAddrRobot,
 		EncryptedWallet:    kc.CipherWallet,
 		PersonPublicKey:    kc.PersonPubk,
@@ -64,9 +53,9 @@ func (c sigCheck) checkKeychainData(kc *account.KeyChainData) error {
 	return nil
 }
 
-func (c sigCheck) checkBioData(b *datamining.BioData) error {
-	bValid := BioData{
-		BIODPublicKey:       b.BiodPubk,
+func (c sigCheck) checkBioData(b *account.BioData) error {
+	bValid := rawBiometricData{
+		BiodPublicKey:       b.BiodPubk,
 		EncryptedAddrPerson: b.CipherAddrBio,
 		EncryptedAddrRobot:  b.CipherAddrRobot,
 		EncryptedAESKey:     b.CipherAESKey,

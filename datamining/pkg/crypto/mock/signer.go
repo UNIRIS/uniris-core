@@ -2,9 +2,8 @@ package mock
 
 import (
 	"github.com/uniris/uniris-core/datamining/pkg/crypto"
-	"github.com/uniris/uniris-core/datamining/pkg/locking"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/master"
-	"github.com/uniris/uniris-core/datamining/pkg/mining/slave"
+	"github.com/uniris/uniris-core/datamining/pkg/lock"
+	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
 //NewSigner creates a mock a signer
@@ -22,14 +21,10 @@ func (s mockSigner) CheckTransactionSignature(pubk string, tx string, der string
 	return nil
 }
 
-func (s mockSigner) SignLock(locking.TransactionLock, string) (string, error) {
+func (s mockSigner) SignLock(lock.TransactionLock, string) (string, error) {
 	return "sig", nil
 }
 
-func (s mockSigner) SignMasterValidation(v master.Validation, pvKey string) (string, error) {
-	return "sig", nil
-}
-
-func (s mockSigner) SignValidation(v slave.Validation, pvKey string) (string, error) {
+func (s mockSigner) SignValidation(v mining.UnsignedValidation, pvKey string) (string, error) {
 	return "sig", nil
 }

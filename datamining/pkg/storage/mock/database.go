@@ -1,7 +1,6 @@
 package mock
 
 import (
-	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	account_adding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
 	account_listing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
@@ -20,7 +19,7 @@ type Repo interface {
 type databasemock struct {
 	Biometrics []account.Biometric
 	Keychains  []account.Keychain
-	Locks      []datamining.TransactionLock
+	Locks      []lock.TransactionLock
 }
 
 //NewDatabase creates a new mock database
@@ -28,7 +27,7 @@ func NewDatabase() Repo {
 	return &databasemock{
 		Biometrics: make([]account.Biometric, 0),
 		Keychains:  make([]account.Keychain, 0),
-		Locks:      make([]datamining.TransactionLock, 0),
+		Locks:      make([]lock.TransactionLock, 0),
 	}
 }
 
@@ -64,12 +63,12 @@ func (d *databasemock) StoreBiometric(b account.Biometric) error {
 	return nil
 }
 
-func (d *databasemock) NewLock(txLock datamining.TransactionLock) error {
+func (d *databasemock) NewLock(txLock lock.TransactionLock) error {
 	d.Locks = append(d.Locks, txLock)
 	return nil
 }
 
-func (d *databasemock) RemoveLock(txLock datamining.TransactionLock) error {
+func (d *databasemock) RemoveLock(txLock lock.TransactionLock) error {
 	pos := d.findLockPosition(txLock)
 	if pos > -1 {
 		d.Locks = append(d.Locks[:pos], d.Locks[pos+1:]...)
@@ -77,7 +76,7 @@ func (d *databasemock) RemoveLock(txLock datamining.TransactionLock) error {
 	return nil
 }
 
-func (d databasemock) ContainsLock(txLock datamining.TransactionLock) bool {
+func (d databasemock) ContainsLock(txLock lock.TransactionLock) bool {
 	for _, lock := range d.Locks {
 		if lock.TxHash == txLock.TxHash && txLock.MasterRobotKey == lock.MasterRobotKey {
 			return true
@@ -86,7 +85,7 @@ func (d databasemock) ContainsLock(txLock datamining.TransactionLock) bool {
 	return false
 }
 
-func (d databasemock) findLockPosition(txLock datamining.TransactionLock) int {
+func (d databasemock) findLockPosition(txLock lock.TransactionLock) int {
 	for i, lock := range d.Locks {
 		if lock.TxHash == txLock.TxHash && txLock.MasterRobotKey == lock.MasterRobotKey {
 			return i
