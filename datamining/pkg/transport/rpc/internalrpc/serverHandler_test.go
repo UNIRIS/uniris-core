@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/uniris/uniris-core/datamining/pkg"
 
@@ -13,8 +14,7 @@ import (
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
-
-	"github.com/uniris/uniris-core/datamining/pkg/mock"
+	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 )
 
 /*
@@ -24,26 +24,8 @@ Scenario: Get account
 	Then I get the encrypted keychain and biometric data
 */
 func TestGetAccount(t *testing.T) {
-	db := mock.NewDatabase()
 	conf := system.UnirisConfig{}
-	srvHandler := NewInternalServerHandler(mock.NewPoolRequester(db), mockAIClient{}, mockHasher{}, mockDecrypter{}, conf)
-
-	db.StoreBiometric(account.NewBiometric(
-		&account.BioData{
-			CipherAddrBio: "enc address",
-			CipherAESKey:  "cipher aes",
-			PersonHash:    "hash",
-		},
-		datamining.NewEndorsement("", "hash", nil, nil),
-	))
-
-	db.StoreKeychain(account.NewKeychain(
-		&account.KeyChainData{
-			CipherWallet: "cipher wallet",
-			WalletAddr:   "address",
-		},
-		datamining.NewEndorsement("", "hash", nil, nil),
-	))
+	srvHandler := NewInternalServerHandler(mockAccountRequester{}, mockAIClient{}, mockHasher{}, mockDecrypter{}, conf)
 
 	res, err := srvHandler.GetAccount(context.TODO(), &api.AccountSearchRequest{
 		EncryptedHashPerson: "enc person hash",
@@ -62,7 +44,7 @@ Scenario: Create keychain
 */
 func TestCreateKeychain(t *testing.T) {
 	conf := system.UnirisConfig{}
-	srvHandler := NewInternalServerHandler(nil, nil, mockHasher{}, mockKeychainDecrypter{}, conf)
+	srvHandler := NewInternalServerHandler(nil, mockAIClient{}, mockHasher{}, mockKeychainDecrypter{}, conf)
 	res, err := srvHandler.CreateKeychain(context.TODO(), &api.KeychainCreationRequest{
 		EncryptedKeychainData: "cipher data",
 		SignatureKeychainData: &api.Signature{
@@ -83,7 +65,7 @@ Scenario: Create biometric
 */
 func TestCreateBiometric(t *testing.T) {
 	conf := system.UnirisConfig{}
-	srvHandler := NewInternalServerHandler(nil, nil, mockHasher{}, mockBiometricDecrypter{}, conf)
+	srvHandler := NewInternalServerHandler(nil, mockAIClient{}, mockHasher{}, mockBiometricDecrypter{}, conf)
 	res, err := srvHandler.CreateBiometric(context.TODO(), &api.BiometricCreationRequest{
 		EncryptedBiometricData: "cipher data",
 		SignatureBiometricData: &api.Signature{
@@ -98,10 +80,10 @@ func TestCreateBiometric(t *testing.T) {
 
 type mockHasher struct{}
 
-func (h mockHasher) HashKeychainJSON(*KeychainDataJSON) (string, error) {
+func (h mockHasher) HashKeychainJSON(*rpc.KeychainDataJSON) (string, error) {
 	return "hash", nil
 }
-func (h mockHasher) HashBiometricJSON(*BioDataJSON) (string, error) {
+func (h mockHasher) HashBiometricJSON(*rpc.BioDataJSON) (string, error) {
 	return "hash", nil
 
 }
@@ -116,7 +98,7 @@ func (d mockKeychainDecrypter) DecryptCipherAddress(cipherAddr string, pvKey str
 	return "address", nil
 }
 func (d mockKeychainDecrypter) DecryptTransactionData(data string, pvKey string) (string, error) {
-	keychainJSON := KeychainDataJSON{
+	keychainJSON := rpc.KeychainDataJSON{
 		EncryptedWallet:    "cipher wallet",
 		BiodPublicKey:      "pubk",
 		PersonPublicKey:    "pubk",
@@ -136,7 +118,7 @@ func (d mockBiometricDecrypter) DecryptCipherAddress(cipherAddr string, pvKey st
 	return "address", nil
 }
 func (d mockBiometricDecrypter) DecryptTransactionData(data string, pvKey string) (string, error) {
-	biometricJSON := BioDataJSON{
+	biometricJSON := rpc.BioDataJSON{
 		EncryptedAddrPerson: "cipher addr",
 		EncryptedAESKey:     "cipher aes",
 		PersonHash:          "person hash",
@@ -169,4 +151,57 @@ func (c mockAIClient) GetBiometricStoragePool(personHash string) (datamining.Poo
 }
 func (c mockAIClient) GetKeychainStoragePool(address string) (datamining.Pool, error) {
 	return datamining.NewPool(datamining.Peer{IP: net.ParseIP("127.0.0.1")}), nil
+}
+
+func (c mockAIClient) GetMasterPeer(txHash string) (datamining.Peer, error) {
+	return datamining.Peer{IP: net.ParseIP("127.0.0.1")}, nil
+}
+
+func (c mockAIClient) GetValidationPool(txHash string) (datamining.Pool, error) {
+	return datamining.NewPool(datamining.Peer{IP: net.ParseIP("127.0.0.1")}), nil
+}
+
+type mockAccountRequester struct{}
+
+func (r mockAccountRequester) RequestBiometric(sPool datamining.Pool, personHash string) (account.Biometric, error) {
+	return account.NewBiometric(
+		&account.BioData{
+			BiodPubk:        "pub",
+			CipherAddrBio:   "enc addr",
+			CipherAddrRobot: "enc addr",
+			CipherAESKey:    "enc aes key",
+			PersonHash:      personHash,
+			PersonPubk:      "pub",
+		},
+		datamining.NewEndorsement(
+			"",
+			"hash",
+			datamining.NewMasterValidation(
+				[]string{"hash"},
+				"robotkey",
+				datamining.NewValidation(datamining.ValidationOK, time.Now(), "pubkey", "sig"),
+			),
+			[]datamining.Validation{},
+		),
+	), nil
+}
+func (r mockAccountRequester) RequestKeychain(sPool datamining.Pool, addr string) (account.Keychain, error) {
+	return account.NewKeychain(
+		&account.KeyChainData{
+			BiodPubk:        "pub",
+			CipherAddrRobot: "enc addr",
+			CipherWallet:    "enc wallet",
+			PersonPubk:      "pub",
+		},
+		datamining.NewEndorsement(
+			"",
+			"hash",
+			datamining.NewMasterValidation(
+				[]string{"hash"},
+				"robotkey",
+				datamining.NewValidation(datamining.ValidationOK, time.Now(), "pubkey", "sig"),
+			),
+			[]datamining.Validation{},
+		),
+	), nil
 }

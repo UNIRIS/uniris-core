@@ -6,4 +6,6 @@ import datamining "github.com/uniris/uniris-core/datamining/pkg"
 type AIClient interface {
 	GetBiometricStoragePool(personHash string) (datamining.Pool, error)
 	GetKeychainStoragePool(address string) (datamining.Pool, error)
+	GetMasterPeer(txHash string) (datamining.Peer, error)
+	GetValidationPool(txHash string) (datamining.Pool, error)
 }

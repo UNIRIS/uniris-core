@@ -28,12 +28,12 @@ type externalSrvHandler struct {
 	accAdd    accAdding.Service
 	accLister accListing.Service
 	decrypt   rpc.Decrypter
-	signer    Signer
+	signer    rpc.Signer
 	conf      system.UnirisConfig
 }
 
 //NewExternalServerHandler creates a new External GRPC handler
-func NewExternalServerHandler(lock lock.Service, mining mining.Service, accAdd accAdding.Service, accLister accListing.Service, decrypt rpc.Decrypter, signer Signer, conf system.UnirisConfig) api.ExternalServer {
+func NewExternalServerHandler(lock lock.Service, mining mining.Service, accAdd accAdding.Service, accLister accListing.Service, decrypt rpc.Decrypter, signer rpc.Signer, conf system.UnirisConfig) api.ExternalServer {
 	return externalSrvHandler{lock, mining, accAdd, accLister, decrypt, signer, conf}
 }
 
@@ -54,7 +54,7 @@ func (s externalSrvHandler) GetBiometric(ctxt context.Context, req *api.Biometri
 		return nil, errors.New(s.conf.Datamining.Errors.AccountNotExist)
 	}
 
-	sig, err := s.signer.SignBiometric(buildBiometricJSON(biometric), s.conf.SharedKeys.RobotPrivateKey)
+	sig, err := s.signer.SignBiometric(rpc.BuildBiometricJSON(biometric), s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (s externalSrvHandler) GetKeychain(ctxt context.Context, req *api.KeychainR
 		return nil, errors.New(s.conf.Datamining.Errors.AccountNotExist)
 	}
 
-	sig, err := s.signer.SignKeychain(buildKeychainJSON(keychain), s.conf.SharedKeys.RobotPrivateKey)
+	sig, err := s.signer.SignKeychain(rpc.BuildKeychainJSON(keychain), s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (s externalSrvHandler) LeadKeychainMining(ctx context.Context, req *api.Key
 		return nil, fmt.Errorf("Cannot decrypt the wallet data - %s", err.Error())
 	}
 
-	var keychain *KeychainDataJSON
+	var keychain *rpc.KeychainDataJSON
 	err = json.Unmarshal([]byte(keychainRawData), &keychain)
 	if err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func (s externalSrvHandler) LeadKeychainMining(ctx context.Context, req *api.Key
 		return nil, fmt.Errorf("Cannot decrypt the address - %s", err.Error())
 	}
 
-	keychainData := buildKeychainDataFromJSON(keychain, req.SignatureKeychainData, clearaddr)
+	keychainData := rpc.BuildKeychainDataFromJSON(keychain, req.SignatureKeychainData, clearaddr)
 	pp := make([]datamining.Peer, 0)
 	for _, p := range req.ValidatorPeerIPs {
 		pp = append(pp, datamining.Peer{IP: net.ParseIP(p)})
@@ -124,7 +124,7 @@ func (s externalSrvHandler) LeadBiometricMining(ctx context.Context, req *api.Bi
 		return nil, fmt.Errorf("Cannot decrypt the wallet data - %s", err.Error())
 	}
 
-	var bio *BioDataJSON
+	var bio *rpc.BioDataJSON
 	err = json.Unmarshal([]byte(biometricRawData), &bio)
 	if err != nil {
 		return nil, err
@@ -135,7 +135,7 @@ func (s externalSrvHandler) LeadBiometricMining(ctx context.Context, req *api.Bi
 		return nil, fmt.Errorf("Cannot decrypt the address - %s", err.Error())
 	}
 
-	bioData := buildBioDataFromJSON(bio, req.SignatureBioData)
+	bioData := rpc.BuildBioDataFromJSON(bio, req.SignatureBioData)
 
 	pp := make([]datamining.Peer, 0)
 	for _, p := range req.ValidatorPeerIPs {
@@ -184,7 +184,7 @@ func (s externalSrvHandler) ValidateKeychain(ctx context.Context, req *api.Keych
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt the address - %s", err.Error())
 	}
-	data := formatKeychainDataAPI(req.Data, clearaddr)
+	data := buildKeychainDataFromAPI(req.Data, clearaddr)
 
 	valid, err := s.mining.Validate(req.TransactionHash, data, mining.KeychainTransaction)
 	if err != nil {
@@ -203,7 +203,7 @@ func (s externalSrvHandler) ValidateKeychain(ctx context.Context, req *api.Keych
 
 func (s externalSrvHandler) ValidateBiometric(ctx context.Context, req *api.BiometricValidationRequest) (*api.ValidationResponse, error) {
 	//TODO: verify signatures
-	data := formatBiometricDataAPI(req.Data)
+	data := buildBiometricDataFromAPI(req.Data)
 
 	valid, err := s.mining.Validate(req.TransactionHash, data, mining.BiometricTransaction)
 	if err != nil {
@@ -228,7 +228,7 @@ func (s externalSrvHandler) StoreKeychain(ctx context.Context, req *api.Keychain
 		return nil, fmt.Errorf("Cannot decrypt the address - %s", err.Error())
 	}
 
-	if err := s.accAdd.StoreKeychain(formatKeychainDataAPI(req.Data, clearaddr), formatEndorsementAPI(req.Endorsement)); err != nil {
+	if err := s.accAdd.StoreKeychain(buildKeychainDataFromAPI(req.Data, clearaddr), buildEndorsementFromAPI(req.Endorsement)); err != nil {
 		return nil, err
 	}
 
@@ -237,7 +237,7 @@ func (s externalSrvHandler) StoreKeychain(ctx context.Context, req *api.Keychain
 
 func (s externalSrvHandler) StoreBiometric(ctx context.Context, req *api.BiometricStorageRequest) (*empty.Empty, error) {
 	//TODO: verify signatures
-	if err := s.accAdd.StoreBiometric(formatBiometricDataAPI(req.Data), formatEndorsementAPI(req.Endorsement)); err != nil {
+	if err := s.accAdd.StoreBiometric(buildBiometricDataFromAPI(req.Data), buildEndorsementFromAPI(req.Endorsement)); err != nil {
 		return nil, err
 	}
 

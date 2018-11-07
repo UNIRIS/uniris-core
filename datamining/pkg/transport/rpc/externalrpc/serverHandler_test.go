@@ -20,6 +20,7 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	"github.com/uniris/uniris-core/datamining/pkg/mock"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
+	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 )
 
 /*
@@ -410,7 +411,7 @@ func (d mockBiometricDecrypter) DecryptCipherAddress(cipherAddr string, pvKey st
 }
 
 func (d mockBiometricDecrypter) DecryptTransactionData(data string, pvKey string) (string, error) {
-	biometricJSON := BioDataJSON{
+	biometricJSON := rpc.BioDataJSON{
 		EncryptedAddrPerson: "cipher addr",
 		EncryptedAESKey:     "cipher aes",
 		PersonHash:          "person hash",
@@ -436,11 +437,11 @@ func (s mockSigner) CheckKeychainSignature(pubk string, data accountMining.Unsig
 	return nil
 }
 
-func (s mockSigner) SignBiometric(b BiometricJSON, pvKey string) (string, error) {
+func (s mockSigner) SignBiometric(b rpc.BiometricJSON, pvKey string) (string, error) {
 	return "sig", nil
 }
 
-func (s mockSigner) SignKeychain(b KeychainJSON, pvKey string) (string, error) {
+func (s mockSigner) SignKeychain(b rpc.KeychainJSON, pvKey string) (string, error) {
 	return "sig", nil
 }
 
@@ -472,7 +473,7 @@ func (d mockKeychainDecrypter) DecryptCipherAddress(cipherAddr string, pvKey str
 	return "address", nil
 }
 func (d mockKeychainDecrypter) DecryptTransactionData(data string, pvKey string) (string, error) {
-	keychainJSON := KeychainDataJSON{
+	keychainJSON := rpc.KeychainDataJSON{
 		EncryptedWallet:    "cipher wallet",
 		BiodPublicKey:      "pubk",
 		PersonPublicKey:    "pubk",

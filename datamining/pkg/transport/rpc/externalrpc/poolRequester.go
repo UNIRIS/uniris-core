@@ -177,12 +177,12 @@ func (pR poolR) RequestValidations(validPool datamining.Pool, txHash string, dat
 		switch txType {
 		case mining.KeychainTransaction:
 			res, err = client.ValidateKeychain(context.Background(), &api.KeychainValidationRequest{
-				Data:            createKeychainData(data.(*account.KeyChainData)),
+				Data:            buildKeychainAPIData(data.(*account.KeyChainData)),
 				TransactionHash: txHash,
 			})
 		case mining.BiometricTransaction:
 			res, err = client.ValidateBiometric(context.Background(), &api.BiometricValidationRequest{
-				Data:            createBiometricData(data.(*account.BioData)),
+				Data:            buildBiometricAPIData(data.(*account.BioData)),
 				TransactionHash: txHash,
 			})
 		}
@@ -218,13 +218,13 @@ func (pR poolR) RequestStorage(sPool datamining.Pool, data interface{}, end data
 		switch txType {
 		case mining.KeychainTransaction:
 			_, err = client.StoreKeychain(context.Background(), &api.KeychainStorageRequest{
-				Data:        createKeychainData(data.(*account.KeyChainData)),
-				Endorsement: createEndorsement(end.(datamining.Endorsement)),
+				Data:        buildKeychainAPIData(data.(*account.KeyChainData)),
+				Endorsement: buildEndorsementAPI(end.(datamining.Endorsement)),
 			})
 		case mining.BiometricTransaction:
 			_, err = client.StoreBiometric(context.Background(), &api.BiometricStorageRequest{
-				Data:        createBiometricData(data.(*account.BioData)),
-				Endorsement: createEndorsement(end.(datamining.Endorsement)),
+				Data:        buildBiometricAPIData(data.(*account.BioData)),
+				Endorsement: buildEndorsementAPI(end.(datamining.Endorsement)),
 			})
 		}
 
