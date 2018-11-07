@@ -2,6 +2,7 @@ package internalrpc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
@@ -17,13 +18,13 @@ import (
 type internalSrvHandler struct {
 	accountReq account.PoolRequester
 	aiClient   AIClient
-	hasher     Hasher
+	hasher     rpc.Hasher
 	decrypter  rpc.Decrypter
 	conf       system.UnirisConfig
 }
 
 //NewInternalServerHandler create a new GRPC server handler for account
-func NewInternalServerHandler(accountReq account.PoolRequester, aiClient AIClient, h Hasher, d rpc.Decrypter, conf system.UnirisConfig) api.InternalServer {
+func NewInternalServerHandler(accountReq account.PoolRequester, aiClient AIClient, h rpc.Hasher, d rpc.Decrypter, conf system.UnirisConfig) api.InternalServer {
 	return internalSrvHandler{
 		accountReq: accountReq,
 		aiClient:   aiClient,
@@ -65,7 +66,15 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 		return nil, err
 	}
 
-	return buildAccountSearchResult(keychain, biometric), nil
+	if keychain == nil {
+		return nil, errors.New(s.conf.Datamining.Errors.AccountNotExist)
+	}
+
+	return &api.AccountSearchResult{
+		EncryptedAESkey:  biometric.CipherAESKey(),
+		EncryptedWallet:  keychain.CipherWallet(),
+		EncryptedAddress: biometric.CipherAddrBio(),
+	}, nil
 }
 
 func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.KeychainCreationRequest) (*api.CreationResult, error) {
@@ -75,7 +84,7 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 		return nil, err
 	}
 
-	var keychain *KeychainDataJSON
+	var keychain *rpc.KeychainDataJSON
 	err = json.Unmarshal([]byte(keychainRawData), &keychain)
 	if err != nil {
 		return nil, err
@@ -85,12 +94,17 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 		return nil, err
 	}
 
-	//TODO: Get elected master and validators ==> contact AI GRPC
-	masterIP := "127.0.0.1"
-	validators := []string{"127.0.0.1"}
+	masterPeer, err := s.aiClient.GetMasterPeer(txHashKeychain)
+	if err != nil {
+		return nil, err
+	}
+	validatorPool, err := s.aiClient.GetValidationPool(txHashKeychain)
+	if err != nil {
+		return nil, err
+	}
 
 	go func() {
-		serverAddr := fmt.Sprintf("%s:%d", masterIP, s.conf.Datamining.ExternalPort)
+		serverAddr := fmt.Sprintf("%s:%d", masterPeer.IP, s.conf.Datamining.ExternalPort)
 		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 		defer conn.Close()
 
@@ -103,7 +117,7 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 			EncryptedKeychainData: req.EncryptedKeychainData,
 			SignatureKeychainData: req.SignatureKeychainData,
 			TransactionHash:       txHashKeychain,
-			ValidatorPeerIPs:      validators,
+			ValidatorPeerIPs:      validatorPool.Peers().IPs(),
 		})
 		if err != nil {
 			log.Print(err)
@@ -112,7 +126,7 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 
 	return &api.CreationResult{
 		TransactionHash: txHashKeychain,
-		MasterPeerIP:    masterIP,
+		MasterPeerIP:    masterPeer.IP.String(),
 	}, nil
 }
 
@@ -122,7 +136,7 @@ func (s internalSrvHandler) CreateBiometric(ctx context.Context, req *api.Biomet
 		return nil, err
 	}
 
-	var bio *BioDataJSON
+	var bio *rpc.BioDataJSON
 	err = json.Unmarshal([]byte(bioRawData), &bio)
 	if err != nil {
 		return nil, err
@@ -132,12 +146,17 @@ func (s internalSrvHandler) CreateBiometric(ctx context.Context, req *api.Biomet
 		return nil, err
 	}
 
-	//TODO: Get elected master and validators ==> contact AI GRPC
-	masterIP := "127.0.0.1"
-	validators := []string{"127.0.0.1"}
+	masterPeer, err := s.aiClient.GetMasterPeer(txHashBiometric)
+	if err != nil {
+		return nil, err
+	}
+	validatorPool, err := s.aiClient.GetValidationPool(txHashBiometric)
+	if err != nil {
+		return nil, err
+	}
 
 	go func() {
-		serverAddr := fmt.Sprintf("%s:%d", masterIP, s.conf.Datamining.ExternalPort)
+		serverAddr := fmt.Sprintf("%s:%d", masterPeer.IP, s.conf.Datamining.ExternalPort)
 		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 		defer conn.Close()
 
@@ -150,7 +169,7 @@ func (s internalSrvHandler) CreateBiometric(ctx context.Context, req *api.Biomet
 			EncryptedBioData: req.EncryptedBiometricData,
 			SignatureBioData: req.SignatureBiometricData,
 			TransactionHash:  txHashBiometric,
-			ValidatorPeerIPs: validators,
+			ValidatorPeerIPs: validatorPool.Peers().IPs(),
 		})
 		if err != nil {
 			log.Print(err)
@@ -159,6 +178,6 @@ func (s internalSrvHandler) CreateBiometric(ctx context.Context, req *api.Biomet
 
 	return &api.CreationResult{
 		TransactionHash: txHashBiometric,
-		MasterPeerIP:    masterIP,
+		MasterPeerIP:    masterPeer.IP.String(),
 	}, nil
 }

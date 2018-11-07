@@ -6,14 +6,14 @@ import (
 	"encoding/json"
 
 	accountMining "github.com/uniris/uniris-core/datamining/pkg/account/mining"
-	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc/internalrpc"
+	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 )
 
 //Hasher defines methods for hashing
 type Hasher interface {
 	accountMining.KeychainHasher
 	accountMining.BiometricHasher
-	internalrpc.Hasher
+	rpc.Hasher
 }
 
 type hasher struct{}
@@ -23,7 +23,7 @@ func NewHasher() Hasher {
 	return hasher{}
 }
 
-func (h hasher) HashBiometricJSON(data *internalrpc.BioDataJSON) (string, error) {
+func (h hasher) HashBiometricJSON(data *rpc.BioDataJSON) (string, error) {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return "", err
@@ -31,7 +31,7 @@ func (h hasher) HashBiometricJSON(data *internalrpc.BioDataJSON) (string, error)
 	return hashBytes(b), nil
 }
 
-func (h hasher) HashKeychainJSON(data *internalrpc.KeychainDataJSON) (string, error) {
+func (h hasher) HashKeychainJSON(data *rpc.KeychainDataJSON) (string, error) {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return "", err

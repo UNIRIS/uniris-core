@@ -19,7 +19,7 @@ func TestStoreKeychain(t *testing.T) {
 	repo := &databasemock{}
 	s := NewService(repo)
 
-	sigs := datamining.Signatures{
+	sigs := account.Signatures{
 		BiodSig:   "sig1",
 		PersonSig: "sig2",
 	}
@@ -56,7 +56,7 @@ func TestStoreBiometric(t *testing.T) {
 	repo := &databasemock{}
 	s := NewService(repo)
 
-	sigs := datamining.Signatures{
+	sigs := account.Signatures{
 		BiodSig:   "sig1",
 		PersonSig: "sig2",
 	}
