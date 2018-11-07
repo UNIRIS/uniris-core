@@ -2,7 +2,6 @@ package adding
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -35,7 +34,7 @@ func TestStoreKeychain(t *testing.T) {
 	}
 
 	err := s.StoreKeychain(data, datamining.NewEndorsement(
-		time.Now(),
+		"",
 		"hash",
 		nil,
 		nil,
@@ -73,7 +72,7 @@ func TestStoreBiometric(t *testing.T) {
 	}
 
 	err := s.StoreBiometric(bdata, datamining.NewEndorsement(
-		time.Now(),
+		"",
 		"hash",
 		nil,
 		nil,

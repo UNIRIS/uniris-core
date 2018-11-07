@@ -58,9 +58,10 @@ message BiometricStorageRequest {
 }
 
 message LockRequest {
-    string TransactionHash = 1;
-    string MasterRobotKey = 2;
-    string Signature = 3;
+    string Address = 1;
+    string TransactionHash = 2;
+    string MasterRobotKey = 3;
+    string Signature = 4;
 }
 
 message KeychainData {
@@ -82,7 +83,7 @@ message BiometricData {
 }
 
 message Endorsement {
-    int64 Timestamp = 1;
+    string LastTransactionHash = 1;
     string TransactionHash = 2;
     MasterValidation MasterValidation = 3;
     repeated Validation Validations = 4;
@@ -109,4 +110,3 @@ message Validation {
         KO = 1;
     }
 }
-

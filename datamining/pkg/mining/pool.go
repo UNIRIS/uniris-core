@@ -41,6 +41,6 @@ type PoolFinder interface {
 type PoolRequester interface {
 	RequestLock(lockPool Pool, lock lock.TransactionLock, sig string) error
 	RequestUnlock(lockPool Pool, lock lock.TransactionLock, sig string) error
-	RequestValidations(vPool Pool, data interface{}, txType TransactionType) ([]datamining.Validation, error)
+	RequestValidations(vPool Pool, txHash string, data interface{}, txType TransactionType) ([]datamining.Validation, error)
 	RequestStorage(sPool Pool, data interface{}, end datamining.Endorsement, txType TransactionType) error
 }

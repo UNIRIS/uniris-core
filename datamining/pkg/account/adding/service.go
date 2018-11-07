@@ -30,7 +30,7 @@ func (s service) StoreKeychain(data *account.KeyChainData, end datamining.Endors
 
 	//TODO: check integrity of keychain
 
-	kc := account.NewKeychain(data, end, "")
+	kc := account.NewKeychain(data, end)
 
 	//TODO: handle store pending/ko
 	return s.repo.StoreKeychain(kc)

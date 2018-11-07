@@ -7,13 +7,13 @@ import (
 //Repository defines methods to get data from the account database
 type Repository interface {
 	FindBiometric(bioHash string) (account.Biometric, error)
-	FindKeychain(addr string) (account.Keychain, error)
+	FindLastKeychain(addr string) (account.Keychain, error)
 }
 
 //Service defines method for the listing service
 type Service interface {
 	GetBiometric(bioHash string) (account.Biometric, error)
-	GetKeychain(addr string) (account.Keychain, error)
+	GetLastKeychain(addr string) (account.Keychain, error)
 }
 
 type service struct {
@@ -33,8 +33,8 @@ func (s service) GetBiometric(bioHash string) (account.Biometric, error) {
 	return w, nil
 }
 
-func (s service) GetKeychain(addr string) (account.Keychain, error) {
-	w, err := s.repo.FindKeychain(addr)
+func (s service) GetLastKeychain(addr string) (account.Keychain, error) {
+	w, err := s.repo.FindLastKeychain(addr)
 	if err != nil {
 		return nil, err
 	}

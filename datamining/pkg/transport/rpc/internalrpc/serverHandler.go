@@ -7,8 +7,6 @@ import (
 	"log"
 
 	accountlisting "github.com/uniris/uniris-core/datamining/pkg/account/listing"
-	"github.com/uniris/uniris-core/datamining/pkg/crypto"
-	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -17,23 +15,25 @@ import (
 )
 
 type internalSrvHandler struct {
-	accLister             accountlisting.Service
-	sharedRobotPrivateKey string
-	conf                  system.DataMiningConfiguration
+	accLister accountlisting.Service
+	hasher    Hasher
+	decrypter decrypter
+	conf      system.UnirisConfig
 }
 
 //NewInternalServerHandler create a new GRPC server handler for account
-func NewInternalServerHandler(accLister accountlisting.Service, mine mining.Service, sharedRobotPrivateKey string, conf system.DataMiningConfiguration) api.InternalServer {
+func NewInternalServerHandler(accLister accountlisting.Service, h Hasher, d decrypter, conf system.UnirisConfig) api.InternalServer {
 	return internalSrvHandler{
-		accLister:             accLister,
-		sharedRobotPrivateKey: sharedRobotPrivateKey,
-		conf:                  conf,
+		accLister: accLister,
+		hasher:    h,
+		decrypter: d,
+		conf:      conf,
 	}
 }
 
 //GetAccount implements the protobuf GetAccount request handler
 func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSearchRequest) (*api.AccountSearchResult, error) {
-	personHash, err := crypto.Decrypt(s.sharedRobotPrivateKey, req.EncryptedHashPerson)
+	personHash, err := s.decrypter.DecryptHashPerson(req.EncryptedHashPerson, s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt person hash - %s", err.Error())
 	}
@@ -44,21 +44,21 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 	}
 
 	if bioWallet == nil {
-		return nil, errors.New(s.conf.Errors.AccountNotExist)
+		return nil, errors.New(s.conf.Datamining.Errors.AccountNotExist)
 	}
 
-	clearaddr, err := crypto.Decrypt(s.sharedRobotPrivateKey, bioWallet.CipherAddrRobot())
+	clearaddr, err := s.decrypter.DecryptCipherAddress(bioWallet.CipherAddrRobot(), s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt the address - %s", err.Error())
 	}
 
-	keychain, err := s.accLister.GetKeychain(clearaddr)
+	keychain, err := s.accLister.GetLastKeychain(clearaddr)
 	if err != nil {
 		return nil, err
 	}
 
 	if keychain == nil {
-		return nil, errors.New(s.conf.Errors.AccountNotExist)
+		return nil, errors.New(s.conf.Datamining.Errors.AccountNotExist)
 	}
 
 	return BuildAccountSearchResult(keychain, bioWallet), nil
@@ -66,7 +66,7 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 
 func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.KeychainCreationRequest) (*api.CreationResult, error) {
 
-	keychainRawData, err := crypto.Decrypt(s.sharedRobotPrivateKey, req.EncryptedKeychainData)
+	keychainRawData, err := s.decrypter.DecryptTransactionData(req.EncryptedKeychainData, s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 	if err != nil {
 		return nil, err
 	}
-	txHashKeychain, err := crypto.NewHasher().HashTransactionData(keychain)
+	txHashKeychain, err := s.hasher.HashKeychainJSON(keychain)
 	if err != nil {
 		return nil, err
 	}
@@ -86,12 +86,12 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 	validators := []string{"127.0.0.1"}
 
 	go func() {
-		serverAddr := fmt.Sprintf("%s:%d", masterIP, s.conf.ExternalPort)
+		serverAddr := fmt.Sprintf("%s:%d", masterIP, s.conf.Datamining.ExternalPort)
 		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 		defer conn.Close()
 
 		if err != nil {
-			log.Fatal(err)
+			log.Print(err)
 		}
 
 		client := api.NewExternalClient(conn)
@@ -102,7 +102,7 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 			ValidatorPeerIPs:      validators,
 		})
 		if err != nil {
-			log.Fatal(err)
+			log.Print(err)
 		}
 	}()
 
@@ -113,7 +113,7 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 }
 
 func (s internalSrvHandler) CreateBiometric(ctx context.Context, req *api.BiometricCreationRequest) (*api.CreationResult, error) {
-	bioRawData, err := crypto.Decrypt(s.sharedRobotPrivateKey, req.EncryptedBiometricData)
+	bioRawData, err := s.decrypter.DecryptTransactionData(req.EncryptedBiometricData, s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func (s internalSrvHandler) CreateBiometric(ctx context.Context, req *api.Biomet
 	if err != nil {
 		return nil, err
 	}
-	txHashBiometric, err := crypto.NewHasher().HashTransactionData(bio)
+	txHashBiometric, err := s.hasher.HashBiometricJSON(bio)
 	if err != nil {
 		return nil, err
 	}
@@ -133,12 +133,12 @@ func (s internalSrvHandler) CreateBiometric(ctx context.Context, req *api.Biomet
 	validators := []string{"127.0.0.1"}
 
 	go func() {
-		serverAddr := fmt.Sprintf("%s:%d", masterIP, s.conf.ExternalPort)
+		serverAddr := fmt.Sprintf("%s:%d", masterIP, s.conf.Datamining.ExternalPort)
 		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 		defer conn.Close()
 
 		if err != nil {
-			log.Fatal(err)
+			log.Print(err)
 		}
 
 		client := api.NewExternalClient(conn)
@@ -149,7 +149,7 @@ func (s internalSrvHandler) CreateBiometric(ctx context.Context, req *api.Biomet
 			ValidatorPeerIPs: validators,
 		})
 		if err != nil {
-			log.Fatal(err)
+			log.Print(err)
 		}
 	}()
 

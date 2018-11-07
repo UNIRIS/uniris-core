@@ -45,7 +45,7 @@ func createEndorsement(data datamining.Endorsement) *api.Endorsement {
 				PublicKey: data.MasterValidation().ProofOfWorkValidation().PublicKey(),
 				Signature: data.MasterValidation().ProofOfWorkValidation().Signature(),
 				Status:    api.Validation_ValidationStatus(data.MasterValidation().ProofOfWorkValidation().Status()),
-				Timestamp: data.Timestamp().Unix(),
+				Timestamp: data.MasterValidation().ProofOfWorkValidation().Timestamp().Unix(),
 			},
 		},
 	}
@@ -86,7 +86,7 @@ func formatEndorsementAPI(end *api.Endorsement) datamining.Endorsement {
 		valids = append(valids, formatValidationAPI(v))
 	}
 	return datamining.NewEndorsement(
-		time.Unix(end.Timestamp, 0),
+		end.LastTransactionHash,
 		end.TransactionHash,
 		formatMasterValidationAPI(end.MasterValidation),
 		valids,

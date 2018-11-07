@@ -10,11 +10,15 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 )
 
+//ErrUnsupportedTransaction when the transaction does not have transaction miners associated
+var ErrUnsupportedTransaction = errors.New("Unsupported transaction")
+
 //ErrInvalidTransaction is returned a transaction is invalid
 var ErrInvalidTransaction = errors.New("Invalid transaction")
 
-//Checker define methods for a checker to implement
-type Checker interface {
+//TransactionMiner define methods a transaction miner must define
+type TransactionMiner interface {
+	GetLastTransactionHash(addr string) (string, error)
 	CheckAsMaster(txHash string, data interface{}) error
 	CheckAsSlave(txHash string, data interface{}) error
 }
@@ -39,15 +43,19 @@ type service struct {
 	biodLister biodlisting.Service
 	robotKey   string
 	robotPvKey string
-	checks     map[TransactionType]Checker
+	txMiners   map[TransactionType]TransactionMiner
 }
 
 //NewService creates a new global mining service
-func NewService(n Notifier, pF PoolFinder, pR PoolRequester, sig Signer, biodLister biodlisting.Service, robotKey, robotPvKey string, checks map[TransactionType]Checker) Service {
-	return service{n, pF, pR, sig, biodLister, robotKey, robotPvKey, checks}
+func NewService(n Notifier, pF PoolFinder, pR PoolRequester, sig Signer, biodLister biodlisting.Service, robotKey, robotPvKey string, txMiners map[TransactionType]TransactionMiner) Service {
+	return service{n, pF, pR, sig, biodLister, robotKey, robotPvKey, txMiners}
 }
 
 func (s service) LeadMining(txHash string, addr string, data interface{}, vPool Pool, txType TransactionType, biodSig string) error {
+	if s.txMiners[txType] == nil {
+		return s.notif.NotifyTransactionStatus(txHash, TxInvalid)
+	}
+
 	if err := s.notif.NotifyTransactionStatus(txHash, TxPending); err != nil {
 		return err
 	}
@@ -61,7 +69,7 @@ func (s service) LeadMining(txHash string, addr string, data interface{}, vPool 
 		return err
 	}
 
-	masterValid, valids, err := s.mine(txHash, data, biodSig, lastVPool, vPool, txType)
+	endorsement, err := s.mine(txHash, data, addr, biodSig, lastVPool, vPool, txType)
 	if err != nil {
 		if err == ErrInvalidTransaction {
 			if err := s.notif.NotifyTransactionStatus(txHash, TxInvalid); err != nil {
@@ -76,7 +84,6 @@ func (s service) LeadMining(txHash string, addr string, data interface{}, vPool 
 		return err
 	}
 
-	endorsement := datamining.NewEndorsement(time.Now(), txHash, masterValid, valids)
 	if err := s.poolR.RequestStorage(sPool, data, endorsement, txType); err != nil {
 		return err
 	}
@@ -137,37 +144,45 @@ func (s service) requestUnlock(txHash string, addr string, lastVPool Pool) error
 	return nil
 }
 
-func (s service) mine(txHash string, data interface{}, biodSig string, lastVPool, vPool Pool, txType TransactionType) (datamining.MasterValidation, []datamining.Validation, error) {
+func (s service) mine(txHash string, data interface{}, addr string, biodSig string, lastVPool, vPool Pool, txType TransactionType) (datamining.Endorsement, error) {
 	//Execute transaction specific master checks
-	if err := s.checks[txType].CheckAsMaster(txHash, data); err != nil {
-		return nil, nil, err
+	if err := s.txMiners[txType].CheckAsMaster(txHash, data); err != nil {
+		return nil, err
 	}
 
 	//Execute the Proof of Work
 	masterValid, err := NewPOW(s.biodLister, s.signer, s.robotKey, s.robotPvKey).Execute(txHash, biodSig, lastVPool)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	//Ask a pool of peers to validate the transaction
-	valids, err := s.poolR.RequestValidations(vPool, data, txType)
+	valids, err := s.poolR.RequestValidations(vPool, txHash, data, txType)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	//Check if the validations passed
 	for _, v := range valids {
 		if v.Status() == datamining.ValidationKO {
-			return nil, nil, ErrInvalidTransaction
+			return nil, ErrInvalidTransaction
 		}
 	}
 
-	return masterValid, valids, nil
+	lastTxHash, err := s.txMiners[txType].GetLastTransactionHash(addr)
+	if err != nil {
+		return nil, err
+	}
+	return datamining.NewEndorsement(lastTxHash, txHash, masterValid, valids), nil
 }
 
 func (s service) Validate(txHash string, data interface{}, txType TransactionType) (datamining.Validation, error) {
-	if err := s.checks[txType].CheckAsSlave(txHash, data); err != nil {
-		if err == ErrInvalidTransaction {
+	if s.txMiners[txType] == nil {
+		return nil, ErrUnsupportedTransaction
+	}
+
+	if err := s.txMiners[txType].CheckAsSlave(txHash, data); err != nil {
+		if err == ErrInvalidTransaction || err == ErrUnsupportedTransaction {
 			return s.buildValidation(datamining.ValidationKO)
 		}
 		return nil, err
