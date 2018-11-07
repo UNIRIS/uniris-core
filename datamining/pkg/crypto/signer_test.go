@@ -25,14 +25,14 @@ func TestSign(t *testing.T) {
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	encData := "uxazexc"
 
-	sig, err := Sign(hex.EncodeToString(pvKey), encData)
+	sig, err := sign(hex.EncodeToString(pvKey), encData)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, sig)
 	var signature ecdsaSignature
 	decodesig, _ := hex.DecodeString(string(sig))
 	asn1.Unmarshal(decodesig, &signature)
 
-	hash := []byte(HashString(encData))
+	hash := []byte(hashString(encData))
 
 	assert.True(t, ecdsa.Verify(&key.PublicKey, hash, signature.R, signature.S))
 }
@@ -52,9 +52,9 @@ func TestVerify(t *testing.T) {
 	b, _ := json.Marshal(encData)
 
 	s := signer{}
-	sig, _ := Sign(hex.EncodeToString(pvKey), string(b))
+	sig, _ := sign(hex.EncodeToString(pvKey), string(b))
 
-	err := s.CheckSignature(
+	err := s.checkSignature(
 		hex.EncodeToString(puKey),
 		encData,
 		sig,

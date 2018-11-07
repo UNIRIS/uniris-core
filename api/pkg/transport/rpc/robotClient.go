@@ -84,28 +84,37 @@ func (c robotClient) AddAccount(req adding.AccountCreationRequest) (*adding.Acco
 
 	client := api.NewInternalClient(conn)
 
-	w := &api.AccountCreationRequest{
-		EncryptedBioData:      req.EncryptedBioData,
-		EncryptedKeychainData: req.EncryptedKeychainData,
-		SignatureBioData: &api.Signature{
+	resBio, err := client.CreateBiometric(context.Background(), &api.BiometricCreationRequest{
+		EncryptedBiometricData: req.EncryptedBioData,
+		SignatureBiometricData: &api.Signature{
 			Person: req.SignaturesBio.PersonSig,
 			Biod:   req.SignaturesBio.BiodSig,
 		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	resKeychain, err := client.CreateKeychain(context.Background(), &api.KeychainCreationRequest{
+		EncryptedKeychainData: req.EncryptedKeychainData,
 		SignatureKeychainData: &api.Signature{
 			Person: req.SignaturesKeychain.PersonSig,
 			Biod:   req.SignaturesKeychain.BiodSig,
 		},
-	}
-
-	resGRPC, err := client.CreateAccount(context.Background(), w)
+	})
 	if err != nil {
-		s, _ := status.FromError(err)
-		return nil, errors.New(s.Message())
+		return nil, err
 	}
 
 	txs := adding.AccountCreationTransactions{
-		Biod:     resGRPC.BioTransactionHash,
-		Keychain: resGRPC.KeychainTransactionHash,
+		Biometric: adding.CreationTransaction{
+			TransactionHash: resBio.TransactionHash,
+			MasterPeerIP:    resBio.MasterPeerIP,
+		},
+		Keychain: adding.CreationTransaction{
+			TransactionHash: resKeychain.TransactionHash,
+			MasterPeerIP:    resKeychain.MasterPeerIP,
+		},
 	}
 
 	sig, err := crypto.SignData(c.robotSharedPrivateKey, txs)

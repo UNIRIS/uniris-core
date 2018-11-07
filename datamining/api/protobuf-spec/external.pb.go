@@ -6,7 +6,6 @@ package api
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import any "github.com/golang/protobuf/ptypes/any"
 import empty "github.com/golang/protobuf/ptypes/empty"
 
 import (
@@ -24,29 +23,6 @@ var _ = math.Inf
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
-
-type TransactionType int32
-
-const (
-	TransactionType_CreateKeychain TransactionType = 0
-	TransactionType_CreateBio      TransactionType = 1
-)
-
-var TransactionType_name = map[int32]string{
-	0: "CreateKeychain",
-	1: "CreateBio",
-}
-var TransactionType_value = map[string]int32{
-	"CreateKeychain": 0,
-	"CreateBio":      1,
-}
-
-func (x TransactionType) String() string {
-	return proto.EnumName(TransactionType_name, int32(x))
-}
-func (TransactionType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_external_e13acc160228db28, []int{0}
-}
 
 type Validation_ValidationStatus int32
 
@@ -68,13 +44,338 @@ func (x Validation_ValidationStatus) String() string {
 	return proto.EnumName(Validation_ValidationStatus_name, int32(x))
 }
 func (Validation_ValidationStatus) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_external_e13acc160228db28, []int{4, 0}
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{12, 0}
+}
+
+type KeychainLeadRequest struct {
+	TransactionHash       string     `protobuf:"bytes,1,opt,name=TransactionHash,proto3" json:"TransactionHash,omitempty"`
+	ValidatorPeerIPs      []string   `protobuf:"bytes,2,rep,name=ValidatorPeerIPs,proto3" json:"ValidatorPeerIPs,omitempty"`
+	EncryptedKeychainData string     `protobuf:"bytes,3,opt,name=EncryptedKeychainData,proto3" json:"EncryptedKeychainData,omitempty"`
+	SignatureKeychainData *Signature `protobuf:"bytes,4,opt,name=SignatureKeychainData,proto3" json:"SignatureKeychainData,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}   `json:"-"`
+	XXX_unrecognized      []byte     `json:"-"`
+	XXX_sizecache         int32      `json:"-"`
+}
+
+func (m *KeychainLeadRequest) Reset()         { *m = KeychainLeadRequest{} }
+func (m *KeychainLeadRequest) String() string { return proto.CompactTextString(m) }
+func (*KeychainLeadRequest) ProtoMessage()    {}
+func (*KeychainLeadRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{0}
+}
+func (m *KeychainLeadRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_KeychainLeadRequest.Unmarshal(m, b)
+}
+func (m *KeychainLeadRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_KeychainLeadRequest.Marshal(b, m, deterministic)
+}
+func (dst *KeychainLeadRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_KeychainLeadRequest.Merge(dst, src)
+}
+func (m *KeychainLeadRequest) XXX_Size() int {
+	return xxx_messageInfo_KeychainLeadRequest.Size(m)
+}
+func (m *KeychainLeadRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_KeychainLeadRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_KeychainLeadRequest proto.InternalMessageInfo
+
+func (m *KeychainLeadRequest) GetTransactionHash() string {
+	if m != nil {
+		return m.TransactionHash
+	}
+	return ""
+}
+
+func (m *KeychainLeadRequest) GetValidatorPeerIPs() []string {
+	if m != nil {
+		return m.ValidatorPeerIPs
+	}
+	return nil
+}
+
+func (m *KeychainLeadRequest) GetEncryptedKeychainData() string {
+	if m != nil {
+		return m.EncryptedKeychainData
+	}
+	return ""
+}
+
+func (m *KeychainLeadRequest) GetSignatureKeychainData() *Signature {
+	if m != nil {
+		return m.SignatureKeychainData
+	}
+	return nil
+}
+
+type BiometricLeadRequest struct {
+	TransactionHash      string     `protobuf:"bytes,1,opt,name=TransactionHash,proto3" json:"TransactionHash,omitempty"`
+	ValidatorPeerIPs     []string   `protobuf:"bytes,2,rep,name=ValidatorPeerIPs,proto3" json:"ValidatorPeerIPs,omitempty"`
+	EncryptedBioData     string     `protobuf:"bytes,3,opt,name=EncryptedBioData,proto3" json:"EncryptedBioData,omitempty"`
+	SignatureBioData     *Signature `protobuf:"bytes,4,opt,name=SignatureBioData,proto3" json:"SignatureBioData,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}   `json:"-"`
+	XXX_unrecognized     []byte     `json:"-"`
+	XXX_sizecache        int32      `json:"-"`
+}
+
+func (m *BiometricLeadRequest) Reset()         { *m = BiometricLeadRequest{} }
+func (m *BiometricLeadRequest) String() string { return proto.CompactTextString(m) }
+func (*BiometricLeadRequest) ProtoMessage()    {}
+func (*BiometricLeadRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{1}
+}
+func (m *BiometricLeadRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_BiometricLeadRequest.Unmarshal(m, b)
+}
+func (m *BiometricLeadRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_BiometricLeadRequest.Marshal(b, m, deterministic)
+}
+func (dst *BiometricLeadRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BiometricLeadRequest.Merge(dst, src)
+}
+func (m *BiometricLeadRequest) XXX_Size() int {
+	return xxx_messageInfo_BiometricLeadRequest.Size(m)
+}
+func (m *BiometricLeadRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_BiometricLeadRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BiometricLeadRequest proto.InternalMessageInfo
+
+func (m *BiometricLeadRequest) GetTransactionHash() string {
+	if m != nil {
+		return m.TransactionHash
+	}
+	return ""
+}
+
+func (m *BiometricLeadRequest) GetValidatorPeerIPs() []string {
+	if m != nil {
+		return m.ValidatorPeerIPs
+	}
+	return nil
+}
+
+func (m *BiometricLeadRequest) GetEncryptedBioData() string {
+	if m != nil {
+		return m.EncryptedBioData
+	}
+	return ""
+}
+
+func (m *BiometricLeadRequest) GetSignatureBioData() *Signature {
+	if m != nil {
+		return m.SignatureBioData
+	}
+	return nil
+}
+
+type KeychainValidationRequest struct {
+	TransactionHash      string        `protobuf:"bytes,1,opt,name=TransactionHash,proto3" json:"TransactionHash,omitempty"`
+	Data                 *KeychainData `protobuf:"bytes,2,opt,name=Data,proto3" json:"Data,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
+	XXX_unrecognized     []byte        `json:"-"`
+	XXX_sizecache        int32         `json:"-"`
+}
+
+func (m *KeychainValidationRequest) Reset()         { *m = KeychainValidationRequest{} }
+func (m *KeychainValidationRequest) String() string { return proto.CompactTextString(m) }
+func (*KeychainValidationRequest) ProtoMessage()    {}
+func (*KeychainValidationRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{2}
+}
+func (m *KeychainValidationRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_KeychainValidationRequest.Unmarshal(m, b)
+}
+func (m *KeychainValidationRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_KeychainValidationRequest.Marshal(b, m, deterministic)
+}
+func (dst *KeychainValidationRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_KeychainValidationRequest.Merge(dst, src)
+}
+func (m *KeychainValidationRequest) XXX_Size() int {
+	return xxx_messageInfo_KeychainValidationRequest.Size(m)
+}
+func (m *KeychainValidationRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_KeychainValidationRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_KeychainValidationRequest proto.InternalMessageInfo
+
+func (m *KeychainValidationRequest) GetTransactionHash() string {
+	if m != nil {
+		return m.TransactionHash
+	}
+	return ""
+}
+
+func (m *KeychainValidationRequest) GetData() *KeychainData {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+type BiometricValidationRequest struct {
+	TransactionHash      string         `protobuf:"bytes,1,opt,name=TransactionHash,proto3" json:"TransactionHash,omitempty"`
+	Data                 *BiometricData `protobuf:"bytes,2,opt,name=Data,proto3" json:"Data,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
+}
+
+func (m *BiometricValidationRequest) Reset()         { *m = BiometricValidationRequest{} }
+func (m *BiometricValidationRequest) String() string { return proto.CompactTextString(m) }
+func (*BiometricValidationRequest) ProtoMessage()    {}
+func (*BiometricValidationRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{3}
+}
+func (m *BiometricValidationRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_BiometricValidationRequest.Unmarshal(m, b)
+}
+func (m *BiometricValidationRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_BiometricValidationRequest.Marshal(b, m, deterministic)
+}
+func (dst *BiometricValidationRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BiometricValidationRequest.Merge(dst, src)
+}
+func (m *BiometricValidationRequest) XXX_Size() int {
+	return xxx_messageInfo_BiometricValidationRequest.Size(m)
+}
+func (m *BiometricValidationRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_BiometricValidationRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BiometricValidationRequest proto.InternalMessageInfo
+
+func (m *BiometricValidationRequest) GetTransactionHash() string {
+	if m != nil {
+		return m.TransactionHash
+	}
+	return ""
+}
+
+func (m *BiometricValidationRequest) GetData() *BiometricData {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+type KeychainStorageRequest struct {
+	TransactionHash      string        `protobuf:"bytes,1,opt,name=TransactionHash,proto3" json:"TransactionHash,omitempty"`
+	Data                 *KeychainData `protobuf:"bytes,2,opt,name=Data,proto3" json:"Data,omitempty"`
+	Endorsement          *Endorsement  `protobuf:"bytes,4,opt,name=Endorsement,proto3" json:"Endorsement,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
+	XXX_unrecognized     []byte        `json:"-"`
+	XXX_sizecache        int32         `json:"-"`
+}
+
+func (m *KeychainStorageRequest) Reset()         { *m = KeychainStorageRequest{} }
+func (m *KeychainStorageRequest) String() string { return proto.CompactTextString(m) }
+func (*KeychainStorageRequest) ProtoMessage()    {}
+func (*KeychainStorageRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{4}
+}
+func (m *KeychainStorageRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_KeychainStorageRequest.Unmarshal(m, b)
+}
+func (m *KeychainStorageRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_KeychainStorageRequest.Marshal(b, m, deterministic)
+}
+func (dst *KeychainStorageRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_KeychainStorageRequest.Merge(dst, src)
+}
+func (m *KeychainStorageRequest) XXX_Size() int {
+	return xxx_messageInfo_KeychainStorageRequest.Size(m)
+}
+func (m *KeychainStorageRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_KeychainStorageRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_KeychainStorageRequest proto.InternalMessageInfo
+
+func (m *KeychainStorageRequest) GetTransactionHash() string {
+	if m != nil {
+		return m.TransactionHash
+	}
+	return ""
+}
+
+func (m *KeychainStorageRequest) GetData() *KeychainData {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+func (m *KeychainStorageRequest) GetEndorsement() *Endorsement {
+	if m != nil {
+		return m.Endorsement
+	}
+	return nil
+}
+
+type BiometricStorageRequest struct {
+	TransactionHash      string         `protobuf:"bytes,1,opt,name=TransactionHash,proto3" json:"TransactionHash,omitempty"`
+	Data                 *BiometricData `protobuf:"bytes,2,opt,name=Data,proto3" json:"Data,omitempty"`
+	Endorsement          *Endorsement   `protobuf:"bytes,3,opt,name=Endorsement,proto3" json:"Endorsement,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
+}
+
+func (m *BiometricStorageRequest) Reset()         { *m = BiometricStorageRequest{} }
+func (m *BiometricStorageRequest) String() string { return proto.CompactTextString(m) }
+func (*BiometricStorageRequest) ProtoMessage()    {}
+func (*BiometricStorageRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{5}
+}
+func (m *BiometricStorageRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_BiometricStorageRequest.Unmarshal(m, b)
+}
+func (m *BiometricStorageRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_BiometricStorageRequest.Marshal(b, m, deterministic)
+}
+func (dst *BiometricStorageRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BiometricStorageRequest.Merge(dst, src)
+}
+func (m *BiometricStorageRequest) XXX_Size() int {
+	return xxx_messageInfo_BiometricStorageRequest.Size(m)
+}
+func (m *BiometricStorageRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_BiometricStorageRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BiometricStorageRequest proto.InternalMessageInfo
+
+func (m *BiometricStorageRequest) GetTransactionHash() string {
+	if m != nil {
+		return m.TransactionHash
+	}
+	return ""
+}
+
+func (m *BiometricStorageRequest) GetData() *BiometricData {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+func (m *BiometricStorageRequest) GetEndorsement() *Endorsement {
+	if m != nil {
+		return m.Endorsement
+	}
+	return nil
 }
 
 type LockRequest struct {
-	TransactionHash      string   `protobuf:"bytes,1,opt,name=TransactionHash,proto3" json:"TransactionHash,omitempty"`
-	MasterRobotKey       string   `protobuf:"bytes,2,opt,name=MasterRobotKey,proto3" json:"MasterRobotKey,omitempty"`
-	Signature            string   `protobuf:"bytes,3,opt,name=Signature,proto3" json:"Signature,omitempty"`
+	Address              string   `protobuf:"bytes,1,opt,name=Address,proto3" json:"Address,omitempty"`
+	TransactionHash      string   `protobuf:"bytes,2,opt,name=TransactionHash,proto3" json:"TransactionHash,omitempty"`
+	MasterRobotKey       string   `protobuf:"bytes,3,opt,name=MasterRobotKey,proto3" json:"MasterRobotKey,omitempty"`
+	Signature            string   `protobuf:"bytes,4,opt,name=Signature,proto3" json:"Signature,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -84,7 +385,7 @@ func (m *LockRequest) Reset()         { *m = LockRequest{} }
 func (m *LockRequest) String() string { return proto.CompactTextString(m) }
 func (*LockRequest) ProtoMessage()    {}
 func (*LockRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_external_e13acc160228db28, []int{0}
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{6}
 }
 func (m *LockRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LockRequest.Unmarshal(m, b)
@@ -103,6 +404,13 @@ func (m *LockRequest) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_LockRequest proto.InternalMessageInfo
+
+func (m *LockRequest) GetAddress() string {
+	if m != nil {
+		return m.Address
+	}
+	return ""
+}
 
 func (m *LockRequest) GetTransactionHash() string {
 	if m != nil {
@@ -125,96 +433,276 @@ func (m *LockRequest) GetSignature() string {
 	return ""
 }
 
-type StorageRequest struct {
-	Data                 *any.Any        `protobuf:"bytes,1,opt,name=Data,proto3" json:"Data,omitempty"`
-	TransactionType      TransactionType `protobuf:"varint,2,opt,name=TransactionType,proto3,enum=api.TransactionType" json:"TransactionType,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
-	XXX_unrecognized     []byte          `json:"-"`
-	XXX_sizecache        int32           `json:"-"`
+type KeychainData struct {
+	CipherAddrRobot      string     `protobuf:"bytes,1,opt,name=CipherAddrRobot,proto3" json:"CipherAddrRobot,omitempty"`
+	CipherWallet         string     `protobuf:"bytes,2,opt,name=CipherWallet,proto3" json:"CipherWallet,omitempty"`
+	PersonPubk           string     `protobuf:"bytes,3,opt,name=PersonPubk,proto3" json:"PersonPubk,omitempty"`
+	BiodPubk             string     `protobuf:"bytes,4,opt,name=BiodPubk,proto3" json:"BiodPubk,omitempty"`
+	Signature            *Signature `protobuf:"bytes,5,opt,name=Signature,proto3" json:"Signature,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}   `json:"-"`
+	XXX_unrecognized     []byte     `json:"-"`
+	XXX_sizecache        int32      `json:"-"`
 }
 
-func (m *StorageRequest) Reset()         { *m = StorageRequest{} }
-func (m *StorageRequest) String() string { return proto.CompactTextString(m) }
-func (*StorageRequest) ProtoMessage()    {}
-func (*StorageRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_external_e13acc160228db28, []int{1}
+func (m *KeychainData) Reset()         { *m = KeychainData{} }
+func (m *KeychainData) String() string { return proto.CompactTextString(m) }
+func (*KeychainData) ProtoMessage()    {}
+func (*KeychainData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{7}
 }
-func (m *StorageRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_StorageRequest.Unmarshal(m, b)
+func (m *KeychainData) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_KeychainData.Unmarshal(m, b)
 }
-func (m *StorageRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_StorageRequest.Marshal(b, m, deterministic)
+func (m *KeychainData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_KeychainData.Marshal(b, m, deterministic)
 }
-func (dst *StorageRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_StorageRequest.Merge(dst, src)
+func (dst *KeychainData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_KeychainData.Merge(dst, src)
 }
-func (m *StorageRequest) XXX_Size() int {
-	return xxx_messageInfo_StorageRequest.Size(m)
+func (m *KeychainData) XXX_Size() int {
+	return xxx_messageInfo_KeychainData.Size(m)
 }
-func (m *StorageRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_StorageRequest.DiscardUnknown(m)
+func (m *KeychainData) XXX_DiscardUnknown() {
+	xxx_messageInfo_KeychainData.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_StorageRequest proto.InternalMessageInfo
+var xxx_messageInfo_KeychainData proto.InternalMessageInfo
 
-func (m *StorageRequest) GetData() *any.Any {
+func (m *KeychainData) GetCipherAddrRobot() string {
 	if m != nil {
-		return m.Data
+		return m.CipherAddrRobot
+	}
+	return ""
+}
+
+func (m *KeychainData) GetCipherWallet() string {
+	if m != nil {
+		return m.CipherWallet
+	}
+	return ""
+}
+
+func (m *KeychainData) GetPersonPubk() string {
+	if m != nil {
+		return m.PersonPubk
+	}
+	return ""
+}
+
+func (m *KeychainData) GetBiodPubk() string {
+	if m != nil {
+		return m.BiodPubk
+	}
+	return ""
+}
+
+func (m *KeychainData) GetSignature() *Signature {
+	if m != nil {
+		return m.Signature
 	}
 	return nil
 }
 
-func (m *StorageRequest) GetTransactionType() TransactionType {
+type BiometricData struct {
+	PersonHash           string     `protobuf:"bytes,1,opt,name=PersonHash,proto3" json:"PersonHash,omitempty"`
+	CipherAddrRobot      string     `protobuf:"bytes,2,opt,name=CipherAddrRobot,proto3" json:"CipherAddrRobot,omitempty"`
+	CipherAddrBio        string     `protobuf:"bytes,3,opt,name=CipherAddrBio,proto3" json:"CipherAddrBio,omitempty"`
+	CipherAESKey         string     `protobuf:"bytes,4,opt,name=CipherAESKey,proto3" json:"CipherAESKey,omitempty"`
+	PersonPubk           string     `protobuf:"bytes,5,opt,name=PersonPubk,proto3" json:"PersonPubk,omitempty"`
+	BiodPubk             string     `protobuf:"bytes,6,opt,name=BiodPubk,proto3" json:"BiodPubk,omitempty"`
+	Signature            *Signature `protobuf:"bytes,7,opt,name=Signature,proto3" json:"Signature,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}   `json:"-"`
+	XXX_unrecognized     []byte     `json:"-"`
+	XXX_sizecache        int32      `json:"-"`
+}
+
+func (m *BiometricData) Reset()         { *m = BiometricData{} }
+func (m *BiometricData) String() string { return proto.CompactTextString(m) }
+func (*BiometricData) ProtoMessage()    {}
+func (*BiometricData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{8}
+}
+func (m *BiometricData) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_BiometricData.Unmarshal(m, b)
+}
+func (m *BiometricData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_BiometricData.Marshal(b, m, deterministic)
+}
+func (dst *BiometricData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BiometricData.Merge(dst, src)
+}
+func (m *BiometricData) XXX_Size() int {
+	return xxx_messageInfo_BiometricData.Size(m)
+}
+func (m *BiometricData) XXX_DiscardUnknown() {
+	xxx_messageInfo_BiometricData.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BiometricData proto.InternalMessageInfo
+
+func (m *BiometricData) GetPersonHash() string {
 	if m != nil {
-		return m.TransactionType
+		return m.PersonHash
 	}
-	return TransactionType_CreateKeychain
+	return ""
 }
 
-type ValidationRequest struct {
-	Data                 *any.Any        `protobuf:"bytes,1,opt,name=Data,proto3" json:"Data,omitempty"`
-	TransactionType      TransactionType `protobuf:"varint,2,opt,name=TransactionType,proto3,enum=api.TransactionType" json:"TransactionType,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
-	XXX_unrecognized     []byte          `json:"-"`
-	XXX_sizecache        int32           `json:"-"`
-}
-
-func (m *ValidationRequest) Reset()         { *m = ValidationRequest{} }
-func (m *ValidationRequest) String() string { return proto.CompactTextString(m) }
-func (*ValidationRequest) ProtoMessage()    {}
-func (*ValidationRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_external_e13acc160228db28, []int{2}
-}
-func (m *ValidationRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_ValidationRequest.Unmarshal(m, b)
-}
-func (m *ValidationRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_ValidationRequest.Marshal(b, m, deterministic)
-}
-func (dst *ValidationRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ValidationRequest.Merge(dst, src)
-}
-func (m *ValidationRequest) XXX_Size() int {
-	return xxx_messageInfo_ValidationRequest.Size(m)
-}
-func (m *ValidationRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_ValidationRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_ValidationRequest proto.InternalMessageInfo
-
-func (m *ValidationRequest) GetData() *any.Any {
+func (m *BiometricData) GetCipherAddrRobot() string {
 	if m != nil {
-		return m.Data
+		return m.CipherAddrRobot
+	}
+	return ""
+}
+
+func (m *BiometricData) GetCipherAddrBio() string {
+	if m != nil {
+		return m.CipherAddrBio
+	}
+	return ""
+}
+
+func (m *BiometricData) GetCipherAESKey() string {
+	if m != nil {
+		return m.CipherAESKey
+	}
+	return ""
+}
+
+func (m *BiometricData) GetPersonPubk() string {
+	if m != nil {
+		return m.PersonPubk
+	}
+	return ""
+}
+
+func (m *BiometricData) GetBiodPubk() string {
+	if m != nil {
+		return m.BiodPubk
+	}
+	return ""
+}
+
+func (m *BiometricData) GetSignature() *Signature {
+	if m != nil {
+		return m.Signature
 	}
 	return nil
 }
 
-func (m *ValidationRequest) GetTransactionType() TransactionType {
+type Endorsement struct {
+	LastTransactionHash  string            `protobuf:"bytes,1,opt,name=LastTransactionHash,proto3" json:"LastTransactionHash,omitempty"`
+	TransactionHash      string            `protobuf:"bytes,2,opt,name=TransactionHash,proto3" json:"TransactionHash,omitempty"`
+	MasterValidation     *MasterValidation `protobuf:"bytes,3,opt,name=MasterValidation,proto3" json:"MasterValidation,omitempty"`
+	Validations          []*Validation     `protobuf:"bytes,4,rep,name=Validations,proto3" json:"Validations,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
+	XXX_unrecognized     []byte            `json:"-"`
+	XXX_sizecache        int32             `json:"-"`
+}
+
+func (m *Endorsement) Reset()         { *m = Endorsement{} }
+func (m *Endorsement) String() string { return proto.CompactTextString(m) }
+func (*Endorsement) ProtoMessage()    {}
+func (*Endorsement) Descriptor() ([]byte, []int) {
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{9}
+}
+func (m *Endorsement) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Endorsement.Unmarshal(m, b)
+}
+func (m *Endorsement) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Endorsement.Marshal(b, m, deterministic)
+}
+func (dst *Endorsement) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Endorsement.Merge(dst, src)
+}
+func (m *Endorsement) XXX_Size() int {
+	return xxx_messageInfo_Endorsement.Size(m)
+}
+func (m *Endorsement) XXX_DiscardUnknown() {
+	xxx_messageInfo_Endorsement.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Endorsement proto.InternalMessageInfo
+
+func (m *Endorsement) GetLastTransactionHash() string {
 	if m != nil {
-		return m.TransactionType
+		return m.LastTransactionHash
 	}
-	return TransactionType_CreateKeychain
+	return ""
+}
+
+func (m *Endorsement) GetTransactionHash() string {
+	if m != nil {
+		return m.TransactionHash
+	}
+	return ""
+}
+
+func (m *Endorsement) GetMasterValidation() *MasterValidation {
+	if m != nil {
+		return m.MasterValidation
+	}
+	return nil
+}
+
+func (m *Endorsement) GetValidations() []*Validation {
+	if m != nil {
+		return m.Validations
+	}
+	return nil
+}
+
+type MasterValidation struct {
+	ProofOfWorkRobotKey   string      `protobuf:"bytes,1,opt,name=ProofOfWorkRobotKey,proto3" json:"ProofOfWorkRobotKey,omitempty"`
+	ProofOfWorkValidation *Validation `protobuf:"bytes,2,opt,name=ProofOfWorkValidation,proto3" json:"ProofOfWorkValidation,omitempty"`
+	LastTransactionMiners []string    `protobuf:"bytes,3,rep,name=LastTransactionMiners,proto3" json:"LastTransactionMiners,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}    `json:"-"`
+	XXX_unrecognized      []byte      `json:"-"`
+	XXX_sizecache         int32       `json:"-"`
+}
+
+func (m *MasterValidation) Reset()         { *m = MasterValidation{} }
+func (m *MasterValidation) String() string { return proto.CompactTextString(m) }
+func (*MasterValidation) ProtoMessage()    {}
+func (*MasterValidation) Descriptor() ([]byte, []int) {
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{10}
+}
+func (m *MasterValidation) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_MasterValidation.Unmarshal(m, b)
+}
+func (m *MasterValidation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_MasterValidation.Marshal(b, m, deterministic)
+}
+func (dst *MasterValidation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MasterValidation.Merge(dst, src)
+}
+func (m *MasterValidation) XXX_Size() int {
+	return xxx_messageInfo_MasterValidation.Size(m)
+}
+func (m *MasterValidation) XXX_DiscardUnknown() {
+	xxx_messageInfo_MasterValidation.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MasterValidation proto.InternalMessageInfo
+
+func (m *MasterValidation) GetProofOfWorkRobotKey() string {
+	if m != nil {
+		return m.ProofOfWorkRobotKey
+	}
+	return ""
+}
+
+func (m *MasterValidation) GetProofOfWorkValidation() *Validation {
+	if m != nil {
+		return m.ProofOfWorkValidation
+	}
+	return nil
+}
+
+func (m *MasterValidation) GetLastTransactionMiners() []string {
+	if m != nil {
+		return m.LastTransactionMiners
+	}
+	return nil
 }
 
 type ValidationResponse struct {
@@ -228,7 +716,7 @@ func (m *ValidationResponse) Reset()         { *m = ValidationResponse{} }
 func (m *ValidationResponse) String() string { return proto.CompactTextString(m) }
 func (*ValidationResponse) ProtoMessage()    {}
 func (*ValidationResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_external_e13acc160228db28, []int{3}
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{11}
 }
 func (m *ValidationResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ValidationResponse.Unmarshal(m, b)
@@ -269,7 +757,7 @@ func (m *Validation) Reset()         { *m = Validation{} }
 func (m *Validation) String() string { return proto.CompactTextString(m) }
 func (*Validation) ProtoMessage()    {}
 func (*Validation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_external_e13acc160228db28, []int{4}
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{12}
 }
 func (m *Validation) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Validation.Unmarshal(m, b)
@@ -317,13 +805,224 @@ func (m *Validation) GetSignature() string {
 	return ""
 }
 
+type BiometricRequest struct {
+	PersonHash           string   `protobuf:"bytes,1,opt,name=PersonHash,proto3" json:"PersonHash,omitempty"`
+	Signature            string   `protobuf:"bytes,2,opt,name=Signature,proto3" json:"Signature,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *BiometricRequest) Reset()         { *m = BiometricRequest{} }
+func (m *BiometricRequest) String() string { return proto.CompactTextString(m) }
+func (*BiometricRequest) ProtoMessage()    {}
+func (*BiometricRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{13}
+}
+func (m *BiometricRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_BiometricRequest.Unmarshal(m, b)
+}
+func (m *BiometricRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_BiometricRequest.Marshal(b, m, deterministic)
+}
+func (dst *BiometricRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BiometricRequest.Merge(dst, src)
+}
+func (m *BiometricRequest) XXX_Size() int {
+	return xxx_messageInfo_BiometricRequest.Size(m)
+}
+func (m *BiometricRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_BiometricRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BiometricRequest proto.InternalMessageInfo
+
+func (m *BiometricRequest) GetPersonHash() string {
+	if m != nil {
+		return m.PersonHash
+	}
+	return ""
+}
+
+func (m *BiometricRequest) GetSignature() string {
+	if m != nil {
+		return m.Signature
+	}
+	return ""
+}
+
+type KeychainRequest struct {
+	Address              string   `protobuf:"bytes,1,opt,name=Address,proto3" json:"Address,omitempty"`
+	Signature            string   `protobuf:"bytes,2,opt,name=Signature,proto3" json:"Signature,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *KeychainRequest) Reset()         { *m = KeychainRequest{} }
+func (m *KeychainRequest) String() string { return proto.CompactTextString(m) }
+func (*KeychainRequest) ProtoMessage()    {}
+func (*KeychainRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{14}
+}
+func (m *KeychainRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_KeychainRequest.Unmarshal(m, b)
+}
+func (m *KeychainRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_KeychainRequest.Marshal(b, m, deterministic)
+}
+func (dst *KeychainRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_KeychainRequest.Merge(dst, src)
+}
+func (m *KeychainRequest) XXX_Size() int {
+	return xxx_messageInfo_KeychainRequest.Size(m)
+}
+func (m *KeychainRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_KeychainRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_KeychainRequest proto.InternalMessageInfo
+
+func (m *KeychainRequest) GetAddress() string {
+	if m != nil {
+		return m.Address
+	}
+	return ""
+}
+
+func (m *KeychainRequest) GetSignature() string {
+	if m != nil {
+		return m.Signature
+	}
+	return ""
+}
+
+type BiometricResponse struct {
+	Data                 *BiometricData `protobuf:"bytes,1,opt,name=Data,proto3" json:"Data,omitempty"`
+	Endorsement          *Endorsement   `protobuf:"bytes,2,opt,name=Endorsement,proto3" json:"Endorsement,omitempty"`
+	Signature            string         `protobuf:"bytes,3,opt,name=Signature,proto3" json:"Signature,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
+}
+
+func (m *BiometricResponse) Reset()         { *m = BiometricResponse{} }
+func (m *BiometricResponse) String() string { return proto.CompactTextString(m) }
+func (*BiometricResponse) ProtoMessage()    {}
+func (*BiometricResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{15}
+}
+func (m *BiometricResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_BiometricResponse.Unmarshal(m, b)
+}
+func (m *BiometricResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_BiometricResponse.Marshal(b, m, deterministic)
+}
+func (dst *BiometricResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BiometricResponse.Merge(dst, src)
+}
+func (m *BiometricResponse) XXX_Size() int {
+	return xxx_messageInfo_BiometricResponse.Size(m)
+}
+func (m *BiometricResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_BiometricResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_BiometricResponse proto.InternalMessageInfo
+
+func (m *BiometricResponse) GetData() *BiometricData {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+func (m *BiometricResponse) GetEndorsement() *Endorsement {
+	if m != nil {
+		return m.Endorsement
+	}
+	return nil
+}
+
+func (m *BiometricResponse) GetSignature() string {
+	if m != nil {
+		return m.Signature
+	}
+	return ""
+}
+
+type KeychainResponse struct {
+	Data                 *KeychainData `protobuf:"bytes,1,opt,name=Data,proto3" json:"Data,omitempty"`
+	Endorsement          *Endorsement  `protobuf:"bytes,2,opt,name=Endorsement,proto3" json:"Endorsement,omitempty"`
+	Signature            string        `protobuf:"bytes,3,opt,name=Signature,proto3" json:"Signature,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
+	XXX_unrecognized     []byte        `json:"-"`
+	XXX_sizecache        int32         `json:"-"`
+}
+
+func (m *KeychainResponse) Reset()         { *m = KeychainResponse{} }
+func (m *KeychainResponse) String() string { return proto.CompactTextString(m) }
+func (*KeychainResponse) ProtoMessage()    {}
+func (*KeychainResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_external_9cb7b63c2b08eef7, []int{16}
+}
+func (m *KeychainResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_KeychainResponse.Unmarshal(m, b)
+}
+func (m *KeychainResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_KeychainResponse.Marshal(b, m, deterministic)
+}
+func (dst *KeychainResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_KeychainResponse.Merge(dst, src)
+}
+func (m *KeychainResponse) XXX_Size() int {
+	return xxx_messageInfo_KeychainResponse.Size(m)
+}
+func (m *KeychainResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_KeychainResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_KeychainResponse proto.InternalMessageInfo
+
+func (m *KeychainResponse) GetData() *KeychainData {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+func (m *KeychainResponse) GetEndorsement() *Endorsement {
+	if m != nil {
+		return m.Endorsement
+	}
+	return nil
+}
+
+func (m *KeychainResponse) GetSignature() string {
+	if m != nil {
+		return m.Signature
+	}
+	return ""
+}
+
 func init() {
+	proto.RegisterType((*KeychainLeadRequest)(nil), "api.KeychainLeadRequest")
+	proto.RegisterType((*BiometricLeadRequest)(nil), "api.BiometricLeadRequest")
+	proto.RegisterType((*KeychainValidationRequest)(nil), "api.KeychainValidationRequest")
+	proto.RegisterType((*BiometricValidationRequest)(nil), "api.BiometricValidationRequest")
+	proto.RegisterType((*KeychainStorageRequest)(nil), "api.KeychainStorageRequest")
+	proto.RegisterType((*BiometricStorageRequest)(nil), "api.BiometricStorageRequest")
 	proto.RegisterType((*LockRequest)(nil), "api.LockRequest")
-	proto.RegisterType((*StorageRequest)(nil), "api.StorageRequest")
-	proto.RegisterType((*ValidationRequest)(nil), "api.ValidationRequest")
+	proto.RegisterType((*KeychainData)(nil), "api.KeychainData")
+	proto.RegisterType((*BiometricData)(nil), "api.BiometricData")
+	proto.RegisterType((*Endorsement)(nil), "api.Endorsement")
+	proto.RegisterType((*MasterValidation)(nil), "api.MasterValidation")
 	proto.RegisterType((*ValidationResponse)(nil), "api.ValidationResponse")
 	proto.RegisterType((*Validation)(nil), "api.Validation")
-	proto.RegisterEnum("api.TransactionType", TransactionType_name, TransactionType_value)
+	proto.RegisterType((*BiometricRequest)(nil), "api.BiometricRequest")
+	proto.RegisterType((*KeychainRequest)(nil), "api.KeychainRequest")
+	proto.RegisterType((*BiometricResponse)(nil), "api.BiometricResponse")
+	proto.RegisterType((*KeychainResponse)(nil), "api.KeychainResponse")
 	proto.RegisterEnum("api.Validation_ValidationStatus", Validation_ValidationStatus_name, Validation_ValidationStatus_value)
 }
 
@@ -339,10 +1038,16 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type ExternalClient interface {
+	GetBiometric(ctx context.Context, in *BiometricRequest, opts ...grpc.CallOption) (*BiometricResponse, error)
+	GetKeychain(ctx context.Context, in *KeychainRequest, opts ...grpc.CallOption) (*KeychainResponse, error)
 	LockTransaction(ctx context.Context, in *LockRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	UnlockTransaction(ctx context.Context, in *LockRequest, opts ...grpc.CallOption) (*empty.Empty, error)
-	Validate(ctx context.Context, in *ValidationRequest, opts ...grpc.CallOption) (*ValidationResponse, error)
-	Store(ctx context.Context, in *StorageRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	LeadKeychainMining(ctx context.Context, in *KeychainLeadRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	LeadBiometricMining(ctx context.Context, in *BiometricLeadRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	ValidateKeychain(ctx context.Context, in *KeychainValidationRequest, opts ...grpc.CallOption) (*ValidationResponse, error)
+	ValidateBiometric(ctx context.Context, in *BiometricValidationRequest, opts ...grpc.CallOption) (*ValidationResponse, error)
+	StoreKeychain(ctx context.Context, in *KeychainStorageRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	StoreBiometric(ctx context.Context, in *BiometricStorageRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
 type externalClient struct {
@@ -351,6 +1056,24 @@ type externalClient struct {
 
 func NewExternalClient(cc *grpc.ClientConn) ExternalClient {
 	return &externalClient{cc}
+}
+
+func (c *externalClient) GetBiometric(ctx context.Context, in *BiometricRequest, opts ...grpc.CallOption) (*BiometricResponse, error) {
+	out := new(BiometricResponse)
+	err := c.cc.Invoke(ctx, "/api.External/GetBiometric", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *externalClient) GetKeychain(ctx context.Context, in *KeychainRequest, opts ...grpc.CallOption) (*KeychainResponse, error) {
+	out := new(KeychainResponse)
+	err := c.cc.Invoke(ctx, "/api.External/GetKeychain", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *externalClient) LockTransaction(ctx context.Context, in *LockRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
@@ -371,18 +1094,54 @@ func (c *externalClient) UnlockTransaction(ctx context.Context, in *LockRequest,
 	return out, nil
 }
 
-func (c *externalClient) Validate(ctx context.Context, in *ValidationRequest, opts ...grpc.CallOption) (*ValidationResponse, error) {
-	out := new(ValidationResponse)
-	err := c.cc.Invoke(ctx, "/api.External/Validate", in, out, opts...)
+func (c *externalClient) LeadKeychainMining(ctx context.Context, in *KeychainLeadRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/api.External/LeadKeychainMining", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *externalClient) Store(ctx context.Context, in *StorageRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+func (c *externalClient) LeadBiometricMining(ctx context.Context, in *BiometricLeadRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
 	out := new(empty.Empty)
-	err := c.cc.Invoke(ctx, "/api.External/Store", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/api.External/LeadBiometricMining", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *externalClient) ValidateKeychain(ctx context.Context, in *KeychainValidationRequest, opts ...grpc.CallOption) (*ValidationResponse, error) {
+	out := new(ValidationResponse)
+	err := c.cc.Invoke(ctx, "/api.External/ValidateKeychain", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *externalClient) ValidateBiometric(ctx context.Context, in *BiometricValidationRequest, opts ...grpc.CallOption) (*ValidationResponse, error) {
+	out := new(ValidationResponse)
+	err := c.cc.Invoke(ctx, "/api.External/ValidateBiometric", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *externalClient) StoreKeychain(ctx context.Context, in *KeychainStorageRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/api.External/StoreKeychain", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *externalClient) StoreBiometric(ctx context.Context, in *BiometricStorageRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/api.External/StoreBiometric", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -391,14 +1150,56 @@ func (c *externalClient) Store(ctx context.Context, in *StorageRequest, opts ...
 
 // ExternalServer is the server API for External service.
 type ExternalServer interface {
+	GetBiometric(context.Context, *BiometricRequest) (*BiometricResponse, error)
+	GetKeychain(context.Context, *KeychainRequest) (*KeychainResponse, error)
 	LockTransaction(context.Context, *LockRequest) (*empty.Empty, error)
 	UnlockTransaction(context.Context, *LockRequest) (*empty.Empty, error)
-	Validate(context.Context, *ValidationRequest) (*ValidationResponse, error)
-	Store(context.Context, *StorageRequest) (*empty.Empty, error)
+	LeadKeychainMining(context.Context, *KeychainLeadRequest) (*empty.Empty, error)
+	LeadBiometricMining(context.Context, *BiometricLeadRequest) (*empty.Empty, error)
+	ValidateKeychain(context.Context, *KeychainValidationRequest) (*ValidationResponse, error)
+	ValidateBiometric(context.Context, *BiometricValidationRequest) (*ValidationResponse, error)
+	StoreKeychain(context.Context, *KeychainStorageRequest) (*empty.Empty, error)
+	StoreBiometric(context.Context, *BiometricStorageRequest) (*empty.Empty, error)
 }
 
 func RegisterExternalServer(s *grpc.Server, srv ExternalServer) {
 	s.RegisterService(&_External_serviceDesc, srv)
+}
+
+func _External_GetBiometric_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BiometricRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExternalServer).GetBiometric(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.External/GetBiometric",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExternalServer).GetBiometric(ctx, req.(*BiometricRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _External_GetKeychain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(KeychainRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExternalServer).GetKeychain(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.External/GetKeychain",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExternalServer).GetKeychain(ctx, req.(*KeychainRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _External_LockTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -437,38 +1238,110 @@ func _External_UnlockTransaction_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _External_Validate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ValidationRequest)
+func _External_LeadKeychainMining_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(KeychainLeadRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ExternalServer).Validate(ctx, in)
+		return srv.(ExternalServer).LeadKeychainMining(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api.External/Validate",
+		FullMethod: "/api.External/LeadKeychainMining",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ExternalServer).Validate(ctx, req.(*ValidationRequest))
+		return srv.(ExternalServer).LeadKeychainMining(ctx, req.(*KeychainLeadRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _External_Store_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(StorageRequest)
+func _External_LeadBiometricMining_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BiometricLeadRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ExternalServer).Store(ctx, in)
+		return srv.(ExternalServer).LeadBiometricMining(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api.External/Store",
+		FullMethod: "/api.External/LeadBiometricMining",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ExternalServer).Store(ctx, req.(*StorageRequest))
+		return srv.(ExternalServer).LeadBiometricMining(ctx, req.(*BiometricLeadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _External_ValidateKeychain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(KeychainValidationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExternalServer).ValidateKeychain(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.External/ValidateKeychain",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExternalServer).ValidateKeychain(ctx, req.(*KeychainValidationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _External_ValidateBiometric_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BiometricValidationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExternalServer).ValidateBiometric(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.External/ValidateBiometric",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExternalServer).ValidateBiometric(ctx, req.(*BiometricValidationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _External_StoreKeychain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(KeychainStorageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExternalServer).StoreKeychain(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.External/StoreKeychain",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExternalServer).StoreKeychain(ctx, req.(*KeychainStorageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _External_StoreBiometric_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BiometricStorageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExternalServer).StoreBiometric(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.External/StoreBiometric",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExternalServer).StoreBiometric(ctx, req.(*BiometricStorageRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -478,6 +1351,14 @@ var _External_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*ExternalServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "GetBiometric",
+			Handler:    _External_GetBiometric_Handler,
+		},
+		{
+			MethodName: "GetKeychain",
+			Handler:    _External_GetKeychain_Handler,
+		},
+		{
 			MethodName: "LockTransaction",
 			Handler:    _External_LockTransaction_Handler,
 		},
@@ -486,48 +1367,98 @@ var _External_serviceDesc = grpc.ServiceDesc{
 			Handler:    _External_UnlockTransaction_Handler,
 		},
 		{
-			MethodName: "Validate",
-			Handler:    _External_Validate_Handler,
+			MethodName: "LeadKeychainMining",
+			Handler:    _External_LeadKeychainMining_Handler,
 		},
 		{
-			MethodName: "Store",
-			Handler:    _External_Store_Handler,
+			MethodName: "LeadBiometricMining",
+			Handler:    _External_LeadBiometricMining_Handler,
+		},
+		{
+			MethodName: "ValidateKeychain",
+			Handler:    _External_ValidateKeychain_Handler,
+		},
+		{
+			MethodName: "ValidateBiometric",
+			Handler:    _External_ValidateBiometric_Handler,
+		},
+		{
+			MethodName: "StoreKeychain",
+			Handler:    _External_StoreKeychain_Handler,
+		},
+		{
+			MethodName: "StoreBiometric",
+			Handler:    _External_StoreBiometric_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "external.proto",
 }
 
-func init() { proto.RegisterFile("external.proto", fileDescriptor_external_e13acc160228db28) }
+func init() { proto.RegisterFile("external.proto", fileDescriptor_external_9cb7b63c2b08eef7) }
 
-var fileDescriptor_external_e13acc160228db28 = []byte{
-	// 443 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x93, 0x4f, 0x6f, 0xd3, 0x40,
-	0x10, 0xc5, 0xe3, 0xa4, 0x44, 0xcd, 0x54, 0x38, 0xee, 0x50, 0x95, 0x10, 0x38, 0x54, 0x3e, 0xa0,
-	0x8a, 0x83, 0x23, 0x05, 0x84, 0xb8, 0x14, 0xc4, 0x9f, 0x48, 0x48, 0x01, 0x15, 0x39, 0x81, 0xfb,
-	0x24, 0x0c, 0xe9, 0x0a, 0x67, 0xd7, 0xd8, 0x6b, 0x09, 0x23, 0xf5, 0xc0, 0x77, 0xe3, 0x83, 0xa1,
-	0x5d, 0x1b, 0xec, 0x6c, 0xc4, 0x09, 0xa9, 0xa7, 0x44, 0xbf, 0x79, 0xb3, 0xf3, 0xd6, 0x6f, 0x07,
-	0x7c, 0xfe, 0xae, 0x39, 0x93, 0x94, 0x44, 0x69, 0xa6, 0xb4, 0xc2, 0x1e, 0xa5, 0x62, 0x7c, 0x7f,
-	0xa3, 0xd4, 0x26, 0xe1, 0x89, 0x45, 0xab, 0xe2, 0xcb, 0x84, 0xb7, 0xa9, 0x2e, 0x2b, 0xc5, 0xf8,
-	0x9e, 0x5b, 0x24, 0x59, 0x97, 0xc2, 0x6b, 0x38, 0x7a, 0xa7, 0xd6, 0x5f, 0x63, 0xfe, 0x56, 0x70,
-	0xae, 0xf1, 0x1c, 0x86, 0xcb, 0x8c, 0x64, 0x4e, 0x6b, 0x2d, 0x94, 0x7c, 0x4b, 0xf9, 0xd5, 0xc8,
-	0x3b, 0xf3, 0xce, 0x07, 0xb1, 0x8b, 0xf1, 0x21, 0xf8, 0xef, 0x29, 0xd7, 0x9c, 0xc5, 0x6a, 0xa5,
-	0xf4, 0x9c, 0xcb, 0x51, 0xd7, 0x0a, 0x1d, 0x8a, 0x0f, 0x60, 0xb0, 0x10, 0x1b, 0x49, 0xba, 0xc8,
-	0x78, 0xd4, 0xb3, 0x92, 0x06, 0x84, 0x3f, 0xc0, 0x5f, 0x68, 0x95, 0xd1, 0x86, 0x1b, 0x07, 0x07,
-	0x6f, 0x48, 0x93, 0x1d, 0x7b, 0x34, 0x3d, 0x89, 0x2a, 0xeb, 0xd1, 0x1f, 0xeb, 0xd1, 0x4b, 0x59,
-	0xc6, 0x56, 0x81, 0xcf, 0x77, 0xbc, 0x2e, 0xcb, 0x94, 0xad, 0x05, 0x7f, 0x7a, 0x12, 0x51, 0x2a,
-	0x22, 0xa7, 0x16, 0xbb, 0xe2, 0xf0, 0x1a, 0x8e, 0x3f, 0x51, 0x22, 0x3e, 0x93, 0x21, 0x37, 0x3f,
-	0x7e, 0x06, 0xd8, 0x1e, 0x9f, 0xa7, 0x4a, 0xe6, 0x8c, 0x13, 0x80, 0x86, 0xd6, 0x2e, 0x86, 0xf6,
-	0xc0, 0x96, 0xb8, 0x25, 0x09, 0x7f, 0x79, 0xed, 0x0e, 0x7c, 0x06, 0xfd, 0x85, 0x26, 0x5d, 0xe4,
-	0xb6, 0xd7, 0x9f, 0x9e, 0x39, 0xbd, 0xad, 0xbf, 0x95, 0x2e, 0xae, 0xf5, 0x26, 0xa8, 0xa5, 0xd8,
-	0x72, 0xae, 0x69, 0x9b, 0xda, 0x9b, 0xf4, 0xe2, 0x06, 0x98, 0xea, 0x87, 0x62, 0x95, 0x88, 0xb5,
-	0x49, 0xba, 0x8e, 0xf1, 0x2f, 0xd8, 0x0d, 0xf9, 0xc0, 0x0d, 0x39, 0x84, 0xc0, 0x9d, 0x8a, 0x7d,
-	0xe8, 0x5e, 0xce, 0x83, 0x8e, 0xf9, 0x9d, 0x5f, 0x06, 0xde, 0xa3, 0x27, 0x7b, 0x5f, 0x13, 0x11,
-	0xfc, 0xd7, 0x19, 0x93, 0xe6, 0x39, 0x97, 0xeb, 0x2b, 0x12, 0x32, 0xe8, 0xe0, 0x6d, 0x18, 0x54,
-	0xec, 0x95, 0x50, 0x81, 0x37, 0xfd, 0xd9, 0x85, 0xc3, 0x59, 0xbd, 0x0d, 0x78, 0x01, 0x43, 0xf3,
-	0x94, 0x5b, 0xc7, 0x60, 0x60, 0x6f, 0xdf, 0x7a, 0xe0, 0xe3, 0xd3, 0xbd, 0x44, 0x67, 0x66, 0x51,
-	0xc2, 0x0e, 0xbe, 0x80, 0xe3, 0x8f, 0x32, 0xf9, 0x8f, 0x03, 0x2e, 0xe0, 0xb0, 0xbe, 0x26, 0xe3,
-	0xa9, 0x1b, 0x59, 0xdd, 0x7d, 0x77, 0x8f, 0x57, 0xb9, 0x87, 0x1d, 0x7c, 0x0a, 0xb7, 0xcc, 0x2a,
-	0x30, 0xde, 0xb1, 0x9a, 0xdd, 0xb5, 0xf8, 0xf7, 0xd8, 0x55, 0xdf, 0x92, 0xc7, 0xbf, 0x03, 0x00,
-	0x00, 0xff, 0xff, 0xe6, 0x87, 0x40, 0x61, 0x17, 0x04, 0x00, 0x00,
+var fileDescriptor_external_9cb7b63c2b08eef7 = []byte{
+	// 986 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x56, 0x41, 0x6f, 0x1b, 0x45,
+	0x14, 0xce, 0xd8, 0x49, 0xda, 0x3c, 0x27, 0xf1, 0x66, 0x52, 0xa7, 0xae, 0x5b, 0x15, 0x6b, 0x45,
+	0x91, 0x55, 0x21, 0x07, 0x0c, 0x07, 0x84, 0x40, 0x55, 0x42, 0x4d, 0x5b, 0x92, 0x28, 0xd6, 0xa6,
+	0xd0, 0xf3, 0xd8, 0x9e, 0x38, 0xa3, 0xd8, 0x33, 0x66, 0x76, 0x2c, 0x91, 0xdf, 0x80, 0x7a, 0xe6,
+	0x84, 0xf8, 0x2d, 0x48, 0x88, 0x3b, 0x12, 0x77, 0x8e, 0xfc, 0x0d, 0xb4, 0xb3, 0xbb, 0xb3, 0x33,
+	0xeb, 0xc5, 0x71, 0x1a, 0xf5, 0x64, 0xef, 0x37, 0x6f, 0xde, 0xfb, 0xde, 0x37, 0x33, 0xef, 0x3d,
+	0xd8, 0xa6, 0x3f, 0x29, 0x2a, 0x39, 0x19, 0xb7, 0xa7, 0x52, 0x28, 0x81, 0xcb, 0x64, 0xca, 0x1a,
+	0x0f, 0x47, 0x42, 0x8c, 0xc6, 0x74, 0x5f, 0x43, 0xfd, 0xd9, 0xf9, 0x3e, 0x9d, 0x4c, 0xd5, 0x55,
+	0x6c, 0xd1, 0xd8, 0x1c, 0x88, 0xc9, 0x44, 0xf0, 0xf8, 0xcb, 0xff, 0x17, 0xc1, 0xee, 0x11, 0xbd,
+	0x1a, 0x5c, 0x10, 0xc6, 0x8f, 0x29, 0x19, 0x06, 0xf4, 0xc7, 0x19, 0x0d, 0x15, 0x6e, 0x41, 0xf5,
+	0xb5, 0x24, 0x3c, 0x24, 0x03, 0xc5, 0x04, 0x7f, 0x49, 0xc2, 0x8b, 0x3a, 0x6a, 0xa2, 0xd6, 0x46,
+	0x90, 0x87, 0xf1, 0x53, 0xf0, 0x7e, 0x20, 0x63, 0x36, 0x24, 0x4a, 0xc8, 0x1e, 0xa5, 0xf2, 0x55,
+	0x2f, 0xac, 0x97, 0x9a, 0xe5, 0xd6, 0x46, 0x30, 0x87, 0xe3, 0xcf, 0xa1, 0xd6, 0xe5, 0x03, 0x79,
+	0x35, 0x55, 0x74, 0x98, 0x46, 0x7d, 0x4e, 0x14, 0xa9, 0x97, 0xb5, 0xef, 0xe2, 0x45, 0xfc, 0x1c,
+	0x6a, 0x67, 0x6c, 0xc4, 0x89, 0x9a, 0x49, 0xea, 0xec, 0x5a, 0x6d, 0xa2, 0x56, 0xa5, 0xb3, 0xdd,
+	0x26, 0x53, 0xd6, 0x36, 0x16, 0x41, 0xb1, 0xb1, 0xff, 0x37, 0x82, 0x7b, 0x87, 0x4c, 0x4c, 0xa8,
+	0x92, 0x6c, 0xf0, 0xfe, 0x53, 0x7d, 0x0a, 0x9e, 0xc9, 0xe6, 0x90, 0x09, 0x2b, 0xcb, 0x39, 0x1c,
+	0x7f, 0x09, 0x9e, 0xe1, 0x9c, 0xda, 0x16, 0xe7, 0x36, 0x67, 0xe7, 0x8f, 0xe1, 0x41, 0x9a, 0x66,
+	0xc2, 0x81, 0x09, 0x7e, 0xf3, 0xd4, 0x9e, 0xc0, 0xaa, 0x0e, 0x5b, 0xd2, 0x61, 0x77, 0x74, 0x58,
+	0x5b, 0xbe, 0x40, 0x2f, 0xfb, 0x1c, 0x1a, 0x46, 0xc3, 0xdb, 0x84, 0xfb, 0xc8, 0x09, 0x87, 0x75,
+	0x38, 0xe3, 0xd8, 0x8a, 0xf7, 0x2b, 0x82, 0xbd, 0x94, 0xc6, 0x99, 0x12, 0x92, 0x8c, 0xe8, 0xfb,
+	0xca, 0x0d, 0x77, 0xa0, 0xd2, 0xe5, 0x43, 0x21, 0x43, 0x3a, 0xa1, 0x5c, 0x25, 0x07, 0xe0, 0x69,
+	0x6b, 0x0b, 0x0f, 0x6c, 0x23, 0xff, 0x37, 0x04, 0xf7, 0x0d, 0xef, 0x77, 0x26, 0xb8, 0xa4, 0x1a,
+	0x79, 0x86, 0xe5, 0x65, 0x18, 0xfe, 0x82, 0xa0, 0x72, 0x2c, 0x06, 0x97, 0x29, 0xab, 0x3a, 0xdc,
+	0x39, 0x18, 0x0e, 0x25, 0x0d, 0xc3, 0x84, 0x4d, 0xfa, 0x59, 0xc4, 0xb7, 0xf4, 0x7f, 0x7c, 0xb7,
+	0x4f, 0x48, 0xa8, 0xa8, 0x0c, 0x44, 0x5f, 0xa8, 0x23, 0x7a, 0x95, 0xdc, 0xec, 0x1c, 0x8a, 0x1f,
+	0xc1, 0x86, 0xb9, 0xaf, 0x5a, 0xcf, 0x8d, 0x20, 0x03, 0xfc, 0x3f, 0x11, 0x6c, 0x3a, 0xef, 0xbc,
+	0x05, 0xd5, 0x6f, 0xd8, 0xf4, 0x82, 0xca, 0x88, 0x91, 0x76, 0x92, 0x0a, 0x96, 0x83, 0xb1, 0x0f,
+	0x9b, 0x31, 0xf4, 0x86, 0x8c, 0xc7, 0x54, 0x25, 0x3c, 0x1d, 0x0c, 0x3f, 0x06, 0xe8, 0x51, 0x19,
+	0x0a, 0xde, 0x9b, 0xf5, 0x2f, 0x13, 0x82, 0x16, 0x82, 0x1b, 0x70, 0xf7, 0x90, 0x89, 0xa1, 0x5e,
+	0x8d, 0xb9, 0x99, 0x6f, 0xfc, 0xb1, 0x4d, 0x7c, 0xad, 0xf0, 0x25, 0x5a, 0x89, 0xbc, 0x2d, 0xc1,
+	0x96, 0x73, 0x5c, 0x59, 0x6c, 0xeb, 0xd4, 0x2d, 0xa4, 0x28, 0xd3, 0x52, 0x71, 0xa6, 0x1f, 0xc2,
+	0x56, 0x06, 0x1d, 0x32, 0x91, 0x24, 0xe2, 0x82, 0x99, 0x1e, 0x07, 0xdd, 0xb3, 0xe8, 0x38, 0x56,
+	0x6d, 0x3d, 0x62, 0x2c, 0xa7, 0xc7, 0xda, 0x42, 0x3d, 0xd6, 0x17, 0xe9, 0x71, 0xe7, 0x3a, 0x3d,
+	0xfe, 0x41, 0xce, 0x3d, 0xc5, 0x9f, 0xc0, 0xee, 0x31, 0x09, 0x55, 0xf1, 0x63, 0x28, 0x5a, 0xba,
+	0xc1, 0x55, 0x3c, 0x00, 0x2f, 0xbe, 0x74, 0x59, 0x35, 0x4a, 0xde, 0x45, 0x4d, 0x13, 0xcc, 0x2f,
+	0x06, 0x73, 0xe6, 0xf8, 0x53, 0xa8, 0x64, 0x5f, 0x61, 0x7d, 0xb5, 0x59, 0x6e, 0x55, 0x3a, 0x55,
+	0xbd, 0xdb, 0xda, 0x67, 0xdb, 0xf8, 0xbf, 0xa3, 0xf9, 0xb0, 0x51, 0x9a, 0x3d, 0x29, 0xc4, 0xf9,
+	0xe9, 0xf9, 0x1b, 0x21, 0x2f, 0xcd, 0xd3, 0x48, 0xd2, 0x2c, 0x58, 0xc2, 0x5d, 0xa8, 0x59, 0xb0,
+	0x95, 0x41, 0x5c, 0x08, 0xe6, 0x38, 0x14, 0x5b, 0x47, 0x5d, 0x35, 0x27, 0xe2, 0x09, 0xe3, 0x54,
+	0x86, 0xf5, 0xb2, 0xee, 0x4d, 0xc5, 0x8b, 0x7e, 0x17, 0xb0, 0x5d, 0xc1, 0xc3, 0xa9, 0xe0, 0x21,
+	0xc5, 0xfb, 0x00, 0x16, 0x0f, 0x54, 0xcc, 0xc3, 0x32, 0xf1, 0xff, 0x40, 0xf6, 0x0e, 0xfc, 0x05,
+	0xac, 0x9f, 0x29, 0xa2, 0x66, 0x71, 0x75, 0xd9, 0xee, 0x34, 0x73, 0x7b, 0xad, 0xbf, 0xb1, 0x5d,
+	0x90, 0xd8, 0x47, 0xc5, 0xe2, 0x35, 0x9b, 0xd0, 0x50, 0x91, 0xc9, 0x54, 0x0b, 0x50, 0x0e, 0x32,
+	0x20, 0x5a, 0xed, 0xcd, 0xfa, 0x63, 0x36, 0xc8, 0xaa, 0x4d, 0x06, 0x5c, 0x53, 0x68, 0x7c, 0xd3,
+	0xb6, 0x4d, 0x54, 0xbc, 0x0e, 0xa5, 0xd3, 0x23, 0x6f, 0x25, 0xfa, 0x3d, 0x3a, 0xf5, 0x90, 0xdf,
+	0x03, 0xcf, 0x3c, 0xe1, 0xb4, 0x54, 0x5e, 0xf7, 0x8a, 0x9d, 0xa8, 0xa5, 0x7c, 0xd4, 0x57, 0x50,
+	0x4d, 0xab, 0xdb, 0xf5, 0xb5, 0x77, 0xb1, 0xab, 0xb7, 0x08, 0x76, 0x2c, 0x76, 0xc9, 0x51, 0xa5,
+	0x5d, 0x03, 0xdd, 0xac, 0x6b, 0x94, 0x96, 0xe8, 0x1a, 0x2e, 0x9f, 0x72, 0x9e, 0xcf, 0xcf, 0x08,
+	0xbc, 0x2c, 0xb7, 0x84, 0xce, 0x13, 0x87, 0xce, 0xb2, 0x5d, 0xf6, 0xf6, 0x6c, 0x3a, 0x7f, 0xad,
+	0xc1, 0xdd, 0x6e, 0x32, 0x05, 0xe3, 0x67, 0xb0, 0xf9, 0x82, 0x2a, 0x23, 0x03, 0xae, 0xb9, 0xb2,
+	0x24, 0x27, 0xd1, 0xd8, 0xcb, 0xc3, 0x71, 0x12, 0xfe, 0x0a, 0xfe, 0x0a, 0x2a, 0x2f, 0xa8, 0x4a,
+	0x89, 0xe3, 0x7b, 0x4e, 0x1e, 0xe9, 0xf6, 0x5a, 0x0e, 0x35, 0xbb, 0xbf, 0x86, 0x6a, 0xd4, 0x6c,
+	0xad, 0xd7, 0x86, 0xe3, 0xdc, 0xac, 0x16, 0xdc, 0xd8, 0x6b, 0xc7, 0xf3, 0x79, 0x3b, 0x9d, 0xcf,
+	0xdb, 0xdd, 0x68, 0x3e, 0xf7, 0x57, 0xf0, 0x33, 0xd8, 0xf9, 0x9e, 0x8f, 0x6f, 0xe1, 0xe0, 0x25,
+	0xe0, 0x68, 0xb4, 0x4d, 0x99, 0x9d, 0x30, 0xce, 0xf8, 0x08, 0xd7, 0x1d, 0xba, 0xd6, 0xec, 0xbb,
+	0xc0, 0xd3, 0x77, 0xb0, 0x1b, 0x19, 0x1a, 0x89, 0x12, 0x57, 0x0f, 0x5c, 0xe1, 0x96, 0xf3, 0x75,
+	0x62, 0x1e, 0xa0, 0x19, 0xc9, 0xf1, 0x63, 0x87, 0xd3, 0xdc, 0x2c, 0xd9, 0xb8, 0x9f, 0x2f, 0x3a,
+	0x99, 0xc8, 0xa7, 0xb0, 0x93, 0xba, 0xcb, 0x0e, 0xfa, 0x03, 0x97, 0xd8, 0x8d, 0x1c, 0x7e, 0x0b,
+	0x5b, 0xd1, 0xec, 0x96, 0x91, 0x7b, 0xe8, 0x90, 0x73, 0xe7, 0xba, 0x85, 0xea, 0x6f, 0x6b, 0x3f,
+	0x19, 0xab, 0x47, 0x2e, 0xab, 0x65, 0x3d, 0xf5, 0xd7, 0x35, 0xf2, 0xd9, 0x7f, 0x01, 0x00, 0x00,
+	0xff, 0xff, 0x99, 0xc0, 0x6e, 0xd0, 0xdf, 0x0d, 0x00, 0x00,
 }

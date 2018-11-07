@@ -1,4 +1,4 @@
-package mem
+package mock
 
 import (
 	"sort"
