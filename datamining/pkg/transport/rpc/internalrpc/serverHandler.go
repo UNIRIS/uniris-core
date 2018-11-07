@@ -2,12 +2,12 @@ package internalrpc
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 
-	accountlisting "github.com/uniris/uniris-core/datamining/pkg/account/listing"
+	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
+	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
@@ -15,19 +15,21 @@ import (
 )
 
 type internalSrvHandler struct {
-	accLister accountlisting.Service
-	hasher    Hasher
-	decrypter decrypter
-	conf      system.UnirisConfig
+	accountReq account.PoolRequester
+	aiClient   AIClient
+	hasher     Hasher
+	decrypter  rpc.Decrypter
+	conf       system.UnirisConfig
 }
 
 //NewInternalServerHandler create a new GRPC server handler for account
-func NewInternalServerHandler(accLister accountlisting.Service, h Hasher, d decrypter, conf system.UnirisConfig) api.InternalServer {
+func NewInternalServerHandler(accountReq account.PoolRequester, aiClient AIClient, h Hasher, d rpc.Decrypter, conf system.UnirisConfig) api.InternalServer {
 	return internalSrvHandler{
-		accLister: accLister,
-		hasher:    h,
-		decrypter: d,
-		conf:      conf,
+		accountReq: accountReq,
+		aiClient:   aiClient,
+		hasher:     h,
+		decrypter:  d,
+		conf:       conf,
 	}
 }
 
@@ -38,30 +40,32 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 		return nil, fmt.Errorf("Cannot decrypt person hash - %s", err.Error())
 	}
 
-	bioWallet, err := s.accLister.GetBiometric(personHash)
+	biometricPool, err := s.aiClient.GetBiometricStoragePool(personHash)
 	if err != nil {
 		return nil, err
 	}
 
-	if bioWallet == nil {
-		return nil, errors.New(s.conf.Datamining.Errors.AccountNotExist)
-	}
-
-	clearaddr, err := s.decrypter.DecryptCipherAddress(bioWallet.CipherAddrRobot(), s.conf.SharedKeys.RobotPrivateKey)
-	if err != nil {
-		return nil, fmt.Errorf("Cannot decrypt the address - %s", err.Error())
-	}
-
-	keychain, err := s.accLister.GetLastKeychain(clearaddr)
+	biometric, err := s.accountReq.RequestBiometric(biometricPool, req.EncryptedHashPerson)
 	if err != nil {
 		return nil, err
 	}
 
-	if keychain == nil {
-		return nil, errors.New(s.conf.Datamining.Errors.AccountNotExist)
+	clearAddr, err := s.decrypter.DecryptCipherAddress(biometric.CipherAddrRobot(), s.conf.SharedKeys.RobotPrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot decrypt person hash - %s", err.Error())
 	}
 
-	return BuildAccountSearchResult(keychain, bioWallet), nil
+	keychainPool, err := s.aiClient.GetKeychainStoragePool(clearAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	keychain, err := s.accountReq.RequestKeychain(keychainPool, biometric.CipherAddrRobot())
+	if err != nil {
+		return nil, err
+	}
+
+	return buildAccountSearchResult(keychain, biometric), nil
 }
 
 func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.KeychainCreationRequest) (*api.CreationResult, error) {
@@ -71,7 +75,7 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 		return nil, err
 	}
 
-	var keychain *KeychainDataFromJSON
+	var keychain *KeychainDataJSON
 	err = json.Unmarshal([]byte(keychainRawData), &keychain)
 	if err != nil {
 		return nil, err
@@ -118,7 +122,7 @@ func (s internalSrvHandler) CreateBiometric(ctx context.Context, req *api.Biomet
 		return nil, err
 	}
 
-	var bio *BioDataFromJSON
+	var bio *BioDataJSON
 	err = json.Unmarshal([]byte(bioRawData), &bio)
 	if err != nil {
 		return nil, err

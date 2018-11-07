@@ -12,6 +12,7 @@ import (
 
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
+	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc/externalrpc"
 
 	accountMining "github.com/uniris/uniris-core/datamining/pkg/account/mining"
 )
@@ -25,6 +26,7 @@ type Signer interface {
 	mining.Signer
 	accountMining.KeychainSigner
 	accountMining.BiometricSigner
+	externalrpc.Signer
 }
 
 type signer struct{}
@@ -93,6 +95,24 @@ func (s signer) SignValidation(v mining.UnsignedValidation, pvKey string) (strin
 
 func (s signer) SignLock(txLock lock.TransactionLock, pvKey string) (string, error) {
 	b, err := json.Marshal(txLock)
+	if err != nil {
+		return "", err
+	}
+
+	return sign(pvKey, string(b))
+}
+
+func (s signer) SignBiometric(data externalrpc.BiometricJSON, pvKey string) (string, error) {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+
+	return sign(pvKey, string(b))
+}
+
+func (s signer) SignKeychain(data externalrpc.KeychainJSON, pvKey string) (string, error) {
+	b, err := json.Marshal(data)
 	if err != nil {
 		return "", err
 	}

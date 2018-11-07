@@ -23,7 +23,7 @@ func NewHasher() Hasher {
 	return hasher{}
 }
 
-func (h hasher) HashBiometricJSON(data *internalrpc.BioDataFromJSON) (string, error) {
+func (h hasher) HashBiometricJSON(data *internalrpc.BioDataJSON) (string, error) {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return "", err
@@ -31,7 +31,7 @@ func (h hasher) HashBiometricJSON(data *internalrpc.BioDataFromJSON) (string, er
 	return hashBytes(b), nil
 }
 
-func (h hasher) HashKeychainJSON(data *internalrpc.KeychainDataFromJSON) (string, error) {
+func (h hasher) HashKeychainJSON(data *internalrpc.KeychainDataJSON) (string, error) {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return "", err

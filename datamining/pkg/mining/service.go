@@ -16,6 +16,17 @@ var ErrUnsupportedTransaction = errors.New("Unsupported transaction")
 //ErrInvalidTransaction is returned a transaction is invalid
 var ErrInvalidTransaction = errors.New("Invalid transaction")
 
+//TransactionType represents the transaction type
+type TransactionType int
+
+const (
+	//KeychainTransaction represents transaction related to keychain (wallet)
+	KeychainTransaction TransactionType = 0
+
+	//BiometricTransaction represents transaction related to biometric data
+	BiometricTransaction TransactionType = 1
+)
+
 //TransactionMiner define methods a transaction miner must define
 type TransactionMiner interface {
 	GetLastTransactionHash(addr string) (string, error)
@@ -31,7 +42,7 @@ type Signer interface {
 
 //Service defines methods for global mining
 type Service interface {
-	LeadMining(txHash string, addr string, data interface{}, vPool Pool, txType TransactionType, biodSig string) error
+	LeadMining(txHash string, addr string, data interface{}, vPool datamining.Pool, txType TransactionType, biodSig string) error
 	Validate(txHash string, data interface{}, txType TransactionType) (datamining.Validation, error)
 }
 
@@ -51,7 +62,7 @@ func NewService(n Notifier, pF PoolFinder, pR PoolRequester, sig Signer, biodLis
 	return service{n, pF, pR, sig, biodLister, robotKey, robotPvKey, txMiners}
 }
 
-func (s service) LeadMining(txHash string, addr string, data interface{}, vPool Pool, txType TransactionType, biodSig string) error {
+func (s service) LeadMining(txHash string, addr string, data interface{}, vPool datamining.Pool, txType TransactionType, biodSig string) error {
 	if s.txMiners[txType] == nil {
 		return s.notif.NotifyTransactionStatus(txHash, TxInvalid)
 	}
@@ -94,7 +105,7 @@ func (s service) LeadMining(txHash string, addr string, data interface{}, vPool 
 	return s.requestUnlock(txHash, addr, lastVPool)
 }
 
-func (s service) findPools(addr string) (Pool, Pool, error) {
+func (s service) findPools(addr string) (datamining.Pool, datamining.Pool, error) {
 	lastVPool, err := s.poolF.FindLastValidationPool(addr)
 	if err != nil {
 		return nil, nil, err
@@ -108,7 +119,7 @@ func (s service) findPools(addr string) (Pool, Pool, error) {
 	return lastVPool, sPool, nil
 }
 
-func (s service) requestLock(txHash string, addr string, lastVPool Pool) error {
+func (s service) requestLock(txHash string, addr string, lastVPool datamining.Pool) error {
 	//Build lock transaction
 	lock := lock.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey, Address: addr}
 	sigLock, err := s.signer.SignLock(lock, s.robotPvKey)
@@ -126,7 +137,7 @@ func (s service) requestLock(txHash string, addr string, lastVPool Pool) error {
 	return nil
 }
 
-func (s service) requestUnlock(txHash string, addr string, lastVPool Pool) error {
+func (s service) requestUnlock(txHash string, addr string, lastVPool datamining.Pool) error {
 	//Build unlock transaction
 	lock := lock.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey, Address: addr}
 	sigLock, err := s.signer.SignLock(lock, s.robotPvKey)
@@ -144,7 +155,7 @@ func (s service) requestUnlock(txHash string, addr string, lastVPool Pool) error
 	return nil
 }
 
-func (s service) mine(txHash string, data interface{}, addr string, biodSig string, lastVPool, vPool Pool, txType TransactionType) (datamining.Endorsement, error) {
+func (s service) mine(txHash string, data interface{}, addr string, biodSig string, lastVPool, vPool datamining.Pool, txType TransactionType) (datamining.Endorsement, error) {
 	//Execute transaction specific master checks
 	if err := s.txMiners[txType].CheckAsMaster(txHash, data); err != nil {
 		return nil, err

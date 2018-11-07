@@ -8,6 +8,9 @@ package api;
 
 service External {
 
+    rpc GetBiometric(BiometricRequest) returns(BiometricResponse) {}
+    rpc GetKeychain(KeychainRequest) returns(KeychainResponse) {}
+
     rpc LockTransaction(LockRequest) returns (google.protobuf.Empty) {}
     rpc UnlockTransaction(LockRequest) returns (google.protobuf.Empty) {}
 
@@ -109,4 +112,26 @@ message Validation {
         OK = 0;
         KO = 1;
     }
+}
+
+message BiometricRequest {
+    string PersonHash= 1;
+    string Signature = 2;
+}
+
+message KeychainRequest {
+    string Address = 1;
+    string Signature = 2;
+}
+
+message BiometricResponse {
+    BiometricData Data = 1;
+    Endorsement Endorsement = 2;
+    string Signature = 3;
+}
+
+message KeychainResponse {
+    KeychainData Data = 1;
+    Endorsement Endorsement = 2;
+    string Signature = 3;
 }

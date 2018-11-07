@@ -16,6 +16,17 @@ const (
 	ValidationKO ValidationStatus = 1
 )
 
+func (s ValidationStatus) String() string {
+	switch s {
+	case ValidationOK:
+		return "OK"
+	case ValidationKO:
+		return "NO"
+	default:
+		panic("Unrecognized validation status")
+	}
+}
+
 //Validation describe a validation of a robot
 type Validation interface {
 	Status() ValidationStatus

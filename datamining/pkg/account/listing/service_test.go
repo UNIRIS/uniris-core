@@ -21,7 +21,7 @@ func TestGetLastKeychain(t *testing.T) {
 	db := new(databasemock)
 	s := NewService(db)
 
-	sigs := datamining.Signatures{
+	sigs := account.Signatures{
 		BiodSig:   "sig1",
 		PersonSig: "sig2",
 	}
@@ -68,7 +68,7 @@ func TestGetBiometric(t *testing.T) {
 	db := new(databasemock)
 	s := NewService(db)
 
-	sigs := datamining.Signatures{
+	sigs := account.Signatures{
 		BiodSig:   "sig1",
 		PersonSig: "sig2",
 	}

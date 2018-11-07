@@ -12,7 +12,7 @@ type BioData struct {
 	CipherAESKey    string
 	PersonPubk      string
 	BiodPubk        string
-	Sigs            datamining.Signatures
+	Sigs            Signatures
 }
 
 type biometric struct {
@@ -28,7 +28,7 @@ type Biometric interface {
 	CipherAddrRobot() string
 	CipherAddrBio() string
 	CipherAESKey() string
-	Signatures() datamining.Signatures
+	Signatures() Signatures
 	Endorsement() datamining.Endorsement
 }
 
@@ -48,7 +48,7 @@ func (b biometric) PersonPublicKey() string {
 }
 
 //Signatures returns the bio wallet signatures
-func (b biometric) Signatures() datamining.Signatures {
+func (b biometric) Signatures() Signatures {
 	return b.data.Sigs
 }
 
