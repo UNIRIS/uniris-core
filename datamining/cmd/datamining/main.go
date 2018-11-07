@@ -48,6 +48,7 @@ func main() {
 	signer := crypto.NewSigner()
 	hasher := crypto.NewHasher()
 	decrypter := crypto.NewDecrypter()
+	aiClient := mock.NewAIClient()
 
 	accountLister := accountListing.NewService(db)
 	accountAdder := accountAdding.NewService(db)
@@ -71,7 +72,7 @@ func main() {
 	log.Print("DataMining Service starting...")
 
 	go func() {
-		internalHandler := internalrpc.NewInternalServerHandler(accountLister, hasher, decrypter, *config)
+		internalHandler := internalrpc.NewInternalServerHandler(poolRequester, aiClient, hasher, decrypter, *config)
 
 		//Starts Internal grpc server
 		if err := startInternalServer(internalHandler, config.Datamining.InternalPort); err != nil {
@@ -80,7 +81,7 @@ func main() {
 	}()
 
 	//Starts Internal grpc server
-	externalHandler := externalrpc.NewExternalServerHandler(lockSrv, miningSrv, accountAdder, decrypter, *config)
+	externalHandler := externalrpc.NewExternalServerHandler(lockSrv, miningSrv, accountAdder, accountLister, decrypter, signer, *config)
 	if err := startExternalServer(externalHandler, config.Datamining.ExternalPort); err != nil {
 		log.Fatal(err)
 	}

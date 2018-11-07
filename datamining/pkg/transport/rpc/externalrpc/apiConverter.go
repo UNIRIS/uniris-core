@@ -58,7 +58,7 @@ func formatKeychainDataAPI(data *api.KeychainData, addr string) *account.KeyChai
 		CipherAddrRobot: data.CipherAddrRobot,
 		CipherWallet:    data.CipherWallet,
 		PersonPubk:      data.PersonPubk,
-		Sigs: datamining.Signatures{
+		Sigs: account.Signatures{
 			BiodSig:   data.Signature.Biod,
 			PersonSig: data.Signature.Person,
 		},
@@ -73,7 +73,7 @@ func formatBiometricDataAPI(data *api.BiometricData) *account.BioData {
 		CipherAESKey:    data.CipherAESKey,
 		PersonPubk:      data.PersonPubk,
 		PersonHash:      data.PersonHash,
-		Sigs: datamining.Signatures{
+		Sigs: account.Signatures{
 			BiodSig:   data.Signature.Biod,
 			PersonSig: data.Signature.Person,
 		},

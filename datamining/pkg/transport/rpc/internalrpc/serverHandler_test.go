@@ -3,6 +3,7 @@ package internalrpc
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"testing"
 
 	"github.com/uniris/uniris-core/datamining/pkg"
@@ -13,7 +14,6 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 
-	"github.com/uniris/uniris-core/datamining/pkg/account/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/mock"
 )
 
@@ -25,9 +25,8 @@ Scenario: Get account
 */
 func TestGetAccount(t *testing.T) {
 	db := mock.NewDatabase()
-	accountLister := listing.NewService(db)
 	conf := system.UnirisConfig{}
-	srvHandler := NewInternalServerHandler(accountLister, mockHasher{}, mockDecrypter{}, conf)
+	srvHandler := NewInternalServerHandler(mock.NewPoolRequester(db), mockAIClient{}, mockHasher{}, mockDecrypter{}, conf)
 
 	db.StoreBiometric(account.NewBiometric(
 		&account.BioData{
@@ -50,9 +49,9 @@ func TestGetAccount(t *testing.T) {
 		EncryptedHashPerson: "enc person hash",
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, "cipher wallet", res.EncryptedWallet)
-	assert.Equal(t, "cipher aes", res.EncryptedAESkey)
-	assert.Equal(t, "enc address", res.EncryptedAddress)
+	assert.Equal(t, "enc wallet", res.EncryptedWallet)
+	assert.Equal(t, "enc aes key", res.EncryptedAESkey)
+	assert.Equal(t, "enc addr", res.EncryptedAddress)
 }
 
 /*
@@ -62,10 +61,8 @@ Scenario: Create keychain
 	Then the mining process started and the keychain is stored
 */
 func TestCreateKeychain(t *testing.T) {
-	db := mock.NewDatabase()
-	accountLister := listing.NewService(db)
 	conf := system.UnirisConfig{}
-	srvHandler := NewInternalServerHandler(accountLister, mockHasher{}, mockKeychainDecrypter{}, conf)
+	srvHandler := NewInternalServerHandler(nil, nil, mockHasher{}, mockKeychainDecrypter{}, conf)
 	res, err := srvHandler.CreateKeychain(context.TODO(), &api.KeychainCreationRequest{
 		EncryptedKeychainData: "cipher data",
 		SignatureKeychainData: &api.Signature{
@@ -85,10 +82,8 @@ Scenario: Create biometric
 	Then the mining process started and the keychain is stored
 */
 func TestCreateBiometric(t *testing.T) {
-	db := mock.NewDatabase()
-	accountLister := listing.NewService(db)
 	conf := system.UnirisConfig{}
-	srvHandler := NewInternalServerHandler(accountLister, mockHasher{}, mockBiometricDecrypter{}, conf)
+	srvHandler := NewInternalServerHandler(nil, nil, mockHasher{}, mockBiometricDecrypter{}, conf)
 	res, err := srvHandler.CreateBiometric(context.TODO(), &api.BiometricCreationRequest{
 		EncryptedBiometricData: "cipher data",
 		SignatureBiometricData: &api.Signature{
@@ -103,10 +98,10 @@ func TestCreateBiometric(t *testing.T) {
 
 type mockHasher struct{}
 
-func (h mockHasher) HashKeychainJSON(*KeychainDataFromJSON) (string, error) {
+func (h mockHasher) HashKeychainJSON(*KeychainDataJSON) (string, error) {
 	return "hash", nil
 }
-func (h mockHasher) HashBiometricJSON(*BioDataFromJSON) (string, error) {
+func (h mockHasher) HashBiometricJSON(*BioDataJSON) (string, error) {
 	return "hash", nil
 
 }
@@ -121,7 +116,7 @@ func (d mockKeychainDecrypter) DecryptCipherAddress(cipherAddr string, pvKey str
 	return "address", nil
 }
 func (d mockKeychainDecrypter) DecryptTransactionData(data string, pvKey string) (string, error) {
-	keychainJSON := KeychainDataFromJSON{
+	keychainJSON := KeychainDataJSON{
 		EncryptedWallet:    "cipher wallet",
 		BiodPublicKey:      "pubk",
 		PersonPublicKey:    "pubk",
@@ -141,7 +136,7 @@ func (d mockBiometricDecrypter) DecryptCipherAddress(cipherAddr string, pvKey st
 	return "address", nil
 }
 func (d mockBiometricDecrypter) DecryptTransactionData(data string, pvKey string) (string, error) {
-	biometricJSON := BioDataFromJSON{
+	biometricJSON := BioDataJSON{
 		EncryptedAddrPerson: "cipher addr",
 		EncryptedAESKey:     "cipher aes",
 		PersonHash:          "person hash",
@@ -164,4 +159,14 @@ func (d mockDecrypter) DecryptCipherAddress(cipherAddr string, pvKey string) (st
 }
 func (d mockDecrypter) DecryptTransactionData(data string, pvKey string) (string, error) {
 	return "data", nil
+}
+
+type mockAIClient struct {
+}
+
+func (c mockAIClient) GetBiometricStoragePool(personHash string) (datamining.Pool, error) {
+	return datamining.NewPool(datamining.Peer{IP: net.ParseIP("127.0.0.1")}), nil
+}
+func (c mockAIClient) GetKeychainStoragePool(address string) (datamining.Pool, error) {
+	return datamining.NewPool(datamining.Peer{IP: net.ParseIP("127.0.0.1")}), nil
 }

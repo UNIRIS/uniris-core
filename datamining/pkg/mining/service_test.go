@@ -32,8 +32,8 @@ func TestMine(t *testing.T) {
 	}
 
 	endorsement, err := s.mine("txHash", "fake data", "addr", "biod sig",
-		NewPool(Peer{}),
-		NewPool(Peer{}),
+		datamining.NewPool(datamining.Peer{}),
+		datamining.NewPool(datamining.Peer{}),
 		KeychainTransaction)
 
 	assert.Nil(t, err)
@@ -58,7 +58,7 @@ func TestLock(t *testing.T) {
 		poolR:  mockPoolRequester{},
 	}
 
-	err := s.requestLock("txHash", "addr", NewPool(Peer{}))
+	err := s.requestLock("txHash", "addr", datamining.NewPool(datamining.Peer{}))
 	assert.Nil(t, err)
 	assert.Equal(t, "Transaction txHash with status Locked", notif.lastNotif)
 }
@@ -77,7 +77,7 @@ func TestUnlock(t *testing.T) {
 		poolR:  mockPoolRequester{},
 	}
 
-	err := s.requestUnlock("txHash", "addr", NewPool(Peer{}))
+	err := s.requestUnlock("txHash", "addr", datamining.NewPool(datamining.Peer{}))
 	assert.Nil(t, err)
 	assert.Equal(t, "Transaction txHash with status Unlocked", notif.lastNotif)
 }
@@ -186,15 +186,15 @@ func (n *mockNotifier) NotifyTransactionStatus(tx string, status TransactionStat
 type mockPoolRequester struct {
 }
 
-func (r mockPoolRequester) RequestLock(Pool, lock.TransactionLock, string) error {
+func (r mockPoolRequester) RequestLock(datamining.Pool, lock.TransactionLock, string) error {
 	return nil
 }
 
-func (r mockPoolRequester) RequestUnlock(Pool, lock.TransactionLock, string) error {
+func (r mockPoolRequester) RequestUnlock(datamining.Pool, lock.TransactionLock, string) error {
 	return nil
 }
 
-func (r mockPoolRequester) RequestValidations(sPool Pool, txHash string, data interface{}, txType TransactionType) ([]datamining.Validation, error) {
+func (r mockPoolRequester) RequestValidations(sPool datamining.Pool, txHash string, data interface{}, txType TransactionType) ([]datamining.Validation, error) {
 	return []datamining.Validation{
 		datamining.NewValidation(
 			datamining.ValidationOK,
@@ -204,7 +204,7 @@ func (r mockPoolRequester) RequestValidations(sPool Pool, txHash string, data in
 		)}, nil
 }
 
-func (r mockPoolRequester) RequestStorage(sPool Pool, data interface{}, end datamining.Endorsement, txType TransactionType) error {
+func (r mockPoolRequester) RequestStorage(sPool datamining.Pool, data interface{}, end datamining.Endorsement, txType TransactionType) error {
 	return nil
 }
 

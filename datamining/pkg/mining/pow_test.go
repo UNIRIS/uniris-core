@@ -21,7 +21,7 @@ func TestExecutePOW(t *testing.T) {
 	list := listing.NewService(repo)
 
 	pow := NewPOW(list, mockPowSigner{}, "my key", "my pv key")
-	lastValidPool := NewPool(Peer{PublicKey: "key"})
+	lastValidPool := datamining.NewPool(datamining.Peer{PublicKey: "key"})
 	valid, err := pow.Execute("hash", "signature", lastValidPool)
 	assert.Nil(t, err)
 	assert.NotNil(t, valid)
@@ -43,7 +43,7 @@ func TestExecutePOW_KO(t *testing.T) {
 	list := listing.NewService(repo)
 
 	pow := NewPOW(list, mockBadPowSigner{}, "my key", "my pv key")
-	lastValidPool := NewPool(Peer{PublicKey: "key"})
+	lastValidPool := datamining.NewPool(datamining.Peer{PublicKey: "key"})
 
 	valid, err := pow.Execute("hash", "signature", lastValidPool)
 	assert.Nil(t, err)

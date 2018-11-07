@@ -11,7 +11,7 @@ type KeyChainData struct {
 	CipherWallet    string
 	PersonPubk      string
 	BiodPubk        string
-	Sigs            datamining.Signatures
+	Sigs            Signatures
 }
 
 //Keychain describes the keychain data with its endorsement
@@ -27,7 +27,7 @@ type Keychain interface {
 	CipherAddrRobot() string
 	PersonPublicKey() string
 	BiodPublicKey() string
-	Signatures() datamining.Signatures
+	Signatures() Signatures
 	Endorsement() datamining.Endorsement
 }
 
@@ -67,6 +67,6 @@ func (k keychain) BiodPublicKey() string {
 }
 
 //Signatures return the wallet signatures
-func (k keychain) Signatures() datamining.Signatures {
+func (k keychain) Signatures() Signatures {
 	return k.data.Sigs
 }

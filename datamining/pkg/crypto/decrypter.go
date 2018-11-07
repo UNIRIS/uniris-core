@@ -4,8 +4,6 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 
-	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc/internalrpc"
-
 	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 
 	"github.com/uniris/ecies/pkg"
@@ -14,7 +12,6 @@ import (
 //Decrypter defines methods to handle decryption
 type Decrypter interface {
 	rpc.Decrypter
-	internalrpc.Decrypter
 }
 
 type decrypter struct{}
