@@ -7,18 +7,15 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
-	"github.com/uniris/uniris-core/datamining/pkg/storage/mock"
 )
 
 //NewPoolRequester create a mock pool requester
-func NewPoolRequester() mining.PoolRequester {
-	return mockPoolRequester{
-		Repo: mock.NewDatabase(),
-	}
+func NewPoolRequester(db Repo) mining.PoolRequester {
+	return mockPoolRequester{db}
 }
 
 type mockPoolRequester struct {
-	Repo mock.Repo
+	Repo Repo
 }
 
 func (r mockPoolRequester) RequestLock(mining.Pool, lock.TransactionLock, string) error {
@@ -29,7 +26,7 @@ func (r mockPoolRequester) RequestUnlock(mining.Pool, lock.TransactionLock, stri
 	return nil
 }
 
-func (r mockPoolRequester) RequestValidations(sPool mining.Pool, data interface{}, txType mining.TransactionType) ([]datamining.Validation, error) {
+func (r mockPoolRequester) RequestValidations(sPool mining.Pool, txHash string, data interface{}, txType mining.TransactionType) ([]datamining.Validation, error) {
 	return []datamining.Validation{
 		datamining.NewValidation(
 			datamining.ValidationOK,
@@ -43,7 +40,7 @@ func (r mockPoolRequester) RequestStorage(sPool mining.Pool, data interface{}, e
 	switch data.(type) {
 	case *account.KeyChainData:
 		data := data.(*account.KeyChainData)
-		kc := account.NewKeychain(data, end, "")
+		kc := account.NewKeychain(data, end)
 		r.Repo.StoreKeychain(kc)
 	case *account.BioData:
 		data := data.(*account.BioData)

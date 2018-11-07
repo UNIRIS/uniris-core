@@ -4,9 +4,9 @@ package mining
 type TransactionType int
 
 const (
-	//CreateKeychainTransaction represents a wallet creation transaction
-	CreateKeychainTransaction TransactionType = 0
+	//KeychainTransaction represents transaction related to keychain (wallet)
+	KeychainTransaction TransactionType = 0
 
-	//CreateBioTransaction represents a bio creation transaction
-	CreateBioTransaction TransactionType = 1
+	//BiometricTransaction represents transaction related to biometric data
+	BiometricTransaction TransactionType = 1
 )

@@ -40,6 +40,7 @@ func (pR poolR) RequestLock(lastValidPool mining.Pool, txLock lock.TransactionLo
 		_, err = client.LockTransaction(context.Background(), &api.LockRequest{
 			MasterRobotKey:  txLock.MasterRobotKey,
 			TransactionHash: txLock.TxHash,
+			Address:         txLock.Address,
 			Signature:       "", //TODO signature
 		})
 
@@ -67,6 +68,7 @@ func (pR poolR) RequestUnlock(lastValidPool mining.Pool, txLock lock.Transaction
 		_, err = client.UnlockTransaction(context.Background(), &api.LockRequest{
 			MasterRobotKey:  txLock.MasterRobotKey,
 			TransactionHash: txLock.TxHash,
+			Address:         txLock.Address,
 			Signature:       "", //TODO signature
 		})
 
@@ -78,7 +80,7 @@ func (pR poolR) RequestUnlock(lastValidPool mining.Pool, txLock lock.Transaction
 	return nil
 }
 
-func (pR poolR) RequestValidations(validPool mining.Pool, data interface{}, txType mining.TransactionType) ([]datamining.Validation, error) {
+func (pR poolR) RequestValidations(validPool mining.Pool, txHash string, data interface{}, txType mining.TransactionType) ([]datamining.Validation, error) {
 
 	valids := make([]datamining.Validation, 0)
 
@@ -96,13 +98,15 @@ func (pR poolR) RequestValidations(validPool mining.Pool, data interface{}, txTy
 		var res *api.ValidationResponse
 
 		switch txType {
-		case mining.CreateKeychainTransaction:
+		case mining.KeychainTransaction:
 			res, err = client.ValidateKeychain(context.Background(), &api.KeychainValidationRequest{
-				Data: createKeychainData(data.(*account.KeyChainData)),
+				Data:            createKeychainData(data.(*account.KeyChainData)),
+				TransactionHash: txHash,
 			})
-		case mining.CreateBioTransaction:
+		case mining.BiometricTransaction:
 			res, err = client.ValidateBiometric(context.Background(), &api.BiometricValidationRequest{
-				Data: createBiometricData(data.(*account.BioData)),
+				Data:            createBiometricData(data.(*account.BioData)),
+				TransactionHash: txHash,
 			})
 		}
 
@@ -135,12 +139,12 @@ func (pR poolR) RequestStorage(sPool mining.Pool, data interface{}, end datamini
 		client := api.NewExternalClient(conn)
 
 		switch txType {
-		case mining.CreateKeychainTransaction:
+		case mining.KeychainTransaction:
 			_, err = client.StoreKeychain(context.Background(), &api.KeychainStorageRequest{
 				Data:        createKeychainData(data.(*account.KeyChainData)),
 				Endorsement: createEndorsement(end.(datamining.Endorsement)),
 			})
-		case mining.CreateBioTransaction:
+		case mining.BiometricTransaction:
 			_, err = client.StoreBiometric(context.Background(), &api.BiometricStorageRequest{
 				Data:        createBiometricData(data.(*account.BioData)),
 				Endorsement: createEndorsement(end.(datamining.Endorsement)),

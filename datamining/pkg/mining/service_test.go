@@ -10,7 +10,6 @@ import (
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	biodlisting "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
-	memstorage "github.com/uniris/uniris-core/datamining/pkg/storage/mem"
 )
 
 /*
@@ -20,29 +19,29 @@ Scenario: Mine a transaction
 	Then I get a master valid and a list of validations
 */
 func TestMine(t *testing.T) {
-	biodLister := biodlisting.NewService(memstorage.NewDatabase())
+	biodLister := biodlisting.NewService(mockBiodDatabase{})
 
 	s := service{
 		notif:  &mockNotifier{},
 		signer: mockSrvSigner{},
 		poolR:  mockPoolRequester{},
-		checks: map[TransactionType]Checker{
-			CreateKeychainTransaction: mockCheck{},
+		txMiners: map[TransactionType]TransactionMiner{
+			KeychainTransaction: mockMiner{},
 		},
 		biodLister: biodLister,
 	}
 
-	masterValid, valids, err := s.mine("txHash", "fake data", "biod sig",
+	endorsement, err := s.mine("txHash", "fake data", "addr", "biod sig",
 		NewPool(Peer{}),
 		NewPool(Peer{}),
-		CreateKeychainTransaction)
+		KeychainTransaction)
 
 	assert.Nil(t, err)
-	assert.NotNil(t, masterValid)
-	assert.NotEmpty(t, valids)
+	assert.NotNil(t, endorsement.MasterValidation())
+	assert.NotEmpty(t, endorsement.Validations())
 
-	assert.Equal(t, datamining.ValidationOK, masterValid.ProofOfWorkValidation().Status())
-	assert.Equal(t, datamining.ValidationOK, valids[0].Status())
+	assert.Equal(t, datamining.ValidationOK, endorsement.MasterValidation().ProofOfWorkValidation().Status())
+	assert.Equal(t, datamining.ValidationOK, endorsement.Validations()[0].Status())
 }
 
 /*
@@ -91,15 +90,15 @@ Scenario: Validate data from a kind of transaction
 */
 func TestValidateTx(t *testing.T) {
 	s := service{
-		checks: map[TransactionType]Checker{
-			CreateKeychainTransaction: mockCheck{},
+		txMiners: map[TransactionType]TransactionMiner{
+			KeychainTransaction: mockMiner{},
 		},
 		robotKey:   "pub key",
 		robotPvKey: "pv key",
 		signer:     mockSrvSigner{},
 	}
 
-	valid, err := s.Validate("hash", "fake data", CreateKeychainTransaction)
+	valid, err := s.Validate("hash", "fake data", KeychainTransaction)
 	assert.Nil(t, err)
 	assert.NotNil(t, valid)
 	assert.Equal(t, datamining.ValidationOK, valid.Status())
@@ -116,15 +115,15 @@ Scenario: Validate invalid data from a kind of transaction
 */
 func TestValidateInvalidTx(t *testing.T) {
 	s := service{
-		checks: map[TransactionType]Checker{
-			CreateKeychainTransaction: mockBadCheck{},
+		txMiners: map[TransactionType]TransactionMiner{
+			KeychainTransaction: mockBadMiner{},
 		},
 		robotKey:   "pub key",
 		robotPvKey: "pv key",
 		signer:     mockSrvSigner{},
 	}
 
-	valid, err := s.Validate("hash", "fake data", CreateKeychainTransaction)
+	valid, err := s.Validate("hash", "fake data", KeychainTransaction)
 	assert.Nil(t, err)
 	assert.NotNil(t, valid)
 	assert.Equal(t, datamining.ValidationKO, valid.Status())
@@ -147,24 +146,32 @@ func (s mockSrvSigner) SignLock(lock lock.TransactionLock, pvKey string) (string
 	return "sig", nil
 }
 
-type mockCheck struct{}
+type mockMiner struct{}
 
-func (c mockCheck) CheckAsMaster(txHash string, data interface{}) error {
+func (c mockMiner) CheckAsMaster(txHash string, data interface{}) error {
 	return nil
 }
 
-func (c mockCheck) CheckAsSlave(txHash string, data interface{}) error {
+func (c mockMiner) CheckAsSlave(txHash string, data interface{}) error {
 	return nil
 }
 
-type mockBadCheck struct{}
+func (c mockMiner) GetLastTransactionHash(addr string) (string, error) {
+	return "", nil
+}
 
-func (c mockBadCheck) CheckAsMaster(txHash string, data interface{}) error {
+type mockBadMiner struct{}
+
+func (c mockBadMiner) CheckAsMaster(txHash string, data interface{}) error {
 	return ErrInvalidTransaction
 }
 
-func (c mockBadCheck) CheckAsSlave(txHash string, data interface{}) error {
+func (c mockBadMiner) CheckAsSlave(txHash string, data interface{}) error {
 	return ErrInvalidTransaction
+}
+
+func (c mockBadMiner) GetLastTransactionHash(addr string) (string, error) {
+	return "", nil
 }
 
 type mockNotifier struct {
@@ -187,7 +194,7 @@ func (r mockPoolRequester) RequestUnlock(Pool, lock.TransactionLock, string) err
 	return nil
 }
 
-func (r mockPoolRequester) RequestValidations(sPool Pool, data interface{}, txType TransactionType) ([]datamining.Validation, error) {
+func (r mockPoolRequester) RequestValidations(sPool Pool, txHash string, data interface{}, txType TransactionType) ([]datamining.Validation, error) {
 	return []datamining.Validation{
 		datamining.NewValidation(
 			datamining.ValidationOK,
@@ -199,4 +206,10 @@ func (r mockPoolRequester) RequestValidations(sPool Pool, data interface{}, txTy
 
 func (r mockPoolRequester) RequestStorage(sPool Pool, data interface{}, end datamining.Endorsement, txType TransactionType) error {
 	return nil
+}
+
+type mockBiodDatabase struct{}
+
+func (db mockBiodDatabase) ListBiodPubKeys() ([]string, error) {
+	return []string{"key1", "key2"}, nil
 }

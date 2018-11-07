@@ -1,6 +1,7 @@
 package listing
 
 import (
+	"sort"
 	"testing"
 	"time"
 
@@ -11,13 +12,12 @@ import (
 )
 
 /*
-Scenario: Get keychain
+Scenario: TestGetLastKeychain keychain
 	Given a empty database
-	When I add a keychain
-	Then return values of a GetKeychain  are the exepeted ones
+	When I add two keychain
+	Then I get the last keychain
 */
-func TestGetKeychain(t *testing.T) {
-
+func TestGetLastKeychain(t *testing.T) {
 	db := new(databasemock)
 	s := NewService(db)
 
@@ -26,8 +26,8 @@ func TestGetKeychain(t *testing.T) {
 		PersonSig: "sig2",
 	}
 
-	wdata := &account.KeyChainData{
-		WalletAddr:      "addr1",
+	keychainData := &account.KeyChainData{
+		WalletAddr:      "address",
 		CipherAddrRobot: "xxxx",
 		CipherWallet:    "xxxx",
 		PersonPubk:      "xxxx",
@@ -35,17 +35,26 @@ func TestGetKeychain(t *testing.T) {
 		Sigs:            sigs,
 	}
 
-	oldTxnHash := "xxx"
+	masterValid1 := datamining.NewMasterValidation([]string{}, "robotKey", datamining.NewValidation(datamining.ValidationOK, time.Now(), "pubkey", "signature"))
+	endors1 := datamining.NewEndorsement("", "hash1", masterValid1, []datamining.Validation{})
 
-	masterValid := datamining.NewMasterValidation([]string{}, "robotKey", datamining.NewValidation(datamining.ValidationOK, time.Now(), "pubkey", "signature"))
-	endors := datamining.NewEndorsement(time.Now(), "xxx", masterValid, []datamining.Validation{})
+	kc1 := account.NewKeychain(keychainData, endors1)
 
-	kc := account.NewKeychain(wdata, endors, oldTxnHash)
+	time.Sleep(1 * time.Second)
 
-	db.Keychains = append(db.Keychains, kc)
-	wa, err := s.GetKeychain("addr1")
+	masterValid2 := datamining.NewMasterValidation([]string{}, "robotKey", datamining.NewValidation(datamining.ValidationOK, time.Now(), "pubkey", "signature"))
+	endors2 := datamining.NewEndorsement("hash1", "hash2", masterValid2, []datamining.Validation{})
+
+	kc2 := account.NewKeychain(keychainData, endors2)
+
+	db.Keychains = append(db.Keychains, kc1)
+	db.Keychains = append(db.Keychains, kc2)
+
+	keychain, err := s.GetLastKeychain("address")
 	assert.Nil(t, err)
-	assert.NotNil(t, wa)
+	assert.NotNil(t, keychain)
+	assert.Equal(t, "hash2", keychain.Endorsement().TransactionHash())
+	assert.Equal(t, "hash1", keychain.Endorsement().LastTransactionHash())
 }
 
 /*
@@ -75,7 +84,7 @@ func TestGetBiometric(t *testing.T) {
 	}
 
 	masterValid := datamining.NewMasterValidation([]string{}, "robotKey", datamining.NewValidation(datamining.ValidationOK, time.Now(), "pubkey", "signature"))
-	endors := datamining.NewEndorsement(time.Now(), "xxx", masterValid, []datamining.Validation{})
+	endors := datamining.NewEndorsement("", "xxx", masterValid, []datamining.Validation{})
 
 	b := account.NewBiometric(bdata, endors)
 
@@ -99,7 +108,13 @@ func (d *databasemock) FindBiometric(bh string) (account.Biometric, error) {
 	return nil, nil
 }
 
-func (d *databasemock) FindKeychain(addr string) (account.Keychain, error) {
+func (d *databasemock) FindLastKeychain(addr string) (account.Keychain, error) {
+	sort.Slice(d.Keychains, func(i, j int) bool {
+		iTimestamp := d.Keychains[i].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()
+		jTimestamp := d.Keychains[j].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()
+		return iTimestamp > jTimestamp
+	})
+
 	for _, b := range d.Keychains {
 		if b.WalletAddr() == addr {
 			return b, nil

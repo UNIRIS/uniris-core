@@ -1,76 +1,38 @@
 package datamining
 
-import (
-	"encoding/json"
-	"time"
-)
-
 //Endorsement represents a validation
 type Endorsement interface {
-	Timestamp() time.Time
 	TransactionHash() string
+	LastTransactionHash() string
 	MasterValidation() MasterValidation
 	Validations() []Validation
 }
 
 type endorsement struct {
-	timeStamp        time.Time
-	txnHash          string
+	lastTxHash       string
+	txHash           string
 	masterValidation MasterValidation
 	validations      []Validation
 }
 
-func (e endorsement) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Timestamp        time.Time        `json:"timestamp"`
-		TransactionHash  string           `json:"transaction_hash"`
-		MasterValidation MasterValidation `json:"master_validation"`
-		Validations      []Validation     `json:"validations"`
-	}{
-		Timestamp:        e.timeStamp,
-		TransactionHash:  e.txnHash,
-		MasterValidation: e.masterValidation,
-		Validations:      e.validations,
-	})
-}
-
-func (e *endorsement) UnmarshalJSON(b []byte) error {
-	data := struct {
-		Timestamp        time.Time        `json:"timestamp"`
-		TransactionHash  string           `json:"transaction_hash"`
-		MasterValidation MasterValidation `json:"master_validation"`
-		Validations      []Validation     `json:"validations"`
-	}{}
-
-	if err := json.Unmarshal(b, &data); err != nil {
-		return err
-	}
-
-	e.timeStamp = data.Timestamp
-	e.txnHash = data.TransactionHash
-	e.masterValidation = data.MasterValidation
-	e.validations = data.Validations
-	return nil
-}
-
 //NewEndorsement creates a new endorsement
-func NewEndorsement(t time.Time, h string, masterV MasterValidation, valids []Validation) Endorsement {
+func NewEndorsement(lastTxHash, txHash string, masterV MasterValidation, valids []Validation) Endorsement {
 	return endorsement{
-		timeStamp:        t,
-		txnHash:          h,
+		lastTxHash:       lastTxHash,
+		txHash:           txHash,
 		masterValidation: masterV,
 		validations:      valids,
 	}
 }
 
-//Timestamp returns the endorsment's timestamp
-func (e endorsement) Timestamp() time.Time {
-	return e.timeStamp
+//LastTransactionHash returns the previous transaction hash
+func (e endorsement) LastTransactionHash() string {
+	return e.lastTxHash
 }
 
 //TransactionHash returns the endorsment's transaction hash
 func (e endorsement) TransactionHash() string {
-	return e.txnHash
+	return e.txHash
 }
 
 //MasterValidation returns the endorsment's master validation

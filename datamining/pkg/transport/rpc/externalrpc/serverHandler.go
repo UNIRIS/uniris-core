@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/uniris/uniris-core/datamining/pkg/crypto"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
+	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 
@@ -20,21 +20,20 @@ import (
 )
 
 type externalSrvHandler struct {
-	lock              lock.Service
-	mining            mining.Service
-	accAdd            accAdding.Service
-	sharedRobotPubKey string
-	sharedRobotPvKey  string
-	errors            system.DataMininingErrors
+	lock    lock.Service
+	mining  mining.Service
+	accAdd  accAdding.Service
+	decrypt rpc.Decrypter
+	conf    system.UnirisConfig
 }
 
 //NewExternalServerHandler creates a new External GRPC handler
-func NewExternalServerHandler(lock lock.Service, mining mining.Service, accAdd accAdding.Service, sharedRobotPubKey, sharedRobotPvKey string, errors system.DataMininingErrors) api.ExternalServer {
-	return externalSrvHandler{lock, mining, accAdd, sharedRobotPubKey, sharedRobotPvKey, errors}
+func NewExternalServerHandler(lock lock.Service, mining mining.Service, accAdd accAdding.Service, decrypt rpc.Decrypter, conf system.UnirisConfig) api.ExternalServer {
+	return externalSrvHandler{lock, mining, accAdd, decrypt, conf}
 }
 
 func (s externalSrvHandler) LeadKeychainMining(ctx context.Context, req *api.KeychainLeadRequest) (*empty.Empty, error) {
-	keychainRawData, err := crypto.Decrypt(s.sharedRobotPvKey, req.EncryptedKeychainData)
+	keychainRawData, err := s.decrypt.DecryptTransactionData(req.EncryptedKeychainData, s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt the wallet data - %s", err.Error())
 	}
@@ -45,7 +44,7 @@ func (s externalSrvHandler) LeadKeychainMining(ctx context.Context, req *api.Key
 		return nil, err
 	}
 
-	clearaddr, err := crypto.Decrypt(s.sharedRobotPvKey, keychain.EncryptedAddrRobot)
+	clearaddr, err := s.decrypt.DecryptCipherAddress(keychain.EncryptedAddrRobot, s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt the address - %s", err.Error())
 	}
@@ -56,7 +55,7 @@ func (s externalSrvHandler) LeadKeychainMining(ctx context.Context, req *api.Key
 		pp = append(pp, mining.Peer{IP: net.ParseIP(p)})
 	}
 	vPool := mining.NewPool(pp...)
-	if err := s.mining.LeadMining(req.TransactionHash, clearaddr, keychainData, vPool, mining.CreateKeychainTransaction, keychainData.Sigs.BiodSig); err != nil {
+	if err := s.mining.LeadMining(req.TransactionHash, clearaddr, keychainData, vPool, mining.KeychainTransaction, keychainData.Sigs.BiodSig); err != nil {
 		return nil, err
 	}
 
@@ -64,7 +63,7 @@ func (s externalSrvHandler) LeadKeychainMining(ctx context.Context, req *api.Key
 }
 
 func (s externalSrvHandler) LeadBiometricMining(ctx context.Context, req *api.BiometricLeadRequest) (*empty.Empty, error) {
-	biometricRawData, err := crypto.Decrypt(s.sharedRobotPvKey, req.EncryptedBioData)
+	biometricRawData, err := s.decrypt.DecryptTransactionData(req.EncryptedBioData, s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt the wallet data - %s", err.Error())
 	}
@@ -75,7 +74,7 @@ func (s externalSrvHandler) LeadBiometricMining(ctx context.Context, req *api.Bi
 		return nil, err
 	}
 
-	clearaddr, err := crypto.Decrypt(s.sharedRobotPvKey, bio.EncryptedAddrRobot)
+	clearaddr, err := s.decrypt.DecryptCipherAddress(bio.EncryptedAddrRobot, s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt the address - %s", err.Error())
 	}
@@ -87,7 +86,7 @@ func (s externalSrvHandler) LeadBiometricMining(ctx context.Context, req *api.Bi
 		pp = append(pp, mining.Peer{IP: net.ParseIP(p)})
 	}
 	vPool := mining.NewPool(pp...)
-	if err := s.mining.LeadMining(req.TransactionHash, clearaddr, bioData, vPool, mining.CreateBioTransaction, bioData.Sigs.BiodSig); err != nil {
+	if err := s.mining.LeadMining(req.TransactionHash, clearaddr, bioData, vPool, mining.BiometricTransaction, bioData.Sigs.BiodSig); err != nil {
 		return nil, err
 	}
 
@@ -100,6 +99,7 @@ func (s externalSrvHandler) LockTransaction(ctx context.Context, req *api.LockRe
 	if err := s.lock.LockTransaction(lock.TransactionLock{
 		TxHash:         req.TransactionHash,
 		MasterRobotKey: req.MasterRobotKey,
+		Address:        req.Address,
 	}); err != nil {
 		return nil, err
 	}
@@ -111,6 +111,7 @@ func (s externalSrvHandler) UnlockTransaction(ctx context.Context, req *api.Lock
 	//TODO: verify signature
 
 	if err := s.lock.UnlockTransaction(lock.TransactionLock{
+		Address:        req.Address,
 		TxHash:         req.TransactionHash,
 		MasterRobotKey: req.MasterRobotKey,
 	}); err != nil {
@@ -123,13 +124,13 @@ func (s externalSrvHandler) UnlockTransaction(ctx context.Context, req *api.Lock
 func (s externalSrvHandler) ValidateKeychain(ctx context.Context, req *api.KeychainValidationRequest) (*api.ValidationResponse, error) {
 	//TODO: verify signatures
 
-	clearaddr, err := crypto.Decrypt(s.sharedRobotPvKey, req.Data.CipherAddrRobot)
+	clearaddr, err := s.decrypt.DecryptCipherAddress(req.Data.CipherAddrRobot, s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt the address - %s", err.Error())
 	}
 	data := formatKeychainDataAPI(req.Data, clearaddr)
 
-	valid, err := s.mining.Validate(req.TransactionHash, data, mining.CreateKeychainTransaction)
+	valid, err := s.mining.Validate(req.TransactionHash, data, mining.KeychainTransaction)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +149,7 @@ func (s externalSrvHandler) ValidateBiometric(ctx context.Context, req *api.Biom
 	//TODO: verify signatures
 	data := formatBiometricDataAPI(req.Data)
 
-	valid, err := s.mining.Validate(req.TransactionHash, data, mining.CreateBioTransaction)
+	valid, err := s.mining.Validate(req.TransactionHash, data, mining.BiometricTransaction)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +167,7 @@ func (s externalSrvHandler) ValidateBiometric(ctx context.Context, req *api.Biom
 func (s externalSrvHandler) StoreKeychain(ctx context.Context, req *api.KeychainStorageRequest) (*empty.Empty, error) {
 	//TODO: verify signatures
 
-	clearaddr, err := crypto.Decrypt(s.sharedRobotPvKey, req.Data.CipherAddrRobot)
+	clearaddr, err := s.decrypt.DecryptCipherAddress(req.Data.CipherAddrRobot, s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot decrypt the address - %s", err.Error())
 	}

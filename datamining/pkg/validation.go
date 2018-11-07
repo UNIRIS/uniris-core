@@ -1,7 +1,6 @@
 package datamining
 
 import (
-	"encoding/json"
 	"time"
 )
 
@@ -60,38 +59,4 @@ func (v validation) PublicKey() string {
 //Signature returns the validation's signature
 func (v validation) Signature() string {
 	return v.sig
-}
-
-func (v validation) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Status    ValidationStatus `json:"status"`
-		Timestamp time.Time        `json:"timestamp"`
-		PublicKey string           `json:"public_key"`
-		Signature string           `json:"signature"`
-	}{
-		Status:    v.status,
-		Timestamp: v.timestamp,
-		PublicKey: v.pubk,
-		Signature: v.sig,
-	})
-}
-
-func (m *validation) UnmarshalJSON(b []byte) error {
-	data := struct {
-		Status    ValidationStatus `json:"status"`
-		Timestamp time.Time        `json:"timestamp"`
-		PublicKey string           `json:"public_key"`
-		Signature string           `json:"signature"`
-	}{}
-
-	if err := json.Unmarshal(b, &data); err != nil {
-		return err
-	}
-
-	m.status = data.Status
-	m.timestamp = data.Timestamp
-	m.pubk = data.PublicKey
-	m.sig = data.Signature
-
-	return nil
 }

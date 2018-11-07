@@ -1,6 +1,8 @@
 package mem
 
 import (
+	"sort"
+
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	account_adding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
 	account_listing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
@@ -40,10 +42,16 @@ func (d *databasemock) FindBiometric(hash string) (account.Biometric, error) {
 	return nil, nil
 }
 
-func (d *databasemock) FindKeychain(addr string) (account.Keychain, error) {
-	for _, w := range d.Keychains {
-		if w.WalletAddr() == addr {
-			return w, nil
+func (d *databasemock) FindLastKeychain(addr string) (account.Keychain, error) {
+	sort.Slice(d.Keychains, func(i, j int) bool {
+		iTimestamp := d.Keychains[i].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()
+		jTimestamp := d.Keychains[j].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()
+		return iTimestamp > jTimestamp
+	})
+
+	for _, b := range d.Keychains {
+		if b.WalletAddr() == addr {
+			return b, nil
 		}
 	}
 	return nil, nil
