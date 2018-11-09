@@ -50,7 +50,7 @@ func (d *databasemock) FindLastKeychain(addr string) (account.Keychain, error) {
 	})
 
 	for _, b := range d.Keychains {
-		if b.WalletAddr() == addr {
+		if b.Address() == addr {
 			return b, nil
 		}
 	}

@@ -1,6 +1,7 @@
 package adding
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,7 +16,7 @@ Scenario: Enroll an user
 func TestAddAccount(t *testing.T) {
 	s := service{
 		client:       mockClient{},
-		val:          mockGoodRequestValidator{},
+		sigChecker:   mockGoodSignatureChecker{},
 		sharedBioPub: "my key",
 	}
 
@@ -49,7 +50,7 @@ Scenario: Catch invalid signature when get account's details from the robot
 func TestAddAccountInvalidSig(t *testing.T) {
 	s := service{
 		client:       mockClient{},
-		val:          mockBadRequestValidator{},
+		sigChecker:   mockBadSignatureChecker{},
 		sharedBioPub: "my key",
 	}
 
@@ -68,7 +69,7 @@ func TestAddAccountInvalidSig(t *testing.T) {
 	}
 
 	_, err := s.AddAccount(req)
-	assert.Equal(t, err, ErrInvalidSignature)
+	assert.Equal(t, err, errors.New("Invalid signature"))
 }
 
 type mockClient struct{}
@@ -87,14 +88,14 @@ func (c mockClient) AddAccount(AccountCreationRequest) (*AccountCreationResult, 
 	}, nil
 }
 
-type mockGoodRequestValidator struct{}
+type mockGoodSignatureChecker struct{}
 
-func (v mockGoodRequestValidator) CheckDataSignature(data interface{}, pubKey string, sig string) (bool, error) {
-	return true, nil
+func (v mockGoodSignatureChecker) CheckAccountSignature(data AccountCreationRequest, pubKey string) error {
+	return nil
 }
 
-type mockBadRequestValidator struct{}
+type mockBadSignatureChecker struct{}
 
-func (v mockBadRequestValidator) CheckDataSignature(data interface{}, pubKey string, sig string) (bool, error) {
-	return false, nil
+func (v mockBadSignatureChecker) CheckAccountSignature(data AccountCreationRequest, pubKey string) error {
+	return errors.New("Invalid signature")
 }

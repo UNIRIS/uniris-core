@@ -3,7 +3,9 @@ package crypto
 import (
 	"crypto/x509"
 	"encoding/hex"
+	"encoding/json"
 
+	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 
 	"github.com/uniris/ecies/pkg"
@@ -21,16 +23,44 @@ func NewDecrypter() Decrypter {
 	return decrypter{}
 }
 
-func (d decrypter) DecryptCipherAddress(addr string, pvKey string) (string, error) {
-	return decrypt(pvKey, addr)
-}
-
-func (d decrypter) DecryptHashPerson(hash string, pvKey string) (string, error) {
+func (d decrypter) DecryptHash(hash string, pvKey string) (string, error) {
 	return decrypt(pvKey, hash)
 }
 
-func (d decrypter) DecryptTransactionData(data string, pvKey string) (string, error) {
-	return decrypt(pvKey, data)
+func (d decrypter) DecryptBiometricData(data string, pvKey string) (account.BiometricData, error) {
+	clear, err := decrypt(pvKey, data)
+	if err != nil {
+		return nil, err
+	}
+	var bio biometricRaw
+	err = json.Unmarshal([]byte(clear), &bio)
+	if err != nil {
+		return nil, err
+	}
+	return account.NewBiometricData(
+		bio.PersonHash,
+		bio.EncryptedAddrRobot,
+		bio.EncryptedAddrPerson,
+		bio.EncryptedAESKey,
+		bio.PersonPublicKey,
+		bio.BIODPublicKey, nil), nil
+}
+
+func (d decrypter) DecryptKeychainData(data string, pvKey string) (account.KeychainData, error) {
+	clear, err := decrypt(pvKey, data)
+	if err != nil {
+		return nil, err
+	}
+	var keychain keychainRaw
+	err = json.Unmarshal([]byte(clear), &keychain)
+	if err != nil {
+		return nil, err
+	}
+	return account.NewKeychainData(
+		keychain.EncryptedAddrRobot,
+		keychain.EncryptedWallet,
+		keychain.PersonPublicKey,
+		keychain.BIODPublicKey, nil), nil
 }
 
 func decrypt(privk string, data string) (string, error) {

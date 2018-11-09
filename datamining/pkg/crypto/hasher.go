@@ -5,6 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
+	"github.com/uniris/uniris-core/datamining/pkg/lock"
+
+	"github.com/uniris/uniris-core/datamining/pkg/account"
 	accountMining "github.com/uniris/uniris-core/datamining/pkg/account/mining"
 	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 )
@@ -23,32 +26,133 @@ func NewHasher() Hasher {
 	return hasher{}
 }
 
-func (h hasher) HashBiometricJSON(data *rpc.BioDataJSON) (string, error) {
-	b, err := json.Marshal(data)
+func (h hasher) HashLock(txLock lock.TransactionLock) (string, error) {
+	b, err := json.Marshal(lockRaw{
+		Address:        txLock.Address,
+		MasterRobotKey: txLock.MasterRobotKey,
+		TxHash:         txLock.TxHash,
+	})
 	if err != nil {
 		return "", err
 	}
 	return hashBytes(b), nil
 }
 
-func (h hasher) HashKeychainJSON(data *rpc.KeychainDataJSON) (string, error) {
-	b, err := json.Marshal(data)
+func (h hasher) HashBiometric(data account.Biometric) (string, error) {
+	valids := make([]validation, 0)
+	for _, v := range data.Endorsement().Validations() {
+		valids = append(valids, validation{
+			Pubk:      v.PublicKey(),
+			Sig:       v.Signature(),
+			Status:    v.Status(),
+			Timestamp: v.Timestamp(),
+		})
+	}
+	b, err := json.Marshal(biometric{
+		PersonHash:          data.PersonHash(),
+		EncryptedAddrPerson: data.CipherAddrPerson(),
+		EncryptedAddrRobot:  data.CipherAddrRobot(),
+		EncryptedAESKey:     data.CipherAESKey(),
+		BIODPublicKey:       data.BiodPublicKey(),
+		PersonPublicKey:     data.PersonPublicKey(),
+		BIODSignature:       data.Signatures().Biod(),
+		PersonSignature:     data.Signatures().Person(),
+		Endorsement: endorsement{
+			LastTxHash: data.Endorsement().LastTransactionHash(),
+			TxHash:     data.Endorsement().TransactionHash(),
+			MasterValidation: masterValidation{
+				LastTxRvk:   data.Endorsement().MasterValidation().LastTransactionMiners(),
+				PowRobotKey: data.Endorsement().MasterValidation().ProofOfWorkRobotKey(),
+				PowValid: validation{
+					Pubk:      data.Endorsement().MasterValidation().ProofOfWorkValidation().PublicKey(),
+					Sig:       data.Endorsement().MasterValidation().ProofOfWorkValidation().Signature(),
+					Status:    data.Endorsement().MasterValidation().ProofOfWorkValidation().Status(),
+					Timestamp: data.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp(),
+				},
+			},
+			Validations: valids,
+		},
+	})
 	if err != nil {
 		return "", err
 	}
 	return hashBytes(b), nil
 }
 
-func (h hasher) HashUnsignedKeychainData(data accountMining.UnsignedKeychainData) (string, error) {
-	b, err := json.Marshal(data)
+func (h hasher) HashKeychain(data account.Keychain) (string, error) {
+	valids := make([]validation, 0)
+	for _, v := range data.Endorsement().Validations() {
+		valids = append(valids, validation{
+			Pubk:      v.PublicKey(),
+			Sig:       v.Signature(),
+			Status:    v.Status(),
+			Timestamp: v.Timestamp(),
+		})
+	}
+	b, err := json.Marshal(keychain{
+		Address:            data.Address(),
+		EncryptedWallet:    data.CipherWallet(),
+		EncryptedAddrRobot: data.CipherAddrRobot(),
+		BIODPublicKey:      data.BiodPublicKey(),
+		PersonPublicKey:    data.PersonPublicKey(),
+		BIODSignature:      data.Signatures().Biod(),
+		PersonSignature:    data.Signatures().Person(),
+		Endorsement: endorsement{
+			LastTxHash: data.Endorsement().LastTransactionHash(),
+			TxHash:     data.Endorsement().TransactionHash(),
+			MasterValidation: masterValidation{
+				LastTxRvk:   data.Endorsement().MasterValidation().LastTransactionMiners(),
+				PowRobotKey: data.Endorsement().MasterValidation().ProofOfWorkRobotKey(),
+				PowValid: validation{
+					Pubk:      data.Endorsement().MasterValidation().ProofOfWorkValidation().PublicKey(),
+					Sig:       data.Endorsement().MasterValidation().ProofOfWorkValidation().Signature(),
+					Status:    data.Endorsement().MasterValidation().ProofOfWorkValidation().Status(),
+					Timestamp: data.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp(),
+				},
+			},
+			Validations: valids,
+		},
+	})
 	if err != nil {
 		return "", err
 	}
 	return hashBytes(b), nil
 }
 
-func (h hasher) HashUnsignedBiometricData(data accountMining.UnsignedBiometricData) (string, error) {
-	b, err := json.Marshal(data)
+func (h hasher) NewBiometricDataHash(data account.BiometricData) (string, error) {
+	return h.HashBiometricData(data)
+}
+
+func (h hasher) HashBiometricData(data account.BiometricData) (string, error) {
+	b, err := json.Marshal(biometricData{
+		PersonHash:          data.PersonHash(),
+		EncryptedAddrPerson: data.CipherAddrPerson(),
+		EncryptedAddrRobot:  data.CipherAddrRobot(),
+		EncryptedAESKey:     data.CipherAESKey(),
+		BIODPublicKey:       data.BiodPublicKey(),
+		PersonPublicKey:     data.PersonPublicKey(),
+		BIODSignature:       data.Signatures().Biod(),
+		PersonSignature:     data.Signatures().Person(),
+	})
+	if err != nil {
+		return "", err
+	}
+	return hashBytes(b), nil
+}
+
+func (h hasher) NewKeychainDataHash(data account.KeychainData) (string, error) {
+	return h.HashKeychainData(data)
+}
+
+func (h hasher) HashKeychainData(data account.KeychainData) (string, error) {
+	b, err := json.Marshal(keychainData{
+		EncryptedAddrRobot: data.CipherAddrRobot(),
+		EncryptedWallet:    data.CipherWallet(),
+		BIODPublicKey:      data.BiodPublicKey(),
+		PersonPublicKey:    data.PersonPublicKey(),
+		BIODSignature:      data.Signatures().Biod(),
+		PersonSignature:    data.Signatures().Person(),
+	})
 	if err != nil {
 		return "", err
 	}
@@ -56,9 +160,7 @@ func (h hasher) HashUnsignedBiometricData(data accountMining.UnsignedBiometricDa
 }
 
 func hashString(data string) string {
-	hash := sha256.New()
-	hash.Write([]byte(data))
-	return hex.EncodeToString(hash.Sum(nil))
+	return hashBytes([]byte(data))
 }
 
 func hashBytes(data []byte) string {

@@ -11,8 +11,8 @@ service External {
     rpc GetBiometric(BiometricRequest) returns(BiometricResponse) {}
     rpc GetKeychain(KeychainRequest) returns(KeychainResponse) {}
 
-    rpc LockTransaction(LockRequest) returns (google.protobuf.Empty) {}
-    rpc UnlockTransaction(LockRequest) returns (google.protobuf.Empty) {}
+    rpc LockTransaction(LockRequest) returns (LockAck) {}
+    rpc UnlockTransaction(LockRequest) returns (LockAck) {}
 
     rpc LeadKeychainMining(KeychainLeadRequest) returns (google.protobuf.Empty) {}
     rpc LeadBiometricMining(BiometricLeadRequest) returns (google.protobuf.Empty) {}
@@ -20,8 +20,18 @@ service External {
     rpc ValidateKeychain(KeychainValidationRequest) returns (ValidationResponse) {}
     rpc ValidateBiometric(BiometricValidationRequest) returns (ValidationResponse) {}
 
-    rpc StoreKeychain(KeychainStorageRequest) returns (google.protobuf.Empty) {}
-    rpc StoreBiometric(BiometricStorageRequest) returns (google.protobuf.Empty) {}
+    rpc StoreKeychain(KeychainStorageRequest) returns (StorageAck) {}
+    rpc StoreBiometric(BiometricStorageRequest) returns (StorageAck) {}
+}
+
+message LockAck {
+    string Signature = 1;
+    string LockHash = 2;
+}
+
+message StorageAck {
+    string Signature = 1;
+    string StorageHash = 2;
 }
 
 message KeychainLeadRequest {
@@ -29,6 +39,7 @@ message KeychainLeadRequest {
     repeated string ValidatorPeerIPs = 2;
     string EncryptedKeychainData = 3;
     Signature SignatureKeychainData = 4;
+    string SignatureRequest = 5;
 }
 
 message BiometricLeadRequest {
@@ -36,28 +47,31 @@ message BiometricLeadRequest {
     repeated string ValidatorPeerIPs = 2;
     string EncryptedBioData = 3;
     Signature SignatureBioData = 4;
+    string SignatureRequest = 5;
 }
 
 message KeychainValidationRequest {
     string TransactionHash = 1;
     KeychainData Data = 2;
+    string Signature = 3;
 }
 
 message BiometricValidationRequest {
     string TransactionHash = 1;
     BiometricData Data = 2;
+    string Signature = 3;
 }
 
 message KeychainStorageRequest {
-    string TransactionHash = 1;
-    KeychainData Data = 2;
-    Endorsement Endorsement = 4;
+    KeychainData Data = 1;
+    Endorsement Endorsement = 2;
+    string Signature = 3;
 }
 
 message BiometricStorageRequest {
-    string TransactionHash = 1;
-    BiometricData Data = 2;
-    Endorsement Endorsement = 3;
+    BiometricData Data = 1;
+    Endorsement Endorsement = 2;
+    string Signature = 3;
 }
 
 message LockRequest {
@@ -100,6 +114,7 @@ message MasterValidation {
 
 message ValidationResponse {
     Validation Validation = 1;
+    string Signature = 2;
 }
 
 message Validation {

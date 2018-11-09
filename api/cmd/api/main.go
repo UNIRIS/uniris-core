@@ -37,10 +37,10 @@ func main() {
 	swaggerFile, _ := filepath.Abs("../../api/swagger-spec/swagger.yaml")
 	r.StaticFile("/swagger.yaml", swaggerFile)
 
-	client := rpc.NewRobotClient(config.Datamining, config.SharedKeys.RobotPrivateKey)
-	validator := new(crypto.RequestValidator)
-	lister := listing.NewService(config.SharedKeys.BiodPublicKey, client, validator)
-	adder := adding.NewService(config.SharedKeys.BiodPublicKey, client, validator)
+	signer := crypto.NewSigner()
+	client := rpc.NewRobotClient(*config, signer)
+	lister := listing.NewService(config.SharedKeys.BiodPublicKey, client, signer)
+	adder := adding.NewService(config.SharedKeys.BiodPublicKey, client, signer)
 
 	rest.Handler(r, config.SharedKeys.RobotPrivateKey, lister, adder)
 

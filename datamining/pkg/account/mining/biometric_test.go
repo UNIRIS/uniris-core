@@ -17,7 +17,9 @@ Scenario: Checks the biometric data integrity
 */
 func TestBiometricIntegrity(t *testing.T) {
 	miner := biometricMiner{hasher: mockBiometricHasher{}}
-	err := miner.checkDataIntegrity("hash", &account.BioData{})
+	sig := account.NewSignatures("sig1", "sig2")
+	data := account.NewBiometricData("personHash", "enc addr", "enc addr", "enc aes key", "pub", "pub", sig)
+	err := miner.checkDataIntegrity("hash", data)
 	assert.Nil(t, err)
 }
 
@@ -29,7 +31,9 @@ Scenario: Checks the biometric data integrity
 */
 func TestInvalidBiometricIntegrity(t *testing.T) {
 	miner := biometricMiner{hasher: mockBadBiometricHasher{}}
-	err := miner.checkDataIntegrity("hash", &account.BioData{})
+	sig := account.NewSignatures("sig1", "sig2")
+	data := account.NewBiometricData("personHash", "enc addr", "enc addr", "enc aes key", "pub", "pub", sig)
+	err := miner.checkDataIntegrity("hash", data)
 	assert.Equal(t, mining.ErrInvalidTransaction, err)
 }
 
@@ -41,7 +45,9 @@ Scenario: Checks the biometric data signature
 */
 func TestBiometricSignature(t *testing.T) {
 	miner := biometricMiner{signer: mockBiometricSigner{}}
-	err := miner.checkDataSignature(&account.BioData{})
+	sig := account.NewSignatures("sig1", "sig2")
+	data := account.NewBiometricData("personHash", "enc addr", "enc addr", "enc aes key", "pub", "pub", sig)
+	err := miner.checkDataSignature(data)
 	assert.Nil(t, err)
 }
 
@@ -53,7 +59,9 @@ Scenario: Check biometric data as master node
 */
 func TestBiometricMasterCheck(t *testing.T) {
 	miner := NewBiometricMiner(mockBiometricSigner{}, mockBiometricHasher{})
-	err := miner.CheckAsMaster("hash", &account.BioData{})
+	sig := account.NewSignatures("sig1", "sig2")
+	data := account.NewBiometricData("personHash", "enc addr", "enc addr", "enc aes key", "pub", "pub", sig)
+	err := miner.CheckAsMaster("hash", data)
 	assert.Nil(t, err)
 }
 
@@ -65,24 +73,26 @@ Scenario: Check biometric data as slave node
 */
 func TestBiometricSlaveCheck(t *testing.T) {
 	miner := NewBiometricMiner(mockBiometricSigner{}, mockBiometricHasher{})
-	err := miner.CheckAsSlave("hash", &account.BioData{})
+	sig := account.NewSignatures("sig1", "sig2")
+	data := account.NewBiometricData("personHash", "enc addr", "enc addr", "enc aes key", "pub", "pub", sig)
+	err := miner.CheckAsSlave("hash", data)
 	assert.Nil(t, err)
 }
 
 type mockBiometricHasher struct{}
 
-func (h mockBiometricHasher) HashUnsignedBiometricData(data UnsignedBiometricData) (string, error) {
+func (h mockBiometricHasher) NewBiometricDataHash(account.BiometricData) (string, error) {
 	return "hash", nil
 }
 
 type mockBadBiometricHasher struct{}
 
-func (h mockBadBiometricHasher) HashUnsignedBiometricData(data UnsignedBiometricData) (string, error) {
+func (h mockBadBiometricHasher) NewBiometricDataHash(account.BiometricData) (string, error) {
 	return "other hash", nil
 }
 
 type mockBiometricSigner struct{}
 
-func (s mockBiometricSigner) CheckBiometricSignature(pubK string, data UnsignedBiometricData, sig string) error {
+func (s mockBiometricSigner) CheckBiometricDataSignature(pubK string, data account.BiometricData, sig string) error {
 	return nil
 }

@@ -6,6 +6,8 @@ import (
 
 //Pool represents a pool of peers
 type Pool interface {
+
+	//Peers returns the pool's peers
 	Peers() PeerList
 }
 

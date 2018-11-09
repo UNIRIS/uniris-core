@@ -6,13 +6,21 @@ import (
 
 //Repository defines methods to get data from the account database
 type Repository interface {
-	FindBiometric(bioHash string) (account.Biometric, error)
+
+	//FindBiometric retrieve a biometric from a given person hash
+	FindBiometric(hash string) (account.Biometric, error)
+
+	//FindLastKeychain retrieve the last keychain from a given account's address
 	FindLastKeychain(addr string) (account.Keychain, error)
 }
 
 //Service defines method for the listing service
 type Service interface {
-	GetBiometric(bioHash string) (account.Biometric, error)
+
+	//GetBiometric retrieve a biometric from a given person hash
+	GetBiometric(personHash string) (account.Biometric, error)
+
+	//GetLastKeychain retrieve the last keychain from a given account's address
 	GetLastKeychain(addr string) (account.Keychain, error)
 }
 
@@ -25,8 +33,8 @@ func NewService(repo Repository) Service {
 	return service{repo}
 }
 
-func (s service) GetBiometric(bioHash string) (account.Biometric, error) {
-	w, err := s.repo.FindBiometric(bioHash)
+func (s service) GetBiometric(personHash string) (account.Biometric, error) {
+	w, err := s.repo.FindBiometric(personHash)
 	if err != nil {
 		return nil, err
 	}

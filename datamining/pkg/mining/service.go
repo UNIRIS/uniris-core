@@ -29,21 +29,37 @@ const (
 
 //TransactionMiner define methods a transaction miner must define
 type TransactionMiner interface {
+
+	//GetLastTransactionHash returns the last transaction from a given address
 	GetLastTransactionHash(addr string) (string, error)
+
+	//CheckAsMaster performs checks on some data like a master node
 	CheckAsMaster(txHash string, data interface{}) error
+
+	//CheckAsSlave performs checks on some data like a peer inside a validation pool
 	CheckAsSlave(txHash string, data interface{}) error
 }
 
 //Signer defines methods to handle lead mining signing
 type Signer interface {
-	lock.Signer
 	PowSigner
 }
 
 //Service defines methods for global mining
 type Service interface {
+
+	//LeadMining process workflow to lead mining (like elected master node)
+	//
+	//The workflow includes:
+	// - Checks (as master)
+	// - Executes the proof of work
+	// - Relay on pools to lock/unlock, validate and store the transaction
+	//
+	//It also in charge of notify the transaction status during this workflow
 	LeadMining(txHash string, addr string, data interface{}, vPool datamining.Pool, txType TransactionType, biodSig string) error
-	Validate(txHash string, data interface{}, txType TransactionType) (datamining.Validation, error)
+
+	//Validate performs checks like a node in a validation pool and create a validation (successed or not)
+	Validate(txHash string, data interface{}, txType TransactionType) (Validation, error)
 }
 
 type service struct {
@@ -111,7 +127,7 @@ func (s service) findPools(addr string) (datamining.Pool, datamining.Pool, error
 		return nil, nil, err
 	}
 
-	sPool, err := s.poolF.FindStoragePool()
+	sPool, err := s.poolF.FindStoragePool(addr)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -122,12 +138,8 @@ func (s service) findPools(addr string) (datamining.Pool, datamining.Pool, error
 func (s service) requestLock(txHash string, addr string, lastVPool datamining.Pool) error {
 	//Build lock transaction
 	lock := lock.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey, Address: addr}
-	sigLock, err := s.signer.SignLock(lock, s.robotPvKey)
-	if err != nil {
-		return err
-	}
 
-	if err := s.poolR.RequestLock(lastVPool, lock, sigLock); err != nil {
+	if err := s.poolR.RequestLock(lastVPool, lock); err != nil {
 		return err
 	}
 	if err := s.notif.NotifyTransactionStatus(txHash, TxLocked); err != nil {
@@ -140,12 +152,7 @@ func (s service) requestLock(txHash string, addr string, lastVPool datamining.Po
 func (s service) requestUnlock(txHash string, addr string, lastVPool datamining.Pool) error {
 	//Build unlock transaction
 	lock := lock.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey, Address: addr}
-	sigLock, err := s.signer.SignLock(lock, s.robotPvKey)
-	if err != nil {
-		return err
-	}
-
-	if err := s.poolR.RequestUnlock(lastVPool, lock, sigLock); err != nil {
+	if err := s.poolR.RequestUnlock(lastVPool, lock); err != nil {
 		return err
 	}
 	if err := s.notif.NotifyTransactionStatus(txHash, TxUnlocked); err != nil {
@@ -155,14 +162,24 @@ func (s service) requestUnlock(txHash string, addr string, lastVPool datamining.
 	return nil
 }
 
-func (s service) mine(txHash string, data interface{}, addr string, biodSig string, lastVPool, vPool datamining.Pool, txType TransactionType) (datamining.Endorsement, error) {
+func (s service) mine(txHash string, data interface{}, addr string, biodSig string, lastVPool, vPool datamining.Pool, txType TransactionType) (Endorsement, error) {
 	//Execute transaction specific master checks
 	if err := s.txMiners[txType].CheckAsMaster(txHash, data); err != nil {
 		return nil, err
 	}
 
 	//Execute the Proof of Work
-	masterValid, err := NewPOW(s.biodLister, s.signer, s.robotKey, s.robotPvKey).Execute(txHash, biodSig, lastVPool)
+	pow := pow{
+		lastVPool:   lastVPool,
+		lister:      s.biodLister,
+		robotPubKey: s.robotKey,
+		robotPvKey:  s.robotPvKey,
+		signer:      s.signer,
+		txBiodSig:   biodSig,
+		txData:      data,
+		txType:      txType,
+	}
+	masterValid, err := pow.execute()
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +192,7 @@ func (s service) mine(txHash string, data interface{}, addr string, biodSig stri
 
 	//Check if the validations passed
 	for _, v := range valids {
-		if v.Status() == datamining.ValidationKO {
+		if v.Status() == ValidationKO {
 			return nil, ErrInvalidTransaction
 		}
 	}
@@ -184,32 +201,32 @@ func (s service) mine(txHash string, data interface{}, addr string, biodSig stri
 	if err != nil {
 		return nil, err
 	}
-	return datamining.NewEndorsement(lastTxHash, txHash, masterValid, valids), nil
+	return NewEndorsement(lastTxHash, txHash, masterValid, valids), nil
 }
 
-func (s service) Validate(txHash string, data interface{}, txType TransactionType) (datamining.Validation, error) {
+func (s service) Validate(txHash string, data interface{}, txType TransactionType) (Validation, error) {
 	if s.txMiners[txType] == nil {
 		return nil, ErrUnsupportedTransaction
 	}
 
 	if err := s.txMiners[txType].CheckAsSlave(txHash, data); err != nil {
 		if err == ErrInvalidTransaction || err == ErrUnsupportedTransaction {
-			return s.buildValidation(datamining.ValidationKO)
+			return s.buildValidation(ValidationKO)
 		}
 		return nil, err
 	}
-	return s.buildValidation(datamining.ValidationOK)
+	return s.buildValidation(ValidationOK)
 }
 
-func (s service) buildValidation(status datamining.ValidationStatus) (datamining.Validation, error) {
-	v := UnsignedValidation{
-		PublicKey: s.robotKey,
-		Status:    status,
-		Timestamp: time.Now(),
+func (s service) buildValidation(status ValidationStatus) (Validation, error) {
+	v := validation{
+		pubk:      s.robotKey,
+		status:    status,
+		timestamp: time.Now(),
 	}
 	signature, err := s.signer.SignValidation(v, s.robotPvKey)
 	if err != nil {
 		return nil, err
 	}
-	return datamining.NewValidation(v.Status, v.Timestamp, v.PublicKey, signature), nil
+	return NewValidation(v.status, v.timestamp, v.pubk, signature), nil
 }
