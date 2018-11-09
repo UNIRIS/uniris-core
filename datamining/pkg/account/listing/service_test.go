@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
+	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
 /*
@@ -21,31 +21,20 @@ func TestGetLastKeychain(t *testing.T) {
 	db := new(databasemock)
 	s := NewService(db)
 
-	sigs := account.Signatures{
-		BiodSig:   "sig1",
-		PersonSig: "sig2",
-	}
+	sigs := account.NewSignatures("sig1", "sig2")
+	keychainData := account.NewKeychainData("xxx", "xxx", "xxx", "xxx", sigs)
 
-	keychainData := &account.KeyChainData{
-		WalletAddr:      "address",
-		CipherAddrRobot: "xxxx",
-		CipherWallet:    "xxxx",
-		PersonPubk:      "xxxx",
-		BiodPubk:        "xxxx",
-		Sigs:            sigs,
-	}
+	masterValid1 := mining.NewMasterValidation([]string{}, "robotKey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature"))
+	endors1 := mining.NewEndorsement("", "hash1", masterValid1, []mining.Validation{})
 
-	masterValid1 := datamining.NewMasterValidation([]string{}, "robotKey", datamining.NewValidation(datamining.ValidationOK, time.Now(), "pubkey", "signature"))
-	endors1 := datamining.NewEndorsement("", "hash1", masterValid1, []datamining.Validation{})
-
-	kc1 := account.NewKeychain(keychainData, endors1)
+	kc1 := account.NewKeychain("address", keychainData, endors1)
 
 	time.Sleep(1 * time.Second)
 
-	masterValid2 := datamining.NewMasterValidation([]string{}, "robotKey", datamining.NewValidation(datamining.ValidationOK, time.Now(), "pubkey", "signature"))
-	endors2 := datamining.NewEndorsement("hash1", "hash2", masterValid2, []datamining.Validation{})
+	masterValid2 := mining.NewMasterValidation([]string{}, "robotKey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature"))
+	endors2 := mining.NewEndorsement("hash1", "hash2", masterValid2, []mining.Validation{})
 
-	kc2 := account.NewKeychain(keychainData, endors2)
+	kc2 := account.NewKeychain("address", keychainData, endors2)
 
 	db.Keychains = append(db.Keychains, kc1)
 	db.Keychains = append(db.Keychains, kc2)
@@ -68,25 +57,13 @@ func TestGetBiometric(t *testing.T) {
 	db := new(databasemock)
 	s := NewService(db)
 
-	sigs := account.Signatures{
-		BiodSig:   "sig1",
-		PersonSig: "sig2",
-	}
+	sigs := account.NewSignatures("sig1", "sig2")
+	data := account.NewBiometricData("hash1", "xxx", "xxx", "xxx", "xxx", "xxx", sigs)
 
-	bdata := &account.BioData{
-		PersonHash:      "hash1",
-		BiodPubk:        "xxxx",
-		CipherAddrBio:   "xxxx",
-		CipherAddrRobot: "xxxx",
-		CipherAESKey:    "xxxx",
-		PersonPubk:      "xxxx",
-		Sigs:            sigs,
-	}
+	masterValid := mining.NewMasterValidation([]string{}, "robotKey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature"))
+	endors := mining.NewEndorsement("", "xxx", masterValid, []mining.Validation{})
 
-	masterValid := datamining.NewMasterValidation([]string{}, "robotKey", datamining.NewValidation(datamining.ValidationOK, time.Now(), "pubkey", "signature"))
-	endors := datamining.NewEndorsement("", "xxx", masterValid, []datamining.Validation{})
-
-	b := account.NewBiometric(bdata, endors)
+	b := account.NewBiometric(data, endors)
 
 	db.Biometrics = append(db.Biometrics, b)
 	wa, err := s.GetBiometric("hash1")
@@ -116,7 +93,7 @@ func (d *databasemock) FindLastKeychain(addr string) (account.Keychain, error) {
 	})
 
 	for _, b := range d.Keychains {
-		if b.WalletAddr() == addr {
+		if b.Address() == addr {
 			return b, nil
 		}
 	}

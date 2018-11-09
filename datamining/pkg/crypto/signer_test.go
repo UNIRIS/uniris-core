@@ -8,10 +8,14 @@ import (
 	"encoding/asn1"
 	"encoding/hex"
 	"encoding/json"
+	"time"
 
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
+	"github.com/uniris/uniris-core/datamining/pkg/account"
+	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
 /*
@@ -46,22 +50,533 @@ Scenario: Verify encrypted data
 func TestVerify(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
-	puKey, _ := x509.MarshalPKIXPublicKey(key.Public())
-	encData := fakeData{Message: "hello"}
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+	encData := struct {
+		Message string
+	}{Message: "hello"}
 
 	b, _ := json.Marshal(encData)
 
-	s := signer{}
 	sig, _ := sign(hex.EncodeToString(pvKey), string(b))
 
-	err := s.checkSignature(
-		hex.EncodeToString(puKey),
-		encData,
+	err := checkSignature(
+		hex.EncodeToString(pubKey),
+		string(b),
 		sig,
 	)
 	assert.Nil(t, err)
 }
 
-type fakeData struct {
-	Message string
+/*
+Scenario: Check keychain transaction signature
+	Given a signed keychain data, a signature and a public key
+	When I want to check it's the data matched the signature
+	Then I get not error
+*/
+func TestCheckTransactionKeychainSignature(t *testing.T) {
+	k := account.NewKeychainData("cipher addr", "cipher wallet", "person pub", "biod pub", account.NewSignatures("sig", "sig"))
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	data := keychainRaw{
+		BIODPublicKey:      k.BiodPublicKey(),
+		EncryptedAddrRobot: k.CipherAddrRobot(),
+		EncryptedWallet:    k.CipherWallet(),
+		PersonPublicKey:    k.PersonPublicKey(),
+	}
+	b, _ := json.Marshal(data)
+
+	sig, _ := sign(hex.EncodeToString(pvKey), string(b))
+
+	assert.Nil(t, NewSigner().CheckTransactionDataSignature(mining.KeychainTransaction, hex.EncodeToString(pubKey), k, sig))
+}
+
+/*
+Scenario: Check biometric transaction signature
+	Given a signed biometric data, a signature and a public key
+	When I want to check it's the data matches the signature
+	Then I get not error
+*/
+func TestCheckTransactionBiometricSignature(t *testing.T) {
+	bio := account.NewBiometricData("hash", "cipher addr", "cipher addr", "cipher aes key", "person pub", "biod pub", account.NewSignatures("sig", "sig"))
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	data := biometricRaw{
+		PersonHash:          bio.PersonHash(),
+		EncryptedAESKey:     bio.CipherAESKey(),
+		BIODPublicKey:       bio.BiodPublicKey(),
+		EncryptedAddrRobot:  bio.CipherAddrRobot(),
+		EncryptedAddrPerson: bio.CipherAddrPerson(),
+		PersonPublicKey:     bio.PersonPublicKey(),
+	}
+	b, _ := json.Marshal(data)
+
+	sig, _ := sign(hex.EncodeToString(pvKey), string(b))
+
+	assert.Nil(t, NewSigner().CheckTransactionDataSignature(mining.BiometricTransaction, hex.EncodeToString(pubKey), bio, sig))
+}
+
+/*
+Scenario: Sign and check hash signature
+	Given a hash and a key pair
+	When I want to sign the hash and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndCheckHashSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	sig, err := NewSigner().SignHash("hash", hex.EncodeToString(pvKey))
+	assert.Nil(t, err)
+	assert.NotEmpty(t, sig)
+
+	assert.Nil(t, NewSigner().CheckHashSignature(hex.EncodeToString(pubKey), "hash", sig))
+}
+
+/*
+Scenario: Sign and checks keychain validation request signature
+	Given a validation request and a key pair
+	When I want to sign the request and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndCheckKeychainValidationRequestSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	req := &api.KeychainValidationRequest{
+		Data: &api.KeychainData{
+			BiodPubk:        "pub",
+			CipherAddrRobot: "enc addr",
+			CipherWallet:    "enc wallet",
+			PersonPubk:      "pub",
+			Signature: &api.Signature{
+				Biod:   "sig",
+				Person: "sig",
+			},
+		},
+		TransactionHash: "txHash",
+	}
+
+	err := NewSigner().SignKeychainValidationRequestSignature(req, hex.EncodeToString(pvKey))
+	assert.Nil(t, err)
+	assert.NotEmpty(t, req.Signature)
+
+	assert.Nil(t, NewSigner().CheckKeychainValidationRequestSignature(hex.EncodeToString(pubKey), req))
+}
+
+/*
+Scenario: Sign and checks biometric validation request signature
+	Given a validation request and a key pair
+	When I want to sign the request and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndCheckBiometricValidationRequestSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	req := &api.BiometricValidationRequest{
+		Data: &api.BiometricData{
+			BiodPubk:        "pub",
+			CipherAddrRobot: "enc addr",
+			CipherAddrBio:   "enc addr",
+			CipherAESKey:    "enc aes key",
+			PersonHash:      "hash",
+			PersonPubk:      "pub",
+			Signature: &api.Signature{
+				Biod:   "sig",
+				Person: "sig",
+			},
+		},
+		TransactionHash: "txHash",
+	}
+
+	err := NewSigner().SignBiometricValidationRequestSignature(req, hex.EncodeToString(pvKey))
+	assert.Nil(t, err)
+	assert.NotEmpty(t, req.Signature)
+
+	assert.Nil(t, NewSigner().CheckBiometricValidationRequestSignature(hex.EncodeToString(pubKey), req))
+}
+
+/*
+Scenario: Sign and checks keychain storage request signature
+	Given a storage request and a key pair
+	When I want to sign the request and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndCheckKeychainStorageRequestSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	req := &api.KeychainStorageRequest{
+		Data: &api.KeychainData{
+			BiodPubk:        "pub",
+			CipherAddrRobot: "enc addr",
+			CipherWallet:    "enc wallet",
+			PersonPubk:      "pub",
+			Signature: &api.Signature{
+				Biod:   "sig",
+				Person: "sig",
+			},
+		},
+		Endorsement: &api.Endorsement{
+			LastTransactionHash: "",
+			TransactionHash:     "hash",
+			MasterValidation: &api.MasterValidation{
+				LastTransactionMiners: []string{"hash"},
+				ProofOfWorkRobotKey:   "key",
+				ProofOfWorkValidation: &api.Validation{
+					PublicKey: "key",
+					Signature: "sig",
+					Timestamp: time.Now().Unix(),
+					Status:    api.Validation_OK,
+				},
+			},
+		},
+	}
+
+	err := NewSigner().SignKeychainStorageRequestSignature(req, hex.EncodeToString(pvKey))
+	assert.Nil(t, err)
+	assert.NotEmpty(t, req.Signature)
+
+	assert.Nil(t, NewSigner().CheckKeychainStorageRequestSignature(hex.EncodeToString(pubKey), req))
+}
+
+/*
+Scenario: Sign and checks keychain storage request signature
+	Given a storage request and a key pair
+	When I want to sign the request and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndCheckBiometricStorageRequestSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	req := &api.BiometricStorageRequest{
+		Data: &api.BiometricData{
+			BiodPubk:        "pub",
+			CipherAddrRobot: "enc addr",
+			CipherAddrBio:   "enc addr",
+			CipherAESKey:    "enc aes key",
+			PersonHash:      "hash",
+			PersonPubk:      "pub",
+			Signature: &api.Signature{
+				Biod:   "sig",
+				Person: "sig",
+			},
+		},
+		Endorsement: &api.Endorsement{
+			LastTransactionHash: "",
+			TransactionHash:     "hash",
+			MasterValidation: &api.MasterValidation{
+				LastTransactionMiners: []string{"hash"},
+				ProofOfWorkRobotKey:   "key",
+				ProofOfWorkValidation: &api.Validation{
+					PublicKey: "key",
+					Signature: "sig",
+					Timestamp: time.Now().Unix(),
+					Status:    api.Validation_OK,
+				},
+			},
+		},
+	}
+
+	err := NewSigner().SignBiometricStorageRequestSignature(req, hex.EncodeToString(pvKey))
+	assert.Nil(t, err)
+	assert.NotEmpty(t, req.Signature)
+
+	assert.Nil(t, NewSigner().CheckBiometricStorageRequestSignature(hex.EncodeToString(pubKey), req))
+}
+
+/*
+Scenario: Sign and checks lock request signature
+	Given a lock request and a key pair
+	When I want to sign the request and checks the signature generated
+	Then I get not error
+*/
+func TestSignCheckLockRequestSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	req := &api.LockRequest{
+		Address:         "address",
+		MasterRobotKey:  "robotkey",
+		TransactionHash: "hash",
+	}
+
+	err := NewSigner().SignLockRequest(req, hex.EncodeToString(pvKey))
+	assert.Nil(t, err)
+	assert.NotEmpty(t, req.Signature)
+
+	assert.Nil(t, NewSigner().CheckLockRequestSignature(hex.EncodeToString(pubKey), req))
+}
+
+/*
+Scenario: Sign and checks keychain lead mining request signature
+	Given a keychain lead mining request and a key pair
+	When I want to sign the request and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndCheckKeychainLeadRequestSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	req := &api.KeychainLeadRequest{
+		EncryptedKeychainData: "enc data",
+		SignatureKeychainData: &api.Signature{
+			Biod:   "sig",
+			Person: "sig",
+		},
+		TransactionHash:  "txHash",
+		ValidatorPeerIPs: []string{"127.0.0.1"},
+	}
+
+	err := NewSigner().SignKeychainLeadRequest(req, hex.EncodeToString(pvKey))
+	assert.Nil(t, err)
+	assert.NotEmpty(t, req.SignatureRequest)
+
+	assert.Nil(t, NewSigner().CheckKeychainLeadRequestSignature(hex.EncodeToString(pubKey), req))
+}
+
+/*
+Scenario: Sign and checks biometric lead mining request signature
+	Given a biometric lead mining request and a key pair
+	When I want to sign the request and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndCheckBiometricLeadRequestSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	req := &api.BiometricLeadRequest{
+		EncryptedBioData: "enc data",
+		SignatureBioData: &api.Signature{
+			Biod:   "sig",
+			Person: "sig",
+		},
+		TransactionHash:  "txHash",
+		ValidatorPeerIPs: []string{"127.0.0.1"},
+	}
+
+	err := NewSigner().SignBiometricLeadRequest(req, hex.EncodeToString(pvKey))
+	assert.Nil(t, err)
+	assert.NotEmpty(t, req.SignatureRequest)
+
+	assert.Nil(t, NewSigner().CheckBiometricLeadRequestSignature(hex.EncodeToString(pubKey), req))
+}
+
+/*
+Scenario: Sign and checks validation response signature
+	Given a validation response and a key pair
+	When I want to sign the response and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndCheckValidationResponseSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	res := &api.ValidationResponse{
+		Validation: &api.Validation{
+			PublicKey: "pub",
+			Status:    api.Validation_OK,
+			Timestamp: time.Now().Unix(),
+			Signature: "sig",
+		},
+	}
+
+	err := NewSigner().SignValidationResponse(res, hex.EncodeToString(pvKey))
+	assert.Nil(t, err)
+	assert.NotEmpty(t, res.Signature)
+
+	assert.Nil(t, NewSigner().CheckValidationResponseSignature(hex.EncodeToString(pubKey), res))
+}
+
+/*
+Scenario: Sign and checks lock ack signature
+	Given a lock ack and a key pair
+	When I want to sign the response and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndChecLockAckSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	ack := &api.LockAck{
+		LockHash: "hash",
+	}
+
+	err := NewSigner().SignLockAck(ack, hex.EncodeToString(pvKey))
+	assert.Nil(t, err)
+	assert.NotEmpty(t, ack.Signature)
+
+	assert.Nil(t, NewSigner().CheckLockAckSignature(hex.EncodeToString(pubKey), ack))
+}
+
+/*
+Scenario: Sign and checks storage ack signature
+	Given a storage ack and a key pair
+	When I want to sign the response and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndCheckStorageAckSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	ack := &api.StorageAck{
+		StorageHash: "hash",
+	}
+
+	err := NewSigner().SignStorageAck(ack, hex.EncodeToString(pvKey))
+	assert.Nil(t, err)
+	assert.NotEmpty(t, ack.Signature)
+
+	assert.Nil(t, NewSigner().CheckStorageAckSignature(hex.EncodeToString(pubKey), ack))
+}
+
+/*
+Scenario: Sign and checks account search result signature
+	Given a account search result and a key pair
+	When I want to sign the response and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndCheckAccountSearchResultSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	res := &api.AccountSearchResult{
+		EncryptedAddress: "enc address",
+		EncryptedAESkey:  "enc aes key",
+		EncryptedWallet:  "enc wallet",
+	}
+	b, _ := json.Marshal(res)
+
+	assert.Nil(t, NewSigner().SignAccountSearchResult(res, hex.EncodeToString(pvKey)))
+	assert.NotEmpty(t, res.Signature)
+
+	checkSignature(hex.EncodeToString(pubKey), string(b), res.Signature)
+}
+
+/*
+Scenario: Sign and checks creation result signature
+	Given a creation result and a key pair
+	When I want to sign the response and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndCheckCreationResultSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	res := &api.CreationResult{
+		MasterPeerIP:    "127.0.0.1",
+		TransactionHash: "hash",
+	}
+	b, _ := json.Marshal(res)
+
+	assert.Nil(t, NewSigner().SignCreationResult(res, hex.EncodeToString(pvKey)))
+	assert.NotEmpty(t, res.Signature)
+
+	checkSignature(hex.EncodeToString(pubKey), string(b), res.Signature)
+}
+
+/*
+Scenario: Sign and checks biometric response signature
+	Given a biometric response and a key pair
+	When I want to sign the response and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndCheckBiometricResponseSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	res := &api.BiometricResponse{
+		Data: &api.BiometricData{
+			BiodPubk:        "pub",
+			CipherAddrRobot: "enc addr",
+			CipherAddrBio:   "enc addr",
+			CipherAESKey:    "enc aes key",
+			PersonHash:      "hash",
+			PersonPubk:      "pub",
+			Signature: &api.Signature{
+				Biod:   "sig",
+				Person: "sig",
+			},
+		},
+		Endorsement: &api.Endorsement{
+			LastTransactionHash: "",
+			TransactionHash:     "hash",
+			MasterValidation: &api.MasterValidation{
+				LastTransactionMiners: []string{"hash"},
+				ProofOfWorkRobotKey:   "key",
+				ProofOfWorkValidation: &api.Validation{
+					PublicKey: "key",
+					Signature: "sig",
+					Timestamp: time.Now().Unix(),
+					Status:    api.Validation_OK,
+				},
+			},
+		},
+	}
+	assert.Nil(t, NewSigner().SignBiometricResponse(res, hex.EncodeToString(pvKey)))
+	assert.NotEmpty(t, res.Signature)
+
+	assert.Nil(t, NewSigner().CheckBiometricResponseSignature(hex.EncodeToString(pubKey), res))
+}
+
+/*
+Scenario: Sign and checks keychain response signature
+	Given a keychain response and a key pair
+	When I want to sign the response and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndCheckKeychainResponseSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	res := &api.KeychainResponse{
+		Data: &api.KeychainData{
+			BiodPubk:        "pub",
+			CipherAddrRobot: "enc addr",
+			CipherWallet:    "enc wallet",
+			PersonPubk:      "pub",
+			Signature: &api.Signature{
+				Biod:   "sig",
+				Person: "sig",
+			},
+		},
+		Endorsement: &api.Endorsement{
+			LastTransactionHash: "",
+			TransactionHash:     "hash",
+			MasterValidation: &api.MasterValidation{
+				LastTransactionMiners: []string{"hash"},
+				ProofOfWorkRobotKey:   "key",
+				ProofOfWorkValidation: &api.Validation{
+					PublicKey: "key",
+					Signature: "sig",
+					Timestamp: time.Now().Unix(),
+					Status:    api.Validation_OK,
+				},
+			},
+		},
+	}
+	assert.Nil(t, NewSigner().SignKeychainResponse(res, hex.EncodeToString(pvKey)))
+	assert.NotEmpty(t, res.Signature)
+
+	assert.Nil(t, NewSigner().CheckKeychainResponseSignature(hex.EncodeToString(pubKey), res))
 }

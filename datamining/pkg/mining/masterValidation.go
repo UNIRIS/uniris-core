@@ -1,9 +1,15 @@
-package datamining
+package mining
 
 //MasterValidation describe a validation of an elected master robot
 type MasterValidation interface {
+
+	//LastTransactionMiners returns the miners list of the last transaction
 	LastTransactionMiners() []string
+
+	//ProofOfWorkRobotKey returns the public key from the robot which performs the Proof of work
 	ProofOfWorkRobotKey() string
+
+	//ProofOfWorkRobotKey returns the validation performed during the Proof of work
 	ProofOfWorkValidation() Validation
 }
 
@@ -18,17 +24,14 @@ func NewMasterValidation(lastTxRvk []string, powRobotKey string, powValid Valida
 	return masterValidation{lastTxRvk, powRobotKey, powValid}
 }
 
-//LastTransactionMiners returns the list of public keys which validate the last transaction
 func (m masterValidation) LastTransactionMiners() []string {
 	return m.lastTxRvk
 }
 
-//ProofOfWorkRobotKey returns the public key of the robot which perform the PoW
 func (m masterValidation) ProofOfWorkRobotKey() string {
 	return m.powRobotKey
 }
 
-//ProofOfWorkValidation returns the transaction proceed after the proof of work
 func (m masterValidation) ProofOfWorkValidation() Validation {
 	return m.powValid
 }

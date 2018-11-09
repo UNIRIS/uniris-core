@@ -16,6 +16,7 @@ type AccountCreationTransactions struct {
 type CreationTransaction struct {
 	TransactionHash string `json:"transaction_hash" binding:"required"`
 	MasterPeerIP    string `json:"master_peer_ip" binding:"required"`
+	Signature       string `json:"signature" binding:"required"`
 }
 
 //AccountCreationRequest represents the data to provide to create an account

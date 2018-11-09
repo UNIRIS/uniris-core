@@ -1,72 +1,107 @@
 package account
 
 import (
-	datamining "github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
-//KeyChainData describe a decoded keychain data
-type KeyChainData struct {
-	WalletAddr      string
-	CipherAddrRobot string
-	CipherWallet    string
-	PersonPubk      string
-	BiodPubk        string
-	Sigs            Signatures
-}
+//KeychainData describe a keychain data
+type KeychainData interface {
 
-//Keychain describes the keychain data with its endorsement
-type keychain struct {
-	data        *KeyChainData
-	endorsement datamining.Endorsement
-}
-
-//Keychain represents a keychain for an account
-type Keychain interface {
-	CipherWallet() string
-	WalletAddr() string
+	//CipherAddrRobot returns encrypted address by the shared robot key
 	CipherAddrRobot() string
+
+	//CipherWallet returns encrypted wallet by the person AES key
+	CipherWallet() string
+
+	//PersonPublicKey returns the person public key
 	PersonPublicKey() string
+
+	//BiodPublicKey returns the biometric device public key
 	BiodPublicKey() string
+
+	//Signature returns the signatures of the keychain data
 	Signatures() Signatures
-	Endorsement() datamining.Endorsement
 }
 
-//NewKeychain creates a new keychain
-func NewKeychain(data *KeyChainData, endor datamining.Endorsement) Keychain {
-	return keychain{data, endor}
+type keyChainData struct {
+	cipherAddr   string
+	cipherWallet string
+	personPubk   string
+	biodPubk     string
+	sigs         Signatures
 }
 
-//Endorsement returns the wallet endorsement
-func (k keychain) Endorsement() datamining.Endorsement {
-	return k.endorsement
+//NewKeychainData creates a new keychain data
+func NewKeychainData(cipherAddr, cipherWallet, personPubk, biodPubk string, sigs Signatures) KeychainData {
+	return keyChainData{cipherAddr, cipherWallet, personPubk, biodPubk, sigs}
 }
 
-//CipherWallet returns the encrypted wallet
-func (k keychain) CipherWallet() string {
-	return k.data.CipherWallet
+func (k keyChainData) CipherAddrRobot() string {
+	return k.cipherAddr
 }
 
-//WalletAddr returns address of the encrypted wallet
-func (k keychain) WalletAddr() string {
-	return k.data.WalletAddr
+func (k keyChainData) CipherWallet() string {
+	return k.cipherWallet
 }
 
-//CipherAddrRobot get the wallet address encrypted for roboto
+func (k keyChainData) PersonPublicKey() string {
+	return k.personPubk
+}
+
+func (k keyChainData) BiodPublicKey() string {
+	return k.biodPubk
+}
+
+func (k keyChainData) Signatures() Signatures {
+	return k.sigs
+}
+
+//Keychain aggregates keychain data and it's endorsement
+type Keychain interface {
+	KeychainData
+
+	//Address returns the keychain address
+	Address() string
+
+	//Endorsement returns the keychain data endorsement
+	Endorsement() mining.Endorsement
+}
+
+type keychain struct {
+	address     string
+	data        KeychainData
+	endorsement mining.Endorsement
+}
+
+//NewKeychain creates a new keychain aggregate
+func NewKeychain(address string, data KeychainData, endor mining.Endorsement) Keychain {
+	return keychain{address, data, endor}
+}
+
+func (k keychain) Address() string {
+	return k.address
+}
+
 func (k keychain) CipherAddrRobot() string {
-	return k.data.CipherAddrRobot
+	return k.data.CipherAddrRobot()
 }
 
-//PersonPublicKey returns the wallet personal public key
+func (k keychain) CipherWallet() string {
+	return k.data.CipherWallet()
+}
+
 func (k keychain) PersonPublicKey() string {
-	return k.data.PersonPubk
+	return k.data.PersonPublicKey()
 }
 
-//BiodPublicKey returns the wallet biod public key
 func (k keychain) BiodPublicKey() string {
-	return k.data.BiodPubk
+	return k.data.BiodPublicKey()
 }
 
-//Signatures return the wallet signatures
 func (k keychain) Signatures() Signatures {
-	return k.data.Sigs
+	return k.data.Signatures()
+}
+
+func (k keychain) Endorsement() mining.Endorsement {
+	return k.endorsement
 }

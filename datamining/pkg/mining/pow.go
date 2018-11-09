@@ -9,71 +9,61 @@ import (
 
 //PowSigner defines methods to handle signatures
 type PowSigner interface {
-	SignValidation(v UnsignedValidation, pvKey string) (string, error)
-	CheckTransactionSignature(pubKey string, tx string, sig string) error
-}
 
-//POW defines methods for the POW
-type POW interface {
-	Execute(txHash, biodSig string, lastValidationPool datamining.Pool) (datamining.MasterValidation, error)
-}
+	//SignValidation create signature for a validation data
+	SignValidation(v Validation, pvKey string) (string, error)
 
-//UnsignedValidation represents a validation without a signature
-type UnsignedValidation struct {
-	Status    datamining.ValidationStatus `json:"status"`
-	Timestamp time.Time                   `json:"timestamp"`
-	PublicKey string                      `json:"pubk"`
+	//CheckTransactionDataSignature checks the transaction data signature
+	CheckTransactionDataSignature(txType TransactionType, pubKey string, data interface{}, sig string) error
 }
 
 type pow struct {
+	txType      TransactionType
+	txData      interface{}
+	lastVPool   datamining.Pool
+	txBiodSig   string
 	lister      listing.Service
 	signer      PowSigner
 	robotPubKey string
 	robotPvKey  string
 }
 
-//NewPOW creates a new Proof Of Work handler
-func NewPOW(lister listing.Service, signer PowSigner, robotPubKey, robotPvKey string) POW {
-	return pow{lister, signer, robotPubKey, robotPvKey}
-}
-
-//Execute the Proof Of Work
-func (p pow) Execute(txHash string, biodSig string, lastValidationPool datamining.Pool) (datamining.MasterValidation, error) {
+func (p pow) execute() (MasterValidation, error) {
 	keys, err := p.lister.ListBiodPubKeys()
 	if err != nil {
 		return nil, err
 	}
 
 	//Find the public key which matches the transaction signature
-	status := datamining.ValidationKO
+	status := ValidationKO
 	for _, k := range keys {
-		err := p.signer.CheckTransactionSignature(k, txHash, biodSig)
+		err := p.signer.CheckTransactionDataSignature(p.txType, k, p.txData, p.txBiodSig)
 		if err == nil {
-			status = datamining.ValidationOK
+			status = ValidationOK
 			break
 		}
 	}
 
-	v := UnsignedValidation{
-		PublicKey: p.robotPubKey,
-		Status:    status,
-		Timestamp: time.Now(),
+	v := validation{
+		pubk:      p.robotPubKey,
+		status:    status,
+		timestamp: time.Now(),
 	}
 	signature, err := p.signer.SignValidation(v, p.robotPvKey)
 	if err != nil {
 		return nil, err
 	}
 
-	valid := datamining.NewValidation(
-		v.Status,
-		v.Timestamp,
-		v.PublicKey,
+	valid := NewValidation(
+		v.status,
+		v.timestamp,
+		v.pubk,
 		signature)
 
 	lastTxMiners := make([]string, 0)
-	for _, p := range lastValidationPool.Peers() {
-		lastTxMiners = append(lastTxMiners, p.PublicKey)
+	for _, peer := range p.lastVPool.Peers() {
+		lastTxMiners = append(lastTxMiners, peer.PublicKey)
 	}
 
-	return datamining.NewMasterValidation(lastTxMiners, p.robotPubKey, valid), nil
+	return NewMasterValidation(lastTxMiners, p.robotPubKey, valid), nil
 }

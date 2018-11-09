@@ -15,6 +15,7 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	"github.com/uniris/uniris-core/datamining/pkg/mock"
+	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 
 	"github.com/uniris/uniris-core/datamining/pkg/crypto"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
@@ -23,8 +24,6 @@ import (
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	mem "github.com/uniris/uniris-core/datamining/pkg/storage/mem"
-	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc/externalrpc"
-	internalrpc "github.com/uniris/uniris-core/datamining/pkg/transport/rpc/internalrpc"
 )
 
 const (
@@ -41,15 +40,17 @@ func main() {
 	db := mem.NewDatabase()
 
 	poolFinder := mock.NewPoolFinder()
-	poolRequester := externalrpc.NewPoolRequester(config.Datamining)
+	aiClient := mock.NewAIClient()
 
-	biodLister := biodlisting.NewService(db)
-	lockSrv := lock.NewService(db)
 	signer := crypto.NewSigner()
 	hasher := crypto.NewHasher()
 	decrypter := crypto.NewDecrypter()
-	aiClient := mock.NewAIClient()
 
+	rpcCrypto := rpc.NewCrypto(decrypter, signer, hasher)
+	poolRequester := rpc.NewPoolRequester(*config, rpcCrypto)
+
+	biodLister := biodlisting.NewService(db)
+	lockSrv := lock.NewService(db)
 	accountLister := accountListing.NewService(db)
 	accountAdder := accountAdding.NewService(db)
 
@@ -72,7 +73,7 @@ func main() {
 	log.Print("DataMining Service starting...")
 
 	go func() {
-		internalHandler := internalrpc.NewInternalServerHandler(poolRequester, aiClient, hasher, decrypter, *config)
+		internalHandler := rpc.NewInternalServerHandler(poolRequester, aiClient, rpcCrypto, *config)
 
 		//Starts Internal grpc server
 		if err := startInternalServer(internalHandler, config.Datamining.InternalPort); err != nil {
@@ -81,7 +82,8 @@ func main() {
 	}()
 
 	//Starts Internal grpc server
-	externalHandler := externalrpc.NewExternalServerHandler(lockSrv, miningSrv, accountAdder, accountLister, decrypter, signer, *config)
+	rpcServices := rpc.NewExternalServices(lockSrv, miningSrv, accountAdder, accountLister)
+	externalHandler := rpc.NewExternalServerHandler(rpcServices, rpcCrypto, *config)
 	if err := startExternalServer(externalHandler, config.Datamining.ExternalPort); err != nil {
 		log.Fatal(err)
 	}

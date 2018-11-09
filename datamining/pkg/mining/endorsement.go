@@ -1,10 +1,17 @@
-package datamining
+package mining
 
 //Endorsement represents a validation
 type Endorsement interface {
+	//TransactionHash returns the endorsment's transaction hash
 	TransactionHash() string
+
+	//LastTransactionHash returns the previous transaction hash
 	LastTransactionHash() string
+
+	//MasterValidation returns the endorsment's master validation
 	MasterValidation() MasterValidation
+
+	//Validations returns the endorsment's validations
 	Validations() []Validation
 }
 
@@ -25,22 +32,18 @@ func NewEndorsement(lastTxHash, txHash string, masterV MasterValidation, valids 
 	}
 }
 
-//LastTransactionHash returns the previous transaction hash
 func (e endorsement) LastTransactionHash() string {
 	return e.lastTxHash
 }
 
-//TransactionHash returns the endorsment's transaction hash
 func (e endorsement) TransactionHash() string {
 	return e.txHash
 }
 
-//MasterValidation returns the endorsment's master validation
 func (e endorsement) MasterValidation() MasterValidation {
 	return e.masterValidation
 }
 
-//Validations returns the endorsment's validations
 func (e endorsement) Validations() []Validation {
 	return e.validations
 }

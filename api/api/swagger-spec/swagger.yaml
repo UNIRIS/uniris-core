@@ -181,7 +181,7 @@ definitions:
             $ref: "#/definitions/CreationResponse"
             description: Keychain creation response hash
       signature:
-        description: Signature
+        description: Signature of the response
         type: string
 
   Signatures:
@@ -208,3 +208,6 @@ definitions:
       master_peer_ip:
         type: string
         description: IP of the master peer which lead the transaction processing
+      signature:
+        type: string
+        description: Signature of the response from the master peer
