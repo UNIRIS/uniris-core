@@ -1,9 +1,6 @@
-package rpc
+package mock
 
 import (
-	"errors"
-	"time"
-
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
@@ -11,43 +8,33 @@ import (
 )
 
 type mockPoolRequester struct {
-	repo *mockDatabase
+	cli mockExtClient
+}
+
+func NewPoolRequester(cli mockExtClient) mockPoolRequester {
+	return mockPoolRequester{cli}
 }
 
 func (r mockPoolRequester) RequestBiometric(sPool datamining.Pool, personHash string) (account.Biometric, error) {
-	return r.repo.FindBiometric("hash")
+	return r.cli.RequestBiometric("127.0.0.1", personHash)
 }
 func (r mockPoolRequester) RequestKeychain(sPool datamining.Pool, addr string) (account.Keychain, error) {
-	return r.repo.FindLastKeychain("hash")
+	return r.cli.RequestKeychain("127.0.0.1", addr)
 }
 
 func (r mockPoolRequester) RequestLock(lockPool datamining.Pool, txLock lock.TransactionLock) error {
-	return r.repo.NewLock(txLock)
+	return r.cli.RequestLock("127.0.0.1", txLock)
 }
 
 func (r mockPoolRequester) RequestUnlock(lockPool datamining.Pool, txLock lock.TransactionLock) error {
-	return r.repo.RemoveLock(txLock)
+	return r.cli.RequestUnlock("127.0.0.1", txLock)
 }
 
 func (r mockPoolRequester) RequestValidations(sPool datamining.Pool, txHash string, data interface{}, txType mining.TransactionType) ([]mining.Validation, error) {
-	return []mining.Validation{
-		mining.NewValidation(
-			mining.ValidationOK,
-			time.Now(),
-			"pubkey",
-			"fake sig",
-		)}, nil
+	v, _ := r.cli.RequestValidation("127.0.0.1", txType, txHash, data)
+	return []mining.Validation{v}, nil
 }
 
 func (r mockPoolRequester) RequestStorage(sPool datamining.Pool, data interface{}, end mining.Endorsement, txType mining.TransactionType) error {
-	switch txType {
-	case mining.KeychainTransaction:
-		keychain := account.NewKeychain("address", data.(account.KeychainData), end)
-		return r.repo.StoreKeychain(keychain)
-	case mining.BiometricTransaction:
-		bio := account.NewBiometric(data.(account.BiometricData), end)
-		return r.repo.StoreBiometric(bio)
-	}
-
-	return errors.New("Unsupported storage")
+	return r.cli.RequestStorage("127.0.0.1", txType, data, end)
 }
