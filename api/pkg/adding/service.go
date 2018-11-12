@@ -12,7 +12,7 @@ type RobotClient interface {
 
 //SignatureChecker defines methods to validate signature requests
 type SignatureChecker interface {
-	CheckAccountSignature(data AccountCreationRequest, key string) error
+	CheckAccountCreationRequestSignature(data AccountCreationRequest, key string) error
 }
 
 type service struct {
@@ -27,7 +27,7 @@ func NewService(sharedBioPub string, cli RobotClient, sigChecker SignatureChecke
 }
 
 func (s service) AddAccount(req AccountCreationRequest) (*AccountCreationResult, error) {
-	if err := s.sigChecker.CheckAccountSignature(req, s.sharedBioPub); err != nil {
+	if err := s.sigChecker.CheckAccountCreationRequestSignature(req, s.sharedBioPub); err != nil {
 		return nil, err
 	}
 

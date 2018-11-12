@@ -65,8 +65,7 @@ func main() {
 		poolRequester,
 		signer,
 		biodLister,
-		config.SharedKeys.RobotPublicKey,
-		config.SharedKeys.RobotPrivateKey,
+		*config,
 		txMiners,
 	)
 

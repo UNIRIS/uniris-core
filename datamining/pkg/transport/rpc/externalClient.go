@@ -89,7 +89,7 @@ func (c externalClient) leadBiometricMining(txHash string, encData string, sig *
 	return nil
 }
 
-func (c externalClient) RequestBiometric(personHash string) (account.Biometric, error) {
+func (c externalClient) RequestBiometric(encPersonHash string) (account.Biometric, error) {
 	serverAddr := fmt.Sprintf("%s:%d", c.ip, c.port)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
@@ -100,20 +100,20 @@ func (c externalClient) RequestBiometric(personHash string) (account.Biometric, 
 
 	client := api.NewExternalClient(conn)
 
-	sigReq, err := c.crypto.signer.SignHash(personHash, c.conf.SharedKeys.RobotPrivateKey)
+	sigReq, err := c.crypto.signer.SignHash(encPersonHash, c.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
 	res, err := client.GetBiometric(context.Background(), &api.BiometricRequest{
-		PersonHash: personHash,
-		Signature:  sigReq,
+		EncryptedPersonHash: encPersonHash,
+		Signature:           sigReq,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	if err := c.crypto.signer.CheckBiometricResponseSignature(c.conf.SharedKeys.RobotPrivateKey, res); err != nil {
+	if err := c.crypto.signer.CheckBiometricResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
 		return nil, err
 	}
 
@@ -122,7 +122,7 @@ func (c externalClient) RequestBiometric(personHash string) (account.Biometric, 
 		c.data.buildEndorsement(res.Endorsement)), nil
 }
 
-func (c externalClient) RequestKeychain(address string) (account.Keychain, error) {
+func (c externalClient) RequestKeychain(encAddress string) (account.Keychain, error) {
 	serverAddr := fmt.Sprintf("%s:%d", c.ip, c.port)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
@@ -133,14 +133,14 @@ func (c externalClient) RequestKeychain(address string) (account.Keychain, error
 
 	client := api.NewExternalClient(conn)
 
-	sigReq, err := c.crypto.signer.SignHash(address, c.conf.SharedKeys.RobotPrivateKey)
+	sigReq, err := c.crypto.signer.SignHash(encAddress, c.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
 	res, err := client.GetKeychain(context.Background(), &api.KeychainRequest{
-		Address:   address,
-		Signature: sigReq,
+		EncryptedAddress: encAddress,
+		Signature:        sigReq,
 	})
 	if err != nil {
 		return nil, err
@@ -151,7 +151,7 @@ func (c externalClient) RequestKeychain(address string) (account.Keychain, error
 		return nil, err
 	}
 
-	if err := c.crypto.signer.CheckKeychainResponseSignature(c.conf.SharedKeys.RobotPrivateKey, res); err != nil {
+	if err := c.crypto.signer.CheckKeychainResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
 		return nil, err
 	}
 

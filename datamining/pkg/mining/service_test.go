@@ -10,6 +10,7 @@ import (
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	biodlisting "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
+	"github.com/uniris/uniris-core/datamining/pkg/system"
 )
 
 /*
@@ -93,9 +94,12 @@ func TestValidateTx(t *testing.T) {
 		txMiners: map[TransactionType]TransactionMiner{
 			KeychainTransaction: mockMiner{},
 		},
-		robotKey:   "pub key",
-		robotPvKey: "pv key",
-		signer:     mockSrvSigner{},
+		config: system.UnirisConfig{
+			SharedKeys: system.SharedKeys{
+				RobotPublicKey: "pub key",
+			},
+		},
+		signer: mockSrvSigner{},
 	}
 
 	valid, err := s.Validate("hash", "fake data", KeychainTransaction)
@@ -118,9 +122,12 @@ func TestValidateInvalidTx(t *testing.T) {
 		txMiners: map[TransactionType]TransactionMiner{
 			KeychainTransaction: mockBadMiner{},
 		},
-		robotKey:   "pub key",
-		robotPvKey: "pv key",
-		signer:     mockSrvSigner{},
+		config: system.UnirisConfig{
+			SharedKeys: system.SharedKeys{
+				RobotPublicKey: "pub key",
+			},
+		},
+		signer: mockSrvSigner{},
 	}
 
 	valid, err := s.Validate("hash", "fake data", KeychainTransaction)

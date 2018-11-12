@@ -15,10 +15,10 @@ type mockPoolRequester struct {
 }
 
 func (r mockPoolRequester) RequestBiometric(sPool datamining.Pool, personHash string) (account.Biometric, error) {
-	return r.repo.FindBiometric(personHash)
+	return r.repo.FindBiometric("hash")
 }
 func (r mockPoolRequester) RequestKeychain(sPool datamining.Pool, addr string) (account.Keychain, error) {
-	return r.repo.FindLastKeychain(addr)
+	return r.repo.FindLastKeychain("hash")
 }
 
 func (r mockPoolRequester) RequestLock(lockPool datamining.Pool, txLock lock.TransactionLock) error {

@@ -55,7 +55,7 @@ func NewSigner() Signer {
 	return signer{}
 }
 
-func (s signer) CheckAccountSignature(data adding.AccountCreationRequest, pubKey string) error {
+func (s signer) CheckAccountCreationRequestSignature(data adding.AccountCreationRequest, pubKey string) error {
 	b, err := json.Marshal(struct {
 		EncryptedBioData      string     `json:"encrypted_bio_data"`
 		EncryptedKeychainData string     `json:"encrypted_keychain_data"`

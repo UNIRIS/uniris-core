@@ -53,7 +53,7 @@ func (c robotClient) GetAccount(encHash string) (*listing.AccountResult, error) 
 		return nil, errors.New(s.Message())
 	}
 
-	if err := c.sigHandler.CheckAccountSearchResultSignature(c.conf.SharedKeys.RobotPrivateKey, res); err != nil {
+	if err := c.sigHandler.CheckAccountSearchResultSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
 		return nil, err
 	}
 

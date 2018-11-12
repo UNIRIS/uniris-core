@@ -8,6 +8,7 @@ import (
 
 	biodlisting "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
+	"github.com/uniris/uniris-core/datamining/pkg/system"
 )
 
 //ErrUnsupportedTransaction when the transaction does not have transaction miners associated
@@ -68,14 +69,13 @@ type service struct {
 	poolR      PoolRequester
 	signer     Signer
 	biodLister biodlisting.Service
-	robotKey   string
-	robotPvKey string
+	config     system.UnirisConfig
 	txMiners   map[TransactionType]TransactionMiner
 }
 
 //NewService creates a new global mining service
-func NewService(n Notifier, pF PoolFinder, pR PoolRequester, sig Signer, biodLister biodlisting.Service, robotKey, robotPvKey string, txMiners map[TransactionType]TransactionMiner) Service {
-	return service{n, pF, pR, sig, biodLister, robotKey, robotPvKey, txMiners}
+func NewService(n Notifier, pF PoolFinder, pR PoolRequester, sig Signer, biodLister biodlisting.Service, config system.UnirisConfig, txMiners map[TransactionType]TransactionMiner) Service {
+	return service{n, pF, pR, sig, biodLister, config, txMiners}
 }
 
 func (s service) LeadMining(txHash string, addr string, data interface{}, vPool datamining.Pool, txType TransactionType, biodSig string) error {
@@ -137,7 +137,7 @@ func (s service) findPools(addr string) (datamining.Pool, datamining.Pool, error
 
 func (s service) requestLock(txHash string, addr string, lastVPool datamining.Pool) error {
 	//Build lock transaction
-	lock := lock.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey, Address: addr}
+	lock := lock.TransactionLock{TxHash: txHash, MasterRobotKey: s.config.SharedKeys.RobotPublicKey, Address: addr}
 
 	if err := s.poolR.RequestLock(lastVPool, lock); err != nil {
 		return err
@@ -151,7 +151,9 @@ func (s service) requestLock(txHash string, addr string, lastVPool datamining.Po
 
 func (s service) requestUnlock(txHash string, addr string, lastVPool datamining.Pool) error {
 	//Build unlock transaction
-	lock := lock.TransactionLock{TxHash: txHash, MasterRobotKey: s.robotKey, Address: addr}
+
+	//TODO: use the real public key not shared one
+	lock := lock.TransactionLock{TxHash: txHash, MasterRobotKey: s.config.SharedKeys.RobotPublicKey, Address: addr}
 	if err := s.poolR.RequestUnlock(lastVPool, lock); err != nil {
 		return err
 	}
@@ -172,8 +174,8 @@ func (s service) mine(txHash string, data interface{}, addr string, biodSig stri
 	pow := pow{
 		lastVPool:   lastVPool,
 		lister:      s.biodLister,
-		robotPubKey: s.robotKey,
-		robotPvKey:  s.robotPvKey,
+		robotPubKey: s.config.SharedKeys.RobotPublicKey,
+		robotPvKey:  s.config.SharedKeys.RobotPrivateKey,
 		signer:      s.signer,
 		txBiodSig:   biodSig,
 		txData:      data,
@@ -219,12 +221,13 @@ func (s service) Validate(txHash string, data interface{}, txType TransactionTyp
 }
 
 func (s service) buildValidation(status ValidationStatus) (Validation, error) {
+	//TODO: use the real public key not the shared one
 	v := validation{
-		pubk:      s.robotKey,
+		pubk:      s.config.SharedKeys.RobotPublicKey,
 		status:    status,
 		timestamp: time.Now(),
 	}
-	signature, err := s.signer.SignValidation(v, s.robotPvKey)
+	signature, err := s.signer.SignValidation(v, s.config.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, err
 	}

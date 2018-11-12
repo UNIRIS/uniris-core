@@ -39,7 +39,7 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 		return nil, err
 	}
 
-	biometric, err := s.pR.RequestBiometric(biometricPool, personHash)
+	biometric, err := s.pR.RequestBiometric(biometricPool, req.EncryptedHashPerson)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 		return nil, err
 	}
 
-	keychain, err := s.pR.RequestKeychain(keychainPool, clearAddr)
+	keychain, err := s.pR.RequestKeychain(keychainPool, biometric.CipherAddrRobot())
 	if err != nil {
 		return nil, err
 	}
