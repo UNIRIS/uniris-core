@@ -9,8 +9,8 @@ import (
 //KeychainSigner define methods to handle keychain signature
 type KeychainSigner interface {
 
-	//CheckKeychainDataSignature checks the signature of the keychain data using the shared robot public key
-	CheckKeychainDataSignature(pubKey string, data account.KeychainData, sig string) error
+	//VerifyKeychainDataSignature checks the signature of the keychain data using the shared robot public key
+	VerifyKeychainDataSignature(pubKey string, data account.KeychainData, sig string) error
 }
 
 //KeychainHasher define methods to hash keychain data
@@ -47,7 +47,7 @@ func (m keychainMiner) CheckAsMaster(txHash string, data interface{}) error {
 	if err := m.checkDataIntegrity(txHash, keychain); err != nil {
 		return err
 	}
-	if err := m.checkDataSignature(keychain); err != nil {
+	if err := m.verifyDataSignature(keychain); err != nil {
 		return err
 	}
 
@@ -59,7 +59,7 @@ func (m keychainMiner) CheckAsSlave(txHash string, data interface{}) error {
 	if err := m.checkDataIntegrity(txHash, keychain); err != nil {
 		return err
 	}
-	if err := m.checkDataSignature(keychain); err != nil {
+	if err := m.verifyDataSignature(keychain); err != nil {
 		return err
 	}
 
@@ -77,12 +77,12 @@ func (m keychainMiner) checkDataIntegrity(txHash string, data account.KeychainDa
 	return nil
 }
 
-func (m keychainMiner) checkDataSignature(data account.KeychainData) error {
-	if err := m.signer.CheckKeychainDataSignature(data.BiodPublicKey(), data, data.Signatures().Biod()); err != nil {
+func (m keychainMiner) verifyDataSignature(data account.KeychainData) error {
+	if err := m.signer.VerifyKeychainDataSignature(data.BiodPublicKey(), data, data.Signatures().Biod()); err != nil {
 		return err
 	}
 
-	if err := m.signer.CheckKeychainDataSignature(data.PersonPublicKey(), data, data.Signatures().Person()); err != nil {
+	if err := m.signer.VerifyKeychainDataSignature(data.PersonPublicKey(), data, data.Signatures().Person()); err != nil {
 		return err
 	}
 	return nil

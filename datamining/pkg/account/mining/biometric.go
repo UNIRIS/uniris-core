@@ -15,8 +15,8 @@ type BiometricHasher interface {
 //BiometricSigner define methods to handle signatures
 type BiometricSigner interface {
 
-	//CheckBiometricDataSignature checks the signature of the biometric data using the shared robot public key
-	CheckBiometricDataSignature(pubKey string, data account.BiometricData, sig string) error
+	//VerifyBiometricDataSignature checks the signature of the biometric data using the shared robot public key
+	VerifyBiometricDataSignature(pubKey string, data account.BiometricData, sig string) error
 }
 
 type biometricMiner struct {
@@ -38,7 +38,7 @@ func (m biometricMiner) CheckAsMaster(txHash string, data interface{}) error {
 	if err := m.checkDataIntegrity(txHash, biometric); err != nil {
 		return err
 	}
-	if err := m.checkDataSignature(biometric); err != nil {
+	if err := m.verifyDataSignature(biometric); err != nil {
 		return err
 	}
 
@@ -50,7 +50,7 @@ func (m biometricMiner) CheckAsSlave(txHash string, data interface{}) error {
 	if err := m.checkDataIntegrity(txHash, biometric); err != nil {
 		return err
 	}
-	if err := m.checkDataSignature(biometric); err != nil {
+	if err := m.verifyDataSignature(biometric); err != nil {
 		return err
 	}
 
@@ -68,12 +68,12 @@ func (m biometricMiner) checkDataIntegrity(txHash string, data account.Biometric
 	return nil
 }
 
-func (m biometricMiner) checkDataSignature(data account.BiometricData) error {
-	if err := m.signer.CheckBiometricDataSignature(data.BiodPublicKey(), data, data.Signatures().Biod()); err != nil {
+func (m biometricMiner) verifyDataSignature(data account.BiometricData) error {
+	if err := m.signer.VerifyBiometricDataSignature(data.BiodPublicKey(), data, data.Signatures().Biod()); err != nil {
 		return err
 	}
 
-	if err := m.signer.CheckBiometricDataSignature(data.PersonPublicKey(), data, data.Signatures().Person()); err != nil {
+	if err := m.signer.VerifyBiometricDataSignature(data.PersonPublicKey(), data, data.Signatures().Person()); err != nil {
 		return err
 	}
 

@@ -141,7 +141,7 @@ func TestValidateInvalidTx(t *testing.T) {
 
 type mockSrvSigner struct{}
 
-func (s mockSrvSigner) CheckTransactionDataSignature(txType TransactionType, pubk string, data interface{}, der string) error {
+func (s mockSrvSigner) VerifyTransactionDataSignature(txType TransactionType, pubk string, data interface{}, der string) error {
 	return nil
 }
 

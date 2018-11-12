@@ -61,55 +61,55 @@ type Hasher interface {
 //Signer define methods to handle signatures
 type Signer interface {
 	signatureBuilder
-	signatureChecker
+	signatureVerifier
 }
 
-type signatureChecker interface {
+type signatureVerifier interface {
 
-	//CheckKeychainValidationRequestSignature checks the keychain validation request's signature
+	//VerifyKeychainValidationRequestSignature checks the keychain validation request's signature
 	//Using the share robot public key
-	CheckKeychainValidationRequestSignature(pubKey string, req *api.KeychainValidationRequest) error
+	VerifyKeychainValidationRequestSignature(pubKey string, req *api.KeychainValidationRequest) error
 
-	//CheckKeychainValidationRequestSignature checks the biometric validation request's signature
+	//VerifyKeychainValidationRequestSignature checks the biometric validation request's signature
 	//Using the share robot public key
-	CheckBiometricValidationRequestSignature(pubKey string, req *api.BiometricValidationRequest) error
+	VerifyBiometricValidationRequestSignature(pubKey string, req *api.BiometricValidationRequest) error
 
-	//CheckKeychainStorageRequestSignature checks the keychain storage request's signature
+	//VerifyKeychainStorageRequestSignature checks the keychain storage request's signature
 	//Using the share robot public key
-	CheckKeychainStorageRequestSignature(pubKey string, req *api.KeychainStorageRequest) error
+	VerifyKeychainStorageRequestSignature(pubKey string, req *api.KeychainStorageRequest) error
 
-	//CheckBiometricStorageRequestSignature checks the biometric storage request's signature
+	//VerifyBiometricStorageRequestSignature checks the biometric storage request's signature
 	//Using the share robot public key
-	CheckBiometricStorageRequestSignature(pubKey string, req *api.BiometricStorageRequest) error
+	VerifyBiometricStorageRequestSignature(pubKey string, req *api.BiometricStorageRequest) error
 
-	//CheckLockRequestSignature checks the lock request's signature using the share robot public key
-	CheckLockRequestSignature(pubKey string, req *api.LockRequest) error
+	//VerifyLockRequestSignature checks the lock request's signature using the share robot public key
+	VerifyLockRequestSignature(pubKey string, req *api.LockRequest) error
 
-	//CheckKeychainLeadRequestSignature checks the keychain lead mining request's signature
+	//VerifyKeychainLeadRequestSignature checks the keychain lead mining request's signature
 	//Using the share robot public key
-	CheckKeychainLeadRequestSignature(pubKey string, req *api.KeychainLeadRequest) error
+	VerifyKeychainLeadRequestSignature(pubKey string, req *api.KeychainLeadRequest) error
 
-	//CheckBiometricLeadRequestSignature checks the biometric lead mining request's signature
+	//VerifyBiometricLeadRequestSignature checks the biometric lead mining request's signature
 	//Using the share robot public key
-	CheckBiometricLeadRequestSignature(pubKey string, req *api.BiometricLeadRequest) error
+	VerifyBiometricLeadRequestSignature(pubKey string, req *api.BiometricLeadRequest) error
 
-	//CheckValidationResponseSignature checks the signature of a validation response using the share robot public key
-	CheckValidationResponseSignature(pubKey string, res *api.ValidationResponse) error
+	//VerifyValidationResponseSignature checks the signature of a validation response using the share robot public key
+	VerifyValidationResponseSignature(pubKey string, res *api.ValidationResponse) error
 
-	//CheckHashSignature checks the signature of a hash using the shared robot public key
-	CheckHashSignature(pubKey string, hash string, sig string) error
+	//VerifyHashSignature checks the signature of a hash using the shared robot public key
+	VerifyHashSignature(pubKey string, hash string, sig string) error
 
-	//CheckStorageAckSignature checks the signature of a storage ack using the shared robot public key
-	CheckStorageAckSignature(pubKey string, ack *api.StorageAck) error
+	//VerifyStorageAckSignature checks the signature of a storage ack using the shared robot public key
+	VerifyStorageAckSignature(pubKey string, ack *api.StorageAck) error
 
-	//CheckLockAckSignature checks the signature of a lock ack using the shared robot public key
-	CheckLockAckSignature(pubKey string, ack *api.LockAck) error
+	//VerifyLockAckSignature checks the signature of a lock ack using the shared robot public key
+	VerifyLockAckSignature(pubKey string, ack *api.LockAck) error
 
-	//CheckKeychainResponseSignature checks the signature of a keychain response using the shared robot public key
-	CheckKeychainResponseSignature(pubKey string, res *api.KeychainResponse) error
+	//VerifyKeychainResponseSignature checks the signature of a keychain response using the shared robot public key
+	VerifyKeychainResponseSignature(pubKey string, res *api.KeychainResponse) error
 
-	//CheckBiometricResponseSignature checks the signature of a biometric response using the shared robot public key
-	CheckBiometricResponseSignature(pubKey string, res *api.BiometricResponse) error
+	//VerifyBiometricResponseSignature checks the signature of a biometric response using the shared robot public key
+	VerifyBiometricResponseSignature(pubKey string, res *api.BiometricResponse) error
 }
 
 type signatureBuilder interface {

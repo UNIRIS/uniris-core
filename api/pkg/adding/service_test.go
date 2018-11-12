@@ -16,7 +16,7 @@ Scenario: Enroll an user
 func TestAddAccount(t *testing.T) {
 	s := service{
 		client:       mockClient{},
-		sigChecker:   mockGoodSignatureChecker{},
+		sigVerif:     mockGoodSignatureVerifer{},
 		sharedBioPub: "my key",
 	}
 
@@ -50,7 +50,7 @@ Scenario: Catch invalid signature when get account's details from the robot
 func TestAddAccountInvalidSig(t *testing.T) {
 	s := service{
 		client:       mockClient{},
-		sigChecker:   mockBadSignatureChecker{},
+		sigVerif:     mockBadSignatureVerifer{},
 		sharedBioPub: "my key",
 	}
 
@@ -77,10 +77,10 @@ type mockClient struct{}
 func (c mockClient) AddAccount(AccountCreationRequest) (*AccountCreationResult, error) {
 	return &AccountCreationResult{
 		Transactions: AccountCreationTransactions{
-			Biometric: CreationTransaction{
+			Biometric: TransactionResult{
 				TransactionHash: "transaction hash",
 			},
-			Keychain: CreationTransaction{
+			Keychain: TransactionResult{
 				TransactionHash: "transaction hash",
 			},
 		},
@@ -88,14 +88,14 @@ func (c mockClient) AddAccount(AccountCreationRequest) (*AccountCreationResult, 
 	}, nil
 }
 
-type mockGoodSignatureChecker struct{}
+type mockGoodSignatureVerifer struct{}
 
-func (v mockGoodSignatureChecker) CheckAccountCreationRequestSignature(data AccountCreationRequest, pubKey string) error {
+func (v mockGoodSignatureVerifer) VerifyAccountCreationRequestSignature(data AccountCreationRequest, pubKey string) error {
 	return nil
 }
 
-type mockBadSignatureChecker struct{}
+type mockBadSignatureVerifer struct{}
 
-func (v mockBadSignatureChecker) CheckAccountCreationRequestSignature(data AccountCreationRequest, pubKey string) error {
+func (v mockBadSignatureVerifer) VerifyAccountCreationRequestSignature(data AccountCreationRequest, pubKey string) error {
 	return errors.New("Invalid signature")
 }

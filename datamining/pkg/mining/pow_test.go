@@ -84,7 +84,7 @@ func (d *mockDatabase) ListBiodPubKeys() ([]string, error) {
 
 type mockPowSigner struct{}
 
-func (s mockPowSigner) CheckTransactionDataSignature(txType TransactionType, pubk string, data interface{}, der string) error {
+func (s mockPowSigner) VerifyTransactionDataSignature(txType TransactionType, pubk string, data interface{}, der string) error {
 	return nil
 }
 
@@ -94,7 +94,7 @@ func (s mockPowSigner) SignValidation(v Validation, pvKey string) (string, error
 
 type mockBadPowSigner struct{}
 
-func (s mockBadPowSigner) CheckTransactionDataSignature(txType TransactionType, pubk string, data interface{}, der string) error {
+func (s mockBadPowSigner) VerifyTransactionDataSignature(txType TransactionType, pubk string, data interface{}, der string) error {
 	return errors.New("Invalid signature")
 }
 

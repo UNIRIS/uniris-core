@@ -113,7 +113,7 @@ func (c externalClient) RequestBiometric(encPersonHash string) (account.Biometri
 		return nil, err
 	}
 
-	if err := c.crypto.signer.CheckBiometricResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyBiometricResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
 		return nil, err
 	}
 
@@ -151,7 +151,7 @@ func (c externalClient) RequestKeychain(encAddress string) (account.Keychain, er
 		return nil, err
 	}
 
-	if err := c.crypto.signer.CheckKeychainResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyKeychainResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
 		return nil, err
 	}
 
@@ -187,11 +187,11 @@ func (c externalClient) RequestLock(txLock lock.TransactionLock) error {
 		return err
 	}
 
-	if err := c.crypto.signer.CheckLockAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyLockAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
 		return err
 	}
 
-	//TODO: Check res.LockHash
+	//TODO: Verify res.LockHash
 
 	return nil
 }
@@ -221,11 +221,11 @@ func (c externalClient) RequestUnlock(txLock lock.TransactionLock) error {
 		return err
 	}
 
-	if err := c.crypto.signer.CheckLockAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyLockAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
 		return err
 	}
 
-	//TODO: Check res.LockHash
+	//TODO: Verify res.LockHash
 
 	return nil
 }
@@ -288,7 +288,7 @@ func (c externalClient) validateKeychain(client api.ExternalClient, txHash strin
 		return nil, err
 	}
 
-	if err := c.crypto.signer.CheckValidationResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyValidationResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
 		return nil, err
 	}
 
@@ -308,7 +308,7 @@ func (c externalClient) validateBiometric(client api.ExternalClient, txHash stri
 		return nil, err
 	}
 
-	if err := c.crypto.signer.CheckValidationResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyValidationResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
 		return nil, err
 	}
 
@@ -329,11 +329,11 @@ func (c externalClient) storeKeychain(client api.ExternalClient, data *api.Keych
 		return err
 	}
 
-	if err := c.crypto.signer.CheckStorageAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyStorageAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
 		return err
 	}
 
-	//TODO: Check res.StorageHash
+	//TODO: Verify res.StorageHash
 
 	return nil
 }
@@ -352,11 +352,11 @@ func (c externalClient) storeBiometric(client api.ExternalClient, data *api.Biom
 		return err
 	}
 
-	if err := c.crypto.signer.CheckStorageAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyStorageAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
 		return err
 	}
 
-	//TODO: Check res.StorageHash
+	//TODO: Verify res.StorageHash
 
 	return nil
 }

@@ -68,12 +68,12 @@ func TestVerify(t *testing.T) {
 }
 
 /*
-Scenario: Check keychain transaction signature
+Scenario: Verifies keychain transaction signature
 	Given a signed keychain data, a signature and a public key
 	When I want to check it's the data matched the signature
 	Then I get not error
 */
-func TestCheckTransactionKeychainSignature(t *testing.T) {
+func TestVerifyTransactionKeychainSignature(t *testing.T) {
 	k := account.NewKeychainData("cipher addr", "cipher wallet", "person pub", "biod pub", account.NewSignatures("sig", "sig"))
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
@@ -89,16 +89,16 @@ func TestCheckTransactionKeychainSignature(t *testing.T) {
 
 	sig, _ := sign(hex.EncodeToString(pvKey), string(b))
 
-	assert.Nil(t, NewSigner().CheckTransactionDataSignature(mining.KeychainTransaction, hex.EncodeToString(pubKey), k, sig))
+	assert.Nil(t, NewSigner().VerifyTransactionDataSignature(mining.KeychainTransaction, hex.EncodeToString(pubKey), k, sig))
 }
 
 /*
-Scenario: Check biometric transaction signature
+Scenario: Verify biometric transaction signature
 	Given a signed biometric data, a signature and a public key
 	When I want to check it's the data matches the signature
 	Then I get not error
 */
-func TestCheckTransactionBiometricSignature(t *testing.T) {
+func TestVerifyTransactionBiometricSignature(t *testing.T) {
 	bio := account.NewBiometricData("hash", "cipher addr", "cipher addr", "cipher aes key", "person pub", "biod pub", account.NewSignatures("sig", "sig"))
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
@@ -116,7 +116,7 @@ func TestCheckTransactionBiometricSignature(t *testing.T) {
 
 	sig, _ := sign(hex.EncodeToString(pvKey), string(b))
 
-	assert.Nil(t, NewSigner().CheckTransactionDataSignature(mining.BiometricTransaction, hex.EncodeToString(pubKey), bio, sig))
+	assert.Nil(t, NewSigner().VerifyTransactionDataSignature(mining.BiometricTransaction, hex.EncodeToString(pubKey), bio, sig))
 }
 
 /*
@@ -125,7 +125,7 @@ Scenario: Sign and check hash signature
 	When I want to sign the hash and checks the signature generated
 	Then I get not error
 */
-func TestSignAndCheckHashSignature(t *testing.T) {
+func TestSignAndVerifyHashSignature(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -134,7 +134,7 @@ func TestSignAndCheckHashSignature(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, sig)
 
-	assert.Nil(t, NewSigner().CheckHashSignature(hex.EncodeToString(pubKey), "hash", sig))
+	assert.Nil(t, NewSigner().VerifyHashSignature(hex.EncodeToString(pubKey), "hash", sig))
 }
 
 /*
@@ -143,7 +143,7 @@ Scenario: Sign and checks keychain validation request signature
 	When I want to sign the request and checks the signature generated
 	Then I get not error
 */
-func TestSignAndCheckKeychainValidationRequestSignature(t *testing.T) {
+func TestSignAndVerifyKeychainValidationRequestSignature(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -166,7 +166,7 @@ func TestSignAndCheckKeychainValidationRequestSignature(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, req.Signature)
 
-	assert.Nil(t, NewSigner().CheckKeychainValidationRequestSignature(hex.EncodeToString(pubKey), req))
+	assert.Nil(t, NewSigner().VerifyKeychainValidationRequestSignature(hex.EncodeToString(pubKey), req))
 }
 
 /*
@@ -175,7 +175,7 @@ Scenario: Sign and checks biometric validation request signature
 	When I want to sign the request and checks the signature generated
 	Then I get not error
 */
-func TestSignAndCheckBiometricValidationRequestSignature(t *testing.T) {
+func TestSignAndVerifyBiometricValidationRequestSignature(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -200,7 +200,7 @@ func TestSignAndCheckBiometricValidationRequestSignature(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, req.Signature)
 
-	assert.Nil(t, NewSigner().CheckBiometricValidationRequestSignature(hex.EncodeToString(pubKey), req))
+	assert.Nil(t, NewSigner().VerifyBiometricValidationRequestSignature(hex.EncodeToString(pubKey), req))
 }
 
 /*
@@ -209,7 +209,7 @@ Scenario: Sign and checks keychain storage request signature
 	When I want to sign the request and checks the signature generated
 	Then I get not error
 */
-func TestSignAndCheckKeychainStorageRequestSignature(t *testing.T) {
+func TestSignAndVerifyKeychainStorageRequestSignature(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -245,7 +245,7 @@ func TestSignAndCheckKeychainStorageRequestSignature(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, req.Signature)
 
-	assert.Nil(t, NewSigner().CheckKeychainStorageRequestSignature(hex.EncodeToString(pubKey), req))
+	assert.Nil(t, NewSigner().VerifyKeychainStorageRequestSignature(hex.EncodeToString(pubKey), req))
 }
 
 /*
@@ -254,7 +254,7 @@ Scenario: Sign and checks keychain storage request signature
 	When I want to sign the request and checks the signature generated
 	Then I get not error
 */
-func TestSignAndCheckBiometricStorageRequestSignature(t *testing.T) {
+func TestSignAndVerifyBiometricStorageRequestSignature(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -292,7 +292,7 @@ func TestSignAndCheckBiometricStorageRequestSignature(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, req.Signature)
 
-	assert.Nil(t, NewSigner().CheckBiometricStorageRequestSignature(hex.EncodeToString(pubKey), req))
+	assert.Nil(t, NewSigner().VerifyBiometricStorageRequestSignature(hex.EncodeToString(pubKey), req))
 }
 
 /*
@@ -301,7 +301,7 @@ Scenario: Sign and checks lock request signature
 	When I want to sign the request and checks the signature generated
 	Then I get not error
 */
-func TestSignCheckLockRequestSignature(t *testing.T) {
+func TestSignVerifyLockRequestSignature(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -316,7 +316,7 @@ func TestSignCheckLockRequestSignature(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, req.Signature)
 
-	assert.Nil(t, NewSigner().CheckLockRequestSignature(hex.EncodeToString(pubKey), req))
+	assert.Nil(t, NewSigner().VerifyLockRequestSignature(hex.EncodeToString(pubKey), req))
 }
 
 /*
@@ -325,7 +325,7 @@ Scenario: Sign and checks keychain lead mining request signature
 	When I want to sign the request and checks the signature generated
 	Then I get not error
 */
-func TestSignAndCheckKeychainLeadRequestSignature(t *testing.T) {
+func TestSignAndVerifyKeychainLeadRequestSignature(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -344,7 +344,7 @@ func TestSignAndCheckKeychainLeadRequestSignature(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, req.SignatureRequest)
 
-	assert.Nil(t, NewSigner().CheckKeychainLeadRequestSignature(hex.EncodeToString(pubKey), req))
+	assert.Nil(t, NewSigner().VerifyKeychainLeadRequestSignature(hex.EncodeToString(pubKey), req))
 }
 
 /*
@@ -353,7 +353,7 @@ Scenario: Sign and checks biometric lead mining request signature
 	When I want to sign the request and checks the signature generated
 	Then I get not error
 */
-func TestSignAndCheckBiometricLeadRequestSignature(t *testing.T) {
+func TestSignAndVerifyBiometricLeadRequestSignature(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -372,7 +372,7 @@ func TestSignAndCheckBiometricLeadRequestSignature(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, req.SignatureRequest)
 
-	assert.Nil(t, NewSigner().CheckBiometricLeadRequestSignature(hex.EncodeToString(pubKey), req))
+	assert.Nil(t, NewSigner().VerifyBiometricLeadRequestSignature(hex.EncodeToString(pubKey), req))
 }
 
 /*
@@ -381,7 +381,7 @@ Scenario: Sign and checks validation response signature
 	When I want to sign the response and checks the signature generated
 	Then I get not error
 */
-func TestSignAndCheckValidationResponseSignature(t *testing.T) {
+func TestSignAndVerifyValidationResponseSignature(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -399,7 +399,7 @@ func TestSignAndCheckValidationResponseSignature(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, res.Signature)
 
-	assert.Nil(t, NewSigner().CheckValidationResponseSignature(hex.EncodeToString(pubKey), res))
+	assert.Nil(t, NewSigner().VerifyValidationResponseSignature(hex.EncodeToString(pubKey), res))
 }
 
 /*
@@ -421,7 +421,7 @@ func TestSignAndChecLockAckSignature(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, ack.Signature)
 
-	assert.Nil(t, NewSigner().CheckLockAckSignature(hex.EncodeToString(pubKey), ack))
+	assert.Nil(t, NewSigner().VerifyLockAckSignature(hex.EncodeToString(pubKey), ack))
 }
 
 /*
@@ -430,7 +430,7 @@ Scenario: Sign and checks storage ack signature
 	When I want to sign the response and checks the signature generated
 	Then I get not error
 */
-func TestSignAndCheckStorageAckSignature(t *testing.T) {
+func TestSignAndVerifyStorageAckSignature(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -443,7 +443,7 @@ func TestSignAndCheckStorageAckSignature(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, ack.Signature)
 
-	assert.Nil(t, NewSigner().CheckStorageAckSignature(hex.EncodeToString(pubKey), ack))
+	assert.Nil(t, NewSigner().VerifyStorageAckSignature(hex.EncodeToString(pubKey), ack))
 }
 
 /*
@@ -452,7 +452,7 @@ Scenario: Sign and checks account search result signature
 	When I want to sign the response and checks the signature generated
 	Then I get not error
 */
-func TestSignAndCheckAccountSearchResultSignature(t *testing.T) {
+func TestSignAndVerifyAccountSearchResultSignature(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -476,7 +476,7 @@ Scenario: Sign and checks creation result signature
 	When I want to sign the response and checks the signature generated
 	Then I get not error
 */
-func TestSignAndCheckCreationResultSignature(t *testing.T) {
+func TestSignAndVerifyCreationResultSignature(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -499,7 +499,7 @@ Scenario: Sign and checks biometric response signature
 	When I want to sign the response and checks the signature generated
 	Then I get not error
 */
-func TestSignAndCheckBiometricResponseSignature(t *testing.T) {
+func TestSignAndVerifyBiometricResponseSignature(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -535,7 +535,7 @@ func TestSignAndCheckBiometricResponseSignature(t *testing.T) {
 	assert.Nil(t, NewSigner().SignBiometricResponse(res, hex.EncodeToString(pvKey)))
 	assert.NotEmpty(t, res.Signature)
 
-	assert.Nil(t, NewSigner().CheckBiometricResponseSignature(hex.EncodeToString(pubKey), res))
+	assert.Nil(t, NewSigner().VerifyBiometricResponseSignature(hex.EncodeToString(pubKey), res))
 }
 
 /*
@@ -544,7 +544,7 @@ Scenario: Sign and checks keychain response signature
 	When I want to sign the response and checks the signature generated
 	Then I get not error
 */
-func TestSignAndCheckKeychainResponseSignature(t *testing.T) {
+func TestSignAndVerifyKeychainResponseSignature(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -578,5 +578,5 @@ func TestSignAndCheckKeychainResponseSignature(t *testing.T) {
 	assert.Nil(t, NewSigner().SignKeychainResponse(res, hex.EncodeToString(pvKey)))
 	assert.NotEmpty(t, res.Signature)
 
-	assert.Nil(t, NewSigner().CheckKeychainResponseSignature(hex.EncodeToString(pubKey), res))
+	assert.Nil(t, NewSigner().VerifyKeychainResponseSignature(hex.EncodeToString(pubKey), res))
 }

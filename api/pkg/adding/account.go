@@ -6,20 +6,20 @@ type AccountCreationResult struct {
 	Signature    string                      `json:"signature" binding:"required"`
 }
 
-//AccountCreationTransactions represents the generated transactions during the account creation
+//AccountCreationTransactions represents the transactions for the account creation
 type AccountCreationTransactions struct {
-	Biometric CreationTransaction `json:"biometric" binding:"required"`
-	Keychain  CreationTransaction `json:"keychain" binding:"required"`
+	Biometric TransactionResult `json:"biometric" binding:"required"`
+	Keychain  TransactionResult `json:"keychain" binding:"required"`
 }
 
-//CreationTransaction represents the result for a transaction
-type CreationTransaction struct {
+//TransactionResult represents the result for a transaction
+type TransactionResult struct {
 	TransactionHash string `json:"transaction_hash" binding:"required"`
 	MasterPeerIP    string `json:"master_peer_ip" binding:"required"`
 	Signature       string `json:"signature" binding:"required"`
 }
 
-//AccountCreationRequest represents the data to provide to create an account
+//AccountCreationRequest represents the required data to create an account
 type AccountCreationRequest struct {
 	EncryptedBioData      string     `json:"encrypted_bio_data" binding:"required"`
 	EncryptedKeychainData string     `json:"encrypted_keychain_data" binding:"required"`
@@ -28,15 +28,7 @@ type AccountCreationRequest struct {
 	SignatureRequest      string     `json:"signature_request" binding:"required"`
 }
 
-//AccountCreationData represents the data without signature request
-type AccountCreationData struct {
-	EncryptedBioData      string     `json:"encrypted_bio_data"`
-	EncryptedKeychainData string     `json:"encrypted_keychain_data"`
-	SignaturesBio         Signatures `json:"signatures_bio"`
-	SignaturesKeychain    Signatures `json:"signatures_keychain"`
-}
-
-//Signatures represents a set of signatures for the sent data
+//Signatures represents a common set of signatures for requests
 type Signatures struct {
 	BiodSig   string `json:"biod_sig" binding:"required"`
 	PersonSig string `json:"person_sig" binding:"required"`

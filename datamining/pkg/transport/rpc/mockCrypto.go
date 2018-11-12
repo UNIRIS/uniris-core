@@ -50,63 +50,63 @@ func (d mockDecrypter) DecryptBiometricData(data string, pvKey string) (account.
 
 type mockSigner struct{}
 
-func (s mockSigner) CheckTransactionDataSignature(txType mining.TransactionType, pubKey string, data interface{}, sig string) error {
+func (s mockSigner) VerifyTransactionDataSignature(txType mining.TransactionType, pubKey string, data interface{}, sig string) error {
 	return nil
 }
 
-func (s mockSigner) CheckHashSignature(pubKey string, text string, sig string) error {
+func (s mockSigner) VerifyHashSignature(pubKey string, text string, sig string) error {
 	return nil
 }
 
-func (s mockSigner) CheckKeychainLeadRequestSignature(pubKey string, data *api.KeychainLeadRequest) error {
+func (s mockSigner) VerifyKeychainLeadRequestSignature(pubKey string, data *api.KeychainLeadRequest) error {
 	return nil
 }
-func (s mockSigner) CheckBiometricLeadRequestSignature(pubKey string, data *api.BiometricLeadRequest) error {
-	return nil
-}
-
-func (s mockSigner) CheckKeychainValidationRequestSignature(pubKey string, data *api.KeychainValidationRequest) error {
-	return nil
-}
-func (s mockSigner) CheckBiometricValidationRequestSignature(pubKey string, data *api.BiometricValidationRequest) error {
-	return nil
-}
-func (s mockSigner) CheckKeychainStorageRequestSignature(pubKey string, data *api.KeychainStorageRequest) error {
-	return nil
-}
-func (s mockSigner) CheckBiometricStorageRequestSignature(pubKey string, data *api.BiometricStorageRequest) error {
+func (s mockSigner) VerifyBiometricLeadRequestSignature(pubKey string, data *api.BiometricLeadRequest) error {
 	return nil
 }
 
-func (s mockSigner) CheckLockRequestSignature(pubkey string, req *api.LockRequest) error {
+func (s mockSigner) VerifyKeychainValidationRequestSignature(pubKey string, data *api.KeychainValidationRequest) error {
+	return nil
+}
+func (s mockSigner) VerifyBiometricValidationRequestSignature(pubKey string, data *api.BiometricValidationRequest) error {
+	return nil
+}
+func (s mockSigner) VerifyKeychainStorageRequestSignature(pubKey string, data *api.KeychainStorageRequest) error {
+	return nil
+}
+func (s mockSigner) VerifyBiometricStorageRequestSignature(pubKey string, data *api.BiometricStorageRequest) error {
 	return nil
 }
 
-func (s mockSigner) CheckBiometricDataSignature(pubKey string, data account.BiometricData, sig string) error {
+func (s mockSigner) VerifyLockRequestSignature(pubkey string, req *api.LockRequest) error {
 	return nil
 }
 
-func (s mockSigner) CheckKeychainDataSignature(pubKey string, data account.KeychainData, sig string) error {
+func (s mockSigner) VerifyBiometricDataSignature(pubKey string, data account.BiometricData, sig string) error {
 	return nil
 }
 
-func (s mockSigner) CheckLockAckSignature(pubKey string, ack *api.LockAck) error {
+func (s mockSigner) VerifyKeychainDataSignature(pubKey string, data account.KeychainData, sig string) error {
 	return nil
 }
 
-func (s mockSigner) CheckStorageAckSignature(pubKey string, ack *api.StorageAck) error {
+func (s mockSigner) VerifyLockAckSignature(pubKey string, ack *api.LockAck) error {
 	return nil
 }
 
-func (s mockSigner) CheckValidationResponseSignature(pubKey string, res *api.ValidationResponse) error {
+func (s mockSigner) VerifyStorageAckSignature(pubKey string, ack *api.StorageAck) error {
 	return nil
 }
 
-func (s mockSigner) CheckKeychainResponseSignature(pubKey string, res *api.KeychainResponse) error {
+func (s mockSigner) VerifyValidationResponseSignature(pubKey string, res *api.ValidationResponse) error {
 	return nil
 }
 
-func (s mockSigner) CheckBiometricResponseSignature(pubKey string, res *api.BiometricResponse) error {
+func (s mockSigner) VerifyKeychainResponseSignature(pubKey string, res *api.KeychainResponse) error {
+	return nil
+}
+
+func (s mockSigner) VerifyBiometricResponseSignature(pubKey string, res *api.BiometricResponse) error {
 	return nil
 }
 

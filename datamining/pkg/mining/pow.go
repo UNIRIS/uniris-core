@@ -13,8 +13,8 @@ type PowSigner interface {
 	//SignValidation create signature for a validation data
 	SignValidation(v Validation, pvKey string) (string, error)
 
-	//CheckTransactionDataSignature checks the transaction data signature
-	CheckTransactionDataSignature(txType TransactionType, pubKey string, data interface{}, sig string) error
+	//VerifyTransactionDataSignature checks the transaction data signature
+	VerifyTransactionDataSignature(txType TransactionType, pubKey string, data interface{}, sig string) error
 }
 
 type pow struct {
@@ -37,7 +37,7 @@ func (p pow) execute() (MasterValidation, error) {
 	//Find the public key which matches the transaction signature
 	status := ValidationKO
 	for _, k := range keys {
-		err := p.signer.CheckTransactionDataSignature(p.txType, k, p.txData, p.txBiodSig)
+		err := p.signer.VerifyTransactionDataSignature(p.txType, k, p.txData, p.txBiodSig)
 		if err == nil {
 			status = ValidationOK
 			break
