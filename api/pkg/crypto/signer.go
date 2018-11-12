@@ -44,7 +44,7 @@ type transactionResult struct {
 type Signer interface {
 	rpc.SignatureHandler
 	adding.SignatureVerifier
-	listing.SignatureChecker
+	listing.SignatureVerifier
 }
 
 type signer struct {
