@@ -34,7 +34,7 @@ type TransactionMiner interface {
 	//GetLastTransactionHash returns the last transaction from a given address
 	GetLastTransactionHash(addr string) (string, error)
 
-	//CheckAsMaster performs checks on some data like a master node
+	//CheckAsMaster performs checks on some data like a master peer
 	CheckAsMaster(txHash string, data interface{}) error
 
 	//CheckAsSlave performs checks on some data like a peer inside a validation pool
@@ -49,17 +49,20 @@ type Signer interface {
 //Service defines methods for global mining
 type Service interface {
 
-	//LeadMining process workflow to lead mining (like elected master node)
+	//LeadMining process workflow to lead mining (like elected master peer)
 	//
 	//The workflow includes:
+	// - Locks the transaction
 	// - Checks (as master)
 	// - Executes the proof of work
-	// - Relay on pools to lock/unlock, validate and store the transaction
+	// - Requests validations (as slave)
+	// - Requests storage
+	// - Unlocks the transaction
 	//
 	//It also in charge of notify the transaction status during this workflow
 	LeadMining(txHash string, addr string, data interface{}, vPool datamining.Pool, txType TransactionType, biodSig string) error
 
-	//Validate performs checks like a node in a validation pool and create a validation (successed or not)
+	//Validate performs checks like a peer in a validation pool and create a validation (successed or not)
 	Validate(txHash string, data interface{}, txType TransactionType) (Validation, error)
 }
 

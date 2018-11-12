@@ -37,18 +37,18 @@ func NewSigner() Signer {
 	return signer{}
 }
 
-func (s signer) CheckTransactionDataSignature(txType mining.TransactionType, pubKey string, data interface{}, sig string) error {
+func (s signer) VerifyTransactionDataSignature(txType mining.TransactionType, pubKey string, data interface{}, sig string) error {
 	switch txType {
 	case mining.KeychainTransaction:
-		return s.CheckKeychainDataSignature(pubKey, data.(account.KeychainData), sig)
+		return s.VerifyKeychainDataSignature(pubKey, data.(account.KeychainData), sig)
 	case mining.BiometricTransaction:
-		return s.CheckBiometricDataSignature(pubKey, data.(account.BiometricData), sig)
+		return s.VerifyBiometricDataSignature(pubKey, data.(account.BiometricData), sig)
 	}
 
 	return mining.ErrUnsupportedTransaction
 }
 
-func (s signer) CheckBiometricDataSignature(pubKey string, data account.BiometricData, sig string) error {
+func (s signer) VerifyBiometricDataSignature(pubKey string, data account.BiometricData, sig string) error {
 	b, err := json.Marshal(biometricRaw{
 		BIODPublicKey:       data.BiodPublicKey(),
 		EncryptedAddrPerson: data.CipherAddrPerson(),
@@ -63,7 +63,7 @@ func (s signer) CheckBiometricDataSignature(pubKey string, data account.Biometri
 	return checkSignature(pubKey, string(b), sig)
 }
 
-func (s signer) CheckKeychainDataSignature(pubKey string, data account.KeychainData, sig string) error {
+func (s signer) VerifyKeychainDataSignature(pubKey string, data account.KeychainData, sig string) error {
 	b, err := json.Marshal(keychainRaw{
 		BIODPublicKey:      data.BiodPublicKey(),
 		EncryptedWallet:    data.CipherWallet(),
@@ -76,11 +76,11 @@ func (s signer) CheckKeychainDataSignature(pubKey string, data account.KeychainD
 	return checkSignature(pubKey, string(b), sig)
 }
 
-func (s signer) CheckHashSignature(pubKey string, hash string, sig string) error {
+func (s signer) VerifyHashSignature(pubKey string, hash string, sig string) error {
 	return checkSignature(pubKey, hash, sig)
 }
 
-func (s signer) CheckKeychainValidationRequestSignature(pubKey string, req *api.KeychainValidationRequest) error {
+func (s signer) VerifyKeychainValidationRequestSignature(pubKey string, req *api.KeychainValidationRequest) error {
 	b, err := json.Marshal(&api.KeychainValidationRequest{
 		Data:            req.Data,
 		TransactionHash: req.TransactionHash,
@@ -91,7 +91,7 @@ func (s signer) CheckKeychainValidationRequestSignature(pubKey string, req *api.
 	return checkSignature(pubKey, string(b), req.Signature)
 }
 
-func (s signer) CheckBiometricValidationRequestSignature(pubKey string, req *api.BiometricValidationRequest) error {
+func (s signer) VerifyBiometricValidationRequestSignature(pubKey string, req *api.BiometricValidationRequest) error {
 	b, err := json.Marshal(&api.BiometricValidationRequest{
 		Data:            req.Data,
 		TransactionHash: req.TransactionHash,
@@ -102,7 +102,7 @@ func (s signer) CheckBiometricValidationRequestSignature(pubKey string, req *api
 	return checkSignature(pubKey, string(b), req.Signature)
 }
 
-func (s signer) CheckKeychainStorageRequestSignature(pubKey string, req *api.KeychainStorageRequest) error {
+func (s signer) VerifyKeychainStorageRequestSignature(pubKey string, req *api.KeychainStorageRequest) error {
 	b, err := json.Marshal(&api.KeychainStorageRequest{
 		Data:        req.Data,
 		Endorsement: req.Endorsement,
@@ -113,7 +113,7 @@ func (s signer) CheckKeychainStorageRequestSignature(pubKey string, req *api.Key
 	return checkSignature(pubKey, string(b), req.Signature)
 }
 
-func (s signer) CheckBiometricStorageRequestSignature(pubKey string, req *api.BiometricStorageRequest) error {
+func (s signer) VerifyBiometricStorageRequestSignature(pubKey string, req *api.BiometricStorageRequest) error {
 	b, err := json.Marshal(&api.BiometricStorageRequest{
 		Data:        req.Data,
 		Endorsement: req.Endorsement,
@@ -124,7 +124,7 @@ func (s signer) CheckBiometricStorageRequestSignature(pubKey string, req *api.Bi
 	return checkSignature(pubKey, string(b), req.Signature)
 }
 
-func (s signer) CheckLockRequestSignature(pubKey string, req *api.LockRequest) error {
+func (s signer) VerifyLockRequestSignature(pubKey string, req *api.LockRequest) error {
 	b, err := json.Marshal(&api.LockRequest{
 		Address:         req.Address,
 		MasterRobotKey:  req.MasterRobotKey,
@@ -136,7 +136,7 @@ func (s signer) CheckLockRequestSignature(pubKey string, req *api.LockRequest) e
 	return checkSignature(pubKey, string(b), req.Signature)
 }
 
-func (s signer) CheckKeychainLeadRequestSignature(pubKey string, req *api.KeychainLeadRequest) error {
+func (s signer) VerifyKeychainLeadRequestSignature(pubKey string, req *api.KeychainLeadRequest) error {
 	b, err := json.Marshal(&api.KeychainLeadRequest{
 		EncryptedKeychainData: req.EncryptedKeychainData,
 		SignatureKeychainData: req.SignatureKeychainData,
@@ -149,7 +149,7 @@ func (s signer) CheckKeychainLeadRequestSignature(pubKey string, req *api.Keycha
 	return checkSignature(pubKey, string(b), req.SignatureRequest)
 }
 
-func (s signer) CheckBiometricLeadRequestSignature(pubKey string, req *api.BiometricLeadRequest) error {
+func (s signer) VerifyBiometricLeadRequestSignature(pubKey string, req *api.BiometricLeadRequest) error {
 	b, err := json.Marshal(&api.BiometricLeadRequest{
 		EncryptedBioData: req.EncryptedBioData,
 		SignatureBioData: req.SignatureBioData,
@@ -162,7 +162,7 @@ func (s signer) CheckBiometricLeadRequestSignature(pubKey string, req *api.Biome
 	return checkSignature(pubKey, string(b), req.SignatureRequest)
 }
 
-func (s signer) CheckValidationResponseSignature(pubKey string, res *api.ValidationResponse) error {
+func (s signer) VerifyValidationResponseSignature(pubKey string, res *api.ValidationResponse) error {
 	b, err := json.Marshal(&api.ValidationResponse{
 		Validation: res.Validation,
 	})
@@ -172,7 +172,7 @@ func (s signer) CheckValidationResponseSignature(pubKey string, res *api.Validat
 	return checkSignature(pubKey, string(b), res.Signature)
 }
 
-func (s signer) CheckLockAckSignature(pubKey string, ack *api.LockAck) error {
+func (s signer) VerifyLockAckSignature(pubKey string, ack *api.LockAck) error {
 	b, err := json.Marshal(&api.LockAck{
 		LockHash: ack.LockHash,
 	})
@@ -182,7 +182,7 @@ func (s signer) CheckLockAckSignature(pubKey string, ack *api.LockAck) error {
 	return checkSignature(pubKey, string(b), ack.Signature)
 }
 
-func (s signer) CheckStorageAckSignature(pubKey string, ack *api.StorageAck) error {
+func (s signer) VerifyStorageAckSignature(pubKey string, ack *api.StorageAck) error {
 	b, err := json.Marshal(&api.StorageAck{
 		StorageHash: ack.StorageHash,
 	})
@@ -192,7 +192,7 @@ func (s signer) CheckStorageAckSignature(pubKey string, ack *api.StorageAck) err
 	return checkSignature(pubKey, string(b), ack.Signature)
 }
 
-func (s signer) CheckKeychainResponseSignature(pubKey string, res *api.KeychainResponse) error {
+func (s signer) VerifyKeychainResponseSignature(pubKey string, res *api.KeychainResponse) error {
 	b, err := json.Marshal(&api.KeychainResponse{
 		Data:        res.Data,
 		Endorsement: res.Endorsement,
@@ -203,7 +203,7 @@ func (s signer) CheckKeychainResponseSignature(pubKey string, res *api.KeychainR
 	return checkSignature(pubKey, string(b), res.Signature)
 }
 
-func (s signer) CheckBiometricResponseSignature(pubKey string, res *api.BiometricResponse) error {
+func (s signer) VerifyBiometricResponseSignature(pubKey string, res *api.BiometricResponse) error {
 	b, err := json.Marshal(&api.BiometricResponse{
 		Data:        res.Data,
 		Endorsement: res.Endorsement,

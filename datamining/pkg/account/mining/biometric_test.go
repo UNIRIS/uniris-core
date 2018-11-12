@@ -38,7 +38,7 @@ func TestInvalidBiometricIntegrity(t *testing.T) {
 }
 
 /*
-Scenario: Checks the biometric data signature
+Scenario: Verifies the biometric data signature
 	Given biometric data
 	When I want to check if the signature match the transaction
 	Then I get no errors
@@ -47,12 +47,12 @@ func TestBiometricSignature(t *testing.T) {
 	miner := biometricMiner{signer: mockBiometricSigner{}}
 	sig := account.NewSignatures("sig1", "sig2")
 	data := account.NewBiometricData("personHash", "enc addr", "enc addr", "enc aes key", "pub", "pub", sig)
-	err := miner.checkDataSignature(data)
+	err := miner.verifyDataSignature(data)
 	assert.Nil(t, err)
 }
 
 /*
-Scenario: Check biometric data as master node
+Scenario: Check biometric data as master peer
 	Given a transaction hash and biometric data
 	When I want to check it as master
 	Then I get not error
@@ -66,7 +66,7 @@ func TestBiometricMasterCheck(t *testing.T) {
 }
 
 /*
-Scenario: Check biometric data as slave node
+Scenario: Check biometric data as slave peer
 	Given a transaction hash and biometric data
 	When I want to check it as slave
 	Then I get not error
@@ -93,6 +93,6 @@ func (h mockBadBiometricHasher) NewBiometricDataHash(account.BiometricData) (str
 
 type mockBiometricSigner struct{}
 
-func (s mockBiometricSigner) CheckBiometricDataSignature(pubK string, data account.BiometricData, sig string) error {
+func (s mockBiometricSigner) VerifyBiometricDataSignature(pubK string, data account.BiometricData, sig string) error {
 	return nil
 }

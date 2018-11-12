@@ -29,12 +29,12 @@ type signatures struct {
 	PersonSig string `json:"person_sig"`
 }
 
-type accountCreationTransactions struct {
-	Biometric creationTransaction `json:"biometric"`
-	Keychain  creationTransaction `json:"keychain"`
+type accountCreationResult struct {
+	Biometric transactionResult `json:"biometric"`
+	Keychain  transactionResult `json:"keychain"`
 }
 
-type creationTransaction struct {
+type transactionResult struct {
 	TransactionHash string `json:"transaction_hash"`
 	MasterPeerIP    string `json:"master_peer_ip"`
 	Signature       string `json:"signature"`
@@ -43,7 +43,7 @@ type creationTransaction struct {
 //Signer define methods to handle signatures
 type Signer interface {
 	rpc.SignatureHandler
-	adding.SignatureChecker
+	adding.SignatureVerifier
 	listing.SignatureChecker
 }
 
@@ -55,7 +55,7 @@ func NewSigner() Signer {
 	return signer{}
 }
 
-func (s signer) CheckAccountCreationRequestSignature(data adding.AccountCreationRequest, pubKey string) error {
+func (s signer) VerifyAccountCreationRequestSignature(data adding.AccountCreationRequest, pubKey string) error {
 	b, err := json.Marshal(struct {
 		EncryptedBioData      string     `json:"encrypted_bio_data"`
 		EncryptedKeychainData string     `json:"encrypted_keychain_data"`
@@ -80,11 +80,11 @@ func (s signer) CheckAccountCreationRequestSignature(data adding.AccountCreation
 	return checkSignature(pubKey, string(b), data.SignatureRequest)
 }
 
-func (s signer) CheckHashSignature(hashedData string, pubKey string, sig string) error {
+func (s signer) VerifyHashSignature(hashedData string, pubKey string, sig string) error {
 	return checkSignature(pubKey, hashedData, sig)
 }
 
-func (s signer) CheckAccountSearchResultSignature(pubKey string, res *api.AccountSearchResult) error {
+func (s signer) VerifyAccountSearchResultSignature(pubKey string, res *api.AccountSearchResult) error {
 	b, err := json.Marshal(&api.AccountSearchResult{
 		EncryptedAddress: res.EncryptedAddress,
 		EncryptedAESkey:  res.EncryptedAESkey,
@@ -95,7 +95,7 @@ func (s signer) CheckAccountSearchResultSignature(pubKey string, res *api.Accoun
 	}
 	return checkSignature(pubKey, string(b), res.Signature)
 }
-func (s signer) CheckCreationResultSignature(pubKey string, res *api.CreationResult) error {
+func (s signer) VerifyCreationResultSignature(pubKey string, res *api.CreationResult) error {
 	b, err := json.Marshal(&api.CreationResult{
 		MasterPeerIP:    res.MasterPeerIP,
 		TransactionHash: res.TransactionHash,
@@ -125,15 +125,15 @@ func (s signer) SignAccountResult(res *listing.AccountResult, pvKey string) erro
 }
 func (s signer) SignAccountCreationResult(res *adding.AccountCreationResult, pvKey string) error {
 	b, err := json.Marshal(struct {
-		Transactions accountCreationTransactions `json:"transactions"`
+		Transactions accountCreationResult `json:"transactions"`
 	}{
-		Transactions: accountCreationTransactions{
-			Biometric: creationTransaction{
+		Transactions: accountCreationResult{
+			Biometric: transactionResult{
 				MasterPeerIP:    res.Transactions.Biometric.MasterPeerIP,
 				Signature:       res.Transactions.Biometric.Signature,
 				TransactionHash: res.Transactions.Biometric.TransactionHash,
 			},
-			Keychain: creationTransaction{
+			Keychain: transactionResult{
 				MasterPeerIP:    res.Transactions.Keychain.MasterPeerIP,
 				TransactionHash: res.Transactions.Keychain.TransactionHash,
 				Signature:       res.Transactions.Keychain.Signature,

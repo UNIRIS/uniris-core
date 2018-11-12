@@ -58,7 +58,7 @@ func NewExternalServerHandler(srv Services, crypto Crypto, conf system.UnirisCon
 }
 
 func (h externalSrvHandler) GetBiometric(ctxt context.Context, req *api.BiometricRequest) (*api.BiometricResponse, error) {
-	if err := h.crypto.signer.CheckHashSignature(h.conf.SharedKeys.RobotPublicKey, req.EncryptedPersonHash, req.Signature); err != nil {
+	if err := h.crypto.signer.VerifyHashSignature(h.conf.SharedKeys.RobotPublicKey, req.EncryptedPersonHash, req.Signature); err != nil {
 		return nil, ErrInvalidSignature
 	}
 
@@ -89,7 +89,7 @@ func (h externalSrvHandler) GetBiometric(ctxt context.Context, req *api.Biometri
 }
 
 func (h externalSrvHandler) GetKeychain(ctxt context.Context, req *api.KeychainRequest) (*api.KeychainResponse, error) {
-	if err := h.crypto.signer.CheckHashSignature(h.conf.SharedKeys.RobotPublicKey, req.EncryptedAddress, req.Signature); err != nil {
+	if err := h.crypto.signer.VerifyHashSignature(h.conf.SharedKeys.RobotPublicKey, req.EncryptedAddress, req.Signature); err != nil {
 		return nil, ErrInvalidSignature
 	}
 
@@ -120,7 +120,7 @@ func (h externalSrvHandler) GetKeychain(ctxt context.Context, req *api.KeychainR
 }
 
 func (h externalSrvHandler) LeadKeychainMining(ctx context.Context, req *api.KeychainLeadRequest) (*empty.Empty, error) {
-	if err := h.crypto.signer.CheckKeychainLeadRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyKeychainLeadRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
 		return nil, ErrInvalidSignature
 	}
 
@@ -155,7 +155,7 @@ func (h externalSrvHandler) LeadKeychainMining(ctx context.Context, req *api.Key
 }
 
 func (h externalSrvHandler) LeadBiometricMining(ctx context.Context, req *api.BiometricLeadRequest) (*empty.Empty, error) {
-	if err := h.crypto.signer.CheckBiometricLeadRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyBiometricLeadRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
 		return nil, ErrInvalidSignature
 	}
 
@@ -192,7 +192,7 @@ func (h externalSrvHandler) LeadBiometricMining(ctx context.Context, req *api.Bi
 }
 
 func (h externalSrvHandler) LockTransaction(ctx context.Context, req *api.LockRequest) (*api.LockAck, error) {
-	if err := h.crypto.signer.CheckLockRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyLockRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
 		return nil, err
 	}
 
@@ -222,7 +222,7 @@ func (h externalSrvHandler) LockTransaction(ctx context.Context, req *api.LockRe
 
 func (h externalSrvHandler) UnlockTransaction(ctx context.Context, req *api.LockRequest) (*api.LockAck, error) {
 
-	if err := h.crypto.signer.CheckLockRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyLockRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
 		return nil, err
 	}
 
@@ -251,7 +251,7 @@ func (h externalSrvHandler) UnlockTransaction(ctx context.Context, req *api.Lock
 }
 
 func (h externalSrvHandler) ValidateKeychain(ctx context.Context, req *api.KeychainValidationRequest) (*api.ValidationResponse, error) {
-	if err := h.crypto.signer.CheckKeychainValidationRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyKeychainValidationRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
 		return nil, err
 	}
 
@@ -278,7 +278,7 @@ func (h externalSrvHandler) ValidateKeychain(ctx context.Context, req *api.Keych
 }
 
 func (h externalSrvHandler) ValidateBiometric(ctx context.Context, req *api.BiometricValidationRequest) (*api.ValidationResponse, error) {
-	if err := h.crypto.signer.CheckBiometricValidationRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyBiometricValidationRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
 		return nil, err
 	}
 
@@ -305,7 +305,7 @@ func (h externalSrvHandler) ValidateBiometric(ctx context.Context, req *api.Biom
 }
 
 func (h externalSrvHandler) StoreKeychain(ctx context.Context, req *api.KeychainStorageRequest) (*api.StorageAck, error) {
-	if err := h.crypto.signer.CheckKeychainStorageRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyKeychainStorageRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
 		return nil, err
 	}
 
@@ -337,7 +337,7 @@ func (h externalSrvHandler) StoreKeychain(ctx context.Context, req *api.Keychain
 }
 
 func (h externalSrvHandler) StoreBiometric(ctx context.Context, req *api.BiometricStorageRequest) (*api.StorageAck, error) {
-	if err := h.crypto.signer.CheckBiometricStorageRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyBiometricStorageRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
 		return nil, err
 	}
 

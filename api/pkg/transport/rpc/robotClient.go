@@ -53,7 +53,7 @@ func (c robotClient) GetAccount(encHash string) (*listing.AccountResult, error) 
 		return nil, errors.New(s.Message())
 	}
 
-	if err := c.sigHandler.CheckAccountSearchResultSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.sigHandler.VerifyAccountSearchResultSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
 		return nil, err
 	}
 
@@ -92,7 +92,7 @@ func (c robotClient) AddAccount(req adding.AccountCreationRequest) (*adding.Acco
 		return nil, err
 	}
 
-	if err := c.sigHandler.CheckCreationResultSignature(c.conf.SharedKeys.RobotPublicKey, resBio); err != nil {
+	if err := c.sigHandler.VerifyCreationResultSignature(c.conf.SharedKeys.RobotPublicKey, resBio); err != nil {
 		return nil, err
 	}
 

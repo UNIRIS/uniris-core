@@ -16,7 +16,7 @@ Scenario: Get account's details from the robot
 func TestGetAccount(t *testing.T) {
 	s := service{
 		client:       mockClient{},
-		sigChecker:   mockGoodSignatureChecker{},
+		sigVerif:     mockGoodSignatureVerif{},
 		sharedBioPub: "my key",
 	}
 
@@ -36,7 +36,7 @@ Scenario: Catch invalid signature when get account's details from the robot
 func TestGetAccountInvalidSig(t *testing.T) {
 	s := service{
 		client:       mockClient{},
-		sigChecker:   mockBadSignatureChecker{},
+		sigVerif:     mockBadSignatureVerif{},
 		sharedBioPub: "my key",
 	}
 
@@ -55,14 +55,14 @@ func (c mockClient) GetAccount(encHash string) (*AccountResult, error) {
 	}, nil
 }
 
-type mockGoodSignatureChecker struct{}
+type mockGoodSignatureVerif struct{}
 
-func (v mockGoodSignatureChecker) CheckHashSignature(data string, pubKey string, sig string) error {
+func (v mockGoodSignatureVerif) VerifyHashSignature(data string, pubKey string, sig string) error {
 	return nil
 }
 
-type mockBadSignatureChecker struct{}
+type mockBadSignatureVerif struct{}
 
-func (v mockBadSignatureChecker) CheckHashSignature(data string, pubKey string, sig string) error {
+func (v mockBadSignatureVerif) VerifyHashSignature(data string, pubKey string, sig string) error {
 	return errors.New("Invalid signature")
 }

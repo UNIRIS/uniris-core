@@ -58,7 +58,7 @@ func TestInvalidKeychainIntegrity(t *testing.T) {
 }
 
 /*
-Scenario: Checks the keychain data signature
+Scenario: Verifies the keychain data signature
 	Given keychain data
 	When I want to check if the signature match the transaction
 	Then I get no errors
@@ -67,12 +67,12 @@ func TestKeychainSignature(t *testing.T) {
 	miner := keychainMiner{signer: mockKeychainSigner{}}
 	sigs := account.NewSignatures("sig1", "sig2")
 	data := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", sigs)
-	err := miner.checkDataSignature(data)
+	err := miner.verifyDataSignature(data)
 	assert.Nil(t, err)
 }
 
 /*
-Scenario: Check keychain data as master node
+Scenario: Check keychain data as master peer
 	Given a transaction hash and keychain data
 	When I want to check it as master
 	Then I get not error
@@ -86,7 +86,7 @@ func TestKeychainMasterCheck(t *testing.T) {
 }
 
 /*
-Scenario: Check keychain data as slave node
+Scenario: Check keychain data as slave peer
 	Given a transaction hash and keychain data
 	When I want to check it as slave
 	Then I get not error
@@ -113,6 +113,6 @@ func (h mockBadKeychainHasher) NewKeychainDataHash(data account.KeychainData) (s
 
 type mockKeychainSigner struct{}
 
-func (s mockKeychainSigner) CheckKeychainDataSignature(pubK string, data account.KeychainData, sig string) error {
+func (s mockKeychainSigner) VerifyKeychainDataSignature(pubK string, data account.KeychainData, sig string) error {
 	return nil
 }

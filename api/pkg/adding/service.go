@@ -10,24 +10,24 @@ type RobotClient interface {
 	AddAccount(AccountCreationRequest) (*AccountCreationResult, error)
 }
 
-//SignatureChecker defines methods to validate signature requests
-type SignatureChecker interface {
-	CheckAccountCreationRequestSignature(data AccountCreationRequest, key string) error
+//SignatureVerifier defines methods to verify signature requests
+type SignatureVerifier interface {
+	VerifyAccountCreationRequestSignature(data AccountCreationRequest, key string) error
 }
 
 type service struct {
 	sharedBioPub string
 	client       RobotClient
-	sigChecker   SignatureChecker
+	sigVerif     SignatureVerifier
 }
 
 //NewService creates a new adding service
-func NewService(sharedBioPub string, cli RobotClient, sigChecker SignatureChecker) Service {
-	return service{sharedBioPub, cli, sigChecker}
+func NewService(sharedBioPub string, cli RobotClient, sigVerif SignatureVerifier) Service {
+	return service{sharedBioPub, cli, sigVerif}
 }
 
 func (s service) AddAccount(req AccountCreationRequest) (*AccountCreationResult, error) {
-	if err := s.sigChecker.CheckAccountCreationRequestSignature(req, s.sharedBioPub); err != nil {
+	if err := s.sigVerif.VerifyAccountCreationRequestSignature(req, s.sharedBioPub); err != nil {
 		return nil, err
 	}
 

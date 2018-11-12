@@ -13,8 +13,8 @@ type SignatureHandler interface {
 }
 
 type signatureChecker interface {
-	CheckAccountSearchResultSignature(pubKey string, res *api.AccountSearchResult) error
-	CheckCreationResultSignature(pubKey string, res *api.CreationResult) error
+	VerifyAccountSearchResultSignature(pubKey string, res *api.AccountSearchResult) error
+	VerifyCreationResultSignature(pubKey string, res *api.CreationResult) error
 }
 
 type signatureBuilder interface {
