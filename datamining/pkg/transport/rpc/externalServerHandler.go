@@ -58,11 +58,11 @@ func NewExternalServerHandler(srv Services, crypto Crypto, conf system.UnirisCon
 }
 
 func (h externalSrvHandler) GetBiometric(ctxt context.Context, req *api.BiometricRequest) (*api.BiometricResponse, error) {
-	if err := h.crypto.signer.CheckHashSignature(h.conf.SharedKeys.RobotPublicKey, req.PersonHash, req.Signature); err != nil {
+	if err := h.crypto.signer.CheckHashSignature(h.conf.SharedKeys.RobotPublicKey, req.EncryptedPersonHash, req.Signature); err != nil {
 		return nil, ErrInvalidSignature
 	}
 
-	personHash, err := h.crypto.decrypter.DecryptHash(req.PersonHash, h.conf.SharedKeys.RobotPrivateKey)
+	personHash, err := h.crypto.decrypter.DecryptHash(req.EncryptedPersonHash, h.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
@@ -89,16 +89,16 @@ func (h externalSrvHandler) GetBiometric(ctxt context.Context, req *api.Biometri
 }
 
 func (h externalSrvHandler) GetKeychain(ctxt context.Context, req *api.KeychainRequest) (*api.KeychainResponse, error) {
-	if err := h.crypto.signer.CheckHashSignature(h.conf.SharedKeys.RobotPublicKey, req.Address, req.Signature); err != nil {
+	if err := h.crypto.signer.CheckHashSignature(h.conf.SharedKeys.RobotPublicKey, req.EncryptedAddress, req.Signature); err != nil {
 		return nil, ErrInvalidSignature
 	}
 
-	clearaddr, err := h.crypto.decrypter.DecryptHash(req.Address, h.conf.SharedKeys.RobotPrivateKey)
+	clearAddress, err := h.crypto.decrypter.DecryptHash(req.EncryptedAddress, h.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
 
-	keychain, err := h.services.accLister.GetLastKeychain(clearaddr)
+	keychain, err := h.services.accLister.GetLastKeychain(clearAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -124,10 +124,18 @@ func (h externalSrvHandler) LeadKeychainMining(ctx context.Context, req *api.Key
 		return nil, ErrInvalidSignature
 	}
 
-	keychain, err := h.crypto.decrypter.DecryptKeychainData(req.EncryptedKeychainData, h.conf.SharedKeys.RobotPrivateKey)
+	keychainSigLess, err := h.crypto.decrypter.DecryptKeychainData(req.EncryptedKeychainData, h.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
+
+	keychain := account.NewKeychainData(
+		keychainSigLess.CipherAddrRobot(),
+		keychainSigLess.CipherWallet(),
+		keychainSigLess.PersonPublicKey(),
+		keychainSigLess.BiodPublicKey(),
+		account.NewSignatures(req.SignatureKeychainData.Biod, req.SignatureKeychainData.Person),
+	)
 
 	clearaddr, err := h.crypto.decrypter.DecryptHash(keychain.CipherAddrRobot(), h.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
@@ -151,10 +159,20 @@ func (h externalSrvHandler) LeadBiometricMining(ctx context.Context, req *api.Bi
 		return nil, ErrInvalidSignature
 	}
 
-	biometricData, err := h.crypto.decrypter.DecryptBiometricData(req.EncryptedBioData, h.conf.SharedKeys.RobotPrivateKey)
+	bioSigLess, err := h.crypto.decrypter.DecryptBiometricData(req.EncryptedBioData, h.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
+
+	biometricData := account.NewBiometricData(
+		bioSigLess.PersonHash(),
+		bioSigLess.CipherAddrRobot(),
+		bioSigLess.CipherAddrPerson(),
+		bioSigLess.CipherAESKey(),
+		bioSigLess.PersonPublicKey(),
+		bioSigLess.BiodPublicKey(),
+		account.NewSignatures(req.SignatureBioData.Biod, req.SignatureBioData.Person),
+	)
 
 	clearaddr, err := h.crypto.decrypter.DecryptHash(biometricData.CipherAddrRobot(), h.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {

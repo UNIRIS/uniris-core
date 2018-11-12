@@ -130,12 +130,12 @@ message Validation {
 }
 
 message BiometricRequest {
-    string PersonHash= 1;
+    string EncryptedPersonHash= 1;
     string Signature = 2;
 }
 
 message KeychainRequest {
-    string Address = 1;
+    string EncryptedAddress = 1;
     string Signature = 2;
 }
 

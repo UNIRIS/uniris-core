@@ -90,12 +90,12 @@ func (c mockClient) AddAccount(AccountCreationRequest) (*AccountCreationResult, 
 
 type mockGoodSignatureChecker struct{}
 
-func (v mockGoodSignatureChecker) CheckAccountSignature(data AccountCreationRequest, pubKey string) error {
+func (v mockGoodSignatureChecker) CheckAccountCreationRequestSignature(data AccountCreationRequest, pubKey string) error {
 	return nil
 }
 
 type mockBadSignatureChecker struct{}
 
-func (v mockBadSignatureChecker) CheckAccountSignature(data AccountCreationRequest, pubKey string) error {
+func (v mockBadSignatureChecker) CheckAccountCreationRequestSignature(data AccountCreationRequest, pubKey string) error {
 	return errors.New("Invalid signature")
 }

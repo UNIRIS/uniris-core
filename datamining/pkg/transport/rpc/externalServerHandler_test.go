@@ -44,7 +44,7 @@ func TestGetBiometric(t *testing.T) {
 	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
 
 	res, err := h.GetBiometric(context.TODO(), &api.BiometricRequest{
-		PersonHash: "enc hash",
+		EncryptedPersonHash: "enc hash",
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, "sig", res.Signature)
@@ -73,7 +73,7 @@ func TestGetKeychain(t *testing.T) {
 	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}}
 	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
 	res, err := h.GetKeychain(context.TODO(), &api.KeychainRequest{
-		Address: "enc address",
+		EncryptedAddress: "enc address",
 	})
 
 	assert.Nil(t, err)
@@ -102,7 +102,7 @@ func TestLeadKeychainMining(t *testing.T) {
 		mining.KeychainTransaction: accountMining.NewKeychainMiner(mockSigner{}, mockHasher{}, accLister),
 	}
 
-	mineSrv := mining.NewService(notifier, poolF, poolR, mockSigner{}, biodlister, "robotkey", "robotpbKey", txMiners)
+	mineSrv := mining.NewService(notifier, poolF, poolR, mockSigner{}, biodlister, system.UnirisConfig{}, txMiners)
 
 	accSrv := accountadding.NewService(db)
 
@@ -145,7 +145,11 @@ func TestLeadBiometricMining(t *testing.T) {
 		mining.BiometricTransaction: accountMining.NewBiometricMiner(mockSigner{}, mockHasher{}),
 	}
 
-	mineSrv := mining.NewService(notifier, poolF, poolR, mockSigner{}, biodlister, "robotkey", "robotpbKey", txMiners)
+	mineSrv := mining.NewService(notifier, poolF, poolR, mockSigner{}, biodlister, system.UnirisConfig{
+		SharedKeys: system.SharedKeys{
+			RobotPublicKey: "robotkey",
+		},
+	}, txMiners)
 
 	accSrv := accountadding.NewService(db)
 
@@ -255,7 +259,11 @@ func TestValidateKeychain(t *testing.T) {
 		mining.KeychainTransaction: accountMining.NewKeychainMiner(mockSigner{}, mockHasher{}, nil),
 	}
 
-	mineSrv := mining.NewService(nil, nil, nil, mockSigner{}, nil, "robotkey", "robotpbKey", txMiners)
+	mineSrv := mining.NewService(nil, nil, nil, mockSigner{}, nil, system.UnirisConfig{
+		SharedKeys: system.SharedKeys{
+			RobotPublicKey: "robotkey",
+		},
+	}, txMiners)
 
 	services := Services{mining: mineSrv}
 	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}, hasher: mockHasher{}}
@@ -292,7 +300,11 @@ func TestValidateBiometric(t *testing.T) {
 		mining.BiometricTransaction: accountMining.NewBiometricMiner(mockSigner{}, mockHasher{}),
 	}
 
-	mineSrv := mining.NewService(nil, nil, nil, mockSigner{}, nil, "robotkey", "robotpbKey", txMiners)
+	mineSrv := mining.NewService(nil, nil, nil, mockSigner{}, nil, system.UnirisConfig{
+		SharedKeys: system.SharedKeys{
+			RobotPublicKey: "robotkey",
+		},
+	}, txMiners)
 
 	services := Services{mining: mineSrv}
 	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}, hasher: mockHasher{}}
