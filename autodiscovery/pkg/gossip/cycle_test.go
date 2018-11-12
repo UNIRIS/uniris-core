@@ -64,7 +64,7 @@ func TestSelectPeersWithOnlyPeersExcludingOurself(t *testing.T) {
 }
 
 /*
-Scenario: Pick two random nodes (seed and a reachable peer)
+Scenario: Pick two random peers (seed and a reachable peer)
 	Given a list of seeds and a list of reachable peers
 	When we want select peers
 	Then we get a random seed and a random reachable peer
@@ -93,7 +93,7 @@ func TestSelectPeerWithSomeReachablePeers(t *testing.T) {
 }
 
 /*
-Scenario: Pick two random nodes (seed and a reachable peer) but ourself is in the reachable peer
+Scenario: Pick two random peers (seed and a reachable peer) but ourself is in the reachable peer
 	Given a list of seeds and a list of reachable peers (including ourself)
 	When we want select peers
 	Then we get a random seed and no reachable peers
@@ -119,7 +119,7 @@ func TestSelectPeerWithOurselfAsReachable(t *testing.T) {
 }
 
 /*
-Scenario: Pick two random nodes (seed and a unreachable peer)
+Scenario: Pick two random peers (seed and a unreachable peer)
 	Given a list of seeds and a list of unreachable peers
 	When we want select peers
 	Then we get a random seed and a random unreachable peer

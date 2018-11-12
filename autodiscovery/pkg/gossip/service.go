@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	//ErrNotFoundOnUnreachableList is returned when the unreachable list does not include the searchable peer
 	ErrNotFoundOnUnreachableList = errors.New("cannot found the peer in the unreachableKeys list")
 )
 

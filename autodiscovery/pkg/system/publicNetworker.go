@@ -71,7 +71,7 @@ func (n publicPeerNetworker) myExternalIP() (net.IP, error) {
 	return net.ParseIP(string(bytes)), nil
 }
 
-//CheckInternetConfig check internet configuration on the node
+//CheckInternetConfig check internet configuration on the peer
 func (n publicPeerNetworker) CheckInternetState() error {
 	_, err := net.LookupIP(cdns)
 	if err != nil {
@@ -80,7 +80,7 @@ func (n publicPeerNetworker) CheckInternetState() error {
 	return nil
 }
 
-//CheckNtp check time synchonization on the node
+//CheckNtp check time synchonization on the peer
 func (n publicPeerNetworker) CheckNtpState() error {
 	for _, ntps := range cntp {
 		r, err := ntp.QueryWithOptions(ntps, ntp.QueryOptions{Version: 4})

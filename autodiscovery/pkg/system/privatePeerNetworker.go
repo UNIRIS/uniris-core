@@ -44,12 +44,12 @@ func (n privatePeerNetworker) IP() (net.IP, error) {
 	return nil, fmt.Errorf("Cannot find a IP address from the interface %s", n.iface)
 }
 
-//CheckInternetConfig check internet configuration on the node
+//CheckInternetConfig check internet configuration on the peer
 func (n privatePeerNetworker) CheckInternetState() error {
 	return nil
 }
 
-//CheckNtp check time synchonization on the node
+//CheckNtp check time synchonization on the peer
 func (n privatePeerNetworker) CheckNtpState() error {
 	for _, ntps := range cntp {
 		r, err := ntp.QueryWithOptions(ntps, ntp.QueryOptions{Version: 4})

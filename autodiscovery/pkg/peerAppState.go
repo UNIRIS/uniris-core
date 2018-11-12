@@ -89,7 +89,7 @@ func (a appState) GeoPosition() PeerPosition {
 	return a.geoPosition
 }
 
-//DiscoveredPeersNumber returns the number of discovered nodes by the peer
+//DiscoveredPeersNumber returns the number of discovered peers
 func (a appState) DiscoveredPeersNumber() int {
 	return a.discoveredPeersNumber
 }
