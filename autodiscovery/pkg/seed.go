@@ -37,7 +37,7 @@ func (s Seed) String() string {
 	)
 }
 
-//SeedDiscoveryCounter define the interface to check the number of discovered node by a seed
+//SeedDiscoveryCounter define the interface to check the number of discovered peer by a seed
 type SeedDiscoveryCounter interface {
 	CountDiscoveries() (int, error)
 }
@@ -51,7 +51,7 @@ func NewSeedDiscoveryCounter(repo Repository) SeedDiscoveryCounter {
 	return seedDiscoveryCounter{repo}
 }
 
-//CountDiscoveries report the average of node detected by the differents known seeds
+//CountDiscoveries report the average of peer detected by the differents known seeds
 func (sdc seedDiscoveryCounter) CountDiscoveries() (int, error) {
 	listseed, err := sdc.repo.ListSeedPeers()
 	if err != nil {

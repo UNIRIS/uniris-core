@@ -76,7 +76,7 @@ type mockClient struct{}
 
 func (c mockClient) AddAccount(AccountCreationRequest) (*AccountCreationResult, error) {
 	return &AccountCreationResult{
-		Transactions: AccountCreationTransactions{
+		Transactions: AccountCreationTransactionsResult{
 			Biometric: TransactionResult{
 				TransactionHash: "transaction hash",
 			},

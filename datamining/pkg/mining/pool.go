@@ -5,7 +5,7 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 )
 
-//PoolRequester define methods to send request on pool nodes
+//PoolRequester define methods to send request on pool peers
 type PoolRequester interface {
 
 	//RequestLock assk a pool pool to lock a transaction
