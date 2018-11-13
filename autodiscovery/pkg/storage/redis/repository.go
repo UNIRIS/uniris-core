@@ -8,7 +8,6 @@ import (
 	"github.com/go-redis/redis"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
-	gossip "github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/system"
 )
 
@@ -219,7 +218,7 @@ func (r redisRepository) ContainsUnreachableKey(pubk string) error {
 	if idx < len(unreachableKeys) && unreachableKeys[idx] == pubk {
 		return nil
 	}
-	return gossip.ErrNotFoundOnUnreachableList
+	return discovery.ErrNotFoundOnUnreachableList
 }
 
 func (r redisRepository) fetchList(key string) ([]map[string]string, error) {

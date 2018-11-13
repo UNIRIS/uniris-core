@@ -39,11 +39,7 @@ func NewService(sharedBioPub string, client RobotClient, sigVerif SignatureVerif
 }
 
 func (s service) ExistAccount(encryptedHash string, sig string) error {
-	if err := s.sigVerif.VerifyHashSignature(encryptedHash, s.sharedBioPub, sig); err != nil {
-		return err
-	}
-
-	_, err := s.client.GetAccount(encryptedHash)
+	_, err := s.GetAccount(encryptedHash, sig)
 	if err != nil {
 		return err
 	}

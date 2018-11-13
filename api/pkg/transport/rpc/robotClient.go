@@ -107,7 +107,7 @@ func (c robotClient) AddAccount(req adding.AccountCreationRequest) (*adding.Acco
 		return nil, err
 	}
 
-	txs := adding.AccountCreationTransactions{
+	txs := adding.AccountCreationTransactionsResult{
 		Biometric: adding.TransactionResult{
 			TransactionHash: resBio.TransactionHash,
 			MasterPeerIP:    resBio.MasterPeerIP,

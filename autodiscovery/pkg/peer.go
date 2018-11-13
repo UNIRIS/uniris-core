@@ -13,6 +13,9 @@ const BootStrapingMinTime = 1800
 //ErrChangeNotOwnedPeer is returned when you try to change the state of peer that you don't own
 var ErrChangeNotOwnedPeer = errors.New("Cannot change a peer that you don't own")
 
+//ErrNotFoundOnUnreachableList is returned when the unreachable list does not include the searchable peer
+var ErrNotFoundOnUnreachableList = errors.New("cannot found the peer in the unreachableKeys list")
+
 //Repository provides access to the local repository
 type Repository interface {
 	SeedRepository

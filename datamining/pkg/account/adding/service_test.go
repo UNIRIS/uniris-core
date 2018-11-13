@@ -471,6 +471,14 @@ func (h mockHasher) HashKeychainData(account.KeychainData) (string, error) {
 	return "hash", nil
 }
 
+func (h mockHasher) HashKeychain(account.Keychain) (string, error) {
+	return "hash", nil
+}
+
 func (h mockHasher) HashBiometricData(account.BiometricData) (string, error) {
+	return "hash", nil
+}
+
+func (h mockHasher) HashBiometric(account.Biometric) (string, error) {
 	return "hash", nil
 }

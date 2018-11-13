@@ -1,7 +1,6 @@
 package mock
 
 import (
-	"errors"
 	"net"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
@@ -124,7 +123,7 @@ func (r *Repository) ContainsUnreachableKey(pubk string) error {
 	if r.containsUnreachablePeer(pubk) {
 		return nil
 	}
-	return errors.New("cannot found the peer in the unreachableKeys list")
+	return discovery.ErrNotFoundOnUnreachableList
 }
 
 func (r *Repository) containsPeer(p discovery.Peer) bool {
