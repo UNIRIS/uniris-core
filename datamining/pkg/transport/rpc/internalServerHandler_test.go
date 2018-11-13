@@ -2,10 +2,7 @@ package rpc
 
 import (
 	"context"
-	"net"
 	"testing"
-
-	"github.com/uniris/uniris-core/datamining/pkg"
 
 	"github.com/stretchr/testify/assert"
 
@@ -48,7 +45,7 @@ func TestGetAccount(t *testing.T) {
 
 	cli := mocktransport.NewExternalClient(db)
 	poolR := mocktransport.NewPoolRequester(cli)
-	srvHandler := NewInternalServerHandler(poolR, mockAIClient{}, crypto, conf)
+	srvHandler := NewInternalServerHandler(poolR, mocktransport.NewAIClient(), crypto, conf)
 
 	res, err := srvHandler.GetAccount(context.TODO(), &api.AccountSearchRequest{
 		EncryptedHashPerson: "enc person hash",
@@ -123,19 +120,4 @@ func TestCreateBiometric(t *testing.T) {
 	assert.Equal(t, "hash", res.TransactionHash)
 	assert.Equal(t, "127.0.0.1", res.MasterPeerIP)
 	assert.Equal(t, "sig", res.Signature)
-}
-
-type mockAIClient struct {
-}
-
-func (c mockAIClient) GetStoragePool(personHash string) (datamining.Pool, error) {
-	return datamining.NewPool(datamining.Peer{IP: net.ParseIP("127.0.0.1")}), nil
-}
-
-func (c mockAIClient) GetMasterPeer(txHash string) (datamining.Peer, error) {
-	return datamining.Peer{IP: net.ParseIP("127.0.0.1")}, nil
-}
-
-func (c mockAIClient) GetValidationPool(txHash string) (datamining.Pool, error) {
-	return datamining.NewPool(datamining.Peer{IP: net.ParseIP("127.0.0.1")}), nil
 }
