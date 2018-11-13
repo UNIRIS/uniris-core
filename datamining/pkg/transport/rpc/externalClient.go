@@ -384,23 +384,12 @@ func (c externalClient) storeBiometric(client api.ExternalClient, data *api.Biom
 
 	res, err := client.StoreBiometric(context.Background(), req)
 	if err != nil {
-		return err
+		s, _ := status.FromError(err)
+		return errors.New(s.Message())
 	}
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 	if err := c.crypto.signer.VerifyStorageAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
 		return err
-=======
-	if err := c.crypto.signer.CheckStorageAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
-		s, _ := status.FromError(err)
-		return errors.New(s.Message())
->>>>>>> Use goroutine to dispatch on pool the requests
-=======
-	if err := c.crypto.signer.CheckStorageAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
-		s, _ := status.FromError(err)
-		return errors.New(s.Message())
->>>>>>> b917fa18c00850ba6fc404e8506c6778b962c01c
 	}
 
 	//TODO: Verify res.StorageHash
