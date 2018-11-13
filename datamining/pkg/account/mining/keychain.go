@@ -13,21 +13,14 @@ type KeychainSigner interface {
 	VerifyKeychainDataSignature(pubKey string, data account.KeychainData, sig string) error
 }
 
-//KeychainHasher define methods to hash keychain data
-type KeychainHasher interface {
-
-	//NewKeychainDataHash creates a hash of the keychain data
-	NewKeychainDataHash(data account.KeychainData) (string, error)
-}
-
 type keychainMiner struct {
 	signer    KeychainSigner
-	hasher    KeychainHasher
+	hasher    account.KeychainHasher
 	accLister listing.Service
 }
 
 //NewKeychainMiner creates a miner for the keychain transaction
-func NewKeychainMiner(signer KeychainSigner, hasher KeychainHasher, accLister listing.Service) mining.TransactionMiner {
+func NewKeychainMiner(signer KeychainSigner, hasher account.KeychainHasher, accLister listing.Service) mining.TransactionMiner {
 	return keychainMiner{signer, hasher, accLister}
 }
 
@@ -67,7 +60,7 @@ func (m keychainMiner) CheckAsSlave(txHash string, data interface{}) error {
 }
 
 func (m keychainMiner) checkDataIntegrity(txHash string, data account.KeychainData) error {
-	hash, err := m.hasher.NewKeychainDataHash(data)
+	hash, err := m.hasher.HashKeychainData(data)
 	if err != nil {
 		return err
 	}

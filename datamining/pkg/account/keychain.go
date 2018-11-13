@@ -4,6 +4,10 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
+type KeychainHasher interface {
+	HashKeychainData(KeychainData) (string, error)
+}
+
 //KeychainData describe a keychain data
 type KeychainData interface {
 

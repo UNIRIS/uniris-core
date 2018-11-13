@@ -4,6 +4,10 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
+type BiometricHasher interface {
+	HashBiometricData(BiometricData) (string, error)
+}
+
 //BiometricData describe a biometric data
 type BiometricData interface {
 
