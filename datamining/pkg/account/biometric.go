@@ -1,78 +1,123 @@
 package account
 
 import (
-	datamining "github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
-//BioData describe a decoded biometric data
-type BioData struct {
-	PersonHash      string
-	CipherAddrRobot string
-	CipherAddrBio   string
-	CipherAESKey    string
-	PersonPubk      string
-	BiodPubk        string
-	Sigs            Signatures
+//BiometricData describe a biometric data
+type BiometricData interface {
+
+	//PersonHash returns the person hash
+	PersonHash() string
+
+	//CipherAddrRobot returns the account's address encrypted with shared robot publickey
+	CipherAddrRobot() string
+
+	//CipherAddrPerson returns the account's address encrypted with person public key
+	CipherAddrPerson() string
+
+	//CipherAESKey returns the AES key encrypted with person public key
+	CipherAESKey() string
+
+	//BiodPublicKey return the biometric device public key
+	BiodPublicKey() string
+
+	//PersonPublicKey returns person public key
+	PersonPublicKey() string
+
+	//Signatures returns the signatures of the biometric data
+	Signatures() Signatures
+}
+
+type biodata struct {
+	personHash       string
+	cipherAddrRobot  string
+	cipherAddrPerson string
+	cipherAESKey     string
+	personPubk       string
+	biodPubk         string
+	sigs             Signatures
+}
+
+//NewBiometricData create new biometric
+func NewBiometricData(personHash, cipherAddrRobot, cipherAddrPerson, cipherAesKey, personPubk, biodPubk string, sigs Signatures) BiometricData {
+	return biodata{personHash, cipherAddrRobot, cipherAddrPerson, cipherAesKey, personPubk, biodPubk, sigs}
+}
+
+func (b biodata) PersonHash() string {
+	return b.personHash
+}
+
+func (b biodata) CipherAddrRobot() string {
+	return b.cipherAddrRobot
+}
+
+func (b biodata) CipherAddrPerson() string {
+	return b.cipherAddrPerson
+}
+
+func (b biodata) CipherAESKey() string {
+	return b.cipherAESKey
+}
+
+func (b biodata) PersonPublicKey() string {
+	return b.personPubk
+}
+
+func (b biodata) BiodPublicKey() string {
+	return b.biodPubk
+}
+
+func (b biodata) Signatures() Signatures {
+	return b.sigs
+}
+
+//Biometric aggregates biometric data and its endorsement
+type Biometric interface {
+	BiometricData
+
+	//Endorsement return the biometric data endorsement
+	Endorsement() mining.Endorsement
 }
 
 type biometric struct {
-	data        *BioData
-	endorsement datamining.Endorsement
-}
-
-//Biometric represents a biometric
-type Biometric interface {
-	BiodPublicKey() string
-	PersonPublicKey() string
-	PersonHash() string
-	CipherAddrRobot() string
-	CipherAddrBio() string
-	CipherAESKey() string
-	Signatures() Signatures
-	Endorsement() datamining.Endorsement
+	data        BiometricData
+	endorsement mining.Endorsement
 }
 
 //NewBiometric creates a new biometric
-func NewBiometric(data *BioData, endor datamining.Endorsement) Biometric {
+func NewBiometric(data BiometricData, endor mining.Endorsement) Biometric {
 	return biometric{data, endor}
 }
 
-//BiodPublicKey return the biometric public key for the bio wallet
-func (b biometric) BiodPublicKey() string {
-	return b.data.BiodPubk
-}
-
-//PersonPublicKey returns person public key for the bio wallet
-func (b biometric) PersonPublicKey() string {
-	return b.data.PersonPubk
-}
-
-//Signatures returns the bio wallet signatures
-func (b biometric) Signatures() Signatures {
-	return b.data.Sigs
-}
-
-//PersonHash returns the person hash
 func (b biometric) PersonHash() string {
-	return b.data.PersonHash
+	return b.data.PersonHash()
 }
 
-//CipherAddrRobot returns the address of the wallet encrypted with shared robot publickey
 func (b biometric) CipherAddrRobot() string {
-	return b.data.CipherAddrRobot
+	return b.data.CipherAddrRobot()
 }
 
-//CipherAddrBio returns the address of the wallet encrypted with person keys
-func (b biometric) CipherAddrBio() string {
-	return b.data.CipherAddrBio
+func (b biometric) CipherAddrPerson() string {
+	return b.data.CipherAddrPerson()
 }
 
-//CipherAESKey returns the AES key encrypted with person keys
 func (b biometric) CipherAESKey() string {
-	return b.data.CipherAESKey
+	return b.data.CipherAESKey()
 }
 
-//Endorsement returns the bio wallet endorsement
-func (b biometric) Endorsement() datamining.Endorsement {
+func (b biometric) PersonPublicKey() string {
+	return b.data.PersonPublicKey()
+}
+
+func (b biometric) BiodPublicKey() string {
+	return b.data.BiodPublicKey()
+}
+
+func (b biometric) Signatures() Signatures {
+	return b.data.Signatures()
+}
+
+func (b biometric) Endorsement() mining.Endorsement {
 	return b.endorsement
 }

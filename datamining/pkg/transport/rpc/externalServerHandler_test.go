@@ -1,16 +1,16 @@
-package externalrpc
+package rpc
 
 import (
 	"context"
-	"encoding/json"
+	"log"
+	"net"
 	"testing"
 	"time"
-
-	"github.com/uniris/uniris-core/datamining/pkg"
 
 	"github.com/stretchr/testify/assert"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	accountadding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
 	accountListing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
@@ -18,9 +18,7 @@ import (
 	biodlisting "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
-	"github.com/uniris/uniris-core/datamining/pkg/mock"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
-	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 )
 
 /*
@@ -30,27 +28,27 @@ Scenario: Get biometric
 	Then I get it from the db
 */
 func TestGetBiometric(t *testing.T) {
-	db := mock.NewDatabase()
+	db := &mockDatabase{}
 	accLister := accountListing.NewService(db)
 
-	db.StoreBiometric(account.NewBiometric(
-		&account.BioData{
-			CipherAddrBio: "enc address",
-			CipherAESKey:  "cipher aes",
-			PersonHash:    "hash",
-		},
-		datamining.NewEndorsement("", "hash",
-			datamining.NewMasterValidation([]string{"hash"}, "robotkey", datamining.NewValidation(datamining.ValidationOK, time.Now(), "pub key", "sig")),
-			[]datamining.Validation{}),
-	))
+	sig := account.NewSignatures("sig1", "sig2")
+	bioData := account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", "pub", sig)
+	endors := mining.NewEndorsement("", "hash",
+		mining.NewMasterValidation([]string{"hash"}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pub key", "sig")),
+		[]mining.Validation{})
 
-	srv := NewExternalServerHandler(nil, nil, nil, accLister, mockBiometricDecrypter{}, mockSigner{}, system.UnirisConfig{})
-	res, err := srv.GetBiometric(context.TODO(), &api.BiometricRequest{
-		PersonHash: "enc hash",
+	db.StoreBiometric(account.NewBiometric(bioData, endors))
+
+	srv := Services{accLister: accLister}
+	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}}
+	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
+
+	res, err := h.GetBiometric(context.TODO(), &api.BiometricRequest{
+		EncryptedPersonHash: "enc hash",
 	})
-
 	assert.Nil(t, err)
-	assert.Equal(t, "cipher aes", res.Data.CipherAESKey)
+	assert.Equal(t, "sig", res.Signature)
+	assert.Equal(t, "enc aes key", res.Data.CipherAESKey)
 }
 
 /*
@@ -60,26 +58,26 @@ Scenario: Get keychain
 	Then I get it from the db
 */
 func TestGetKeychain(t *testing.T) {
-	db := mock.NewDatabase()
+	db := &mockDatabase{}
 	accLister := accountListing.NewService(db)
 
-	db.StoreKeychain(account.NewKeychain(
-		&account.KeyChainData{
-			WalletAddr:      "address",
-			CipherWallet:    "cipher wallet",
-			CipherAddrRobot: "enc address",
-		},
-		datamining.NewEndorsement("", "hash",
-			datamining.NewMasterValidation([]string{"hash"}, "robotkey", datamining.NewValidation(datamining.ValidationOK, time.Now(), "pub key", "sig")),
-			[]datamining.Validation{}),
-	))
+	sig := account.NewSignatures("sig1", "sig2")
+	data := account.NewKeychainData("enc address", "cipher wallet", "pub", "pub", sig)
+	endors := mining.NewEndorsement("", "hash",
+		mining.NewMasterValidation([]string{"hash"}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pub key", "sig")),
+		[]mining.Validation{})
 
-	srv := NewExternalServerHandler(nil, nil, nil, accLister, mockBiometricDecrypter{}, mockSigner{}, system.UnirisConfig{})
-	res, err := srv.GetKeychain(context.TODO(), &api.KeychainRequest{
-		Address: "enc address",
+	db.StoreKeychain(account.NewKeychain("hash", data, endors))
+
+	srv := Services{accLister: accLister}
+	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}}
+	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
+	res, err := h.GetKeychain(context.TODO(), &api.KeychainRequest{
+		EncryptedAddress: "enc address",
 	})
 
 	assert.Nil(t, err)
+	assert.Equal(t, "sig", res.Signature)
 	assert.Equal(t, "cipher wallet", res.Data.CipherWallet)
 }
 
@@ -90,11 +88,13 @@ Scenario: Lead mining of keychain transaction
 	Then I got no error and the data is stored
 */
 func TestLeadKeychainMining(t *testing.T) {
-	db := mock.NewDatabase()
+	db := &mockDatabase{}
 	lockSrv := lock.NewService(db)
-	notifier := mock.NewNotifier()
-	poolF := mock.NewPoolFinder()
-	poolR := mock.NewPoolRequester(db)
+	notifier := mockNotifier{}
+	poolF := mockPoolFinder{}
+	poolR := mockPoolRequester{
+		repo: db,
+	}
 	biodlister := biodlisting.NewService(db)
 	accLister := accountListing.NewService(db)
 
@@ -102,15 +102,15 @@ func TestLeadKeychainMining(t *testing.T) {
 		mining.KeychainTransaction: accountMining.NewKeychainMiner(mockSigner{}, mockHasher{}, accLister),
 	}
 
-	mineSrv := mining.NewService(notifier, poolF, poolR, mockSigner{}, biodlister, "robotkey", "robotpbKey", txMiners)
+	mineSrv := mining.NewService(notifier, poolF, poolR, mockSigner{}, biodlister, system.UnirisConfig{}, txMiners)
 
 	accSrv := accountadding.NewService(db)
 
-	conf := system.UnirisConfig{}
+	srv := Services{accAdd: accSrv, lock: lockSrv, mining: mineSrv}
+	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}}
+	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
 
-	srvHandler := NewExternalServerHandler(lockSrv, mineSrv, accSrv, nil, mockBiometricDecrypter{}, nil, conf)
-
-	_, err := srvHandler.LeadKeychainMining(context.TODO(), &api.KeychainLeadRequest{
+	_, err := h.LeadKeychainMining(context.TODO(), &api.KeychainLeadRequest{
 		EncryptedKeychainData: "encrypted data",
 		SignatureKeychainData: &api.Signature{
 			Biod:   "sig",
@@ -132,26 +132,32 @@ Scenario: Lead mining of biometric transaction
 	Then I got no error and the data is stored
 */
 func TestLeadBiometricMining(t *testing.T) {
-	db := mock.NewDatabase()
+	db := &mockDatabase{}
 	lockSrv := lock.NewService(db)
-	notifier := mock.NewNotifier()
-	poolF := mock.NewPoolFinder()
-	poolR := mock.NewPoolRequester(db)
+	notifier := mockNotifier{}
+	poolF := mockPoolFinder{}
+	poolR := mockPoolRequester{
+		repo: db,
+	}
 	biodlister := biodlisting.NewService(db)
 
 	txMiners := map[mining.TransactionType]mining.TransactionMiner{
 		mining.BiometricTransaction: accountMining.NewBiometricMiner(mockSigner{}, mockHasher{}),
 	}
 
-	mineSrv := mining.NewService(notifier, poolF, poolR, mockSigner{}, biodlister, "robotkey", "robotpbKey", txMiners)
+	mineSrv := mining.NewService(notifier, poolF, poolR, mockSigner{}, biodlister, system.UnirisConfig{
+		SharedKeys: system.SharedKeys{
+			RobotPublicKey: "robotkey",
+		},
+	}, txMiners)
 
 	accSrv := accountadding.NewService(db)
 
-	conf := system.UnirisConfig{}
+	srv := Services{accAdd: accSrv, lock: lockSrv, mining: mineSrv}
+	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}}
+	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
 
-	srvHandler := NewExternalServerHandler(lockSrv, mineSrv, accSrv, nil, mockBiometricDecrypter{}, nil, conf)
-
-	_, err := srvHandler.LeadBiometricMining(context.TODO(), &api.BiometricLeadRequest{
+	_, err := h.LeadBiometricMining(context.TODO(), &api.BiometricLeadRequest{
 		EncryptedBioData: "encrypted data",
 		SignatureBioData: &api.Signature{
 			Biod:   "sig",
@@ -162,7 +168,7 @@ func TestLeadBiometricMining(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	biometric, _ := db.FindBiometric("person hash")
+	biometric, _ := db.FindBiometric("personHash")
 	assert.NotNil(t, biometric)
 }
 
@@ -173,20 +179,23 @@ Scenario: Lock a transaction
 	Then the lock is stored
 */
 func TestLockTransaction(t *testing.T) {
-	db := mock.NewDatabase()
+	db := &mockDatabase{}
 	lockSrv := lock.NewService(db)
 
-	srvHandler := externalSrvHandler{
-		lock: lockSrv,
-	}
+	srv := Services{lock: lockSrv}
+	crypto := Crypto{signer: mockSigner{}, hasher: mockHasher{}}
+	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
 
-	_, err := srvHandler.LockTransaction(context.TODO(), &api.LockRequest{
+	ack, err := h.LockTransaction(context.TODO(), &api.LockRequest{
 		MasterRobotKey:  "robotkey",
 		Signature:       "sig",
 		Address:         "address",
 		TransactionHash: "hash",
 	})
 	assert.Nil(t, err)
+	assert.NotNil(t, ack)
+	assert.Equal(t, "sig", ack.Signature)
+
 	assert.True(t, db.ContainsLock(lock.TransactionLock{
 		Address:        "address",
 		MasterRobotKey: "robotkey",
@@ -201,14 +210,14 @@ Scenario: Unlock a transaction
 	Then the lock is removed
 */
 func TestUnlockTransaction(t *testing.T) {
-	db := mock.NewDatabase()
+	db := &mockDatabase{}
 	lockSrv := lock.NewService(db)
 
-	srvHandler := externalSrvHandler{
-		lock: lockSrv,
-	}
+	srv := Services{lock: lockSrv}
+	crypto := Crypto{signer: mockSigner{}, hasher: mockHasher{}}
+	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
 
-	_, err := srvHandler.LockTransaction(context.TODO(), &api.LockRequest{
+	_, err := h.LockTransaction(context.TODO(), &api.LockRequest{
 		MasterRobotKey:  "robotkey",
 		Signature:       "sig",
 		Address:         "address",
@@ -221,13 +230,15 @@ func TestUnlockTransaction(t *testing.T) {
 		TxHash:         "hash",
 	}))
 
-	_, err = srvHandler.UnlockTransaction(context.TODO(), &api.LockRequest{
+	ack, err := h.UnlockTransaction(context.TODO(), &api.LockRequest{
 		MasterRobotKey:  "robotkey",
 		Signature:       "sig",
 		Address:         "address",
 		TransactionHash: "hash",
 	})
 	assert.Nil(t, err)
+	assert.NotNil(t, ack)
+	assert.Equal(t, "sig", ack.Signature)
 
 	assert.False(t, db.ContainsLock(lock.TransactionLock{
 		Address:        "address",
@@ -248,11 +259,17 @@ func TestValidateKeychain(t *testing.T) {
 		mining.KeychainTransaction: accountMining.NewKeychainMiner(mockSigner{}, mockHasher{}, nil),
 	}
 
-	mineSrv := mining.NewService(nil, nil, nil, mockSigner{}, nil, "robotkey", "robotpbKey", txMiners)
+	mineSrv := mining.NewService(nil, nil, nil, mockSigner{}, nil, system.UnirisConfig{
+		SharedKeys: system.SharedKeys{
+			RobotPublicKey: "robotkey",
+		},
+	}, txMiners)
 
-	srvHandler := NewExternalServerHandler(nil, mineSrv, nil, nil, mockBiometricDecrypter{}, nil, system.UnirisConfig{})
+	services := Services{mining: mineSrv}
+	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}, hasher: mockHasher{}}
+	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
 
-	valid, err := srvHandler.ValidateKeychain(context.TODO(), &api.KeychainValidationRequest{
+	valid, err := h.ValidateKeychain(context.TODO(), &api.KeychainValidationRequest{
 		Data: &api.KeychainData{
 			BiodPubk:        "pubk",
 			CipherAddrRobot: "encrypted addr",
@@ -267,8 +284,9 @@ func TestValidateKeychain(t *testing.T) {
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, api.Validation_OK, valid.Validation.Status)
-	assert.Equal(t, "sign", valid.Validation.Signature)
+	assert.Equal(t, "sig", valid.Validation.Signature)
 	assert.Equal(t, "robotkey", valid.Validation.PublicKey)
+	assert.Equal(t, "sig", valid.Signature)
 }
 
 /*
@@ -282,11 +300,17 @@ func TestValidateBiometric(t *testing.T) {
 		mining.BiometricTransaction: accountMining.NewBiometricMiner(mockSigner{}, mockHasher{}),
 	}
 
-	mineSrv := mining.NewService(nil, nil, nil, mockSigner{}, nil, "robotkey", "robotpbKey", txMiners)
+	mineSrv := mining.NewService(nil, nil, nil, mockSigner{}, nil, system.UnirisConfig{
+		SharedKeys: system.SharedKeys{
+			RobotPublicKey: "robotkey",
+		},
+	}, txMiners)
 
-	srvHandler := NewExternalServerHandler(nil, mineSrv, nil, nil, mockBiometricDecrypter{}, nil, system.UnirisConfig{})
+	services := Services{mining: mineSrv}
+	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}, hasher: mockHasher{}}
+	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
 
-	valid, err := srvHandler.ValidateBiometric(context.TODO(), &api.BiometricValidationRequest{
+	valid, err := h.ValidateBiometric(context.TODO(), &api.BiometricValidationRequest{
 		Data: &api.BiometricData{
 			BiodPubk:        "pubk",
 			CipherAddrRobot: "encrypted addr",
@@ -302,8 +326,9 @@ func TestValidateBiometric(t *testing.T) {
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, api.Validation_OK, valid.Validation.Status)
-	assert.Equal(t, "sign", valid.Validation.Signature)
+	assert.Equal(t, "sig", valid.Validation.Signature)
 	assert.Equal(t, "robotkey", valid.Validation.PublicKey)
+	assert.Equal(t, "sig", valid.Signature)
 }
 
 /*
@@ -313,11 +338,14 @@ Scenario: Store keychain transaction
 	Then I get retrieve it in the db
 */
 func TestStoreKeychain(t *testing.T) {
-	db := mock.NewDatabase()
+	db := &mockDatabase{}
 	accAdder := accountadding.NewService(db)
-	srvHandler := NewExternalServerHandler(nil, nil, accAdder, nil, mockKeychainDecrypter{}, nil, system.UnirisConfig{})
 
-	_, err := srvHandler.StoreKeychain(context.TODO(), &api.KeychainStorageRequest{
+	services := Services{accAdd: accAdder}
+	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}, hasher: mockHasher{}}
+	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
+
+	ack, err := h.StoreKeychain(context.TODO(), &api.KeychainStorageRequest{
 		Data: &api.KeychainData{
 			CipherWallet:    "encrypted addr",
 			BiodPubk:        "pubk",
@@ -342,14 +370,15 @@ func TestStoreKeychain(t *testing.T) {
 				},
 			},
 		},
-		TransactionHash: "hash",
 	})
-
 	assert.Nil(t, err)
-	keychain, err := db.FindLastKeychain("address")
+	assert.NotNil(t, ack)
+	assert.Equal(t, "sig", ack.Signature)
+
+	keychain, err := db.FindLastKeychain("hash")
 	assert.Nil(t, err)
 	assert.NotNil(t, keychain.Endorsement())
-	assert.Equal(t, datamining.ValidationOK, keychain.Endorsement().MasterValidation().ProofOfWorkValidation().Status())
+	assert.Equal(t, mining.ValidationOK, keychain.Endorsement().MasterValidation().ProofOfWorkValidation().Status())
 }
 
 /*
@@ -359,11 +388,14 @@ Scenario: Store biometric transaction
 	Then I get retrieve it in the db
 */
 func TestStoreBiometric(t *testing.T) {
-	db := mock.NewDatabase()
-	accAdder := accountadding.NewService(db)
-	srvHandler := NewExternalServerHandler(nil, nil, accAdder, nil, mockBiometricDecrypter{}, nil, system.UnirisConfig{})
+	db := &mockDatabase{}
 
-	_, err := srvHandler.StoreBiometric(context.TODO(), &api.BiometricStorageRequest{
+	accAdder := accountadding.NewService(db)
+	services := Services{accAdd: accAdder}
+	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}, hasher: mockHasher{}}
+	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
+
+	ack, err := h.StoreBiometric(context.TODO(), &api.BiometricStorageRequest{
 		Data: &api.BiometricData{
 			CipherAESKey:    "encrypted aes key",
 			PersonHash:      "hash",
@@ -389,96 +421,45 @@ func TestStoreBiometric(t *testing.T) {
 				},
 			},
 		},
-		TransactionHash: "hash",
 	})
 
 	assert.Nil(t, err)
+	assert.NotNil(t, ack)
+	assert.Equal(t, "sig", ack.Signature)
+
 	biometric, err := db.FindBiometric("hash")
 	assert.Nil(t, err)
 	assert.Equal(t, "encrypted aes key", biometric.CipherAESKey())
 	assert.NotNil(t, biometric.Endorsement())
-	assert.Equal(t, datamining.ValidationOK, biometric.Endorsement().MasterValidation().ProofOfWorkValidation().Status())
+	assert.Equal(t, mining.ValidationOK, biometric.Endorsement().MasterValidation().ProofOfWorkValidation().Status())
 }
 
-type mockBiometricDecrypter struct{}
+type mockPoolFinder struct{}
 
-func (d mockBiometricDecrypter) DecryptHashPerson(hash string, pvKey string) (string, error) {
-	return "hash", nil
+func (p mockPoolFinder) FindLastValidationPool(addr string) (datamining.Pool, error) {
+	return datamining.NewPool(datamining.Peer{
+		IP:        net.ParseIP("127.0.0.1"),
+		PublicKey: "key",
+	}), nil
 }
 
-func (d mockBiometricDecrypter) DecryptCipherAddress(cipherAddr string, pvKey string) (string, error) {
-	return "address", nil
+func (p mockPoolFinder) FindValidationPool() (datamining.Pool, error) {
+	return datamining.NewPool(datamining.Peer{
+		IP:        net.ParseIP("127.0.0.1"),
+		PublicKey: "key",
+	}), nil
 }
 
-func (d mockBiometricDecrypter) DecryptTransactionData(data string, pvKey string) (string, error) {
-	biometricJSON := rpc.BioDataJSON{
-		EncryptedAddrPerson: "cipher addr",
-		EncryptedAESKey:     "cipher aes",
-		PersonHash:          "person hash",
-		BiodPublicKey:       "pubk",
-		PersonPublicKey:     "pubk",
-		EncryptedAddrRobot:  "cipher addr",
-	}
-	b, _ := json.Marshal(biometricJSON)
-	return string(b), nil
+func (p mockPoolFinder) FindStoragePool(addr string) (datamining.Pool, error) {
+	return datamining.NewPool(datamining.Peer{
+		IP:        net.ParseIP("127.0.0.1"),
+		PublicKey: "key",
+	}), nil
 }
 
-type mockSigner struct{}
+type mockNotifier struct{}
 
-func (s mockSigner) CheckTransactionSignature(pubk string, txHash string, sig string) error {
+func (n mockNotifier) NotifyTransactionStatus(tx string, status mining.TransactionStatus) error {
+	log.Printf("Transaction %s with status %s", tx, status.String())
 	return nil
-}
-
-func (s mockSigner) CheckBiometricSignature(pubk string, data accountMining.UnsignedBiometricData, sig string) error {
-	return nil
-}
-
-func (s mockSigner) CheckKeychainSignature(pubk string, data accountMining.UnsignedKeychainData, sig string) error {
-	return nil
-}
-
-func (s mockSigner) SignBiometric(b rpc.BiometricJSON, pvKey string) (string, error) {
-	return "sig", nil
-}
-
-func (s mockSigner) SignKeychain(b rpc.KeychainJSON, pvKey string) (string, error) {
-	return "sig", nil
-}
-
-func (s mockSigner) SignValidation(v mining.UnsignedValidation, pvKey string) (string, error) {
-	return "sign", nil
-}
-
-func (s mockSigner) SignLock(txLock lock.TransactionLock, pvKey string) (string, error) {
-	return "sign", nil
-}
-
-type mockHasher struct{}
-
-func (h mockHasher) HashUnsignedBiometricData(data accountMining.UnsignedBiometricData) (string, error) {
-	return "hash", nil
-}
-
-func (h mockHasher) HashUnsignedKeychainData(data accountMining.UnsignedKeychainData) (string, error) {
-	return "hash", nil
-}
-
-type mockKeychainDecrypter struct{}
-
-func (d mockKeychainDecrypter) DecryptHashPerson(hash string, pvKey string) (string, error) {
-	return "hash", nil
-}
-
-func (d mockKeychainDecrypter) DecryptCipherAddress(cipherAddr string, pvKey string) (string, error) {
-	return "address", nil
-}
-func (d mockKeychainDecrypter) DecryptTransactionData(data string, pvKey string) (string, error) {
-	keychainJSON := rpc.KeychainDataJSON{
-		EncryptedWallet:    "cipher wallet",
-		BiodPublicKey:      "pubk",
-		PersonPublicKey:    "pubk",
-		EncryptedAddrRobot: "cipher addr",
-	}
-	b, _ := json.Marshal(keychainJSON)
-	return string(b), nil
 }

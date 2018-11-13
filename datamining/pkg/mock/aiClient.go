@@ -4,20 +4,17 @@ import (
 	"net"
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
-	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc/internalrpc"
+	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 )
 
 type aiClient struct{}
 
 //NewAIClient create a new mock of the AI client
-func NewAIClient() internalrpc.AIClient {
+func NewAIClient() rpc.AIClient {
 	return aiClient{}
 }
 
-func (c aiClient) GetBiometricStoragePool(personHash string) (datamining.Pool, error) {
-	return datamining.NewPool(datamining.Peer{IP: net.ParseIP("127.0.0.1")}), nil
-}
-func (c aiClient) GetKeychainStoragePool(address string) (datamining.Pool, error) {
+func (c aiClient) GetStoragePool(personHash string) (datamining.Pool, error) {
 	return datamining.NewPool(datamining.Peer{IP: net.ParseIP("127.0.0.1")}), nil
 }
 

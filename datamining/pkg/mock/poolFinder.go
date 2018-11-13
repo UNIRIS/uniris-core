@@ -28,7 +28,7 @@ func (p poolFinder) FindValidationPool() (datamining.Pool, error) {
 	}), nil
 }
 
-func (p poolFinder) FindStoragePool() (datamining.Pool, error) {
+func (p poolFinder) FindStoragePool(addr string) (datamining.Pool, error) {
 	return datamining.NewPool(datamining.Peer{
 		IP:        net.ParseIP("127.0.0.1"),
 		PublicKey: "key",

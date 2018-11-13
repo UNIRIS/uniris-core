@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
+	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
 /*
@@ -19,30 +19,16 @@ func TestStoreKeychain(t *testing.T) {
 	repo := &databasemock{}
 	s := NewService(repo)
 
-	sigs := account.Signatures{
-		BiodSig:   "sig1",
-		PersonSig: "sig2",
-	}
+	sigs := account.NewSignatures("sig1", "sig2")
 
-	data := &account.KeyChainData{
-		WalletAddr:      "addr1",
-		CipherAddrRobot: "xxxx",
-		CipherWallet:    "xxxx",
-		PersonPubk:      "xxxx",
-		BiodPubk:        "xxxx",
-		Sigs:            sigs,
-	}
+	data := account.NewKeychainData("xxx", "xxx", "xxx", "xxx", sigs)
+	kc := account.NewKeychain("addr", data, mining.NewEndorsement("", "hash", nil, nil))
 
-	err := s.StoreKeychain(data, datamining.NewEndorsement(
-		"",
-		"hash",
-		nil,
-		nil,
-	))
+	err := s.StoreKeychain(kc)
 	assert.Nil(t, err)
 	l := len(repo.keychains)
 	assert.Equal(t, 1, l)
-	assert.Equal(t, "addr1", repo.keychains[0].WalletAddr())
+	assert.Equal(t, "addr", repo.keychains[0].Address())
 	assert.Equal(t, "hash", repo.keychains[0].Endorsement().TransactionHash())
 }
 
@@ -56,32 +42,16 @@ func TestStoreBiometric(t *testing.T) {
 	repo := &databasemock{}
 	s := NewService(repo)
 
-	sigs := account.Signatures{
-		BiodSig:   "sig1",
-		PersonSig: "sig2",
-	}
+	sigs := account.NewSignatures("sig1", "sig2")
 
-	bdata := &account.BioData{
-		PersonHash:      "hash1",
-		BiodPubk:        "xxxx",
-		CipherAddrBio:   "xxxx",
-		CipherAddrRobot: "xxxx",
-		CipherAESKey:    "xxxx",
-		PersonPubk:      "xxxx",
-		Sigs:            sigs,
-	}
-
-	err := s.StoreBiometric(bdata, datamining.NewEndorsement(
-		"",
-		"hash",
-		nil,
-		nil,
-	))
+	data := account.NewBiometricData("pHash", "xxx", "xxx", "xxx", "xxx", "xxx", sigs)
+	bio := account.NewBiometric(data, mining.NewEndorsement("", "hash", nil, nil))
+	err := s.StoreBiometric(bio)
 	assert.Nil(t, err)
 	l := len(repo.biometrics)
 	assert.Equal(t, 1, l)
 	assert.Equal(t, 1, l)
-	assert.Equal(t, "hash1", repo.biometrics[0].PersonHash())
+	assert.Equal(t, "pHash", repo.biometrics[0].PersonHash())
 }
 
 type databasemock struct {

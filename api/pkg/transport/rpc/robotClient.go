@@ -7,7 +7,6 @@ import (
 
 	"google.golang.org/grpc/status"
 
-	"github.com/uniris/uniris-core/api/pkg/crypto"
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 
 	adding "github.com/uniris/uniris-core/api/pkg/adding"
@@ -23,17 +22,17 @@ type RobotClient interface {
 }
 
 type robotClient struct {
-	conf                  system.DataMiningConfiguration
-	robotSharedPrivateKey string
+	conf       system.UnirisConfig
+	sigHandler SignatureHandler
 }
 
 //NewRobotClient creates a new robot client using GRPC
-func NewRobotClient(conf system.DataMiningConfiguration, robotSharedPrivateKey string) RobotClient {
-	return robotClient{conf, robotSharedPrivateKey}
+func NewRobotClient(conf system.UnirisConfig, sigHandler SignatureHandler) RobotClient {
+	return robotClient{conf, sigHandler}
 }
 
-func (c robotClient) GetAccount(encHash string) (*listing.SignedAccountResult, error) {
-	serverAddr := fmt.Sprintf("localhost:%d", c.conf.InternalPort)
+func (c robotClient) GetAccount(encHash string) (*listing.AccountResult, error) {
+	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Datamining.InternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -43,38 +42,36 @@ func (c robotClient) GetAccount(encHash string) (*listing.SignedAccountResult, e
 
 	client := api.NewInternalClient(conn)
 
-	resGRPC, err := client.GetAccount(context.Background(), &api.AccountSearchRequest{
+	res, err := client.GetAccount(context.Background(), &api.AccountSearchRequest{
 		EncryptedHashPerson: encHash,
 	})
 	if err != nil {
 		s, _ := status.FromError(err)
-		if s.Message() == c.conf.Errors.AccountNotExist {
+		if s.Message() == c.conf.Datamining.Errors.AccountNotExist {
 			return nil, listing.ErrAccountNotExist
 		}
 		return nil, errors.New(s.Message())
 	}
 
-	r := listing.AccountResult{
-		EncryptedAESKey:  resGRPC.EncryptedAESkey,
-		EncryptedAddress: resGRPC.EncryptedAddress,
-		EncryptedWallet:  resGRPC.EncryptedWallet,
-	}
-
-	sig, err := crypto.SignData(c.robotSharedPrivateKey, r)
-	if err != nil {
+	if err := c.sigHandler.VerifyAccountSearchResultSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
 		return nil, err
 	}
 
-	return &listing.SignedAccountResult{
-		EncryptedAddress: r.EncryptedAddress,
-		EncryptedAESKey:  r.EncryptedAESKey,
-		EncryptedWallet:  r.EncryptedWallet,
-		SignatureRequest: sig,
-	}, nil
+	resAcc := &listing.AccountResult{
+		EncryptedAddress: res.EncryptedAddress,
+		EncryptedAESKey:  res.EncryptedAESkey,
+		EncryptedWallet:  res.EncryptedWallet,
+	}
+
+	if err := c.sigHandler.SignAccountResult(resAcc, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+		return nil, err
+	}
+
+	return resAcc, nil
 }
 
 func (c robotClient) AddAccount(req adding.AccountCreationRequest) (*adding.AccountCreationResult, error) {
-	serverAddr := fmt.Sprintf("localhost:%d", c.conf.InternalPort)
+	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Datamining.InternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -95,6 +92,10 @@ func (c robotClient) AddAccount(req adding.AccountCreationRequest) (*adding.Acco
 		return nil, err
 	}
 
+	if err := c.sigHandler.VerifyCreationResultSignature(c.conf.SharedKeys.RobotPublicKey, resBio); err != nil {
+		return nil, err
+	}
+
 	resKeychain, err := client.CreateKeychain(context.Background(), &api.KeychainCreationRequest{
 		EncryptedKeychainData: req.EncryptedKeychainData,
 		SignatureKeychainData: &api.Signature{
@@ -106,24 +107,26 @@ func (c robotClient) AddAccount(req adding.AccountCreationRequest) (*adding.Acco
 		return nil, err
 	}
 
-	txs := adding.AccountCreationTransactions{
-		Biometric: adding.CreationTransaction{
+	txs := adding.AccountCreationTransactionsResult{
+		Biometric: adding.TransactionResult{
 			TransactionHash: resBio.TransactionHash,
 			MasterPeerIP:    resBio.MasterPeerIP,
+			Signature:       resBio.Signature,
 		},
-		Keychain: adding.CreationTransaction{
+		Keychain: adding.TransactionResult{
 			TransactionHash: resKeychain.TransactionHash,
 			MasterPeerIP:    resKeychain.MasterPeerIP,
+			Signature:       resKeychain.Signature,
 		},
 	}
 
-	sig, err := crypto.SignData(c.robotSharedPrivateKey, txs)
-	if err != nil {
+	res := &adding.AccountCreationResult{
+		Transactions: txs,
+	}
+
+	if err := c.sigHandler.SignAccountCreationResult(res, c.conf.SharedKeys.RobotPrivateKey); err != nil {
 		return nil, err
 	}
 
-	return &adding.AccountCreationResult{
-		Transactions: txs,
-		Signature:    sig,
-	}, nil
+	return res, nil
 }

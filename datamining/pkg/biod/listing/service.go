@@ -2,11 +2,14 @@ package listing
 
 //Repository defines mtehods to get data from the tech database
 type Repository interface {
+	//ListBiodPubKeys queries the biometric device public keys registered
 	ListBiodPubKeys() ([]string, error)
 }
 
 //Service define methods for the biometric devices
 type Service interface {
+
+	//ListBiodPubKeys find the biometric device public keys registered
 	ListBiodPubKeys() ([]string, error)
 }
 

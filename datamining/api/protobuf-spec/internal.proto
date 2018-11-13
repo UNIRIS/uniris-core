@@ -18,6 +18,7 @@ message AccountSearchResult {
     string EncryptedWallet = 1;
     string EncryptedAESkey = 2;
     string EncryptedAddress =3;
+    string Signature = 4;
 }
 
 message KeychainCreationRequest {
@@ -33,4 +34,5 @@ message BiometricCreationRequest {
 message CreationResult {
     string TransactionHash = 1;
     string MasterPeerIP = 2;
+    string Signature = 3;
 }

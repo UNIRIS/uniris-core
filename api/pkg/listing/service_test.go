@@ -1,6 +1,7 @@
 package listing
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,7 +16,7 @@ Scenario: Get account's details from the robot
 func TestGetAccount(t *testing.T) {
 	s := service{
 		client:       mockClient{},
-		val:          mockGoodRequestValidator{},
+		sigVerif:     mockGoodSignatureVerif{},
 		sharedBioPub: "my key",
 	}
 
@@ -35,32 +36,33 @@ Scenario: Catch invalid signature when get account's details from the robot
 func TestGetAccountInvalidSig(t *testing.T) {
 	s := service{
 		client:       mockClient{},
-		val:          mockBadRequestValidator{},
+		sigVerif:     mockBadSignatureVerif{},
 		sharedBioPub: "my key",
 	}
 
 	_, err := s.GetAccount("encrypted person pub key", "sig")
-	assert.Equal(t, err, ErrInvalidSignature)
+	assert.Equal(t, err, errors.New("Invalid signature"))
 }
 
 type mockClient struct{}
 
-func (c mockClient) GetAccount(encHash string) (*SignedAccountResult, error) {
-	return &SignedAccountResult{
+func (c mockClient) GetAccount(encHash string) (*AccountResult, error) {
+	return &AccountResult{
 		EncryptedAESKey:  "encrypted_aes_key",
 		EncryptedAddress: "encrypted_address",
 		EncryptedWallet:  "encrypted_wallet",
+		SignatureRequest: "sig",
 	}, nil
 }
 
-type mockGoodRequestValidator struct{}
+type mockGoodSignatureVerif struct{}
 
-func (v mockGoodRequestValidator) CheckRawSignature(data string, pubKey string, sig string) (bool, error) {
-	return true, nil
+func (v mockGoodSignatureVerif) VerifyHashSignature(data string, pubKey string, sig string) error {
+	return nil
 }
 
-type mockBadRequestValidator struct{}
+type mockBadSignatureVerif struct{}
 
-func (v mockBadRequestValidator) CheckRawSignature(data string, pubKey string, sig string) (bool, error) {
-	return false, nil
+func (v mockBadSignatureVerif) VerifyHashSignature(data string, pubKey string, sig string) error {
+	return errors.New("Invalid signature")
 }

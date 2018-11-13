@@ -11,24 +11,30 @@ type TransactionLock struct {
 	Address        string
 }
 
-//Signer define method to sign lock transaction
-type Signer interface {
-	SignLock(lock TransactionLock, pvKey string) (string, error)
-}
-
 //ErrLockExisting is returned when a lock already exist
 var ErrLockExisting = errors.New("A lock already exist for this transaction")
 
 //Repository defines methods to manage locks
 type Repository interface {
+
+	//NewLock stores a lock
 	NewLock(TransactionLock) error
+
+	//RemoveLock remove an existing lock
 	RemoveLock(TransactionLock) error
+
+	//ContainsLocks determines if a lock exists or not
 	ContainsLock(TransactionLock) bool
 }
 
 //Service defines methods to handle lock and unlock transactions
 type Service interface {
+	//LockTransaction performs a lock on a transaction
+	//
+	//If a lock exist, ErrLockExisting error is returned
 	LockTransaction(TransactionLock) error
+
+	//UnlockTransaction performs a unlock on a transaction
 	UnlockTransaction(TransactionLock) error
 }
 

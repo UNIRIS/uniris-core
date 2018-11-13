@@ -4,7 +4,6 @@ import (
 	"net"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
-	gossip "github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
 )
 
 //Repository implements the repository interface as mock
@@ -124,7 +123,7 @@ func (r *Repository) ContainsUnreachableKey(pubk string) error {
 	if r.containsUnreachablePeer(pubk) {
 		return nil
 	}
-	return gossip.ErrNotFoundOnUnreachableList
+	return discovery.ErrNotFoundOnUnreachableList
 }
 
 func (r *Repository) containsPeer(p discovery.Peer) bool {

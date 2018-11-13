@@ -10,6 +10,7 @@ import (
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	biodlisting "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
+	"github.com/uniris/uniris-core/datamining/pkg/system"
 )
 
 /*
@@ -40,8 +41,8 @@ func TestMine(t *testing.T) {
 	assert.NotNil(t, endorsement.MasterValidation())
 	assert.NotEmpty(t, endorsement.Validations())
 
-	assert.Equal(t, datamining.ValidationOK, endorsement.MasterValidation().ProofOfWorkValidation().Status())
-	assert.Equal(t, datamining.ValidationOK, endorsement.Validations()[0].Status())
+	assert.Equal(t, ValidationOK, endorsement.MasterValidation().ProofOfWorkValidation().Status())
+	assert.Equal(t, ValidationOK, endorsement.Validations()[0].Status())
 }
 
 /*
@@ -93,15 +94,18 @@ func TestValidateTx(t *testing.T) {
 		txMiners: map[TransactionType]TransactionMiner{
 			KeychainTransaction: mockMiner{},
 		},
-		robotKey:   "pub key",
-		robotPvKey: "pv key",
-		signer:     mockSrvSigner{},
+		config: system.UnirisConfig{
+			SharedKeys: system.SharedKeys{
+				RobotPublicKey: "pub key",
+			},
+		},
+		signer: mockSrvSigner{},
 	}
 
 	valid, err := s.Validate("hash", "fake data", KeychainTransaction)
 	assert.Nil(t, err)
 	assert.NotNil(t, valid)
-	assert.Equal(t, datamining.ValidationOK, valid.Status())
+	assert.Equal(t, ValidationOK, valid.Status())
 	assert.Equal(t, "sig", valid.Signature())
 	assert.Equal(t, "pub key", valid.PublicKey())
 	assert.NotEqual(t, time.Now(), valid.Timestamp())
@@ -118,15 +122,18 @@ func TestValidateInvalidTx(t *testing.T) {
 		txMiners: map[TransactionType]TransactionMiner{
 			KeychainTransaction: mockBadMiner{},
 		},
-		robotKey:   "pub key",
-		robotPvKey: "pv key",
-		signer:     mockSrvSigner{},
+		config: system.UnirisConfig{
+			SharedKeys: system.SharedKeys{
+				RobotPublicKey: "pub key",
+			},
+		},
+		signer: mockSrvSigner{},
 	}
 
 	valid, err := s.Validate("hash", "fake data", KeychainTransaction)
 	assert.Nil(t, err)
 	assert.NotNil(t, valid)
-	assert.Equal(t, datamining.ValidationKO, valid.Status())
+	assert.Equal(t, ValidationKO, valid.Status())
 	assert.Equal(t, "sig", valid.Signature())
 	assert.Equal(t, "pub key", valid.PublicKey())
 	assert.NotEqual(t, time.Now(), valid.Timestamp())
@@ -134,15 +141,11 @@ func TestValidateInvalidTx(t *testing.T) {
 
 type mockSrvSigner struct{}
 
-func (s mockSrvSigner) CheckTransactionSignature(pubk string, tx string, der string) error {
+func (s mockSrvSigner) VerifyTransactionDataSignature(txType TransactionType, pubk string, data interface{}, der string) error {
 	return nil
 }
 
-func (s mockSrvSigner) SignValidation(v UnsignedValidation, pvKey string) (string, error) {
-	return "sig", nil
-}
-
-func (s mockSrvSigner) SignLock(lock lock.TransactionLock, pvKey string) (string, error) {
+func (s mockSrvSigner) SignValidation(v Validation, pvKey string) (string, error) {
 	return "sig", nil
 }
 
@@ -186,25 +189,25 @@ func (n *mockNotifier) NotifyTransactionStatus(tx string, status TransactionStat
 type mockPoolRequester struct {
 }
 
-func (r mockPoolRequester) RequestLock(datamining.Pool, lock.TransactionLock, string) error {
+func (r mockPoolRequester) RequestLock(datamining.Pool, lock.TransactionLock) error {
 	return nil
 }
 
-func (r mockPoolRequester) RequestUnlock(datamining.Pool, lock.TransactionLock, string) error {
+func (r mockPoolRequester) RequestUnlock(datamining.Pool, lock.TransactionLock) error {
 	return nil
 }
 
-func (r mockPoolRequester) RequestValidations(sPool datamining.Pool, txHash string, data interface{}, txType TransactionType) ([]datamining.Validation, error) {
-	return []datamining.Validation{
-		datamining.NewValidation(
-			datamining.ValidationOK,
+func (r mockPoolRequester) RequestValidations(sPool datamining.Pool, txHash string, data interface{}, txType TransactionType) ([]Validation, error) {
+	return []Validation{
+		NewValidation(
+			ValidationOK,
 			time.Now(),
 			"pubkey",
 			"fake sig",
 		)}, nil
 }
 
-func (r mockPoolRequester) RequestStorage(sPool datamining.Pool, data interface{}, end datamining.Endorsement, txType TransactionType) error {
+func (r mockPoolRequester) RequestStorage(sPool datamining.Pool, data interface{}, end Endorsement, txType TransactionType) error {
 	return nil
 }
 

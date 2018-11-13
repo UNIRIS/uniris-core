@@ -6,22 +6,18 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
-//UnsignedKeychainData defines keychain data before signature
-type UnsignedKeychainData struct {
-	PersonPublicKey    string `json:"person_pubk"`
-	BiodPublicKey      string `json:"biod_pubk"`
-	EncryptedWallet    string `json:"encrypted_wal"`
-	EncryptedAddrRobot string `json:"encrypted_addr_robot"`
-}
-
 //KeychainSigner define methods to handle keychain signature
 type KeychainSigner interface {
-	CheckKeychainSignature(pubKey string, data UnsignedKeychainData, sig string) error
+
+	//VerifyKeychainDataSignature checks the signature of the keychain data using the shared robot public key
+	VerifyKeychainDataSignature(pubKey string, data account.KeychainData, sig string) error
 }
 
 //KeychainHasher define methods to hash keychain data
 type KeychainHasher interface {
-	HashUnsignedKeychainData(data UnsignedKeychainData) (string, error)
+
+	//NewKeychainDataHash creates a hash of the keychain data
+	NewKeychainDataHash(data account.KeychainData) (string, error)
 }
 
 type keychainMiner struct {
@@ -47,11 +43,11 @@ func (m keychainMiner) GetLastTransactionHash(addr string) (string, error) {
 }
 
 func (m keychainMiner) CheckAsMaster(txHash string, data interface{}) error {
-	keychain := data.(*account.KeyChainData)
+	keychain := data.(account.KeychainData)
 	if err := m.checkDataIntegrity(txHash, keychain); err != nil {
 		return err
 	}
-	if err := m.checkDataSignature(keychain); err != nil {
+	if err := m.verifyDataSignature(keychain); err != nil {
 		return err
 	}
 
@@ -59,20 +55,19 @@ func (m keychainMiner) CheckAsMaster(txHash string, data interface{}) error {
 }
 
 func (m keychainMiner) CheckAsSlave(txHash string, data interface{}) error {
-	keychain := data.(*account.KeyChainData)
+	keychain := data.(account.KeychainData)
 	if err := m.checkDataIntegrity(txHash, keychain); err != nil {
 		return err
 	}
-	if err := m.checkDataSignature(keychain); err != nil {
+	if err := m.verifyDataSignature(keychain); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (m keychainMiner) checkDataIntegrity(txHash string, data *account.KeyChainData) error {
-	unsignedData := m.buildUnsignedData(data)
-	hash, err := m.hasher.HashUnsignedKeychainData(unsignedData)
+func (m keychainMiner) checkDataIntegrity(txHash string, data account.KeychainData) error {
+	hash, err := m.hasher.NewKeychainDataHash(data)
 	if err != nil {
 		return err
 	}
@@ -82,24 +77,13 @@ func (m keychainMiner) checkDataIntegrity(txHash string, data *account.KeyChainD
 	return nil
 }
 
-func (m keychainMiner) checkDataSignature(data *account.KeyChainData) error {
-	unsignedData := m.buildUnsignedData(data)
-
-	if err := m.signer.CheckKeychainSignature(data.BiodPubk, unsignedData, data.Sigs.BiodSig); err != nil {
+func (m keychainMiner) verifyDataSignature(data account.KeychainData) error {
+	if err := m.signer.VerifyKeychainDataSignature(data.BiodPublicKey(), data, data.Signatures().Biod()); err != nil {
 		return err
 	}
 
-	if err := m.signer.CheckKeychainSignature(data.PersonPubk, unsignedData, data.Sigs.PersonSig); err != nil {
+	if err := m.signer.VerifyKeychainDataSignature(data.PersonPublicKey(), data, data.Signatures().Person()); err != nil {
 		return err
 	}
 	return nil
-}
-
-func (m keychainMiner) buildUnsignedData(data *account.KeyChainData) UnsignedKeychainData {
-	return UnsignedKeychainData{
-		BiodPublicKey:      data.BiodPubk,
-		EncryptedAddrRobot: data.CipherAddrRobot,
-		EncryptedWallet:    data.CipherWallet,
-		PersonPublicKey:    data.PersonPubk,
-	}
 }

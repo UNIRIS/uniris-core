@@ -1,4 +1,4 @@
-package datamining
+package mining
 
 import (
 	"time"
@@ -29,9 +29,17 @@ func (s ValidationStatus) String() string {
 
 //Validation describe a validation of a robot
 type Validation interface {
+
+	//Status returns the validation's status
 	Status() ValidationStatus
+
+	//Timestamp returns the validation's timestamp
 	Timestamp() time.Time
+
+	//PublicKey returns the validation's public key
 	PublicKey() string
+
+	//Signature returns the validation's signature
 	Signature() string
 }
 
@@ -52,22 +60,18 @@ func NewValidation(status ValidationStatus, t time.Time, pubKey string, sig stri
 	}
 }
 
-//Status returns the validation's status
 func (v validation) Status() ValidationStatus {
 	return v.status
 }
 
-//Timestamp returns the validation's timestamp
 func (v validation) Timestamp() time.Time {
 	return v.timestamp
 }
 
-//PublicKey returns the validation's public key
 func (v validation) PublicKey() string {
 	return v.pubk
 }
 
-//Signature returns the validation's signature
 func (v validation) Signature() string {
 	return v.sig
 }

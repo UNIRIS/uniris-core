@@ -10,7 +10,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/uniris/uniris-core/datamining/pkg/lock"
+	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
+	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 
@@ -36,88 +37,424 @@ func NewSigner() Signer {
 	return signer{}
 }
 
-func (s signer) CheckTransactionSignature(pubk string, txHash string, sig string) error {
-	return s.checkSignature(pubk, txHash, sig)
+func (s signer) VerifyTransactionDataSignature(txType mining.TransactionType, pubKey string, data interface{}, sig string) error {
+	switch txType {
+	case mining.KeychainTransaction:
+		return s.VerifyKeychainDataSignature(pubKey, data.(account.KeychainData), sig)
+	case mining.BiometricTransaction:
+		return s.VerifyBiometricDataSignature(pubKey, data.(account.BiometricData), sig)
+	}
+
+	return mining.ErrUnsupportedTransaction
 }
 
-func (s signer) CheckBiometricSignature(pubk string, data accountMining.UnsignedBiometricData, sig string) error {
-	return s.checkSignature(pubk, data, sig)
-}
-
-func (s signer) CheckKeychainSignature(pubk string, data accountMining.UnsignedKeychainData, sig string) error {
-	return s.checkSignature(pubk, data, sig)
-}
-
-//Verify verify a signature and a data using a public key
-func (s signer) checkSignature(pubk string, data interface{}, sig string) error {
-	var signature ecdsaSignature
-
-	decodedkey, err := hex.DecodeString(pubk)
+func (s signer) VerifyBiometricDataSignature(pubKey string, data account.BiometricData, sig string) error {
+	b, err := json.Marshal(biometricRaw{
+		BIODPublicKey:       data.BiodPublicKey(),
+		EncryptedAddrPerson: data.CipherAddrPerson(),
+		EncryptedAddrRobot:  data.CipherAddrRobot(),
+		EncryptedAESKey:     data.CipherAESKey(),
+		PersonHash:          data.PersonHash(),
+		PersonPublicKey:     data.PersonPublicKey(),
+	})
 	if err != nil {
 		return err
 	}
+	return checkSignature(pubKey, string(b), sig)
+}
 
-	decodedsig, err := hex.DecodeString(sig)
+func (s signer) VerifyKeychainDataSignature(pubKey string, data account.KeychainData, sig string) error {
+	b, err := json.Marshal(keychainRaw{
+		BIODPublicKey:      data.BiodPublicKey(),
+		EncryptedWallet:    data.CipherWallet(),
+		EncryptedAddrRobot: data.CipherAddrRobot(),
+		PersonPublicKey:    data.PersonPublicKey(),
+	})
 	if err != nil {
 		return err
 	}
+	return checkSignature(pubKey, string(b), sig)
+}
 
-	pu, err := x509.ParsePKIXPublicKey(decodedkey)
+func (s signer) VerifyHashSignature(pubKey string, hash string, sig string) error {
+	return checkSignature(pubKey, hash, sig)
+}
+
+func (s signer) VerifyKeychainValidationRequestSignature(pubKey string, req *api.KeychainValidationRequest) error {
+	b, err := json.Marshal(&api.KeychainValidationRequest{
+		Data:            req.Data,
+		TransactionHash: req.TransactionHash,
+	})
 	if err != nil {
 		return err
 	}
+	return checkSignature(pubKey, string(b), req.Signature)
+}
 
-	ecdsaPublic := pu.(*ecdsa.PublicKey)
-	asn1.Unmarshal(decodedsig, &signature)
-
-	b, err := json.Marshal(data)
+func (s signer) VerifyBiometricValidationRequestSignature(pubKey string, req *api.BiometricValidationRequest) error {
+	b, err := json.Marshal(&api.BiometricValidationRequest{
+		Data:            req.Data,
+		TransactionHash: req.TransactionHash,
+	})
 	if err != nil {
 		return err
 	}
-
-	hash := []byte(hashBytes(b))
-
-	if ecdsa.Verify(ecdsaPublic, hash, signature.R, signature.S) {
-		return nil
-	}
-
-	return errors.New("Invalid signature")
+	return checkSignature(pubKey, string(b), req.Signature)
 }
 
-func (s signer) SignValidation(v mining.UnsignedValidation, pvKey string) (string, error) {
-	b, err := json.Marshal(v)
+func (s signer) VerifyKeychainStorageRequestSignature(pubKey string, req *api.KeychainStorageRequest) error {
+	b, err := json.Marshal(&api.KeychainStorageRequest{
+		Data:        req.Data,
+		Endorsement: req.Endorsement,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), req.Signature)
+}
+
+func (s signer) VerifyBiometricStorageRequestSignature(pubKey string, req *api.BiometricStorageRequest) error {
+	b, err := json.Marshal(&api.BiometricStorageRequest{
+		Data:        req.Data,
+		Endorsement: req.Endorsement,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), req.Signature)
+}
+
+func (s signer) VerifyLockRequestSignature(pubKey string, req *api.LockRequest) error {
+	b, err := json.Marshal(&api.LockRequest{
+		Address:         req.Address,
+		MasterRobotKey:  req.MasterRobotKey,
+		TransactionHash: req.TransactionHash,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), req.Signature)
+}
+
+func (s signer) VerifyKeychainLeadRequestSignature(pubKey string, req *api.KeychainLeadRequest) error {
+	b, err := json.Marshal(&api.KeychainLeadRequest{
+		EncryptedKeychainData: req.EncryptedKeychainData,
+		SignatureKeychainData: req.SignatureKeychainData,
+		TransactionHash:       req.TransactionHash,
+		ValidatorPeerIPs:      req.ValidatorPeerIPs,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), req.SignatureRequest)
+}
+
+func (s signer) VerifyBiometricLeadRequestSignature(pubKey string, req *api.BiometricLeadRequest) error {
+	b, err := json.Marshal(&api.BiometricLeadRequest{
+		EncryptedBioData: req.EncryptedBioData,
+		SignatureBioData: req.SignatureBioData,
+		TransactionHash:  req.TransactionHash,
+		ValidatorPeerIPs: req.ValidatorPeerIPs,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), req.SignatureRequest)
+}
+
+func (s signer) VerifyValidationResponseSignature(pubKey string, res *api.ValidationResponse) error {
+	b, err := json.Marshal(&api.ValidationResponse{
+		Validation: res.Validation,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), res.Signature)
+}
+
+func (s signer) VerifyLockAckSignature(pubKey string, ack *api.LockAck) error {
+	b, err := json.Marshal(&api.LockAck{
+		LockHash: ack.LockHash,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), ack.Signature)
+}
+
+func (s signer) VerifyStorageAckSignature(pubKey string, ack *api.StorageAck) error {
+	b, err := json.Marshal(&api.StorageAck{
+		StorageHash: ack.StorageHash,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), ack.Signature)
+}
+
+func (s signer) VerifyKeychainResponseSignature(pubKey string, res *api.KeychainResponse) error {
+	b, err := json.Marshal(&api.KeychainResponse{
+		Data:        res.Data,
+		Endorsement: res.Endorsement,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), res.Signature)
+}
+
+func (s signer) VerifyBiometricResponseSignature(pubKey string, res *api.BiometricResponse) error {
+	b, err := json.Marshal(&api.BiometricResponse{
+		Data:        res.Data,
+		Endorsement: res.Endorsement,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), res.Signature)
+}
+
+func (s signer) SignBiometricResponse(res *api.BiometricResponse, pvKey string) error {
+	b, err := json.Marshal(&api.BiometricResponse{
+		Data:        res.Data,
+		Endorsement: res.Endorsement,
+	})
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	res.Signature = sig
+	return nil
+}
+
+func (s signer) SignKeychainResponse(res *api.KeychainResponse, pvKey string) error {
+	b, err := json.Marshal(&api.KeychainResponse{
+		Data:        res.Data,
+		Endorsement: res.Endorsement,
+	})
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	res.Signature = sig
+	return nil
+}
+
+func (s signer) SignHash(hash string, pvKey string) (string, error) {
+	return sign(pvKey, hash)
+}
+
+func (s signer) SignKeychainLeadRequest(req *api.KeychainLeadRequest, pvKey string) error {
+	b, err := json.Marshal(&api.KeychainLeadRequest{
+		EncryptedKeychainData: req.EncryptedKeychainData,
+		SignatureKeychainData: req.SignatureKeychainData,
+		TransactionHash:       req.TransactionHash,
+		ValidatorPeerIPs:      req.ValidatorPeerIPs,
+	})
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	req.SignatureRequest = sig
+	return nil
+}
+
+func (s signer) SignBiometricLeadRequest(req *api.BiometricLeadRequest, pvKey string) error {
+	b, err := json.Marshal(&api.BiometricLeadRequest{
+		EncryptedBioData: req.EncryptedBioData,
+		SignatureBioData: req.SignatureBioData,
+		TransactionHash:  req.TransactionHash,
+		ValidatorPeerIPs: req.ValidatorPeerIPs,
+	})
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	req.SignatureRequest = sig
+	return nil
+}
+
+func (s signer) SignKeychainValidationRequestSignature(req *api.KeychainValidationRequest, pvKey string) error {
+	b, err := json.Marshal(&api.KeychainValidationRequest{
+		Data:            req.Data,
+		TransactionHash: req.TransactionHash,
+	})
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	req.Signature = sig
+	return nil
+}
+
+func (s signer) SignBiometricValidationRequestSignature(req *api.BiometricValidationRequest, pvKey string) error {
+	b, err := json.Marshal(&api.BiometricValidationRequest{
+		Data:            req.Data,
+		TransactionHash: req.TransactionHash,
+	})
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	req.Signature = sig
+	return nil
+}
+
+func (s signer) SignKeychainStorageRequestSignature(req *api.KeychainStorageRequest, pvKey string) error {
+	b, err := json.Marshal(&api.KeychainStorageRequest{
+		Data:        req.Data,
+		Endorsement: req.Endorsement,
+	})
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	req.Signature = sig
+	return nil
+}
+
+func (s signer) SignBiometricStorageRequestSignature(req *api.BiometricStorageRequest, pvKey string) error {
+	b, err := json.Marshal(&api.BiometricStorageRequest{
+		Data:        req.Data,
+		Endorsement: req.Endorsement,
+	})
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	req.Signature = sig
+	return nil
+}
+
+func (s signer) SignLockRequest(req *api.LockRequest, pvKey string) error {
+	b, err := json.Marshal(&api.LockRequest{
+		Address:         req.Address,
+		MasterRobotKey:  req.MasterRobotKey,
+		TransactionHash: req.TransactionHash,
+	})
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	req.Signature = sig
+	return nil
+}
+
+func (s signer) SignValidation(data mining.Validation, pvKey string) (string, error) {
+	b, err := json.Marshal(validationRaw{
+		PublicKey: data.PublicKey(),
+		Status:    data.Status(),
+		Timestamp: data.Timestamp(),
+	})
 	if err != nil {
 		return "", err
 	}
-
 	return sign(pvKey, string(b))
 }
 
-func (s signer) SignLock(txLock lock.TransactionLock, pvKey string) (string, error) {
-	b, err := json.Marshal(txLock)
+func (s signer) SignValidationResponse(res *api.ValidationResponse, pvKey string) error {
+	b, err := json.Marshal(&api.ValidationResponse{
+		Validation: res.Validation,
+	})
 	if err != nil {
-		return "", err
+		return err
 	}
-
-	return sign(pvKey, string(b))
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	res.Signature = sig
+	return nil
 }
 
-func (s signer) SignBiometric(data rpc.BiometricJSON, pvKey string) (string, error) {
-	b, err := json.Marshal(data)
+func (s signer) SignLockAck(ack *api.LockAck, pvKey string) error {
+	b, err := json.Marshal(&api.LockAck{
+		LockHash: ack.LockHash,
+	})
 	if err != nil {
-		return "", err
+		return err
 	}
-
-	return sign(pvKey, string(b))
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	ack.Signature = sig
+	return nil
 }
 
-func (s signer) SignKeychain(data rpc.KeychainJSON, pvKey string) (string, error) {
-	b, err := json.Marshal(data)
+func (s signer) SignStorageAck(ack *api.StorageAck, pvKey string) error {
+	b, err := json.Marshal(&api.StorageAck{
+		StorageHash: ack.StorageHash,
+	})
 	if err != nil {
-		return "", err
+		return err
 	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	ack.Signature = sig
+	return nil
+}
 
-	return sign(pvKey, string(b))
+func (s signer) SignAccountSearchResult(res *api.AccountSearchResult, pvKey string) error {
+	b, err := json.Marshal(&api.AccountSearchResult{
+		EncryptedAddress: res.EncryptedAddress,
+		EncryptedAESkey:  res.EncryptedAESkey,
+		EncryptedWallet:  res.EncryptedWallet,
+	})
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	res.Signature = sig
+	return nil
+}
+
+func (s signer) SignCreationResult(res *api.CreationResult, pvKey string) error {
+	b, err := json.Marshal(&api.CreationResult{
+		MasterPeerIP:    res.MasterPeerIP,
+		TransactionHash: res.TransactionHash,
+	})
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	res.Signature = sig
+	return nil
 }
 
 func sign(privk string, data string) (string, error) {
@@ -145,4 +482,34 @@ func sign(privk string, data string) (string, error) {
 
 	return hex.EncodeToString(sig), nil
 
+}
+
+func checkSignature(pubk string, data string, sig string) error {
+	var signature ecdsaSignature
+
+	decodedkey, err := hex.DecodeString(pubk)
+	if err != nil {
+		return err
+	}
+
+	decodedsig, err := hex.DecodeString(sig)
+	if err != nil {
+		return err
+	}
+
+	pu, err := x509.ParsePKIXPublicKey(decodedkey)
+	if err != nil {
+		return err
+	}
+
+	ecdsaPublic := pu.(*ecdsa.PublicKey)
+	asn1.Unmarshal(decodedsig, &signature)
+
+	hash := []byte(hashString(data))
+
+	if ecdsa.Verify(ecdsaPublic, hash, signature.R, signature.S) {
+		return nil
+	}
+
+	return errors.New("Invalid signature")
 }

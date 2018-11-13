@@ -5,24 +5,18 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
-//UnsignedBiometricData defines biometric data before signature
-type UnsignedBiometricData struct {
-	PersonPublicKey     string `json:"person_pubk"`
-	BiodPublicKey       string `json:"biod_pubk"`
-	PersonHash          string `json:"person_hash"`
-	EncryptedAESKey     string `json:"encrypted_aes_key"`
-	EncryptedAddrPerson string `json:"encrypted_addr_person"`
-	EncryptedAddrRobot  string `json:"encrypted_addr_robot"`
-}
-
 //BiometricHasher define methods to hash biometric data
 type BiometricHasher interface {
-	HashUnsignedBiometricData(data UnsignedBiometricData) (string, error)
+
+	//NewBiometricDataHash creates a hash of the biometric data
+	NewBiometricDataHash(account.BiometricData) (string, error)
 }
 
 //BiometricSigner define methods to handle signatures
 type BiometricSigner interface {
-	CheckBiometricSignature(pubKey string, data UnsignedBiometricData, sig string) error
+
+	//VerifyBiometricDataSignature checks the signature of the biometric data using the shared robot public key
+	VerifyBiometricDataSignature(pubKey string, data account.BiometricData, sig string) error
 }
 
 type biometricMiner struct {
@@ -40,11 +34,11 @@ func (m biometricMiner) GetLastTransactionHash(addr string) (string, error) {
 }
 
 func (m biometricMiner) CheckAsMaster(txHash string, data interface{}) error {
-	biometric := data.(*account.BioData)
+	biometric := data.(account.BiometricData)
 	if err := m.checkDataIntegrity(txHash, biometric); err != nil {
 		return err
 	}
-	if err := m.checkDataSignature(biometric); err != nil {
+	if err := m.verifyDataSignature(biometric); err != nil {
 		return err
 	}
 
@@ -52,21 +46,19 @@ func (m biometricMiner) CheckAsMaster(txHash string, data interface{}) error {
 }
 
 func (m biometricMiner) CheckAsSlave(txHash string, data interface{}) error {
-	biometric := data.(*account.BioData)
+	biometric := data.(account.BiometricData)
 	if err := m.checkDataIntegrity(txHash, biometric); err != nil {
 		return err
 	}
-	if err := m.checkDataSignature(biometric); err != nil {
+	if err := m.verifyDataSignature(biometric); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (m biometricMiner) checkDataIntegrity(txHash string, data *account.BioData) error {
-	unsignedData := m.buildUnsignedData(data)
-
-	hash, err := m.hasher.HashUnsignedBiometricData(unsignedData)
+func (m biometricMiner) checkDataIntegrity(txHash string, data account.BiometricData) error {
+	hash, err := m.hasher.NewBiometricDataHash(data)
 	if err != nil {
 		return err
 	}
@@ -76,27 +68,14 @@ func (m biometricMiner) checkDataIntegrity(txHash string, data *account.BioData)
 	return nil
 }
 
-func (m biometricMiner) checkDataSignature(data *account.BioData) error {
-	unsignedData := m.buildUnsignedData(data)
-
-	if err := m.signer.CheckBiometricSignature(data.BiodPubk, unsignedData, data.Sigs.BiodSig); err != nil {
+func (m biometricMiner) verifyDataSignature(data account.BiometricData) error {
+	if err := m.signer.VerifyBiometricDataSignature(data.BiodPublicKey(), data, data.Signatures().Biod()); err != nil {
 		return err
 	}
 
-	if err := m.signer.CheckBiometricSignature(data.PersonPubk, unsignedData, data.Sigs.PersonSig); err != nil {
+	if err := m.signer.VerifyBiometricDataSignature(data.PersonPublicKey(), data, data.Signatures().Person()); err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (m biometricMiner) buildUnsignedData(data *account.BioData) UnsignedBiometricData {
-	return UnsignedBiometricData{
-		BiodPublicKey:       data.BiodPubk,
-		EncryptedAddrPerson: data.CipherAddrBio,
-		EncryptedAddrRobot:  data.CipherAddrRobot,
-		EncryptedAESKey:     data.CipherAESKey,
-		PersonHash:          data.PersonHash,
-		PersonPublicKey:     data.PersonPubk,
-	}
 }
