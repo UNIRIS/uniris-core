@@ -2,12 +2,12 @@ package adding
 
 //AccountCreationResult represents the result of the account creation
 type AccountCreationResult struct {
-	Transactions AccountCreationTransactions `json:"transactions" binding:"required"`
-	Signature    string                      `json:"signature" binding:"required"`
+	Transactions AccountCreationTransactionsResult `json:"transactions" binding:"required"`
+	Signature    string                            `json:"signature" binding:"required"`
 }
 
-//AccountCreationTransactions represents the transactions for the account creation
-type AccountCreationTransactions struct {
+//AccountCreationTransactionsResult represents the transactions for the account creation
+type AccountCreationTransactionsResult struct {
 	Biometric TransactionResult `json:"biometric" binding:"required"`
 	Keychain  TransactionResult `json:"keychain" binding:"required"`
 }

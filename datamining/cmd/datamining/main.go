@@ -14,7 +14,7 @@ import (
 	biodlisting "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
-	"github.com/uniris/uniris-core/datamining/pkg/transport/mock"
+	"github.com/uniris/uniris-core/datamining/pkg/mock"
 	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 
 	"github.com/uniris/uniris-core/datamining/pkg/crypto"
@@ -47,8 +47,7 @@ func main() {
 	decrypter := crypto.NewDecrypter()
 
 	rpcCrypto := rpc.NewCrypto(decrypter, signer, hasher)
-	cli := rpc.NewExternalClient(rpcCrypto, *config)
-	poolRequester := rpc.NewPoolRequester(cli, *config, rpcCrypto)
+	poolRequester := rpc.NewPoolRequester(*config, rpcCrypto)
 
 	biodLister := biodlisting.NewService(db)
 	lockSrv := lock.NewService(db)

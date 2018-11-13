@@ -1,17 +1,11 @@
 package gossip
 
 import (
-	"errors"
 	"log"
 	"time"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
 	"github.com/uniris/uniris-core/autodiscovery/pkg/monitoring"
-)
-
-var (
-	//ErrNotFoundOnUnreachableList is returned when the unreachable list does not include the searchable peer
-	ErrNotFoundOnUnreachableList = errors.New("cannot found the peer in the unreachableKeys list")
 )
 
 //Service is the interface that provide gossip methods
@@ -144,7 +138,7 @@ func (s service) handleCycleReachables(c *Cycle, eChan chan<- error) {
 		log.Printf("Gossip reached peer: %s", p.Endpoint())
 
 		err := s.repo.ContainsUnreachableKey(p.Identity().PublicKey())
-		if err != nil && err != ErrNotFoundOnUnreachableList {
+		if err != nil && err != discovery.ErrNotFoundOnUnreachableList {
 			eChan <- err
 			return
 		}
@@ -169,7 +163,7 @@ func (s service) handleCycleUnreachables(c *Cycle, uChan chan<- discovery.Peer, 
 		log.Printf("Gossip unreached peer: %s", p.Endpoint())
 		err := s.repo.ContainsUnreachableKey(p.Identity().PublicKey())
 		if err != nil {
-			if err != ErrNotFoundOnUnreachableList {
+			if err != discovery.ErrNotFoundOnUnreachableList {
 				eChan <- err
 				return
 			}

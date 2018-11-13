@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"log"
 	"net"
 	"sync"
 	"testing"
@@ -55,7 +56,8 @@ func TestGossip(t *testing.T) {
 	}()
 
 	go func() {
-		for range res.Errors {
+		for err := range res.Errors {
+			log.Print(err.Error())
 			assert.Fail(t, "Cannot have errors")
 		}
 	}()

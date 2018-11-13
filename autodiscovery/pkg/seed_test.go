@@ -1,16 +1,11 @@
 package discovery
 
 import (
-	"errors"
 	"net"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-)
-
-var (
-	ErrNotFoundOnUnreachableList = errors.New("cannot found the peer in the unreachableKeys list")
 )
 
 /*
