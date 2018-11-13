@@ -4,7 +4,6 @@ import (
 	"net"
 
 	discovery "github.com/uniris/uniris-core/autodiscovery/pkg"
-	gossip "github.com/uniris/uniris-core/autodiscovery/pkg/gossip"
 )
 
 type repo struct {
@@ -122,7 +121,7 @@ func (r *repo) ContainsUnreachableKey(pubk string) error {
 		return nil
 	}
 
-	return gossip.ErrNotFoundOnUnreachableList
+	return discovery.ErrNotFoundOnUnreachableList
 }
 
 func (r *repo) containsPeer(p discovery.Peer) bool {
