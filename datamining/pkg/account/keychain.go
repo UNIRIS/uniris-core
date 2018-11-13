@@ -4,8 +4,17 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
+//KeychainHasher defines methods to handle hash of keychain data
 type KeychainHasher interface {
+	HashKeychain(Keychain) (string, error)
 	HashKeychainData(KeychainData) (string, error)
+}
+
+//KeychainSigner define methods to handle signatures of keychain data
+type KeychainSigner interface {
+
+	//VerifyKeychainDataSignatures checks the signatures of the keychain data
+	VerifyKeychainDataSignatures(KeychainData) error
 }
 
 //KeychainData describe a keychain data

@@ -14,8 +14,6 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
-
-	accountMining "github.com/uniris/uniris-core/datamining/pkg/account/mining"
 )
 
 type ecdsaSignature struct {
@@ -25,8 +23,8 @@ type ecdsaSignature struct {
 //Signer defines methods to handle signatures
 type Signer interface {
 	mining.Signer
-	accountMining.KeychainSigner
-	accountMining.BiometricSigner
+	account.KeychainSigner
+	account.BiometricSigner
 	rpc.Signer
 }
 
@@ -40,15 +38,37 @@ func NewSigner() Signer {
 func (s signer) VerifyTransactionDataSignature(txType mining.TransactionType, pubKey string, data interface{}, sig string) error {
 	switch txType {
 	case mining.KeychainTransaction:
-		return s.VerifyKeychainDataSignature(pubKey, data.(account.KeychainData), sig)
+		kc := data.(account.KeychainData)
+		b, err := json.Marshal(keychainRaw{
+			BIODPublicKey:      kc.BiodPublicKey(),
+			EncryptedWallet:    kc.CipherWallet(),
+			EncryptedAddrRobot: kc.CipherAddrRobot(),
+			PersonPublicKey:    kc.PersonPublicKey(),
+		})
+		if err != nil {
+			return err
+		}
+		return checkSignature(pubKey, string(b), sig)
 	case mining.BiometricTransaction:
-		return s.VerifyBiometricDataSignature(pubKey, data.(account.BiometricData), sig)
+		bio := data.(account.BiometricData)
+		b, err := json.Marshal(biometricRaw{
+			BIODPublicKey:       bio.BiodPublicKey(),
+			EncryptedAddrPerson: bio.CipherAddrPerson(),
+			EncryptedAddrRobot:  bio.CipherAddrRobot(),
+			EncryptedAESKey:     bio.CipherAESKey(),
+			PersonHash:          bio.PersonHash(),
+			PersonPublicKey:     bio.PersonPublicKey(),
+		})
+		if err != nil {
+			return err
+		}
+		return checkSignature(pubKey, string(b), sig)
 	}
 
 	return mining.ErrUnsupportedTransaction
 }
 
-func (s signer) VerifyBiometricDataSignature(pubKey string, data account.BiometricData, sig string) error {
+func (s signer) VerifyBiometricDataSignatures(data account.BiometricData) error {
 	b, err := json.Marshal(biometricRaw{
 		BIODPublicKey:       data.BiodPublicKey(),
 		EncryptedAddrPerson: data.CipherAddrPerson(),
@@ -60,10 +80,16 @@ func (s signer) VerifyBiometricDataSignature(pubKey string, data account.Biometr
 	if err != nil {
 		return err
 	}
-	return checkSignature(pubKey, string(b), sig)
+	if err := checkSignature(data.PersonPublicKey(), string(b), data.Signatures().Person()); err != nil {
+		return err
+	}
+	if err := checkSignature(data.BiodPublicKey(), string(b), data.Signatures().Biod()); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (s signer) VerifyKeychainDataSignature(pubKey string, data account.KeychainData, sig string) error {
+func (s signer) VerifyKeychainDataSignatures(data account.KeychainData) error {
 	b, err := json.Marshal(keychainRaw{
 		BIODPublicKey:      data.BiodPublicKey(),
 		EncryptedWallet:    data.CipherWallet(),
@@ -73,7 +99,13 @@ func (s signer) VerifyKeychainDataSignature(pubKey string, data account.Keychain
 	if err != nil {
 		return err
 	}
-	return checkSignature(pubKey, string(b), sig)
+	if err := checkSignature(data.PersonPublicKey(), string(b), data.Signatures().Person()); err != nil {
+		return err
+	}
+	if err := checkSignature(data.BiodPublicKey(), string(b), data.Signatures().Biod()); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s signer) VerifyHashSignature(pubKey string, hash string, sig string) error {

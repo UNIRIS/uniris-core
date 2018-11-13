@@ -38,20 +38,6 @@ func TestInvalidBiometricIntegrity(t *testing.T) {
 }
 
 /*
-Scenario: Verifies the biometric data signature
-	Given biometric data
-	When I want to check if the signature match the transaction
-	Then I get no errors
-*/
-func TestBiometricSignature(t *testing.T) {
-	miner := biometricMiner{signer: mockBiometricSigner{}}
-	sig := account.NewSignatures("sig1", "sig2")
-	data := account.NewBiometricData("personHash", "enc addr", "enc addr", "enc aes key", "pub", "pub", sig)
-	err := miner.verifyDataSignature(data)
-	assert.Nil(t, err)
-}
-
-/*
 Scenario: Check biometric data as master peer
 	Given a transaction hash and biometric data
 	When I want to check it as master
@@ -81,18 +67,26 @@ func TestBiometricSlaveCheck(t *testing.T) {
 
 type mockBiometricHasher struct{}
 
-func (h mockBiometricHasher) NewBiometricDataHash(account.BiometricData) (string, error) {
+func (h mockBiometricHasher) HashBiometricData(account.BiometricData) (string, error) {
+	return "hash", nil
+}
+
+func (h mockBiometricHasher) HashBiometric(account.Biometric) (string, error) {
 	return "hash", nil
 }
 
 type mockBadBiometricHasher struct{}
 
-func (h mockBadBiometricHasher) NewBiometricDataHash(account.BiometricData) (string, error) {
+func (h mockBadBiometricHasher) HashBiometricData(account.BiometricData) (string, error) {
 	return "other hash", nil
+}
+
+func (h mockBadBiometricHasher) HashBiometric(account.Biometric) (string, error) {
+	return "hash", nil
 }
 
 type mockBiometricSigner struct{}
 
-func (s mockBiometricSigner) VerifyBiometricDataSignature(pubK string, data account.BiometricData, sig string) error {
+func (s mockBiometricSigner) VerifyBiometricDataSignatures(account.BiometricData) error {
 	return nil
 }

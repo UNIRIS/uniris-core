@@ -6,21 +6,14 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
-//KeychainSigner define methods to handle keychain signature
-type KeychainSigner interface {
-
-	//VerifyKeychainDataSignature checks the signature of the keychain data using the shared robot public key
-	VerifyKeychainDataSignature(pubKey string, data account.KeychainData, sig string) error
-}
-
 type keychainMiner struct {
-	signer    KeychainSigner
+	signer    account.KeychainSigner
 	hasher    account.KeychainHasher
 	accLister listing.Service
 }
 
 //NewKeychainMiner creates a miner for the keychain transaction
-func NewKeychainMiner(signer KeychainSigner, hasher account.KeychainHasher, accLister listing.Service) mining.TransactionMiner {
+func NewKeychainMiner(signer account.KeychainSigner, hasher account.KeychainHasher, accLister listing.Service) mining.TransactionMiner {
 	return keychainMiner{signer, hasher, accLister}
 }
 
@@ -40,7 +33,7 @@ func (m keychainMiner) CheckAsMaster(txHash string, data interface{}) error {
 	if err := m.checkDataIntegrity(txHash, keychain); err != nil {
 		return err
 	}
-	if err := m.verifyDataSignature(keychain); err != nil {
+	if err := m.signer.VerifyKeychainDataSignatures(keychain); err != nil {
 		return err
 	}
 
@@ -52,7 +45,7 @@ func (m keychainMiner) CheckAsSlave(txHash string, data interface{}) error {
 	if err := m.checkDataIntegrity(txHash, keychain); err != nil {
 		return err
 	}
-	if err := m.verifyDataSignature(keychain); err != nil {
+	if err := m.signer.VerifyKeychainDataSignatures(keychain); err != nil {
 		return err
 	}
 
@@ -66,17 +59,6 @@ func (m keychainMiner) checkDataIntegrity(txHash string, data account.KeychainDa
 	}
 	if hash != txHash {
 		return mining.ErrInvalidTransaction
-	}
-	return nil
-}
-
-func (m keychainMiner) verifyDataSignature(data account.KeychainData) error {
-	if err := m.signer.VerifyKeychainDataSignature(data.BiodPublicKey(), data, data.Signatures().Biod()); err != nil {
-		return err
-	}
-
-	if err := m.signer.VerifyKeychainDataSignature(data.PersonPublicKey(), data, data.Signatures().Person()); err != nil {
-		return err
 	}
 	return nil
 }

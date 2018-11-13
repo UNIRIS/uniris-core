@@ -1,6 +1,7 @@
 package adding
 
 import (
+	"errors"
 	"sort"
 	"testing"
 	"time"
@@ -32,7 +33,7 @@ func TestStoreKeychain(t *testing.T) {
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewKeychainData("xxx", "xxx", "xxx", "xxx", sigs)
+	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", "biod pub", sigs)
 	kc := account.NewKeychain("addr", data, end)
 
 	err := s.StoreKeychain(kc)
@@ -62,7 +63,7 @@ func TestStoreKeychainWithMasterValidKO(t *testing.T) {
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewKeychainData("xxx", "xxx", "xxx", "xxx", sigs)
+	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", "biod pub", sigs)
 	kc := account.NewKeychain("addr", data, end)
 
 	err := s.StoreKeychain(kc)
@@ -94,7 +95,7 @@ func TestStoreKeychainWithOneSlaveValidKO(t *testing.T) {
 			mining.NewValidation(mining.ValidationKO, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewKeychainData("xxx", "xxx", "xxx", "xxx", sigs)
+	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", "biod pub", sigs)
 	kc := account.NewKeychain("addr", data, end)
 
 	err := s.StoreKeychain(kc)
@@ -124,7 +125,7 @@ func TestInvalidLastTransactionKeychain(t *testing.T) {
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewKeychainData("xxx", "xxx", "xxx", "xxx", sigs)
+	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", "biod pub", sigs)
 	kc1 := account.NewKeychain("addr", data, end1)
 
 	assert.Nil(t, s.StoreKeychain(kc1))
@@ -152,6 +153,53 @@ func TestInvalidLastTransactionKeychain(t *testing.T) {
 }
 
 /*
+Scenario: Store a keychain with a zero
+	Given a keychain without validations
+	When I want to store it
+	Then I get the error
+*/
+func TestStoreKeychainWithZeroValidations(t *testing.T) {
+	repo := &databasemock{}
+	lister := listing.NewService(repo)
+	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+
+	sigs := account.NewSignatures("sig1", "sig2")
+	end := mining.NewEndorsement(
+		"", "hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		[]mining.Validation{},
+	)
+	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", "biod pub", sigs)
+	kc := account.NewKeychain("addr", data, end)
+
+	assert.Equal(t, ErrInvalidValidationNumber, s.StoreKeychain(kc))
+
+}
+
+/*
+Scenario: Store a keychain with a invalid transaction hash
+	Given a keychain with invalid tx hash
+	When I want to store it
+	Then I get the error
+*/
+func TestStoreKeychainWithInvalidTxHash(t *testing.T) {
+	repo := &databasemock{}
+	lister := listing.NewService(repo)
+	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+
+	sigs := account.NewSignatures("sig1", "sig2")
+	end := mining.NewEndorsement(
+		"", "bad hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		[]mining.Validation{
+			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
+		},
+	)
+	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", "biod pub", sigs)
+	kc := account.NewKeychain("addr", data, end)
+
+	assert.Equal(t, ErrInvalidDataIntegrity, s.StoreKeychain(kc))
+}
+
+/*
 Scenario: Store a biometric
 	Given a bio data
 	When I want to store a biometric data
@@ -170,7 +218,8 @@ func TestStoreBiometric(t *testing.T) {
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewBiometricData("pHash", "xxx", "xxx", "xxx", "xxx", "xxx", sigs)
+
+	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", "biod pub", sigs)
 	bio := account.NewBiometric(data, end)
 	err := s.StoreBiometric(bio)
 	assert.Nil(t, err)
@@ -178,6 +227,154 @@ func TestStoreBiometric(t *testing.T) {
 	assert.Equal(t, 1, l)
 	assert.Equal(t, 1, l)
 	assert.Equal(t, "pHash", repo.biometrics[0].PersonHash())
+}
+
+/*
+Scenario: Store a biometric with a zero
+	Given a biometric without validations
+	When I want to store it
+	Then I get the error
+*/
+func TestStoreBiometricWithZeroValidations(t *testing.T) {
+	repo := &databasemock{}
+	lister := listing.NewService(repo)
+	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+
+	sigs := account.NewSignatures("sig1", "sig2")
+	end := mining.NewEndorsement(
+		"", "hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		[]mining.Validation{},
+	)
+	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", "biod pub", sigs)
+	bio := account.NewBiometric(data, end)
+
+	assert.Equal(t, ErrInvalidValidationNumber, s.StoreBiometric(bio))
+
+}
+
+/*
+Scenario: Store a biometric with master validation KO
+	Given a biometric with a master validation as KO
+	When I want to store the biometric
+	Then I get the biometric is store on the KO database
+*/
+func TestStoreBiometricWithMasterValidKO(t *testing.T) {
+	repo := &databasemock{}
+
+	lister := listing.NewService(repo)
+	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+
+	sigs := account.NewSignatures("sig1", "sig2")
+
+	end := mining.NewEndorsement(
+		"", "hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationKO, time.Now(), "robotkey", "sig")),
+		[]mining.Validation{
+			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
+		},
+	)
+	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", "biod pub", sigs)
+	bio := account.NewBiometric(data, end)
+
+	err := s.StoreBiometric(bio)
+	assert.Nil(t, err)
+
+	assert.Empty(t, repo.biometrics)
+	assert.Len(t, repo.biometricsKO, 1)
+	assert.Equal(t, "enc aes key", repo.biometricsKO[0].CipherAESKey())
+}
+
+/*
+Scenario: Store a biometric with one slave validation as KO
+	Given a biometric with one slave validation as KO
+	When I want to store the keychain
+	Then I get the biometric is store on the KO database
+*/
+func TestStoreBiometricWithOneSlaveValidKO(t *testing.T) {
+	repo := &databasemock{}
+
+	lister := listing.NewService(repo)
+	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+
+	sigs := account.NewSignatures("sig1", "sig2")
+
+	end := mining.NewEndorsement(
+		"", "hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		[]mining.Validation{
+			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
+			mining.NewValidation(mining.ValidationKO, time.Now(), "pub", "sig"),
+		},
+	)
+	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", "biod pub", sigs)
+	bio := account.NewBiometric(data, end)
+
+	err := s.StoreBiometric(bio)
+	assert.Nil(t, err)
+
+	assert.Empty(t, repo.biometrics)
+	assert.Len(t, repo.biometricsKO, 1)
+	assert.Equal(t, "enc aes key", repo.biometricsKO[0].CipherAESKey())
+}
+
+/*
+Scenario: Store a biometric with a invalid transaction hash
+	Given a biometric with invalid tx hash
+	When I want to store it
+	Then I get the error
+*/
+func TestStoreBiometricWithInvalidTxHash(t *testing.T) {
+	repo := &databasemock{}
+	lister := listing.NewService(repo)
+	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+
+	sigs := account.NewSignatures("sig1", "sig2")
+	end := mining.NewEndorsement(
+		"", "bad hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		[]mining.Validation{
+			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
+		},
+	)
+	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", "biod pub", sigs)
+	bio := account.NewBiometric(data, end)
+
+	assert.Equal(t, ErrInvalidDataIntegrity, s.StoreBiometric(bio))
+}
+
+/*
+Scenario: Verify an endorsement with different masterpublic key
+	Given an endorsement with an pow validation differents than the pow public key
+	When I want to verify it
+	Then I get an error
+*/
+func TestEndorsementWithDifferenteMasterPubKey(t *testing.T) {
+	end := mining.NewEndorsement("", "hash",
+		mining.NewMasterValidation([]string{}, "pubkey", mining.NewValidation(mining.ValidationOK, time.Now(), "other pub", "sig")), nil)
+
+	s := service{}
+	assert.Equal(t, ErrInvalidDataMining, s.verifyEndorsementSignatures(end))
+}
+
+/*
+Scenario: Verify an endorsement with different masterpublic key
+	Given an endorsement with an pow validation differents than the pow public key
+	When I want to verify it
+	Then I get an error
+*/
+func TestEndorsementWithBadMasterSignature(t *testing.T) {
+	end := mining.NewEndorsement("", "hash",
+		mining.NewMasterValidation([]string{}, "pubkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "invalid sig")), nil)
+
+	s := service{
+		sigVerif: mockBadSigVerfier{},
+	}
+	assert.Equal(t, ErrInvalidDataMining, s.verifyEndorsementSignatures(end))
+
+	end2 := mining.NewEndorsement("", "hash",
+		mining.NewMasterValidation([]string{}, "pubkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "sig")),
+		[]mining.Validation{
+			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "invalid sig"),
+		},
+	)
+	assert.Equal(t, ErrInvalidDataMining, s.verifyEndorsementSignatures(end2))
 }
 
 type databasemock struct {
@@ -240,6 +437,21 @@ func (v mockSigVerfier) VerifyBiometricSignatures(account.Biometric) error {
 	return nil
 }
 func (v mockSigVerfier) VerifyValidationSignature(mining.Validation) error {
+	return nil
+}
+
+type mockBadSigVerfier struct{}
+
+func (v mockBadSigVerfier) VerifyKeychainSignatures(account.Keychain) error {
+	return nil
+}
+func (v mockBadSigVerfier) VerifyBiometricSignatures(account.Biometric) error {
+	return nil
+}
+func (v mockBadSigVerfier) VerifyValidationSignature(valid mining.Validation) error {
+	if valid.Signature() == "invalid sig" {
+		return errors.New("invalid signature")
+	}
 	return nil
 }
 

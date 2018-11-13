@@ -8,15 +8,13 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 
 	"github.com/uniris/uniris-core/datamining/pkg/account"
-	accountMining "github.com/uniris/uniris-core/datamining/pkg/account/mining"
-	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 )
 
 //Hasher defines methods for hashing
 type Hasher interface {
-	accountMining.KeychainHasher
-	accountMining.BiometricHasher
-	rpc.Hasher
+	account.KeychainHasher
+	account.BiometricHasher
+	lock.Hasher
 }
 
 type hasher struct{}
@@ -119,10 +117,6 @@ func (h hasher) HashKeychain(data account.Keychain) (string, error) {
 	return hashBytes(b), nil
 }
 
-func (h hasher) NewBiometricDataHash(data account.BiometricData) (string, error) {
-	return h.HashBiometricData(data)
-}
-
 func (h hasher) HashBiometricData(data account.BiometricData) (string, error) {
 	b, err := json.Marshal(biometricData{
 		PersonHash:          data.PersonHash(),
@@ -138,10 +132,6 @@ func (h hasher) HashBiometricData(data account.BiometricData) (string, error) {
 		return "", err
 	}
 	return hashBytes(b), nil
-}
-
-func (h hasher) NewKeychainDataHash(data account.KeychainData) (string, error) {
-	return h.HashKeychainData(data)
 }
 
 func (h hasher) HashKeychainData(data account.KeychainData) (string, error) {

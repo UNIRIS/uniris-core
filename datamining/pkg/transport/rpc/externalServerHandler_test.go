@@ -104,7 +104,7 @@ func TestLeadKeychainMining(t *testing.T) {
 
 	mineSrv := mining.NewService(notifier, poolF, poolR, mockSigner{}, biodlister, system.UnirisConfig{}, txMiners)
 
-	accSrv := accountadding.NewService(db)
+	accSrv := accountadding.NewService(db, mock)
 
 	srv := Services{accAdd: accSrv, lock: lockSrv, mining: mineSrv}
 	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}}

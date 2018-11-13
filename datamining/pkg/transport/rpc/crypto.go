@@ -41,21 +41,9 @@ type Decrypter interface {
 
 //Hasher define methods to hash incoming data
 type Hasher interface {
-
-	//HashKeychain produces a hash of the keychain
-	HashKeychain(account.Keychain) (string, error)
-
-	//HashBiometric produces a hash of the biometric
-	HashBiometric(account.Biometric) (string, error)
-
-	//HashKeychainData produces a hash of the account's keychain data
-	HashKeychainData(account.KeychainData) (string, error)
-
-	//HashBiometricData produces a hash of the account's biometric data
-	HashBiometricData(account.BiometricData) (string, error)
-
-	//HashLock produces a hash of the lock transaction
-	HashLock(txLock lock.TransactionLock) (string, error)
+	account.KeychainHasher
+	account.BiometricHasher
+	lock.Hasher
 }
 
 //Signer define methods to handle signatures

@@ -47,7 +47,7 @@ Scenario: Hash a biometric data
 */
 func TestHashBiometricData(t *testing.T) {
 	bio := account.NewBiometricData("hash", "addr", "addr", "aesKey", "pub", "pub", account.NewSignatures("sig", "sig"))
-	hash, err := NewHasher().NewBiometricDataHash(bio)
+	hash, err := NewHasher().HashBiometricData(bio)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, hash)
 }
@@ -60,7 +60,7 @@ Scenario: Hash a keychain data
 */
 func TestHashKeychainData(t *testing.T) {
 	kc := account.NewKeychainData("addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig"))
-	hash, err := NewHasher().NewKeychainDataHash(kc)
+	hash, err := NewHasher().HashKeychainData(kc)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, hash)
 }

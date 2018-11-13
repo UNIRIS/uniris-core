@@ -79,6 +79,15 @@ func (s service) StoreKeychain(kc account.Keychain) error {
 		return err
 	}
 
+	//Checks if the validations matches the required validations for this transaction
+	minValids, err := s.aiClient.GetMininumValidations(kc.Endorsement().TransactionHash())
+	if err != nil {
+		return err
+	}
+	if len(kc.Endorsement().Validations()) < minValids {
+		return ErrInvalidValidationNumber
+	}
+
 	//Checks signatures
 	if err := s.sigVerif.VerifyKeychainSignatures(kc); err != nil {
 		return err
@@ -94,15 +103,6 @@ func (s service) StoreKeychain(kc account.Keychain) error {
 	}
 	if err := s.checkKeychainEndorsementHash(kc.Endorsement(), kc, prevKc); err != nil {
 		return err
-	}
-
-	//Checks if the validations matches the required validations for this transaction
-	minValids, err := s.aiClient.GetMininumValidations(kc.Endorsement().TransactionHash())
-	if err != nil {
-		return err
-	}
-	if len(kc.Endorsement().Validations()) < minValids {
-		return ErrInvalidValidationNumber
 	}
 
 	//If the keychain contains any KO validations, it will be stored on the KO database

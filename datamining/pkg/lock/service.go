@@ -14,6 +14,13 @@ type TransactionLock struct {
 //ErrLockExisting is returned when a lock already exist
 var ErrLockExisting = errors.New("A lock already exist for this transaction")
 
+//Hasher defines methods to handle lock hashing
+type Hasher interface {
+
+	//HashLock produces a hash of the lock transaction
+	HashLock(txLock TransactionLock) (string, error)
+}
+
 //Repository defines methods to manage locks
 type Repository interface {
 

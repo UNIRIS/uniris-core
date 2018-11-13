@@ -58,20 +58,6 @@ func TestInvalidKeychainIntegrity(t *testing.T) {
 }
 
 /*
-Scenario: Verifies the keychain data signature
-	Given keychain data
-	When I want to check if the signature match the transaction
-	Then I get no errors
-*/
-func TestKeychainSignature(t *testing.T) {
-	miner := keychainMiner{signer: mockKeychainSigner{}}
-	sigs := account.NewSignatures("sig1", "sig2")
-	data := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", sigs)
-	err := miner.verifyDataSignature(data)
-	assert.Nil(t, err)
-}
-
-/*
 Scenario: Check keychain data as master peer
 	Given a transaction hash and keychain data
 	When I want to check it as master
@@ -101,18 +87,26 @@ func TestKeychainSlaveCheck(t *testing.T) {
 
 type mockKeychainHasher struct{}
 
-func (h mockKeychainHasher) NewKeychainDataHash(data account.KeychainData) (string, error) {
+func (h mockKeychainHasher) HashKeychainData(data account.KeychainData) (string, error) {
+	return "hash", nil
+}
+
+func (h mockKeychainHasher) HashKeychain(data account.Keychain) (string, error) {
 	return "hash", nil
 }
 
 type mockBadKeychainHasher struct{}
 
-func (h mockBadKeychainHasher) NewKeychainDataHash(data account.KeychainData) (string, error) {
+func (h mockBadKeychainHasher) HashKeychainData(data account.KeychainData) (string, error) {
+	return "other hash", nil
+}
+
+func (h mockBadKeychainHasher) HashKeychain(data account.Keychain) (string, error) {
 	return "other hash", nil
 }
 
 type mockKeychainSigner struct{}
 
-func (s mockKeychainSigner) VerifyKeychainDataSignature(pubK string, data account.KeychainData, sig string) error {
+func (s mockKeychainSigner) VerifyKeychainDataSignatures(account.KeychainData) error {
 	return nil
 }
