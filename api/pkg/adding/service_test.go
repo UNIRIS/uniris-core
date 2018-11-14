@@ -9,16 +9,12 @@ import (
 
 /*
 Scenario: Enroll an user
-	Given a encrypted public key and a signature
+	Given a account creation request and a signature
 	When I want to get the account details
 	Then I can get the encrypted data from the roboto
 */
 func TestAddAccount(t *testing.T) {
-	s := service{
-		client:       mockClient{},
-		sigVerif:     mockGoodSignatureVerifer{},
-		sharedBioPub: "my key",
-	}
+	s := NewService("my key", mockClient{}, mockGoodSignatureVerifer{})
 
 	req := AccountCreationRequest{
 		EncryptedBioData:      "encrypted bio data",
@@ -42,17 +38,13 @@ func TestAddAccount(t *testing.T) {
 }
 
 /*
-Scenario: Catch invalid signature when get account's details from the robot
-	Given a encrypted public key and a invalid signature
-	When I want to get the account details
+Scenario: Catch invalid signature when create account's
+	Given a account creation request and an invalid signature
+	When I want to create an account
 	Then I get an error
 */
 func TestAddAccountInvalidSig(t *testing.T) {
-	s := service{
-		client:       mockClient{},
-		sigVerif:     mockBadSignatureVerifer{},
-		sharedBioPub: "my key",
-	}
+	s := NewService("my key", mockClient{}, mockBadSignatureVerifer{})
 
 	req := AccountCreationRequest{
 		EncryptedBioData:      "encrypted bio data",
@@ -72,6 +64,44 @@ func TestAddAccountInvalidSig(t *testing.T) {
 	assert.Equal(t, err, errors.New("Invalid signature"))
 }
 
+/*
+Scenario: Register biometric device public key
+	Given a encrypted biometric public key
+	When I want to store
+	Then I the key is stored
+*/
+func TestRegisterBiod(t *testing.T) {
+	s := NewService("my key", mockClient{}, mockGoodSignatureVerifer{})
+
+	req := BiodRegisterRequest{
+		EncryptedPublicKey: "pub key",
+		Signature:          "sig",
+	}
+
+	res, err := s.RegisterBiod(req)
+	assert.Nil(t, err)
+	assert.Equal(t, "hash", res.PublicKeyHash)
+	assert.Equal(t, "sig", res.Signature)
+}
+
+/*
+Scenario: Catch invalid signature when register biometric device
+	Given a encrypted public key and a invalid signature
+	When I want to store the biometric device
+	Then I get an error
+*/
+func TestRegisterBiodInvalidSig(t *testing.T) {
+	s := NewService("my key", mockClient{}, mockBadSignatureVerifer{})
+
+	req := BiodRegisterRequest{
+		EncryptedPublicKey: "pub key",
+		Signature:          "sig",
+	}
+
+	_, err := s.RegisterBiod(req)
+	assert.Equal(t, "Invalid signature", err.Error())
+}
+
 type mockClient struct{}
 
 func (c mockClient) AddAccount(AccountCreationRequest) (*AccountCreationResult, error) {
@@ -88,14 +118,28 @@ func (c mockClient) AddAccount(AccountCreationRequest) (*AccountCreationResult, 
 	}, nil
 }
 
+func (mockClient) RegisterBiod(encPubKey string) (*BiodRegisterResponse, error) {
+	return &BiodRegisterResponse{
+		PublicKeyHash: "hash",
+		Signature:     "sig",
+	}, nil
+}
+
 type mockGoodSignatureVerifer struct{}
 
 func (v mockGoodSignatureVerifer) VerifyAccountCreationRequestSignature(data AccountCreationRequest, pubKey string) error {
+	return nil
+}
+func (v mockGoodSignatureVerifer) VerifyBiodRegisteringRequestSignature(req BiodRegisterRequest, pubKey string) error {
 	return nil
 }
 
 type mockBadSignatureVerifer struct{}
 
 func (v mockBadSignatureVerifer) VerifyAccountCreationRequestSignature(data AccountCreationRequest, pubKey string) error {
+	return errors.New("Invalid signature")
+}
+
+func (v mockBadSignatureVerifer) VerifyBiodRegisteringRequestSignature(req BiodRegisterRequest, pubKey string) error {
 	return errors.New("Invalid signature")
 }

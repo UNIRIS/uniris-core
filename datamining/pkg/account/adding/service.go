@@ -89,10 +89,13 @@ func (s service) StoreKeychain(kc account.Keychain) error {
 	}
 
 	//Check the POW
-	matchedKey := kc.Endorsement().MasterValidation().ProofOfWorkKey()
-	biodSig := kc.Signatures().Biod()
-	if err := s.sigVerif.VerifyTransactionDataSignature(mining.KeychainTransaction, matchedKey, kc, biodSig); err != nil {
-		return ErrInvalidDataMining
+	mv := kc.Endorsement().MasterValidation()
+	if mv.ProofOfWorkValidation().Status() == mining.ValidationOK {
+		matchedKey := mv.ProofOfWorkKey()
+		biodSig := kc.Signatures().Biod()
+		if err := s.sigVerif.VerifyTransactionDataSignature(mining.KeychainTransaction, matchedKey, kc, biodSig); err != nil {
+			return ErrInvalidDataMining
+		}
 	}
 
 	//Checks signatures
@@ -127,10 +130,13 @@ func (s service) StoreBiometric(bio account.Biometric) error {
 	}
 
 	//Check the POW
-	matchedKey := bio.Endorsement().MasterValidation().ProofOfWorkKey()
-	biodSig := bio.Signatures().Biod()
-	if err := s.sigVerif.VerifyTransactionDataSignature(mining.BiometricTransaction, matchedKey, bio, biodSig); err != nil {
-		return ErrInvalidDataMining
+	mv := bio.Endorsement().MasterValidation()
+	if mv.ProofOfWorkValidation().Status() == mining.ValidationOK {
+		matchedKey := mv.ProofOfWorkKey()
+		biodSig := bio.Signatures().Biod()
+		if err := s.sigVerif.VerifyTransactionDataSignature(mining.BiometricTransaction, matchedKey, bio, biodSig); err != nil {
+			return ErrInvalidDataMining
+		}
 	}
 
 	//Checks signatures

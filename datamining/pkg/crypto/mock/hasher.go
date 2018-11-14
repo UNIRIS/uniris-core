@@ -12,6 +12,10 @@ func NewHasher() mockHasher {
 	return mockHasher{}
 }
 
+func (h mockHasher) HashBiodPublicKey(pubKey string) string {
+	return "hash"
+}
+
 func (h mockHasher) HashKeychain(account.Keychain) (string, error) {
 	return "hash", nil
 }

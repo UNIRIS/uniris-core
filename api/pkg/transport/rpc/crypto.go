@@ -18,6 +18,7 @@ type signatureChecker interface {
 }
 
 type signatureBuilder interface {
+	SignBiodPubHash(hash string, pvKey string) (string, error)
 	SignAccountResult(res *listing.AccountResult, pvKey string) error
 	SignAccountCreationResult(res *adding.AccountCreationResult, pvKey string) error
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	account_adding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
 	account_listing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
+	biod_adding "github.com/uniris/uniris-core/datamining/pkg/biod/adding"
 	biod_listing "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 )
@@ -15,6 +16,7 @@ type Database interface {
 	account_adding.Repository
 	account_listing.Repository
 	biod_listing.Repository
+	biod_adding.Repository
 	lock.Repository
 }
 
@@ -29,6 +31,7 @@ type mockDatabase struct {
 	Keychains    []account.Keychain
 	KOKeychains  []account.Keychain
 	Locks        []lock.TransactionLock
+	BiodPubKeys  []string
 }
 
 func (d mockDatabase) FindBiometric(hash string) (account.Biometric, error) {
@@ -55,8 +58,19 @@ func (d mockDatabase) FindLastKeychain(addr string) (account.Keychain, error) {
 	return nil, nil
 }
 
+func (d *mockDatabase) StoreBiodPublicKey(key string) error {
+	//Prevent to add multiple times
+	for _, k := range d.BiodPubKeys {
+		if k == key {
+			return nil
+		}
+	}
+	d.BiodPubKeys = append(d.BiodPubKeys, key)
+	return nil
+}
+
 func (d mockDatabase) ListBiodPubKeys() ([]string, error) {
-	return []string{"key1", "key2", "key3"}, nil
+	return d.BiodPubKeys, nil
 }
 
 func (d *mockDatabase) StoreKeychain(k account.Keychain) error {

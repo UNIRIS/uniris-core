@@ -8,6 +8,8 @@ import (
 	"golang.org/x/net/context"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
+
+	biodAdd "github.com/uniris/uniris-core/datamining/pkg/biod/adding"
 )
 
 type internalSrvHandler struct {
@@ -15,11 +17,13 @@ type internalSrvHandler struct {
 	aiClient AIClient
 	crypto   Crypto
 	conf     system.UnirisConfig
+	biodAdd  biodAdd.Service
 }
 
 //NewInternalServerHandler create a new GRPC server handler for account
-func NewInternalServerHandler(pR PoolRequester, aiClient AIClient, crypto Crypto, conf system.UnirisConfig) api.InternalServer {
+func NewInternalServerHandler(biodAdd biodAdd.Service, pR PoolRequester, aiClient AIClient, crypto Crypto, conf system.UnirisConfig) api.InternalServer {
 	return internalSrvHandler{
+		biodAdd:  biodAdd,
 		pR:       pR,
 		aiClient: aiClient,
 		crypto:   crypto,
@@ -27,7 +31,25 @@ func NewInternalServerHandler(pR PoolRequester, aiClient AIClient, crypto Crypto
 	}
 }
 
-//GetAccount implements the protobuf GetAccount request handler
+func (s internalSrvHandler) RegisterBiod(ctx context.Context, req *api.BiodRegisterRequest) (*api.BiodRegisterResponse, error) {
+	biodPubKey, err := s.crypto.decrypter.DecryptHash(req.EncryptedPublicKey, s.conf.SharedKeys.RobotPrivateKey)
+	if err != nil {
+		return nil, ErrInvalidEncryption
+	}
+
+	if err := s.biodAdd.RegisterKey(biodPubKey); err != nil {
+		return nil, err
+	}
+
+	//TODO: Handle replication
+
+	hash := s.crypto.hasher.HashBiodPublicKey(biodPubKey)
+
+	return &api.BiodRegisterResponse{
+		PublicKeyHash: hash,
+	}, nil
+}
+
 func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSearchRequest) (*api.AccountSearchResult, error) {
 	personHash, err := s.crypto.decrypter.DecryptHash(req.EncryptedHashPerson, s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {

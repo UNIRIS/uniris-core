@@ -8,11 +8,36 @@ import (
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
+	biodAdd "github.com/uniris/uniris-core/datamining/pkg/biod/adding"
 	mockcrypto "github.com/uniris/uniris-core/datamining/pkg/crypto/mock"
 	mockstorage "github.com/uniris/uniris-core/datamining/pkg/storage/mock"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 	mocktransport "github.com/uniris/uniris-core/datamining/pkg/transport/mock"
 )
+
+/*
+Scenario: Register a biometric device public key
+	Given an encrypted biod public key
+	When I want to store it
+	Then the key is stored
+*/
+func TestRegisterBiod(t *testing.T) {
+	db := mockstorage.NewDatabase()
+	biodAdder := biodAdd.NewService(db)
+
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+		hasher:    mockcrypto.NewHasher(),
+	}
+	conf := system.UnirisConfig{}
+	srvHandler := NewInternalServerHandler(biodAdder, nil, nil, crypto, conf)
+	res, err := srvHandler.RegisterBiod(context.TODO(), &api.BiodRegisterRequest{
+		EncryptedPublicKey: "enc pub key",
+	})
+	assert.Nil(t, err)
+	assert.Equal(t, "hash", res.PublicKeyHash)
+}
 
 /*
 Scenario: Get account
@@ -45,7 +70,7 @@ func TestGetAccount(t *testing.T) {
 
 	cli := mocktransport.NewExternalClient(db)
 	poolR := mocktransport.NewPoolRequester(cli)
-	srvHandler := NewInternalServerHandler(poolR, mocktransport.NewAIClient(), crypto, conf)
+	srvHandler := NewInternalServerHandler(nil, poolR, mocktransport.NewAIClient(), crypto, conf)
 
 	res, err := srvHandler.GetAccount(context.TODO(), &api.AccountSearchRequest{
 		EncryptedHashPerson: "enc person hash",
@@ -74,7 +99,7 @@ func TestCreateKeychain(t *testing.T) {
 	cli := mocktransport.NewExternalClient(db)
 	poolR := mocktransport.NewPoolRequester(cli)
 	aiCli := mocktransport.NewAIClient()
-	srvHandler := NewInternalServerHandler(poolR, aiCli, crypto, conf)
+	srvHandler := NewInternalServerHandler(nil, poolR, aiCli, crypto, conf)
 
 	res, err := srvHandler.CreateKeychain(context.TODO(), &api.KeychainCreationRequest{
 		EncryptedKeychainData: "cipher data",
@@ -107,7 +132,7 @@ func TestCreateBiometric(t *testing.T) {
 	cli := mocktransport.NewExternalClient(db)
 	poolR := mocktransport.NewPoolRequester(cli)
 	aiCli := mocktransport.NewAIClient()
-	srvHandler := NewInternalServerHandler(poolR, aiCli, crypto, conf)
+	srvHandler := NewInternalServerHandler(nil, poolR, aiCli, crypto, conf)
 
 	res, err := srvHandler.CreateBiometric(context.TODO(), &api.BiometricCreationRequest{
 		EncryptedBiometricData: "cipher data",

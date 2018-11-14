@@ -5,9 +5,18 @@ import "common.proto";
 package api;
 
 service Internal {
+    rpc RegisterBiod(BiodRegisterRequest) returns(BiodRegisterResponse) {}
     rpc GetAccount (AccountSearchRequest) returns (AccountSearchResult) {}
     rpc CreateKeychain(KeychainCreationRequest) returns (CreationResult) {}
     rpc CreateBiometric(BiometricCreationRequest) returns (CreationResult) {}
+}
+
+message BiodRegisterRequest {
+    string EncryptedPublicKey = 1;
+}
+
+message BiodRegisterResponse {
+    string PublicKeyHash = 1;
 }
 
 message AccountSearchRequest {

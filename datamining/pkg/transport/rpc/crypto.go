@@ -44,6 +44,9 @@ type Hasher interface {
 	account.KeychainHasher
 	account.BiometricHasher
 	lock.Hasher
+
+	//HashBiodPublicKey produces a hash of the decrypted biometric device's public key
+	HashBiodPublicKey(string) string
 }
 
 //Signer define methods to handle signatures

@@ -19,8 +19,34 @@ produces:
 tags:
   - name: Account
     description: Manage and query accounts
+  - name: Biometric
+    description: Manage biometric devices
 
 paths:
+
+  /biod:
+    post:
+      tags:
+        - Biometric
+      summary: Register a new biometric device
+      operationId: registerBiod
+      parameters:
+        - name: biod
+          required: true
+          in: body
+          schema:
+            $ref: "#/definitions/BiodRegisterRequest"
+          description: Biometric device register request
+      responses:
+        "201":
+          description: "Biometric device register response"
+          schema:
+            $ref: "#/definitions/BiodRegisterResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/Error"
+
   /account:
     post:
       tags:
@@ -211,3 +237,27 @@ definitions:
       signature:
         type: string
         description: Signature of the person
+
+  BiodRegisterRequest:
+    required:
+      - encrypted_public_key
+      - signature
+    properties:
+      encrypted_public_key:
+        type: string
+        description: Encrypted biometric device's public key
+      signature:
+        type: string
+        description: Request's signature
+
+  BiodRegisterRequest:
+    required:
+      - public_key_hash
+      - signature
+    properties:
+      public_key_hash:
+        type: string
+        descripion: Biometric public key hash
+      signature:
+        type: string
+        description: Response's signature

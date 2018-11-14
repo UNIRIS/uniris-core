@@ -55,6 +55,10 @@ func NewSigner() Signer {
 	return signer{}
 }
 
+func (s signer) VerifyBiodRegisteringRequestSignature(req adding.BiodRegisterRequest, pubKey string) error {
+	return checkSignature(pubKey, req.EncryptedPublicKey, req.Signature)
+}
+
 func (s signer) VerifyAccountCreationRequestSignature(data adding.AccountCreationRequest, pubKey string) error {
 	b, err := json.Marshal(struct {
 		EncryptedBioData      string     `json:"encrypted_bio_data"`
@@ -104,6 +108,10 @@ func (s signer) VerifyCreationResultSignature(pubKey string, res *api.CreationRe
 		return err
 	}
 	return checkSignature(pubKey, string(b), res.Signature)
+}
+
+func (s signer) SignBiodPubHash(hash string, pvKey string) (string, error) {
+	return sign(pvKey, hash)
 }
 
 func (s signer) SignAccountResult(res *listing.AccountResult, pvKey string) error {

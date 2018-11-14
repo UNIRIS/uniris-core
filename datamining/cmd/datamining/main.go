@@ -11,7 +11,8 @@ import (
 	accountAdding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
 	accountListing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
 	accountMining "github.com/uniris/uniris-core/datamining/pkg/account/mining"
-	biodlisting "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
+	biodAdding "github.com/uniris/uniris-core/datamining/pkg/biod/adding"
+	biodListing "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
@@ -51,7 +52,8 @@ func main() {
 	grpcClient := rpc.NewExternalClient(rpcCrypto, *config)
 	poolRequester := rpc.NewPoolRequester(grpcClient, *config, rpcCrypto)
 
-	biodLister := biodlisting.NewService(db)
+	biodAdder := biodAdding.NewService(db)
+	biodLister := biodListing.NewService(db)
 	lockSrv := lock.NewService(db)
 	accountLister := accountListing.NewService(db)
 	accountAdder := accountAdding.NewService(aiClient, db, accountLister, signer, hasher)
@@ -75,7 +77,7 @@ func main() {
 	log.Print("DataMining Service starting...")
 
 	go func() {
-		internalHandler := rpc.NewInternalServerHandler(poolRequester, aiClient, rpcCrypto, *config)
+		internalHandler := rpc.NewInternalServerHandler(biodAdder, poolRequester, aiClient, rpcCrypto, *config)
 
 		//Starts Internal grpc server
 		if err := startInternalServer(internalHandler, config.Datamining.InternalPort); err != nil {

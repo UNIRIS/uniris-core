@@ -31,6 +31,37 @@ func NewRobotClient(conf system.UnirisConfig, sigHandler SignatureHandler) Robot
 	return robotClient{conf, sigHandler}
 }
 
+func (c robotClient) RegisterBiod(encPubKey string) (*adding.BiodRegisterResponse, error) {
+	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Datamining.InternalPort)
+	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	defer conn.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	client := api.NewInternalClient(conn)
+
+	res, err := client.RegisterBiod(context.Background(), &api.BiodRegisterRequest{
+		EncryptedPublicKey: encPubKey,
+	})
+
+	if err != nil {
+		s, _ := status.FromError(err)
+		return nil, errors.New(s.Message())
+	}
+
+	sig, err := c.sigHandler.SignBiodPubHash(res.PublicKeyHash, c.conf.SharedKeys.RobotPrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return &adding.BiodRegisterResponse{
+		PublicKeyHash: res.PublicKeyHash,
+		Signature:     sig,
+	}, nil
+}
+
 func (c robotClient) GetAccount(encHash string) (*listing.AccountResult, error) {
 	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Datamining.InternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())

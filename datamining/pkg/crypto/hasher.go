@@ -6,15 +6,14 @@ import (
 	"encoding/json"
 
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
+	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 )
 
 //Hasher defines methods for hashing
 type Hasher interface {
-	account.KeychainHasher
-	account.BiometricHasher
-	lock.Hasher
+	rpc.Hasher
 }
 
 type hasher struct{}
@@ -22,6 +21,10 @@ type hasher struct{}
 //NewHasher creates new hasher
 func NewHasher() Hasher {
 	return hasher{}
+}
+
+func (h hasher) HashBiodPublicKey(key string) string {
+	return hashString(key)
 }
 
 func (h hasher) HashLock(txLock lock.TransactionLock) (string, error) {

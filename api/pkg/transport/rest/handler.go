@@ -22,9 +22,36 @@ func Handler(r *gin.Engine, robotPvKey string, l listing.Service, a adding.Servi
 
 	api := r.Group("/api")
 	{
+		api.POST("/biod", registerBiod(a, robotPvKey))
 		api.POST("/account", createAccount(a, robotPvKey))
 		api.HEAD("/account/:hash", checkAccount(l, robotPvKey))
 		api.GET("/account/:hash", getAccount(l, robotPvKey))
+	}
+}
+
+func registerBiod(a adding.Service, robotPvKey string) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		var req adding.BiodRegisterRequest
+
+		if err := c.ShouldBindJSON(&req); err != nil {
+			e := createError(http.StatusBadRequest, err, robotPvKey)
+			c.JSON(e.Code, e)
+			return
+		}
+
+		res, err := a.RegisterBiod(req)
+		if err != nil {
+			if err == crypto.ErrInvalidSignature {
+				e := createError(http.StatusBadRequest, err, robotPvKey)
+				c.JSON(e.Code, e)
+				return
+			}
+			e := createError(http.StatusInternalServerError, err, robotPvKey)
+			c.JSON(e.Code, e)
+			return
+		}
+
+		c.JSON(http.StatusCreated, res)
 	}
 }
 
