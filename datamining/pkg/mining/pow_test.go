@@ -88,8 +88,8 @@ func (s mockPowSigner) VerifyTransactionDataSignature(txType TransactionType, pu
 	return nil
 }
 
-func (s mockPowSigner) SignValidation(v Validation, pvKey string) (string, error) {
-	return "sig", nil
+func (s mockPowSigner) SignValidation(v Validation, pvKey string) (Validation, error) {
+	return NewValidation(v.Status(), v.Timestamp(), v.PublicKey(), "sig"), nil
 }
 
 type mockBadPowSigner struct{}
@@ -98,6 +98,6 @@ func (s mockBadPowSigner) VerifyTransactionDataSignature(txType TransactionType,
 	return errors.New("Invalid signature")
 }
 
-func (s mockBadPowSigner) SignValidation(v Validation, pvKey string) (string, error) {
-	return "sig", nil
+func (s mockBadPowSigner) SignValidation(v Validation, pvKey string) (Validation, error) {
+	return NewValidation(v.Status(), v.Timestamp(), v.PublicKey(), "sig"), nil
 }

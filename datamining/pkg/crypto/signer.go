@@ -22,9 +22,11 @@ type ecdsaSignature struct {
 
 //Signer defines methods to handle signatures
 type Signer interface {
-	mining.Signer
-	account.KeychainSigner
-	account.BiometricSigner
+	mining.PowSigVerifier
+	mining.ValidationVerifier
+	mining.ValidationSigner
+	account.KeychainSignatureVerifier
+	account.BiometricSignatureVerifier
 	rpc.Signer
 }
 
@@ -246,6 +248,18 @@ func (s signer) VerifyBiometricResponseSignature(pubKey string, res *api.Biometr
 	return checkSignature(pubKey, string(b), res.Signature)
 }
 
+func (s signer) VerifyValidationSignature(v mining.Validation) error {
+	b, err := json.Marshal(validationRaw{
+		PublicKey: v.PublicKey(),
+		Status:    v.Status(),
+		Timestamp: v.Timestamp(),
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(v.PublicKey(), string(b), v.Signature())
+}
+
 func (s signer) SignBiometricResponse(res *api.BiometricResponse, pvKey string) error {
 	b, err := json.Marshal(&api.BiometricResponse{
 		Data:        res.Data,
@@ -399,16 +413,21 @@ func (s signer) SignLockRequest(req *api.LockRequest, pvKey string) error {
 	return nil
 }
 
-func (s signer) SignValidation(data mining.Validation, pvKey string) (string, error) {
+func (s signer) SignValidation(v mining.Validation, pvKey string) (mining.Validation, error) {
 	b, err := json.Marshal(validationRaw{
-		PublicKey: data.PublicKey(),
-		Status:    data.Status(),
-		Timestamp: data.Timestamp(),
+		PublicKey: v.PublicKey(),
+		Status:    v.Status(),
+		Timestamp: v.Timestamp(),
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return sign(pvKey, string(b))
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return nil, err
+	}
+
+	return mining.NewValidation(v.Status(), v.Timestamp(), v.PublicKey(), sig), nil
 }
 
 func (s signer) SignValidationResponse(res *api.ValidationResponse, pvKey string) error {

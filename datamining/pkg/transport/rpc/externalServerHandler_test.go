@@ -19,6 +19,7 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
+	mocktransport "github.com/uniris/uniris-core/datamining/pkg/transport/mock"
 )
 
 /*
@@ -104,7 +105,8 @@ func TestLeadKeychainMining(t *testing.T) {
 
 	mineSrv := mining.NewService(notifier, poolF, poolR, mockSigner{}, biodlister, system.UnirisConfig{}, txMiners)
 
-	accSrv := accountadding.NewService(db, mock)
+	ai := mocktransport.NewAIClient()
+	accSrv := accountadding.NewService(ai, db, mockSigner{}, accLister)
 
 	srv := Services{accAdd: accSrv, lock: lockSrv, mining: mineSrv}
 	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}}
@@ -339,7 +341,10 @@ Scenario: Store keychain transaction
 */
 func TestStoreKeychain(t *testing.T) {
 	db := &mockDatabase{}
-	accAdder := accountadding.NewService(db)
+
+	aiClient := mocktransport.NewAIClient()
+	accLister := accountListing.NewService(db)
+	accAdder := accountadding.NewService(aiClient, db, mockSigner{}, accLister, mockHasher{})
 
 	services := Services{accAdd: accAdder}
 	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}, hasher: mockHasher{}}

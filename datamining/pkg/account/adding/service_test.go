@@ -23,7 +23,7 @@ func TestStoreKeychain(t *testing.T) {
 	repo := &databasemock{}
 
 	lister := listing.NewService(repo)
-	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
 	sigs := account.NewSignatures("sig1", "sig2")
 
@@ -53,7 +53,7 @@ func TestStoreKeychainWithMasterValidKO(t *testing.T) {
 	repo := &databasemock{}
 
 	lister := listing.NewService(repo)
-	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
 	sigs := account.NewSignatures("sig1", "sig2")
 
@@ -85,7 +85,7 @@ func TestStoreKeychainWithOneSlaveValidKO(t *testing.T) {
 	repo := &databasemock{}
 
 	lister := listing.NewService(repo)
-	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 	sigs := account.NewSignatures("sig1", "sig2")
 
 	end := mining.NewEndorsement(
@@ -116,7 +116,7 @@ Scenario: Store a keychain with a invalid last transaction hash
 func TestInvalidLastTransactionKeychain(t *testing.T) {
 	repo := &databasemock{}
 	lister := listing.NewService(repo)
-	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
 	sigs := account.NewSignatures("sig1", "sig2")
 	end1 := mining.NewEndorsement(
@@ -161,7 +161,7 @@ Scenario: Store a keychain with a zero
 func TestStoreKeychainWithZeroValidations(t *testing.T) {
 	repo := &databasemock{}
 	lister := listing.NewService(repo)
-	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
 	sigs := account.NewSignatures("sig1", "sig2")
 	end := mining.NewEndorsement(
@@ -184,7 +184,7 @@ Scenario: Store a keychain with a invalid transaction hash
 func TestStoreKeychainWithInvalidTxHash(t *testing.T) {
 	repo := &databasemock{}
 	lister := listing.NewService(repo)
-	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
 	sigs := account.NewSignatures("sig1", "sig2")
 	end := mining.NewEndorsement(
@@ -208,7 +208,7 @@ Scenario: Store a biometric
 func TestStoreBiometric(t *testing.T) {
 	repo := &databasemock{}
 	lister := listing.NewService(repo)
-	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
 	sigs := account.NewSignatures("sig1", "sig2")
 
@@ -238,7 +238,7 @@ Scenario: Store a biometric with a zero
 func TestStoreBiometricWithZeroValidations(t *testing.T) {
 	repo := &databasemock{}
 	lister := listing.NewService(repo)
-	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
 	sigs := account.NewSignatures("sig1", "sig2")
 	end := mining.NewEndorsement(
@@ -262,7 +262,7 @@ func TestStoreBiometricWithMasterValidKO(t *testing.T) {
 	repo := &databasemock{}
 
 	lister := listing.NewService(repo)
-	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
 	sigs := account.NewSignatures("sig1", "sig2")
 
@@ -293,7 +293,7 @@ func TestStoreBiometricWithOneSlaveValidKO(t *testing.T) {
 	repo := &databasemock{}
 
 	lister := listing.NewService(repo)
-	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
 	sigs := account.NewSignatures("sig1", "sig2")
 
@@ -324,7 +324,7 @@ Scenario: Store a biometric with a invalid transaction hash
 func TestStoreBiometricWithInvalidTxHash(t *testing.T) {
 	repo := &databasemock{}
 	lister := listing.NewService(repo)
-	s := NewService(mockAiClient{}, repo, mockSigVerfier{}, lister, mockHasher{})
+	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
 	sigs := account.NewSignatures("sig1", "sig2")
 	end := mining.NewEndorsement(
@@ -430,10 +430,10 @@ func (d *databasemock) FindLastKeychain(addr string) (account.Keychain, error) {
 
 type mockSigVerfier struct{}
 
-func (v mockSigVerfier) VerifyKeychainSignatures(account.Keychain) error {
+func (v mockSigVerfier) VerifyKeychainDataSignatures(account.KeychainData) error {
 	return nil
 }
-func (v mockSigVerfier) VerifyBiometricSignatures(account.Biometric) error {
+func (v mockSigVerfier) VerifyBiometricDataSignatures(account.BiometricData) error {
 	return nil
 }
 func (v mockSigVerfier) VerifyValidationSignature(mining.Validation) error {
@@ -442,10 +442,10 @@ func (v mockSigVerfier) VerifyValidationSignature(mining.Validation) error {
 
 type mockBadSigVerfier struct{}
 
-func (v mockBadSigVerfier) VerifyKeychainSignatures(account.Keychain) error {
+func (v mockBadSigVerfier) VerifyKeychainDataSignatures(account.KeychainData) error {
 	return nil
 }
-func (v mockBadSigVerfier) VerifyBiometricSignatures(account.Biometric) error {
+func (v mockBadSigVerfier) VerifyBiometricDataSignatures(account.BiometricData) error {
 	return nil
 }
 func (v mockBadSigVerfier) VerifyValidationSignature(valid mining.Validation) error {

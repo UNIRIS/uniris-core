@@ -41,9 +41,9 @@ type TransactionMiner interface {
 	CheckAsSlave(txHash string, data interface{}) error
 }
 
-//Signer defines methods to handle lead mining signing
-type Signer interface {
-	PowSigner
+type signer interface {
+	PowSigVerifier
+	ValidationSigner
 }
 
 //Service defines methods for global mining
@@ -70,15 +70,15 @@ type service struct {
 	notif      Notifier
 	poolF      PoolFinder
 	poolR      PoolRequester
-	signer     Signer
+	signer     signer
 	biodLister biodlisting.Service
 	config     system.UnirisConfig
 	txMiners   map[TransactionType]TransactionMiner
 }
 
 //NewService creates a new global mining service
-func NewService(n Notifier, pF PoolFinder, pR PoolRequester, sig Signer, biodLister biodlisting.Service, config system.UnirisConfig, txMiners map[TransactionType]TransactionMiner) Service {
-	return service{n, pF, pR, sig, biodLister, config, txMiners}
+func NewService(n Notifier, pF PoolFinder, pR PoolRequester, signer signer, biodLister biodlisting.Service, config system.UnirisConfig, txMiners map[TransactionType]TransactionMiner) Service {
+	return service{n, pF, pR, signer, biodLister, config, txMiners}
 }
 
 func (s service) LeadMining(txHash string, addr string, data interface{}, vPool datamining.Pool, txType TransactionType, biodSig string) error {
@@ -230,9 +230,9 @@ func (s service) buildValidation(status ValidationStatus) (Validation, error) {
 		status:    status,
 		timestamp: time.Now(),
 	}
-	signature, err := s.signer.SignValidation(v, s.config.SharedKeys.RobotPrivateKey)
+	sValid, err := s.signer.SignValidation(v, s.config.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, err
 	}
-	return NewValidation(v.status, v.timestamp, v.pubk, signature), nil
+	return sValid, nil
 }

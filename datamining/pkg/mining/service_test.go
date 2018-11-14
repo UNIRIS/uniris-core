@@ -145,8 +145,8 @@ func (s mockSrvSigner) VerifyTransactionDataSignature(txType TransactionType, pu
 	return nil
 }
 
-func (s mockSrvSigner) SignValidation(v Validation, pvKey string) (string, error) {
-	return "sig", nil
+func (s mockSrvSigner) SignValidation(v Validation, pvKey string) (Validation, error) {
+	return NewValidation(v.Status(), v.Timestamp(), v.PublicKey(), "sig"), nil
 }
 
 type mockMiner struct{}

@@ -7,14 +7,14 @@ import (
 )
 
 type keychainMiner struct {
-	signer    account.KeychainSigner
-	hasher    account.KeychainHasher
-	accLister listing.Service
+	sigVerifier account.KeychainSignatureVerifier
+	hasher      account.KeychainHasher
+	accLister   listing.Service
 }
 
 //NewKeychainMiner creates a miner for the keychain transaction
-func NewKeychainMiner(signer account.KeychainSigner, hasher account.KeychainHasher, accLister listing.Service) mining.TransactionMiner {
-	return keychainMiner{signer, hasher, accLister}
+func NewKeychainMiner(sigVerifier account.KeychainSignatureVerifier, hasher account.KeychainHasher, accLister listing.Service) mining.TransactionMiner {
+	return keychainMiner{sigVerifier, hasher, accLister}
 }
 
 func (m keychainMiner) GetLastTransactionHash(addr string) (string, error) {
@@ -33,7 +33,7 @@ func (m keychainMiner) CheckAsMaster(txHash string, data interface{}) error {
 	if err := m.checkDataIntegrity(txHash, keychain); err != nil {
 		return err
 	}
-	if err := m.signer.VerifyKeychainDataSignatures(keychain); err != nil {
+	if err := m.sigVerifier.VerifyKeychainDataSignatures(keychain); err != nil {
 		return err
 	}
 
@@ -45,7 +45,7 @@ func (m keychainMiner) CheckAsSlave(txHash string, data interface{}) error {
 	if err := m.checkDataIntegrity(txHash, keychain); err != nil {
 		return err
 	}
-	if err := m.signer.VerifyKeychainDataSignatures(keychain); err != nil {
+	if err := m.sigVerifier.VerifyKeychainDataSignatures(keychain); err != nil {
 		return err
 	}
 

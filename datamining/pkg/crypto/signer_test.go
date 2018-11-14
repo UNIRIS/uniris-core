@@ -580,3 +580,22 @@ func TestSignAndVerifyKeychainResponseSignature(t *testing.T) {
 
 	assert.Nil(t, NewSigner().VerifyKeychainResponseSignature(hex.EncodeToString(pubKey), res))
 }
+
+/*
+Scenario: Sign and checks validation signature
+	Given a validation and a key pair
+	When I want to sign the validation and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndVerifyValidationSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	v := mining.NewValidation(mining.ValidationOK, time.Now(), hex.EncodeToString(pubKey), "")
+	sValid, err := NewSigner().SignValidation(v, hex.EncodeToString(pvKey))
+	assert.Nil(t, err)
+	assert.NotEmpty(t, sValid.Signature())
+
+	assert.Nil(t, NewSigner().VerifyValidationSignature(sValid))
+}

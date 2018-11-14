@@ -7,23 +7,13 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/biod/listing"
 )
 
-//PowSigner defines methods to handle signatures
-type PowSigner interface {
-
-	//SignValidation create signature for a validation data
-	SignValidation(v Validation, pvKey string) (string, error)
-
-	//VerifyTransactionDataSignature checks the transaction data signature
-	VerifyTransactionDataSignature(txType TransactionType, pubKey string, data interface{}, sig string) error
-}
-
 type pow struct {
 	txType      TransactionType
 	txData      interface{}
 	lastVPool   datamining.Pool
 	txBiodSig   string
 	lister      listing.Service
-	signer      PowSigner
+	signer      signer
 	robotPubKey string
 	robotPvKey  string
 }
@@ -49,21 +39,15 @@ func (p pow) execute() (MasterValidation, error) {
 		status:    status,
 		timestamp: time.Now(),
 	}
-	signature, err := p.signer.SignValidation(v, p.robotPvKey)
+	sValid, err := p.signer.SignValidation(v, p.robotPvKey)
 	if err != nil {
 		return nil, err
 	}
-
-	valid := NewValidation(
-		v.status,
-		v.timestamp,
-		v.pubk,
-		signature)
 
 	lastTxMiners := make([]string, 0)
 	for _, peer := range p.lastVPool.Peers() {
 		lastTxMiners = append(lastTxMiners, peer.PublicKey)
 	}
 
-	return NewMasterValidation(lastTxMiners, p.robotPubKey, valid), nil
+	return NewMasterValidation(lastTxMiners, p.robotPubKey, sValid), nil
 }

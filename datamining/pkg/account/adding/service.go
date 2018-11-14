@@ -17,13 +17,6 @@ var ErrInvalidDataMining = errors.New("Mining is invalid")
 //ErrInvalidValidationNumber is returned when the validations number is not reached
 var ErrInvalidValidationNumber = errors.New("Invalid validations number")
 
-//SignatureVerifier handles the verification of the account data signatures
-type SignatureVerifier interface {
-	VerifyKeychainSignatures(account.Keychain) error
-	VerifyBiometricSignatures(account.Biometric) error
-	VerifyValidationSignature(mining.Validation) error
-}
-
 //Repository handles account storage
 type Repository interface {
 	//StoreKeychain persists the keychain
@@ -55,6 +48,12 @@ type Service interface {
 	StoreBiometric(account.Biometric) error
 }
 
+type signatureVerifier interface {
+	account.KeychainSignatureVerifier
+	account.BiometricSignatureVerifier
+	mining.ValidationVerifier
+}
+
 type hasher interface {
 	account.KeychainHasher
 	account.BiometricHasher
@@ -63,14 +62,14 @@ type hasher interface {
 type service struct {
 	aiClient AIClient
 	repo     Repository
-	sigVerif SignatureVerifier
 	lister   listing.Service
+	sigVerif signatureVerifier
 	hasher   hasher
 }
 
 //NewService creates a new adding service
-func NewService(aiClient AIClient, repo Repository, sigVerif SignatureVerifier, lister listing.Service, hash hasher) Service {
-	return service{aiClient, repo, sigVerif, lister, hash}
+func NewService(aiClient AIClient, repo Repository, lister listing.Service, sigVerif signatureVerifier, hash hasher) Service {
+	return service{aiClient, repo, lister, sigVerif, hash}
 }
 
 func (s service) StoreKeychain(kc account.Keychain) error {
@@ -89,7 +88,7 @@ func (s service) StoreKeychain(kc account.Keychain) error {
 	}
 
 	//Checks signatures
-	if err := s.sigVerif.VerifyKeychainSignatures(kc); err != nil {
+	if err := s.sigVerif.VerifyKeychainDataSignatures(kc); err != nil {
 		return err
 	}
 	if err := s.verifyEndorsementSignatures(kc.Endorsement()); err != nil {
@@ -120,7 +119,7 @@ func (s service) StoreBiometric(bio account.Biometric) error {
 	}
 
 	//Checks signatures
-	if err := s.sigVerif.VerifyBiometricSignatures(bio); err != nil {
+	if err := s.sigVerif.VerifyBiometricDataSignatures(bio); err != nil {
 		return err
 	}
 	if err := s.verifyEndorsementSignatures(bio.Endorsement()); err != nil {

@@ -6,13 +6,13 @@ import (
 )
 
 type biometricMiner struct {
-	signer account.BiometricSigner
-	hasher account.BiometricHasher
+	sigVerifier account.BiometricSignatureVerifier
+	hasher      account.BiometricHasher
 }
 
 //NewBiometricMiner creates a miner for the biometric transaction
-func NewBiometricMiner(signer account.BiometricSigner, hasher account.BiometricHasher) mining.TransactionMiner {
-	return biometricMiner{signer, hasher}
+func NewBiometricMiner(sigVerifier account.BiometricSignatureVerifier, hasher account.BiometricHasher) mining.TransactionMiner {
+	return biometricMiner{sigVerifier, hasher}
 }
 
 func (m biometricMiner) GetLastTransactionHash(addr string) (string, error) {
@@ -24,7 +24,7 @@ func (m biometricMiner) CheckAsMaster(txHash string, data interface{}) error {
 	if err := m.checkDataIntegrity(txHash, biometric); err != nil {
 		return err
 	}
-	if err := m.signer.VerifyBiometricDataSignatures(biometric); err != nil {
+	if err := m.sigVerifier.VerifyBiometricDataSignatures(biometric); err != nil {
 		return err
 	}
 
@@ -36,7 +36,7 @@ func (m biometricMiner) CheckAsSlave(txHash string, data interface{}) error {
 	if err := m.checkDataIntegrity(txHash, biometric); err != nil {
 		return err
 	}
-	if err := m.signer.VerifyBiometricDataSignatures(biometric); err != nil {
+	if err := m.sigVerifier.VerifyBiometricDataSignatures(biometric); err != nil {
 		return err
 	}
 

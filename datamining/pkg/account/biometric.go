@@ -4,19 +4,6 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
-//BiometricHasher defines methods to handle hash of biometric data
-type BiometricHasher interface {
-	HashBiometric(Biometric) (string, error)
-	HashBiometricData(BiometricData) (string, error)
-}
-
-//BiometricSigner define methods to handle signatures of biometric data
-type BiometricSigner interface {
-
-	//VerifyBiometricDataSignature checks the signatures
-	VerifyBiometricDataSignatures(BiometricData) error
-}
-
 //BiometricData describe a biometric data
 type BiometricData interface {
 

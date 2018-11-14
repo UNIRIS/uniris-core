@@ -4,19 +4,12 @@ import (
 	"net"
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
-	addAdding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
-	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 )
-
-type AIClient interface {
-	rpc.AIClient
-	addAdding.AIClient
-}
 
 type aiClient struct{}
 
 //NewAIClient create a new mock of the AI client
-func NewAIClient() AIClient {
+func NewAIClient() aiClient {
 	return aiClient{}
 }
 
