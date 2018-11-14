@@ -9,6 +9,7 @@ import (
 
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
+	mocktransport "github.com/uniris/uniris-core/datamining/pkg/transport/mock"
 
 	"github.com/stretchr/testify/assert"
 
@@ -393,7 +394,9 @@ Scenario: Call RequestStorage GRPC endpoint for keychain
 */
 func TestRequestKeychainStorageClient(t *testing.T) {
 	db := mockstorage.NewDatabase()
-	accAdder := accountAdding.NewService(db)
+	accLister := accountListing.NewService(db)
+	aiClient := mocktransport.NewAIClient()
+	accAdder := accountAdding.NewService(aiClient, db, accLister, mockcrypto.NewSigner(), mockcrypto.NewHasher())
 
 	crypto := Crypto{
 		decrypter: mockcrypto.NewDecrypter(),
@@ -431,7 +434,7 @@ func TestRequestKeychainStorageClient(t *testing.T) {
 
 	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig"))
 	end := mining.NewEndorsement("", "hash",
-		mining.NewMasterValidation([]string{""}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
+		mining.NewMasterValidation([]string{""}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")},
 	)
 
@@ -451,7 +454,9 @@ Scenario: Call RequestStorage GRPC endpoint for biometric
 */
 func TestRequestBiometricStorageClient(t *testing.T) {
 	db := mockstorage.NewDatabase()
-	accAdder := accountAdding.NewService(db)
+	accLister := accountListing.NewService(db)
+	aiClient := mocktransport.NewAIClient()
+	accAdder := accountAdding.NewService(aiClient, db, accLister, mockcrypto.NewSigner(), mockcrypto.NewHasher())
 
 	crypto := Crypto{
 		decrypter: mockcrypto.NewDecrypter(),
@@ -489,7 +494,7 @@ func TestRequestBiometricStorageClient(t *testing.T) {
 
 	bioData := account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", "pub", account.NewSignatures("sig", "sig"))
 	end := mining.NewEndorsement("", "hash",
-		mining.NewMasterValidation([]string{""}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
+		mining.NewMasterValidation([]string{""}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")},
 	)
 

@@ -113,9 +113,9 @@ func TestLeadKeychainMining(t *testing.T) {
 	mineSrv := mining.NewService(notifier, poolF, poolR, mockcrypto.NewSigner(), biodlister, system.UnirisConfig{}, txMiners)
 
 	ai := mocktransport.NewAIClient()
-	accSrv := accountadding.NewService(ai, db, mockSigner{}, accLister)
+	accAdder := accountadding.NewService(ai, db, accLister, mockcrypto.NewSigner(), mockcrypto.NewHasher())
 
-	srv := Services{accAdd: accSrv, lock: lockSrv, mining: mineSrv}
+	srv := Services{accAdd: accAdder, lock: lockSrv, mining: mineSrv}
 	crypto := Crypto{
 		decrypter: mockcrypto.NewDecrypter(),
 		signer:    mockcrypto.NewSigner(),
@@ -163,9 +163,11 @@ func TestLeadBiometricMining(t *testing.T) {
 		},
 	}, txMiners)
 
-	accSrv := accountadding.NewService(db)
+	accLister := accountListing.NewService(db)
+	aiClient := mocktransport.NewAIClient()
+	accAdder := accountadding.NewService(aiClient, db, accLister, mockcrypto.NewSigner(), mockcrypto.NewHasher())
 
-	srv := Services{accAdd: accSrv, lock: lockSrv, mining: mineSrv}
+	srv := Services{accAdd: accAdder, lock: lockSrv, mining: mineSrv}
 	crypto := Crypto{
 		decrypter: mockcrypto.NewDecrypter(),
 		signer:    mockcrypto.NewSigner(),
@@ -371,7 +373,9 @@ Scenario: Store keychain transaction
 */
 func TestStoreKeychain(t *testing.T) {
 	db := mockstorage.NewDatabase()
-	accAdder := accountadding.NewService(db)
+	accLister := accountListing.NewService(db)
+	aiClient := mocktransport.NewAIClient()
+	accAdder := accountadding.NewService(aiClient, db, accLister, mockcrypto.NewSigner(), mockcrypto.NewHasher())
 
 	services := Services{accAdd: accAdder}
 	crypto := Crypto{
@@ -397,8 +401,16 @@ func TestStoreKeychain(t *testing.T) {
 			TransactionHash:     "hash",
 			MasterValidation: &api.MasterValidation{
 				LastTransactionMiners: []string{"hash", "hash"},
-				ProofOfWorkRobotKey:   "robot key",
+				ProofOfWorkRobotKey:   "robotkey",
 				ProofOfWorkValidation: &api.Validation{
+					PublicKey: "robotkey",
+					Signature: "sig",
+					Status:    api.Validation_OK,
+					Timestamp: time.Now().Unix(),
+				},
+			},
+			Validations: []*api.Validation{
+				&api.Validation{
 					PublicKey: "robotkey",
 					Signature: "sig",
 					Status:    api.Validation_OK,
@@ -426,7 +438,10 @@ Scenario: Store biometric transaction
 func TestStoreBiometric(t *testing.T) {
 	db := mockstorage.NewDatabase()
 
-	accAdder := accountadding.NewService(db)
+	accLister := accountListing.NewService(db)
+	aiClient := mocktransport.NewAIClient()
+	accAdder := accountadding.NewService(aiClient, db, accLister, mockcrypto.NewSigner(), mockcrypto.NewHasher())
+
 	services := Services{accAdd: accAdder}
 	crypto := Crypto{
 		decrypter: mockcrypto.NewDecrypter(),
@@ -452,8 +467,16 @@ func TestStoreBiometric(t *testing.T) {
 			TransactionHash:     "hash",
 			MasterValidation: &api.MasterValidation{
 				LastTransactionMiners: []string{"hash", "hash"},
-				ProofOfWorkRobotKey:   "robot key",
+				ProofOfWorkRobotKey:   "robotkey",
 				ProofOfWorkValidation: &api.Validation{
+					PublicKey: "robotkey",
+					Signature: "sig",
+					Status:    api.Validation_OK,
+					Timestamp: time.Now().Unix(),
+				},
+			},
+			Validations: []*api.Validation{
+				&api.Validation{
 					PublicKey: "robotkey",
 					Signature: "sig",
 					Status:    api.Validation_OK,

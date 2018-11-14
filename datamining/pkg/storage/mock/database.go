@@ -24,9 +24,11 @@ func NewDatabase() Database {
 }
 
 type mockDatabase struct {
-	Biometrics []account.Biometric
-	Keychains  []account.Keychain
-	Locks      []lock.TransactionLock
+	Biometrics   []account.Biometric
+	KOBiometrics []account.Biometric
+	Keychains    []account.Keychain
+	KOKeychains  []account.Keychain
+	Locks        []lock.TransactionLock
 }
 
 func (d mockDatabase) FindBiometric(hash string) (account.Biometric, error) {
@@ -57,13 +59,23 @@ func (d mockDatabase) ListBiodPubKeys() ([]string, error) {
 	return []string{"key1", "key2", "key3"}, nil
 }
 
-func (d *mockDatabase) StoreKeychain(w account.Keychain) error {
-	d.Keychains = append(d.Keychains, w)
+func (d *mockDatabase) StoreKeychain(k account.Keychain) error {
+	d.Keychains = append(d.Keychains, k)
+	return nil
+}
+
+func (d *mockDatabase) StoreKOKeychain(k account.Keychain) error {
+	d.KOKeychains = append(d.KOKeychains, k)
 	return nil
 }
 
 func (d *mockDatabase) StoreBiometric(b account.Biometric) error {
 	d.Biometrics = append(d.Biometrics, b)
+	return nil
+}
+
+func (d *mockDatabase) StoreKOBiometric(b account.Biometric) error {
+	d.KOBiometrics = append(d.KOBiometrics, b)
 	return nil
 }
 
