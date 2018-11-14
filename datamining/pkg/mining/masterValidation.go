@@ -6,30 +6,30 @@ type MasterValidation interface {
 	//LastTransactionMiners returns the miners list of the last transaction
 	LastTransactionMiners() []string
 
-	//ProofOfWorkRobotKey returns the public key from the robot which performs the Proof of work
-	ProofOfWorkRobotKey() string
+	//ProofOfWorkKey returns the key that validated the proof of work
+	ProofOfWorkKey() string
 
-	//ProofOfWorkRobotKey returns the validation performed during the Proof of work
+	//Validation returns the validation for the proof of work
 	ProofOfWorkValidation() Validation
 }
 
 type masterValidation struct {
-	lastTxRvk   []string
-	powRobotKey string
-	powValid    Validation
+	lastTxRvk []string
+	powKey    string
+	powValid  Validation
 }
 
 //NewMasterValidation creates a new master validation
-func NewMasterValidation(lastTxRvk []string, powRobotKey string, powValid Validation) MasterValidation {
-	return masterValidation{lastTxRvk, powRobotKey, powValid}
+func NewMasterValidation(lastTxRvk []string, powKey string, powValid Validation) MasterValidation {
+	return masterValidation{lastTxRvk, powKey, powValid}
 }
 
 func (m masterValidation) LastTransactionMiners() []string {
 	return m.lastTxRvk
 }
 
-func (m masterValidation) ProofOfWorkRobotKey() string {
-	return m.powRobotKey
+func (m masterValidation) ProofOfWorkKey() string {
+	return m.powKey
 }
 
 func (m masterValidation) ProofOfWorkValidation() Validation {

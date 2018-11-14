@@ -26,9 +26,11 @@ func (p pow) execute() (MasterValidation, error) {
 
 	//Find the public key which matches the transaction signature
 	status := ValidationKO
+	var matchedKey string
 	for _, k := range keys {
 		err := p.signer.VerifyTransactionDataSignature(p.txType, k, p.txData, p.txBiodSig)
 		if err == nil {
+			matchedKey = k
 			status = ValidationOK
 			break
 		}
@@ -49,5 +51,5 @@ func (p pow) execute() (MasterValidation, error) {
 		lastTxMiners = append(lastTxMiners, peer.PublicKey)
 	}
 
-	return NewMasterValidation(lastTxMiners, p.robotPubKey, sValid), nil
+	return NewMasterValidation(lastTxMiners, matchedKey, sValid), nil
 }

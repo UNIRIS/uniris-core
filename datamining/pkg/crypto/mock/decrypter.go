@@ -16,9 +16,9 @@ func (d mockDecrypter) DecryptHash(hash string, pvKey string) (string, error) {
 }
 
 func (d mockDecrypter) DecryptKeychainData(data string, pvKey string) (account.KeychainData, error) {
-	return account.NewKeychainData("", "", "", "", account.NewSignatures("", "")), nil
+	return account.NewKeychainData("", "", "", account.NewSignatures("", "")), nil
 }
 
 func (d mockDecrypter) DecryptBiometricData(data string, pvKey string) (account.BiometricData, error) {
-	return account.NewBiometricData("personHash", "", "", "", "", "", account.NewSignatures("", "")), nil
+	return account.NewBiometricData("personHash", "", "", "", "", account.NewSignatures("", "")), nil
 }

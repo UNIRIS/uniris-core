@@ -12,9 +12,9 @@ type endorsement struct {
 }
 
 type masterValidation struct {
-	LastTxRvk   []string   `json:"last_transaction_miners"`
-	PowRobotKey string     `json:"pow_robot_key"`
-	PowValid    validation `json:"pow_validation"`
+	LastTxRvk []string   `json:"last_transaction_miners"`
+	PowKey    string     `json:"pow_key"`
+	PowValid  validation `json:"pow_validation"`
 }
 
 type validation struct {
@@ -26,7 +26,6 @@ type validation struct {
 
 type biometric struct {
 	PersonPublicKey     string      `json:"person_pubk"`
-	BIODPublicKey       string      `json:"biod_pubk"`
 	PersonHash          string      `json:"person_hash"`
 	EncryptedAESKey     string      `json:"encrypted_aes_key"`
 	EncryptedAddrPerson string      `json:"encrypted_addr_person"`
@@ -38,7 +37,6 @@ type biometric struct {
 
 type biometricRaw struct {
 	PersonPublicKey     string `json:"person_pubk"`
-	BIODPublicKey       string `json:"biod_pubk"`
 	PersonHash          string `json:"person_hash"`
 	EncryptedAESKey     string `json:"encrypted_aes_key"`
 	EncryptedAddrPerson string `json:"encrypted_addr_person"`
@@ -47,7 +45,6 @@ type biometricRaw struct {
 
 type biometricData struct {
 	PersonPublicKey     string `json:"person_pubk"`
-	BIODPublicKey       string `json:"biod_pubk"`
 	PersonHash          string `json:"person_hash"`
 	EncryptedAESKey     string `json:"encrypted_aes_key"`
 	EncryptedAddrPerson string `json:"encrypted_addr_person"`
@@ -59,7 +56,6 @@ type biometricData struct {
 type keychain struct {
 	Address            string      `json:"address"`
 	PersonPublicKey    string      `json:"person_pubk"`
-	BIODPublicKey      string      `json:"biod_pubk"`
 	EncryptedWallet    string      `json:"encrypted_wal"`
 	EncryptedAddrRobot string      `json:"encrypted_addr_robot"`
 	BIODSignature      string      `json:"biod_sig"`
@@ -69,7 +65,6 @@ type keychain struct {
 
 type keychainData struct {
 	PersonPublicKey    string `json:"person_pubk"`
-	BIODPublicKey      string `json:"biod_pubk"`
 	EncryptedWallet    string `json:"encrypted_wal"`
 	EncryptedAddrRobot string `json:"encrypted_addr_robot"`
 	BIODSignature      string `json:"biod_sig"`
@@ -78,7 +73,6 @@ type keychainData struct {
 
 type keychainRaw struct {
 	PersonPublicKey    string `json:"person_pubk"`
-	BIODPublicKey      string `json:"biod_pubk"`
 	EncryptedWallet    string `json:"encrypted_wal"`
 	EncryptedAddrRobot string `json:"encrypted_addr_robot"`
 }

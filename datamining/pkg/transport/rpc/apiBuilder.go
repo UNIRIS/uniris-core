@@ -10,7 +10,6 @@ type apiBuilder struct{}
 
 func (b apiBuilder) buildBiometricData(data account.BiometricData) *api.BiometricData {
 	return &api.BiometricData{
-		BiodPubk:        data.BiodPublicKey(),
 		CipherAddrBio:   data.CipherAddrPerson(),
 		CipherAddrRobot: data.CipherAddrRobot(),
 		CipherAESKey:    data.CipherAESKey(),
@@ -25,7 +24,6 @@ func (b apiBuilder) buildBiometricData(data account.BiometricData) *api.Biometri
 
 func (b apiBuilder) buildKeychainData(data account.KeychainData) *api.KeychainData {
 	return &api.KeychainData{
-		BiodPubk:        data.BiodPublicKey(),
 		CipherAddrRobot: data.CipherAddrRobot(),
 		CipherWallet:    data.CipherWallet(),
 		PersonPubk:      data.PersonPublicKey(),
@@ -38,7 +36,6 @@ func (b apiBuilder) buildKeychainData(data account.KeychainData) *api.KeychainDa
 
 func buildKeychainDataForAPI(data account.KeychainData) *api.KeychainData {
 	return &api.KeychainData{
-		BiodPubk:        data.BiodPublicKey(),
 		CipherAddrRobot: data.CipherAddrRobot(),
 		CipherWallet:    data.CipherWallet(),
 		PersonPubk:      data.PersonPublicKey(),
@@ -65,7 +62,7 @@ func (b apiBuilder) buildEndorsement(end mining.Endorsement) *api.Endorsement {
 func (b apiBuilder) buildMasterValidation(mv mining.MasterValidation) *api.MasterValidation {
 	return &api.MasterValidation{
 		LastTransactionMiners: mv.LastTransactionMiners(),
-		ProofOfWorkRobotKey:   mv.ProofOfWorkRobotKey(),
+		ProofOfWorkKey:        mv.ProofOfWorkKey(),
 		ProofOfWorkValidation: b.buildValidation(mv.ProofOfWorkValidation()),
 	}
 }

@@ -18,7 +18,7 @@ Scenario: Checks the biometric data integrity
 func TestBiometricIntegrity(t *testing.T) {
 	miner := biometricMiner{hasher: mockBiometricHasher{}}
 	sig := account.NewSignatures("sig1", "sig2")
-	data := account.NewBiometricData("personHash", "enc addr", "enc addr", "enc aes key", "pub", "pub", sig)
+	data := account.NewBiometricData("personHash", "enc addr", "enc addr", "enc aes key", "pub", sig)
 	err := miner.checkDataIntegrity("hash", data)
 	assert.Nil(t, err)
 }
@@ -32,7 +32,7 @@ Scenario: Checks the biometric data integrity
 func TestInvalidBiometricIntegrity(t *testing.T) {
 	miner := biometricMiner{hasher: mockBadBiometricHasher{}}
 	sig := account.NewSignatures("sig1", "sig2")
-	data := account.NewBiometricData("personHash", "enc addr", "enc addr", "enc aes key", "pub", "pub", sig)
+	data := account.NewBiometricData("personHash", "enc addr", "enc addr", "enc aes key", "pub", sig)
 	err := miner.checkDataIntegrity("hash", data)
 	assert.Equal(t, mining.ErrInvalidTransaction, err)
 }
@@ -46,7 +46,7 @@ Scenario: Check biometric data as master peer
 func TestBiometricMasterCheck(t *testing.T) {
 	miner := NewBiometricMiner(mockBiometricSigner{}, mockBiometricHasher{})
 	sig := account.NewSignatures("sig1", "sig2")
-	data := account.NewBiometricData("personHash", "enc addr", "enc addr", "enc aes key", "pub", "pub", sig)
+	data := account.NewBiometricData("personHash", "enc addr", "enc addr", "enc aes key", "pub", sig)
 	err := miner.CheckAsMaster("hash", data)
 	assert.Nil(t, err)
 }
@@ -60,7 +60,7 @@ Scenario: Check biometric data as slave peer
 func TestBiometricSlaveCheck(t *testing.T) {
 	miner := NewBiometricMiner(mockBiometricSigner{}, mockBiometricHasher{})
 	sig := account.NewSignatures("sig1", "sig2")
-	data := account.NewBiometricData("personHash", "enc addr", "enc addr", "enc aes key", "pub", "pub", sig)
+	data := account.NewBiometricData("personHash", "enc addr", "enc addr", "enc aes key", "pub", sig)
 	err := miner.CheckAsSlave("hash", data)
 	assert.Nil(t, err)
 }

@@ -52,6 +52,7 @@ type signatureVerifier interface {
 	account.KeychainSignatureVerifier
 	account.BiometricSignatureVerifier
 	mining.ValidationVerifier
+	mining.PowSigVerifier
 }
 
 type hasher interface {
@@ -87,6 +88,13 @@ func (s service) StoreKeychain(kc account.Keychain) error {
 		return ErrInvalidValidationNumber
 	}
 
+	//Check the POW
+	matchedKey := kc.Endorsement().MasterValidation().ProofOfWorkKey()
+	biodSig := kc.Signatures().Biod()
+	if err := s.sigVerif.VerifyTransactionDataSignature(mining.KeychainTransaction, matchedKey, kc, biodSig); err != nil {
+		return ErrInvalidDataMining
+	}
+
 	//Checks signatures
 	if err := s.sigVerif.VerifyKeychainDataSignatures(kc); err != nil {
 		return err
@@ -116,6 +124,13 @@ func (s service) StoreBiometric(bio account.Biometric) error {
 	//Checks if the storage must done on this peer
 	if err := s.aiClient.CheckStorageAuthorization(bio.Endorsement().TransactionHash()); err != nil {
 		return err
+	}
+
+	//Check the POW
+	matchedKey := bio.Endorsement().MasterValidation().ProofOfWorkKey()
+	biodSig := bio.Signatures().Biod()
+	if err := s.sigVerif.VerifyTransactionDataSignature(mining.BiometricTransaction, matchedKey, bio, biodSig); err != nil {
+		return ErrInvalidDataMining
 	}
 
 	//Checks signatures
@@ -163,9 +178,6 @@ func (s service) isKO(end mining.Endorsement) bool {
 
 func (s service) verifyEndorsementSignatures(end mining.Endorsement) error {
 
-	if end.MasterValidation().ProofOfWorkRobotKey() != end.MasterValidation().ProofOfWorkValidation().PublicKey() {
-		return ErrInvalidDataMining
-	}
 	if err := s.sigVerif.VerifyValidationSignature(end.MasterValidation().ProofOfWorkValidation()); err != nil {
 		return ErrInvalidDataMining
 	}

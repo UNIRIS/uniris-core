@@ -16,9 +16,6 @@ type KeychainData interface {
 	//PersonPublicKey returns the person public key
 	PersonPublicKey() string
 
-	//BiodPublicKey returns the biometric device public key
-	BiodPublicKey() string
-
 	//Signature returns the signatures of the keychain data
 	Signatures() Signatures
 }
@@ -27,13 +24,12 @@ type keyChainData struct {
 	cipherAddr   string
 	cipherWallet string
 	personPubk   string
-	biodPubk     string
 	sigs         Signatures
 }
 
 //NewKeychainData creates a new keychain data
-func NewKeychainData(cipherAddr, cipherWallet, personPubk, biodPubk string, sigs Signatures) KeychainData {
-	return keyChainData{cipherAddr, cipherWallet, personPubk, biodPubk, sigs}
+func NewKeychainData(cipherAddr, cipherWallet, personPubk string, sigs Signatures) KeychainData {
+	return keyChainData{cipherAddr, cipherWallet, personPubk, sigs}
 }
 
 func (k keyChainData) CipherAddrRobot() string {
@@ -46,10 +42,6 @@ func (k keyChainData) CipherWallet() string {
 
 func (k keyChainData) PersonPublicKey() string {
 	return k.personPubk
-}
-
-func (k keyChainData) BiodPublicKey() string {
-	return k.biodPubk
 }
 
 func (k keyChainData) Signatures() Signatures {
@@ -92,10 +84,6 @@ func (k keychain) CipherWallet() string {
 
 func (k keychain) PersonPublicKey() string {
 	return k.data.PersonPublicKey()
-}
-
-func (k keychain) BiodPublicKey() string {
-	return k.data.BiodPublicKey()
 }
 
 func (k keychain) Signatures() Signatures {

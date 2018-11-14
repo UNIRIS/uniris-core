@@ -19,9 +19,6 @@ type BiometricData interface {
 	//CipherAESKey returns the AES key encrypted with person public key
 	CipherAESKey() string
 
-	//BiodPublicKey return the biometric device public key
-	BiodPublicKey() string
-
 	//PersonPublicKey returns person public key
 	PersonPublicKey() string
 
@@ -35,13 +32,12 @@ type biodata struct {
 	cipherAddrPerson string
 	cipherAESKey     string
 	personPubk       string
-	biodPubk         string
 	sigs             Signatures
 }
 
 //NewBiometricData create new biometric
-func NewBiometricData(personHash, cipherAddrRobot, cipherAddrPerson, cipherAesKey, personPubk, biodPubk string, sigs Signatures) BiometricData {
-	return biodata{personHash, cipherAddrRobot, cipherAddrPerson, cipherAesKey, personPubk, biodPubk, sigs}
+func NewBiometricData(personHash, cipherAddrRobot, cipherAddrPerson, cipherAesKey, personPubk string, sigs Signatures) BiometricData {
+	return biodata{personHash, cipherAddrRobot, cipherAddrPerson, cipherAesKey, personPubk, sigs}
 }
 
 func (b biodata) PersonHash() string {
@@ -62,10 +58,6 @@ func (b biodata) CipherAESKey() string {
 
 func (b biodata) PersonPublicKey() string {
 	return b.personPubk
-}
-
-func (b biodata) BiodPublicKey() string {
-	return b.biodPubk
 }
 
 func (b biodata) Signatures() Signatures {
@@ -108,10 +100,6 @@ func (b biometric) CipherAESKey() string {
 
 func (b biometric) PersonPublicKey() string {
 	return b.data.PersonPublicKey()
-}
-
-func (b biometric) BiodPublicKey() string {
-	return b.data.BiodPublicKey()
 }
 
 func (b biometric) Signatures() Signatures {

@@ -22,17 +22,26 @@ func TestGetLastKeychain(t *testing.T) {
 	s := NewService(db)
 
 	sigs := account.NewSignatures("sig1", "sig2")
-	keychainData := account.NewKeychainData("xxx", "xxx", "xxx", "xxx", sigs)
+	keychainData := account.NewKeychainData("cipher addr", "cipher wallet", "person pub", sigs)
 
-	masterValid1 := mining.NewMasterValidation([]string{}, "robotKey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature"))
-	endors1 := mining.NewEndorsement("", "hash1", masterValid1, []mining.Validation{})
+	endors1 := mining.NewEndorsement(
+		"", "hash1",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		[]mining.Validation{
+			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
+		},
+	)
 
 	kc1 := account.NewKeychain("address", keychainData, endors1)
 
 	time.Sleep(1 * time.Second)
-
-	masterValid2 := mining.NewMasterValidation([]string{}, "robotKey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature"))
-	endors2 := mining.NewEndorsement("hash1", "hash2", masterValid2, []mining.Validation{})
+	endors2 := mining.NewEndorsement(
+		"hash1", "hash2",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		[]mining.Validation{
+			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
+		},
+	)
 
 	kc2 := account.NewKeychain("address", keychainData, endors2)
 
@@ -58,10 +67,15 @@ func TestGetBiometric(t *testing.T) {
 	s := NewService(db)
 
 	sigs := account.NewSignatures("sig1", "sig2")
-	data := account.NewBiometricData("hash1", "xxx", "xxx", "xxx", "xxx", "xxx", sigs)
+	data := account.NewBiometricData("hash1", "cipher addr robot", "cipher addr person", "cipher aes key", "person key", sigs)
 
-	masterValid := mining.NewMasterValidation([]string{}, "robotKey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature"))
-	endors := mining.NewEndorsement("", "xxx", masterValid, []mining.Validation{})
+	endors := mining.NewEndorsement(
+		"", "hash1",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		[]mining.Validation{
+			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
+		},
+	)
 
 	b := account.NewBiometric(data, endors)
 

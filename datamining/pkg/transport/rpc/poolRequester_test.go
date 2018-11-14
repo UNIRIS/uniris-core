@@ -37,7 +37,7 @@ func TestRequestBiometric(t *testing.T) {
 
 	db.StoreBiometric(
 		account.NewBiometric(
-			account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", "pub", account.NewSignatures("sig", "sig")),
+			account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", account.NewSignatures("sig", "sig")),
 			nil,
 		),
 	)
@@ -75,7 +75,7 @@ func TestRequestKeychain(t *testing.T) {
 	db.StoreKeychain(
 		account.NewKeychain(
 			"hash",
-			account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig")),
+			account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig")),
 			nil,
 		),
 	)
@@ -197,7 +197,7 @@ func TestRequestValidations(t *testing.T) {
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")},
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")})
 
-	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig"))
+	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
 
 	valids, err := pr.RequestValidations(2, pool, "hash", keychainData, mining.KeychainTransaction)
 	assert.Nil(t, err)
@@ -228,7 +228,7 @@ func TestRequestValidationsWithLessThanMinimumValidations(t *testing.T) {
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")},
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")})
 
-	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig"))
+	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
 
 	_, err := pr.RequestValidations(5, pool, "hash", keychainData, mining.KeychainTransaction)
 	assert.Equal(t, "Minimum validations are not reached", err.Error())
@@ -252,7 +252,7 @@ func TestRequestStorage(t *testing.T) {
 
 	cli := mock.NewExternalClient(db)
 
-	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig"))
+	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
 	end := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{""}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")},

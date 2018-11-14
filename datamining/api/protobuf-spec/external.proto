@@ -85,7 +85,6 @@ message KeychainData {
 	string CipherAddrRobot = 1;
 	string CipherWallet = 2;
 	string PersonPubk = 3;
-	string BiodPubk = 4;
     Signature Signature = 5;
 }
 
@@ -95,7 +94,6 @@ message BiometricData {
     string CipherAddrBio = 3;
 	string CipherAESKey = 4;
 	string PersonPubk = 5;
-	string BiodPubk = 6;
     Signature Signature = 7;
 }
 
@@ -107,7 +105,7 @@ message Endorsement {
 }
 
 message MasterValidation {
-    string ProofOfWorkRobotKey = 1;
+    string ProofOfWorkKey = 1;
     Validation ProofOfWorkValidation = 2;
     repeated string LastTransactionMiners = 3;
 }

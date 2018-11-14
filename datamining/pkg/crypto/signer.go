@@ -42,7 +42,6 @@ func (s signer) VerifyTransactionDataSignature(txType mining.TransactionType, pu
 	case mining.KeychainTransaction:
 		kc := data.(account.KeychainData)
 		b, err := json.Marshal(keychainRaw{
-			BIODPublicKey:      kc.BiodPublicKey(),
 			EncryptedWallet:    kc.CipherWallet(),
 			EncryptedAddrRobot: kc.CipherAddrRobot(),
 			PersonPublicKey:    kc.PersonPublicKey(),
@@ -54,7 +53,6 @@ func (s signer) VerifyTransactionDataSignature(txType mining.TransactionType, pu
 	case mining.BiometricTransaction:
 		bio := data.(account.BiometricData)
 		b, err := json.Marshal(biometricRaw{
-			BIODPublicKey:       bio.BiodPublicKey(),
 			EncryptedAddrPerson: bio.CipherAddrPerson(),
 			EncryptedAddrRobot:  bio.CipherAddrRobot(),
 			EncryptedAESKey:     bio.CipherAESKey(),
@@ -72,7 +70,6 @@ func (s signer) VerifyTransactionDataSignature(txType mining.TransactionType, pu
 
 func (s signer) VerifyBiometricDataSignatures(data account.BiometricData) error {
 	b, err := json.Marshal(biometricRaw{
-		BIODPublicKey:       data.BiodPublicKey(),
 		EncryptedAddrPerson: data.CipherAddrPerson(),
 		EncryptedAddrRobot:  data.CipherAddrRobot(),
 		EncryptedAESKey:     data.CipherAESKey(),
@@ -85,15 +82,11 @@ func (s signer) VerifyBiometricDataSignatures(data account.BiometricData) error 
 	if err := checkSignature(data.PersonPublicKey(), string(b), data.Signatures().Person()); err != nil {
 		return err
 	}
-	if err := checkSignature(data.BiodPublicKey(), string(b), data.Signatures().Biod()); err != nil {
-		return err
-	}
 	return nil
 }
 
 func (s signer) VerifyKeychainDataSignatures(data account.KeychainData) error {
 	b, err := json.Marshal(keychainRaw{
-		BIODPublicKey:      data.BiodPublicKey(),
 		EncryptedWallet:    data.CipherWallet(),
 		EncryptedAddrRobot: data.CipherAddrRobot(),
 		PersonPublicKey:    data.PersonPublicKey(),
@@ -102,9 +95,6 @@ func (s signer) VerifyKeychainDataSignatures(data account.KeychainData) error {
 		return err
 	}
 	if err := checkSignature(data.PersonPublicKey(), string(b), data.Signatures().Person()); err != nil {
-		return err
-	}
-	if err := checkSignature(data.BiodPublicKey(), string(b), data.Signatures().Biod()); err != nil {
 		return err
 	}
 	return nil

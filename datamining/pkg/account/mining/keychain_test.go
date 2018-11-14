@@ -20,7 +20,7 @@ Scenario: Get last transaction hash
 func TestKeychainGetLastTransactionHash(t *testing.T) {
 	db := mock.NewDatabase()
 	sigs := account.NewSignatures("sig1", "sig2")
-	data := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", sigs)
+	data := account.NewKeychainData("enc addr", "enc wallet", "pub", sigs)
 	kc := account.NewKeychain("address", data, mining.NewEndorsement("", "hash", nil, nil))
 	db.StoreKeychain(kc)
 	miner := keychainMiner{accLister: listing.NewService(db)}
@@ -38,7 +38,7 @@ Scenario: Checks the keychain data integrity
 func TestKeychainIntegrity(t *testing.T) {
 	miner := keychainMiner{hasher: mockKeychainHasher{}}
 	sigs := account.NewSignatures("sig1", "sig2")
-	data := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", sigs)
+	data := account.NewKeychainData("enc addr", "enc wallet", "pub", sigs)
 	err := miner.checkDataIntegrity("hash", data)
 	assert.Nil(t, err)
 }
@@ -52,7 +52,7 @@ Scenario: Checks the keychain data integrity
 func TestInvalidKeychainIntegrity(t *testing.T) {
 	miner := keychainMiner{hasher: mockBadKeychainHasher{}}
 	sigs := account.NewSignatures("sig1", "sig2")
-	data := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", sigs)
+	data := account.NewKeychainData("enc addr", "enc wallet", "pub", sigs)
 	err := miner.checkDataIntegrity("hash", data)
 	assert.Equal(t, mining.ErrInvalidTransaction, err)
 }
@@ -66,7 +66,7 @@ Scenario: Check keychain data as master peer
 func TestKeychainMasterCheck(t *testing.T) {
 	miner := NewKeychainMiner(mockKeychainSigner{}, mockKeychainHasher{}, nil)
 	sigs := account.NewSignatures("sig1", "sig2")
-	data := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", sigs)
+	data := account.NewKeychainData("enc addr", "enc wallet", "pub", sigs)
 	err := miner.CheckAsMaster("hash", data)
 	assert.Nil(t, err)
 }
@@ -80,7 +80,7 @@ Scenario: Check keychain data as slave peer
 func TestKeychainSlaveCheck(t *testing.T) {
 	miner := NewKeychainMiner(mockKeychainSigner{}, mockKeychainHasher{}, nil)
 	sigs := account.NewSignatures("sig1", "sig2")
-	data := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", sigs)
+	data := account.NewKeychainData("enc addr", "enc wallet", "pub", sigs)
 	err := miner.CheckAsSlave("hash", data)
 	assert.Nil(t, err)
 }

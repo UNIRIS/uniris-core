@@ -70,7 +70,7 @@ func TestRequestBiometricClient(t *testing.T) {
 
 	db.StoreBiometric(
 		account.NewBiometric(
-			account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", "pub", account.NewSignatures("sig", "sig")),
+			account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", account.NewSignatures("sig", "sig")),
 			mining.NewEndorsement("", "hash",
 				mining.NewMasterValidation([]string{"hash"}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
 				[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")}),
@@ -131,7 +131,7 @@ func TestRequestKeychainClient(t *testing.T) {
 	db.StoreKeychain(
 		account.NewKeychain(
 			"hash",
-			account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig")),
+			account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig")),
 			mining.NewEndorsement("", "hash",
 				mining.NewMasterValidation([]string{"hash"}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
 				[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")}),
@@ -324,7 +324,7 @@ func TestRequestKeychainValidationClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig"))
+	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
 
 	cli := NewExternalClient(crypto, conf)
 	valid, err := cli.RequestValidation("127.0.0.1", mining.KeychainTransaction, "hash", keychainData)
@@ -380,7 +380,7 @@ func TestRequestBiometricValidationClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	bioData := account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", "pub", account.NewSignatures("sig", "sig"))
+	bioData := account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", account.NewSignatures("sig", "sig"))
 
 	cli := NewExternalClient(crypto, conf)
 	valid, err := cli.RequestValidation("127.0.0.1", mining.BiometricTransaction, "hash", bioData)
@@ -434,7 +434,7 @@ func TestRequestKeychainStorageClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig"))
+	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
 	end := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{""}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")},
@@ -494,7 +494,7 @@ func TestRequestBiometricStorageClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	bioData := account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", "pub", account.NewSignatures("sig", "sig"))
+	bioData := account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", account.NewSignatures("sig", "sig"))
 	end := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{""}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")},

@@ -30,7 +30,7 @@ func TestGetAccount(t *testing.T) {
 	db := mockstorage.NewDatabase()
 	db.StoreBiometric(
 		account.NewBiometric(
-			account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", "pub", account.NewSignatures("sig", "sig")),
+			account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", account.NewSignatures("sig", "sig")),
 			nil,
 		),
 	)
@@ -38,7 +38,7 @@ func TestGetAccount(t *testing.T) {
 	db.StoreKeychain(
 		account.NewKeychain(
 			"hash",
-			account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig")),
+			account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig")),
 			nil,
 		),
 	)

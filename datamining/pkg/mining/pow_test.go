@@ -37,7 +37,7 @@ func TestExecutePOW(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, valid)
 
-	assert.Equal(t, "my key", valid.ProofOfWorkRobotKey())
+	assert.Equal(t, "key1", valid.ProofOfWorkKey())
 	assert.Equal(t, "my key", valid.ProofOfWorkValidation().PublicKey())
 	assert.Equal(t, ValidationOK, valid.ProofOfWorkValidation().Status())
 }
@@ -70,7 +70,7 @@ func TestExecutePOW_KO(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, valid)
 
-	assert.Equal(t, "my key", valid.ProofOfWorkRobotKey())
+	assert.Equal(t, "", valid.ProofOfWorkKey())
 	assert.Equal(t, "my key", valid.ProofOfWorkValidation().PublicKey())
 	assert.Equal(t, ValidationKO, valid.ProofOfWorkValidation().Status())
 }

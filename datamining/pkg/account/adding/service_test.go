@@ -28,12 +28,13 @@ func TestStoreKeychain(t *testing.T) {
 	sigs := account.NewSignatures("sig1", "sig2")
 
 	end := mining.NewEndorsement(
-		"", "hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		"", "hash",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", "biod pub", sigs)
+	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", sigs)
 	kc := account.NewKeychain("addr", data, end)
 
 	err := s.StoreKeychain(kc)
@@ -58,12 +59,13 @@ func TestStoreKeychainWithMasterValidKO(t *testing.T) {
 	sigs := account.NewSignatures("sig1", "sig2")
 
 	end := mining.NewEndorsement(
-		"", "hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationKO, time.Now(), "robotkey", "sig")),
+		"", "hash",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationKO, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", "biod pub", sigs)
+	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", sigs)
 	kc := account.NewKeychain("addr", data, end)
 
 	err := s.StoreKeychain(kc)
@@ -89,13 +91,14 @@ func TestStoreKeychainWithOneSlaveValidKO(t *testing.T) {
 	sigs := account.NewSignatures("sig1", "sig2")
 
 	end := mining.NewEndorsement(
-		"", "hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		"", "hash",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 			mining.NewValidation(mining.ValidationKO, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", "biod pub", sigs)
+	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", sigs)
 	kc := account.NewKeychain("addr", data, end)
 
 	err := s.StoreKeychain(kc)
@@ -119,29 +122,35 @@ func TestInvalidLastTransactionKeychain(t *testing.T) {
 	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
 	sigs := account.NewSignatures("sig1", "sig2")
+
 	end1 := mining.NewEndorsement(
-		"", "hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		"", "hash",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", "biod pub", sigs)
+
+	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", sigs)
 	kc1 := account.NewKeychain("addr", data, end1)
 
 	assert.Nil(t, s.StoreKeychain(kc1))
 
 	end2 := mining.NewEndorsement(
-		"bad last hash", "hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		"bad last hash", "hash",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 		},
 	)
+
 	kc2 := account.NewKeychain("addr", data, end2)
 
 	assert.Equal(t, ErrInvalidDataIntegrity, s.StoreKeychain(kc2))
 
 	end3 := mining.NewEndorsement(
-		"", "hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		"", "hash",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 		},
@@ -165,10 +174,11 @@ func TestStoreKeychainWithZeroValidations(t *testing.T) {
 
 	sigs := account.NewSignatures("sig1", "sig2")
 	end := mining.NewEndorsement(
-		"", "hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		"", "hash",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{},
 	)
-	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", "biod pub", sigs)
+	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", sigs)
 	kc := account.NewKeychain("addr", data, end)
 
 	assert.Equal(t, ErrInvalidValidationNumber, s.StoreKeychain(kc))
@@ -188,12 +198,14 @@ func TestStoreKeychainWithInvalidTxHash(t *testing.T) {
 
 	sigs := account.NewSignatures("sig1", "sig2")
 	end := mining.NewEndorsement(
-		"", "bad hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		"", "bad hash",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", "biod pub", sigs)
+
+	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", sigs)
 	kc := account.NewKeychain("addr", data, end)
 
 	assert.Equal(t, ErrInvalidDataIntegrity, s.StoreKeychain(kc))
@@ -213,13 +225,14 @@ func TestStoreBiometric(t *testing.T) {
 	sigs := account.NewSignatures("sig1", "sig2")
 
 	end := mining.NewEndorsement(
-		"", "hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		"", "hash",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 		},
 	)
 
-	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", "biod pub", sigs)
+	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", sigs)
 	bio := account.NewBiometric(data, end)
 	err := s.StoreBiometric(bio)
 	assert.Nil(t, err)
@@ -241,11 +254,14 @@ func TestStoreBiometricWithZeroValidations(t *testing.T) {
 	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
 	sigs := account.NewSignatures("sig1", "sig2")
+
 	end := mining.NewEndorsement(
-		"", "hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		"", "hash",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{},
 	)
-	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", "biod pub", sigs)
+
+	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", sigs)
 	bio := account.NewBiometric(data, end)
 
 	assert.Equal(t, ErrInvalidValidationNumber, s.StoreBiometric(bio))
@@ -267,12 +283,13 @@ func TestStoreBiometricWithMasterValidKO(t *testing.T) {
 	sigs := account.NewSignatures("sig1", "sig2")
 
 	end := mining.NewEndorsement(
-		"", "hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationKO, time.Now(), "robotkey", "sig")),
+		"", "hash",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationKO, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", "biod pub", sigs)
+	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", sigs)
 	bio := account.NewBiometric(data, end)
 
 	err := s.StoreBiometric(bio)
@@ -298,13 +315,13 @@ func TestStoreBiometricWithOneSlaveValidKO(t *testing.T) {
 	sigs := account.NewSignatures("sig1", "sig2")
 
 	end := mining.NewEndorsement(
-		"", "hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		"", "hash",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{
-			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 			mining.NewValidation(mining.ValidationKO, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", "biod pub", sigs)
+	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", sigs)
 	bio := account.NewBiometric(data, end)
 
 	err := s.StoreBiometric(bio)
@@ -327,13 +344,15 @@ func TestStoreBiometricWithInvalidTxHash(t *testing.T) {
 	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
 	sigs := account.NewSignatures("sig1", "sig2")
+
 	end := mining.NewEndorsement(
-		"", "bad hash", mining.NewMasterValidation([]string{}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
+		"", "bad hash",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{
-			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
+			mining.NewValidation(mining.ValidationKO, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", "biod pub", sigs)
+	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", sigs)
 	bio := account.NewBiometric(data, end)
 
 	assert.Equal(t, ErrInvalidDataIntegrity, s.StoreBiometric(bio))
@@ -345,33 +364,26 @@ Scenario: Verify an endorsement with different masterpublic key
 	When I want to verify it
 	Then I get an error
 */
-func TestEndorsementWithDifferenteMasterPubKey(t *testing.T) {
-	end := mining.NewEndorsement("", "hash",
-		mining.NewMasterValidation([]string{}, "pubkey", mining.NewValidation(mining.ValidationOK, time.Now(), "other pub", "sig")), nil)
-
-	s := service{}
-	assert.Equal(t, ErrInvalidDataMining, s.verifyEndorsementSignatures(end))
-}
-
-/*
-Scenario: Verify an endorsement with different masterpublic key
-	Given an endorsement with an pow validation differents than the pow public key
-	When I want to verify it
-	Then I get an error
-*/
 func TestEndorsementWithBadMasterSignature(t *testing.T) {
-	end := mining.NewEndorsement("", "hash",
-		mining.NewMasterValidation([]string{}, "pubkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "invalid sig")), nil)
+
+	end := mining.NewEndorsement(
+		"", "hash",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "invalid sig")),
+		[]mining.Validation{
+			mining.NewValidation(mining.ValidationKO, time.Now(), "pub", "sig"),
+		},
+	)
 
 	s := service{
 		sigVerif: mockBadSigVerfier{},
 	}
 	assert.Equal(t, ErrInvalidDataMining, s.verifyEndorsementSignatures(end))
 
-	end2 := mining.NewEndorsement("", "hash",
-		mining.NewMasterValidation([]string{}, "pubkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "sig")),
+	end2 := mining.NewEndorsement(
+		"", "hash",
+		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "invalid sig")),
 		[]mining.Validation{
-			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "invalid sig"),
+			mining.NewValidation(mining.ValidationKO, time.Now(), "pub", "sig"),
 		},
 	)
 	assert.Equal(t, ErrInvalidDataMining, s.verifyEndorsementSignatures(end2))
@@ -440,6 +452,10 @@ func (v mockSigVerfier) VerifyValidationSignature(mining.Validation) error {
 	return nil
 }
 
+func (v mockSigVerfier) VerifyTransactionDataSignature(txType mining.TransactionType, pubk string, data interface{}, der string) error {
+	return nil
+}
+
 type mockBadSigVerfier struct{}
 
 func (v mockBadSigVerfier) VerifyKeychainDataSignatures(account.KeychainData) error {
@@ -453,6 +469,10 @@ func (v mockBadSigVerfier) VerifyValidationSignature(valid mining.Validation) er
 		return errors.New("invalid signature")
 	}
 	return nil
+}
+
+func (v mockBadSigVerfier) VerifyTransactionDataSignature(txType mining.TransactionType, pubk string, data interface{}, der string) error {
+	return errors.New("Invalid signature")
 }
 
 type mockAiClient struct{}

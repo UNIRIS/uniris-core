@@ -35,7 +35,7 @@ func TestGetBiometric(t *testing.T) {
 	accLister := accountListing.NewService(db)
 
 	sig := account.NewSignatures("sig1", "sig2")
-	bioData := account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", "pub", sig)
+	bioData := account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", sig)
 	endors := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{"hash"}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pub key", "sig")),
 		[]mining.Validation{})
@@ -68,7 +68,7 @@ func TestGetKeychain(t *testing.T) {
 	accLister := accountListing.NewService(db)
 
 	sig := account.NewSignatures("sig1", "sig2")
-	data := account.NewKeychainData("enc address", "cipher wallet", "pub", "pub", sig)
+	data := account.NewKeychainData("enc address", "cipher wallet", "pub", sig)
 	endors := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{"hash"}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pub key", "sig")),
 		[]mining.Validation{})
@@ -300,7 +300,6 @@ func TestValidateKeychain(t *testing.T) {
 
 	valid, err := h.ValidateKeychain(context.TODO(), &api.KeychainValidationRequest{
 		Data: &api.KeychainData{
-			BiodPubk:        "pubk",
 			CipherAddrRobot: "encrypted addr",
 			CipherWallet:    "cipher wallet",
 			PersonPubk:      "pubk",
@@ -346,7 +345,6 @@ func TestValidateBiometric(t *testing.T) {
 
 	valid, err := h.ValidateBiometric(context.TODO(), &api.BiometricValidationRequest{
 		Data: &api.BiometricData{
-			BiodPubk:        "pubk",
 			CipherAddrRobot: "encrypted addr",
 			CipherAddrBio:   "encrypted addr",
 			CipherAESKey:    "cipher aes",
@@ -388,7 +386,6 @@ func TestStoreKeychain(t *testing.T) {
 	ack, err := h.StoreKeychain(context.TODO(), &api.KeychainStorageRequest{
 		Data: &api.KeychainData{
 			CipherWallet:    "encrypted addr",
-			BiodPubk:        "pubk",
 			CipherAddrRobot: "encrypted addr",
 			PersonPubk:      "pubk",
 			Signature: &api.Signature{
@@ -401,7 +398,7 @@ func TestStoreKeychain(t *testing.T) {
 			TransactionHash:     "hash",
 			MasterValidation: &api.MasterValidation{
 				LastTransactionMiners: []string{"hash", "hash"},
-				ProofOfWorkRobotKey:   "robotkey",
+				ProofOfWorkKey:        "robotkey",
 				ProofOfWorkValidation: &api.Validation{
 					PublicKey: "robotkey",
 					Signature: "sig",
@@ -454,7 +451,6 @@ func TestStoreBiometric(t *testing.T) {
 		Data: &api.BiometricData{
 			CipherAESKey:    "encrypted aes key",
 			PersonHash:      "hash",
-			BiodPubk:        "pubk",
 			CipherAddrRobot: "encrypted addr",
 			PersonPubk:      "pubk",
 			Signature: &api.Signature{
@@ -467,7 +463,7 @@ func TestStoreBiometric(t *testing.T) {
 			TransactionHash:     "hash",
 			MasterValidation: &api.MasterValidation{
 				LastTransactionMiners: []string{"hash", "hash"},
-				ProofOfWorkRobotKey:   "robotkey",
+				ProofOfWorkKey:        "robotkey",
 				ProofOfWorkValidation: &api.Validation{
 					PublicKey: "robotkey",
 					Signature: "sig",
