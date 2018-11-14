@@ -2,16 +2,16 @@ package rpc
 
 import (
 	"context"
-	"net"
 	"testing"
-
-	"github.com/uniris/uniris-core/datamining/pkg"
 
 	"github.com/stretchr/testify/assert"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
+	mockcrypto "github.com/uniris/uniris-core/datamining/pkg/crypto/mock"
+	mockstorage "github.com/uniris/uniris-core/datamining/pkg/storage/mock"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
+	mocktransport "github.com/uniris/uniris-core/datamining/pkg/transport/mock"
 )
 
 /*
@@ -23,12 +23,11 @@ Scenario: Get account
 func TestGetAccount(t *testing.T) {
 	conf := system.UnirisConfig{}
 	crypto := Crypto{
-		hasher:    mockHasher{},
-		decrypter: mockDecrypter{},
-		signer:    mockSigner{},
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+		hasher:    mockcrypto.NewHasher(),
 	}
-	db := &mockDatabase{}
-
+	db := mockstorage.NewDatabase()
 	db.StoreBiometric(
 		account.NewBiometric(
 			account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", "pub", account.NewSignatures("sig", "sig")),
@@ -44,9 +43,9 @@ func TestGetAccount(t *testing.T) {
 		),
 	)
 
-	srvHandler := NewInternalServerHandler(mockPoolRequester{
-		repo: db,
-	}, mockAIClient{}, crypto, conf)
+	cli := mocktransport.NewExternalClient(db)
+	poolR := mocktransport.NewPoolRequester(cli)
+	srvHandler := NewInternalServerHandler(poolR, mocktransport.NewAIClient(), crypto, conf)
 
 	res, err := srvHandler.GetAccount(context.TODO(), &api.AccountSearchRequest{
 		EncryptedHashPerson: "enc person hash",
@@ -67,11 +66,15 @@ Scenario: Create keychain
 func TestCreateKeychain(t *testing.T) {
 	conf := system.UnirisConfig{}
 	crypto := Crypto{
-		hasher:    mockHasher{},
-		decrypter: mockDecrypter{},
-		signer:    mockSigner{},
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+		hasher:    mockcrypto.NewHasher(),
 	}
-	srvHandler := NewInternalServerHandler(mockPoolRequester{}, mockAIClient{}, crypto, conf)
+	db := mockstorage.NewDatabase()
+	cli := mocktransport.NewExternalClient(db)
+	poolR := mocktransport.NewPoolRequester(cli)
+	aiCli := mocktransport.NewAIClient()
+	srvHandler := NewInternalServerHandler(poolR, aiCli, crypto, conf)
 
 	res, err := srvHandler.CreateKeychain(context.TODO(), &api.KeychainCreationRequest{
 		EncryptedKeychainData: "cipher data",
@@ -96,11 +99,15 @@ func TestCreateBiometric(t *testing.T) {
 
 	conf := system.UnirisConfig{}
 	crypto := Crypto{
-		hasher:    mockHasher{},
-		decrypter: mockDecrypter{},
-		signer:    mockSigner{},
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+		hasher:    mockcrypto.NewHasher(),
 	}
-	srvHandler := NewInternalServerHandler(mockPoolRequester{}, mockAIClient{}, crypto, conf)
+	db := mockstorage.NewDatabase()
+	cli := mocktransport.NewExternalClient(db)
+	poolR := mocktransport.NewPoolRequester(cli)
+	aiCli := mocktransport.NewAIClient()
+	srvHandler := NewInternalServerHandler(poolR, aiCli, crypto, conf)
 
 	res, err := srvHandler.CreateBiometric(context.TODO(), &api.BiometricCreationRequest{
 		EncryptedBiometricData: "cipher data",
@@ -113,19 +120,4 @@ func TestCreateBiometric(t *testing.T) {
 	assert.Equal(t, "hash", res.TransactionHash)
 	assert.Equal(t, "127.0.0.1", res.MasterPeerIP)
 	assert.Equal(t, "sig", res.Signature)
-}
-
-type mockAIClient struct {
-}
-
-func (c mockAIClient) GetStoragePool(personHash string) (datamining.Pool, error) {
-	return datamining.NewPool(datamining.Peer{IP: net.ParseIP("127.0.0.1")}), nil
-}
-
-func (c mockAIClient) GetMasterPeer(txHash string) (datamining.Peer, error) {
-	return datamining.Peer{IP: net.ParseIP("127.0.0.1")}, nil
-}
-
-func (c mockAIClient) GetValidationPool(txHash string) (datamining.Pool, error) {
-	return datamining.NewPool(datamining.Peer{IP: net.ParseIP("127.0.0.1")}), nil
 }

@@ -16,9 +16,12 @@ import (
 	accountListing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
 	accountMining "github.com/uniris/uniris-core/datamining/pkg/account/mining"
 	biodlisting "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
+	mockcrypto "github.com/uniris/uniris-core/datamining/pkg/crypto/mock"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
+	mockstorage "github.com/uniris/uniris-core/datamining/pkg/storage/mock"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
+	mocktransport "github.com/uniris/uniris-core/datamining/pkg/transport/mock"
 )
 
 /*
@@ -28,7 +31,7 @@ Scenario: Get biometric
 	Then I get it from the db
 */
 func TestGetBiometric(t *testing.T) {
-	db := &mockDatabase{}
+	db := mockstorage.NewDatabase()
 	accLister := accountListing.NewService(db)
 
 	sig := account.NewSignatures("sig1", "sig2")
@@ -40,7 +43,10 @@ func TestGetBiometric(t *testing.T) {
 	db.StoreBiometric(account.NewBiometric(bioData, endors))
 
 	srv := Services{accLister: accLister}
-	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+	}
 	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
 
 	res, err := h.GetBiometric(context.TODO(), &api.BiometricRequest{
@@ -58,7 +64,7 @@ Scenario: Get keychain
 	Then I get it from the db
 */
 func TestGetKeychain(t *testing.T) {
-	db := &mockDatabase{}
+	db := mockstorage.NewDatabase()
 	accLister := accountListing.NewService(db)
 
 	sig := account.NewSignatures("sig1", "sig2")
@@ -70,7 +76,10 @@ func TestGetKeychain(t *testing.T) {
 	db.StoreKeychain(account.NewKeychain("hash", data, endors))
 
 	srv := Services{accLister: accLister}
-	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+	}
 	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
 	res, err := h.GetKeychain(context.TODO(), &api.KeychainRequest{
 		EncryptedAddress: "enc address",
@@ -88,26 +97,29 @@ Scenario: Lead mining of keychain transaction
 	Then I got no error and the data is stored
 */
 func TestLeadKeychainMining(t *testing.T) {
-	db := &mockDatabase{}
+	db := mockstorage.NewDatabase()
 	lockSrv := lock.NewService(db)
 	notifier := mockNotifier{}
 	poolF := mockPoolFinder{}
-	poolR := mockPoolRequester{
-		repo: db,
-	}
+	cli := mocktransport.NewExternalClient(db)
+	poolR := mocktransport.NewPoolRequester(cli)
 	biodlister := biodlisting.NewService(db)
 	accLister := accountListing.NewService(db)
 
 	txMiners := map[mining.TransactionType]mining.TransactionMiner{
-		mining.KeychainTransaction: accountMining.NewKeychainMiner(mockSigner{}, mockHasher{}, accLister),
+		mining.KeychainTransaction: accountMining.NewKeychainMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher(), accLister),
 	}
 
-	mineSrv := mining.NewService(notifier, poolF, poolR, mockSigner{}, biodlister, system.UnirisConfig{}, txMiners)
+	mineSrv := mining.NewService(notifier, poolF, poolR, mockcrypto.NewSigner(), biodlister, system.UnirisConfig{}, txMiners)
 
 	accSrv := accountadding.NewService(db)
 
 	srv := Services{accAdd: accSrv, lock: lockSrv, mining: mineSrv}
-	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+		hasher:    mockcrypto.NewHasher(),
+	}
 	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
 
 	_, err := h.LeadKeychainMining(context.TODO(), &api.KeychainLeadRequest{
@@ -132,20 +144,19 @@ Scenario: Lead mining of biometric transaction
 	Then I got no error and the data is stored
 */
 func TestLeadBiometricMining(t *testing.T) {
-	db := &mockDatabase{}
+	db := mockstorage.NewDatabase()
 	lockSrv := lock.NewService(db)
 	notifier := mockNotifier{}
 	poolF := mockPoolFinder{}
-	poolR := mockPoolRequester{
-		repo: db,
-	}
+	cli := mocktransport.NewExternalClient(db)
+	poolR := mocktransport.NewPoolRequester(cli)
 	biodlister := biodlisting.NewService(db)
 
 	txMiners := map[mining.TransactionType]mining.TransactionMiner{
-		mining.BiometricTransaction: accountMining.NewBiometricMiner(mockSigner{}, mockHasher{}),
+		mining.BiometricTransaction: accountMining.NewBiometricMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher()),
 	}
 
-	mineSrv := mining.NewService(notifier, poolF, poolR, mockSigner{}, biodlister, system.UnirisConfig{
+	mineSrv := mining.NewService(notifier, poolF, poolR, mockcrypto.NewSigner(), biodlister, system.UnirisConfig{
 		SharedKeys: system.SharedKeys{
 			RobotPublicKey: "robotkey",
 		},
@@ -154,7 +165,11 @@ func TestLeadBiometricMining(t *testing.T) {
 	accSrv := accountadding.NewService(db)
 
 	srv := Services{accAdd: accSrv, lock: lockSrv, mining: mineSrv}
-	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+		hasher:    mockcrypto.NewHasher(),
+	}
 	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
 
 	_, err := h.LeadBiometricMining(context.TODO(), &api.BiometricLeadRequest{
@@ -179,11 +194,15 @@ Scenario: Lock a transaction
 	Then the lock is stored
 */
 func TestLockTransaction(t *testing.T) {
-	db := &mockDatabase{}
+	db := mockstorage.NewDatabase()
 	lockSrv := lock.NewService(db)
 
 	srv := Services{lock: lockSrv}
-	crypto := Crypto{signer: mockSigner{}, hasher: mockHasher{}}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+		hasher:    mockcrypto.NewHasher(),
+	}
 	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
 
 	ack, err := h.LockTransaction(context.TODO(), &api.LockRequest{
@@ -210,11 +229,15 @@ Scenario: Unlock a transaction
 	Then the lock is removed
 */
 func TestUnlockTransaction(t *testing.T) {
-	db := &mockDatabase{}
+	db := mockstorage.NewDatabase()
 	lockSrv := lock.NewService(db)
 
 	srv := Services{lock: lockSrv}
-	crypto := Crypto{signer: mockSigner{}, hasher: mockHasher{}}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+		hasher:    mockcrypto.NewHasher(),
+	}
 	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
 
 	_, err := h.LockTransaction(context.TODO(), &api.LockRequest{
@@ -256,17 +279,20 @@ Scenario: Validate keychain as slave
 */
 func TestValidateKeychain(t *testing.T) {
 	txMiners := map[mining.TransactionType]mining.TransactionMiner{
-		mining.KeychainTransaction: accountMining.NewKeychainMiner(mockSigner{}, mockHasher{}, nil),
+		mining.KeychainTransaction: accountMining.NewKeychainMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher(), nil),
 	}
 
-	mineSrv := mining.NewService(nil, nil, nil, mockSigner{}, nil, system.UnirisConfig{
+	mineSrv := mining.NewService(nil, nil, nil, mockcrypto.NewSigner(), nil, system.UnirisConfig{
 		SharedKeys: system.SharedKeys{
 			RobotPublicKey: "robotkey",
 		},
 	}, txMiners)
 
 	services := Services{mining: mineSrv}
-	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}, hasher: mockHasher{}}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+	}
 	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
 
 	valid, err := h.ValidateKeychain(context.TODO(), &api.KeychainValidationRequest{
@@ -296,18 +322,23 @@ Scenario: Validate biometric as slave
 	Then I get a validation
 */
 func TestValidateBiometric(t *testing.T) {
+
 	txMiners := map[mining.TransactionType]mining.TransactionMiner{
-		mining.BiometricTransaction: accountMining.NewBiometricMiner(mockSigner{}, mockHasher{}),
+		mining.BiometricTransaction: accountMining.NewBiometricMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher()),
 	}
 
-	mineSrv := mining.NewService(nil, nil, nil, mockSigner{}, nil, system.UnirisConfig{
+	mineSrv := mining.NewService(nil, nil, nil, mockcrypto.NewSigner(), nil, system.UnirisConfig{
 		SharedKeys: system.SharedKeys{
 			RobotPublicKey: "robotkey",
 		},
 	}, txMiners)
 
 	services := Services{mining: mineSrv}
-	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}, hasher: mockHasher{}}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+		hasher:    mockcrypto.NewHasher(),
+	}
 	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
 
 	valid, err := h.ValidateBiometric(context.TODO(), &api.BiometricValidationRequest{
@@ -338,11 +369,15 @@ Scenario: Store keychain transaction
 	Then I get retrieve it in the db
 */
 func TestStoreKeychain(t *testing.T) {
-	db := &mockDatabase{}
+	db := mockstorage.NewDatabase()
 	accAdder := accountadding.NewService(db)
 
 	services := Services{accAdd: accAdder}
-	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}, hasher: mockHasher{}}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+		hasher:    mockcrypto.NewHasher(),
+	}
 	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
 
 	ack, err := h.StoreKeychain(context.TODO(), &api.KeychainStorageRequest{
@@ -388,11 +423,15 @@ Scenario: Store biometric transaction
 	Then I get retrieve it in the db
 */
 func TestStoreBiometric(t *testing.T) {
-	db := &mockDatabase{}
+	db := mockstorage.NewDatabase()
 
 	accAdder := accountadding.NewService(db)
 	services := Services{accAdd: accAdder}
-	crypto := Crypto{decrypter: mockDecrypter{}, signer: mockSigner{}, hasher: mockHasher{}}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+		hasher:    mockcrypto.NewHasher(),
+	}
 	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
 
 	ack, err := h.StoreBiometric(context.TODO(), &api.BiometricStorageRequest{

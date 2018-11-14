@@ -1,54 +1,17 @@
-package rpc
+package mock
 
 import (
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
-	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
-type mockHasher struct{}
-
-func (h mockHasher) HashKeychain(account.Keychain) (string, error) {
-	return "hash", nil
-}
-func (h mockHasher) HashBiometric(account.Biometric) (string, error) {
-	return "hash", nil
-}
-
-func (h mockHasher) NewKeychainDataHash(account.KeychainData) (string, error) {
-	return "hash", nil
-}
-func (h mockHasher) NewBiometricDataHash(account.BiometricData) (string, error) {
-	return "hash", nil
-}
-
-func (h mockHasher) HashKeychainData(account.KeychainData) (string, error) {
-	return "hash", nil
-}
-func (h mockHasher) HashBiometricData(account.BiometricData) (string, error) {
-	return "hash", nil
-}
-
-func (h mockHasher) HashLock(lock.TransactionLock) (string, error) {
-	return "hash", nil
-}
-
-type mockDecrypter struct{}
-
-func (d mockDecrypter) DecryptHash(hash string, pvKey string) (string, error) {
-	return "hash", nil
-}
-
-func (d mockDecrypter) DecryptKeychainData(data string, pvKey string) (account.KeychainData, error) {
-	return account.NewKeychainData("", "", "", "", account.NewSignatures("", "")), nil
-}
-
-func (d mockDecrypter) DecryptBiometricData(data string, pvKey string) (account.BiometricData, error) {
-	return account.NewBiometricData("personHash", "", "", "", "", "", account.NewSignatures("", "")), nil
-}
-
 type mockSigner struct{}
+
+//NewSigner create new mocked signer
+func NewSigner() mockSigner {
+	return mockSigner{}
+}
 
 func (s mockSigner) VerifyTransactionDataSignature(txType mining.TransactionType, pubKey string, data interface{}, sig string) error {
 	return nil

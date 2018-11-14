@@ -44,10 +44,6 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 		return nil, err
 	}
 
-	if biometric == nil {
-		return nil, errors.New(s.conf.Datamining.Errors.AccountNotExist)
-	}
-
 	clearAddr, err := s.crypto.decrypter.DecryptHash(biometric.CipherAddrRobot(), s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
@@ -107,8 +103,8 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 		return nil, err
 	}
 
-	extCli := newExternalClient(master.IP.String(), s.conf.Datamining.ExternalPort, s.crypto, s.conf)
-	go extCli.leadKeychainMining(txHash, req.EncryptedKeychainData, req.SignatureKeychainData, validPool.Peers().IPs())
+	extCli := NewExternalClient(s.crypto, s.conf)
+	go extCli.LeadKeychainMining(master.IP.String(), txHash, req.EncryptedKeychainData, req.SignatureKeychainData, validPool.Peers().IPs())
 
 	res := &api.CreationResult{
 		TransactionHash: txHash,
@@ -152,8 +148,8 @@ func (s internalSrvHandler) CreateBiometric(ctx context.Context, req *api.Biomet
 		return nil, err
 	}
 
-	extCli := newExternalClient(master.IP.String(), s.conf.Datamining.ExternalPort, s.crypto, s.conf)
-	go extCli.leadBiometricMining(txHash, req.EncryptedBiometricData, req.SignatureBiometricData, validPool.Peers().IPs())
+	extCli := NewExternalClient(s.crypto, s.conf)
+	go extCli.LeadBiometricMining(master.IP.String(), txHash, req.EncryptedBiometricData, req.SignatureBiometricData, validPool.Peers().IPs())
 
 	res := &api.CreationResult{
 		TransactionHash: txHash,

@@ -1,11 +1,27 @@
-package rpc
+package mock
 
 import (
 	"sort"
 
 	"github.com/uniris/uniris-core/datamining/pkg/account"
+	account_adding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
+	account_listing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
+	biod_listing "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 )
+
+//Database mock the entire database
+type Database interface {
+	account_adding.Repository
+	account_listing.Repository
+	biod_listing.Repository
+	lock.Repository
+}
+
+//NewDatabase create new mocked database
+func NewDatabase() Database {
+	return &mockDatabase{}
+}
 
 type mockDatabase struct {
 	Biometrics []account.Biometric

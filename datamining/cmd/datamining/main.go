@@ -14,7 +14,6 @@ import (
 	biodlisting "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
-	"github.com/uniris/uniris-core/datamining/pkg/mock"
 	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 
 	"github.com/uniris/uniris-core/datamining/pkg/crypto"
@@ -24,6 +23,7 @@ import (
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	mem "github.com/uniris/uniris-core/datamining/pkg/storage/mem"
+	mocktransport "github.com/uniris/uniris-core/datamining/pkg/transport/mock"
 )
 
 const (
@@ -39,15 +39,17 @@ func main() {
 
 	db := mem.NewDatabase()
 
-	poolFinder := mock.NewPoolFinder()
-	aiClient := mock.NewAIClient()
+	poolFinder := mocktransport.NewPoolFinder()
+	aiClient := mocktransport.NewAIClient()
 
 	signer := crypto.NewSigner()
 	hasher := crypto.NewHasher()
 	decrypter := crypto.NewDecrypter()
 
 	rpcCrypto := rpc.NewCrypto(decrypter, signer, hasher)
-	poolRequester := rpc.NewPoolRequester(*config, rpcCrypto)
+
+	grpcClient := rpc.NewExternalClient(rpcCrypto, *config)
+	poolRequester := rpc.NewPoolRequester(grpcClient, *config, rpcCrypto)
 
 	biodLister := biodlisting.NewService(db)
 	lockSrv := lock.NewService(db)
@@ -60,7 +62,7 @@ func main() {
 	}
 
 	miningSrv := mining.NewService(
-		mock.NewNotifier(),
+		mocktransport.NewNotifier(),
 		poolFinder,
 		poolRequester,
 		signer,
