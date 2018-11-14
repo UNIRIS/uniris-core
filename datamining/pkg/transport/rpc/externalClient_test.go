@@ -300,7 +300,8 @@ func TestRequestKeychainValidationClient(t *testing.T) {
 		},
 	}
 
-	miner := mining.NewService(nil, nil, nil, mockcrypto.NewSigner(), nil, conf, txMiners)
+	aiClient := mocktransport.NewAIClient()
+	miner := mining.NewService(aiClient, nil, nil, nil, mockcrypto.NewSigner(), nil, conf, txMiners)
 
 	grpcServer := grpc.NewServer()
 	defer grpcServer.Stop()
@@ -355,7 +356,8 @@ func TestRequestBiometricValidationClient(t *testing.T) {
 		},
 	}
 
-	miner := mining.NewService(nil, nil, nil, mockcrypto.NewSigner(), nil, conf, txMiners)
+	aiClient := mocktransport.NewAIClient()
+	miner := mining.NewService(aiClient, nil, nil, nil, mockcrypto.NewSigner(), nil, conf, txMiners)
 
 	grpcServer := grpc.NewServer()
 	defer grpcServer.Stop()

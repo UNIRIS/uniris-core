@@ -43,7 +43,7 @@ func (h hasher) HashBiometric(data account.Biometric) (string, error) {
 			Pubk:      v.PublicKey(),
 			Sig:       v.Signature(),
 			Status:    v.Status(),
-			Timestamp: v.Timestamp(),
+			Timestamp: v.Timestamp().Unix(),
 		})
 	}
 	b, err := json.Marshal(biometric{
@@ -65,7 +65,7 @@ func (h hasher) HashBiometric(data account.Biometric) (string, error) {
 					Pubk:      data.Endorsement().MasterValidation().ProofOfWorkValidation().PublicKey(),
 					Sig:       data.Endorsement().MasterValidation().ProofOfWorkValidation().Signature(),
 					Status:    data.Endorsement().MasterValidation().ProofOfWorkValidation().Status(),
-					Timestamp: data.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp(),
+					Timestamp: data.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix(),
 				},
 			},
 			Validations: valids,
@@ -84,7 +84,7 @@ func (h hasher) HashKeychain(data account.Keychain) (string, error) {
 			Pubk:      v.PublicKey(),
 			Sig:       v.Signature(),
 			Status:    v.Status(),
-			Timestamp: v.Timestamp(),
+			Timestamp: v.Timestamp().Unix(),
 		})
 	}
 	b, err := json.Marshal(keychain{
@@ -105,7 +105,7 @@ func (h hasher) HashKeychain(data account.Keychain) (string, error) {
 					Pubk:      data.Endorsement().MasterValidation().ProofOfWorkValidation().PublicKey(),
 					Sig:       data.Endorsement().MasterValidation().ProofOfWorkValidation().Signature(),
 					Status:    data.Endorsement().MasterValidation().ProofOfWorkValidation().Status(),
-					Timestamp: data.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp(),
+					Timestamp: data.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix(),
 				},
 			},
 			Validations: valids,

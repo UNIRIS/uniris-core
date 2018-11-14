@@ -38,6 +38,7 @@ func (b dataBuilder) buildEndorsement(data *api.Endorsement) mining.Endorsement 
 	for _, v := range data.Validations {
 		valids = append(valids, b.buildValidation(v))
 	}
+
 	return mining.NewEndorsement(
 		data.LastTransactionHash,
 		data.TransactionHash,

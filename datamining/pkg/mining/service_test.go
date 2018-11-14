@@ -23,9 +23,10 @@ func TestMine(t *testing.T) {
 	biodLister := biodlisting.NewService(mockBiodDatabase{})
 
 	s := service{
-		notif:  &mockNotifier{},
-		signer: mockSrvSigner{},
-		poolR:  mockPoolRequester{},
+		aiClient: mockAIClient{},
+		notif:    &mockNotifier{},
+		signer:   mockSrvSigner{},
+		poolR:    mockPoolRequester{},
 		txMiners: map[TransactionType]TransactionMiner{
 			KeychainTransaction: mockMiner{},
 		},
@@ -197,7 +198,7 @@ func (r mockPoolRequester) RequestUnlock(datamining.Pool, lock.TransactionLock) 
 	return nil
 }
 
-func (r mockPoolRequester) RequestValidations(sPool datamining.Pool, txHash string, data interface{}, txType TransactionType) ([]Validation, error) {
+func (r mockPoolRequester) RequestValidations(minValid int, sPool datamining.Pool, txHash string, data interface{}, txType TransactionType) ([]Validation, error) {
 	return []Validation{
 		NewValidation(
 			ValidationOK,
@@ -215,4 +216,10 @@ type mockBiodDatabase struct{}
 
 func (db mockBiodDatabase) ListBiodPubKeys() ([]string, error) {
 	return []string{"key1", "key2"}, nil
+}
+
+type mockAIClient struct{}
+
+func (ai mockAIClient) GetMininumValidations(txHash string) (int, error) {
+	return 1, nil
 }

@@ -199,10 +199,39 @@ func TestRequestValidations(t *testing.T) {
 
 	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig"))
 
-	valids, err := pr.RequestValidations(pool, "hash", keychainData, mining.KeychainTransaction)
+	valids, err := pr.RequestValidations(2, pool, "hash", keychainData, mining.KeychainTransaction)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, valids)
 	assert.Equal(t, 2, len(valids))
+}
+
+/*
+Scenario: Request transaction validations and get invalid minimum validations
+	Given an transaction hash and data associated
+	When I want to validate them
+	Then it launches a pool of goroutines and validate the information but the number of validation is less than the minimum
+*/
+func TestRequestValidationsWithLessThanMinimumValidations(t *testing.T) {
+	conf := system.UnirisConfig{}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+		hasher:    mockcrypto.NewHasher(),
+	}
+
+	db := mockstorage.NewDatabase()
+
+	cli := mock.NewExternalClient(db)
+
+	pr := NewPoolRequester(cli, conf, crypto)
+	pool := datamining.NewPool(
+		datamining.Peer{IP: net.ParseIP("127.0.0.1")},
+		datamining.Peer{IP: net.ParseIP("127.0.0.1")})
+
+	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig"))
+
+	_, err := pr.RequestValidations(5, pool, "hash", keychainData, mining.KeychainTransaction)
+	assert.Equal(t, "Minimum validations are not reached", err.Error())
 }
 
 /*

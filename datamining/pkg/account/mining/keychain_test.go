@@ -8,7 +8,7 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/account/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
-	"github.com/uniris/uniris-core/datamining/pkg/mock"
+	"github.com/uniris/uniris-core/datamining/pkg/storage/mock"
 )
 
 /*

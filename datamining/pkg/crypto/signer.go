@@ -252,11 +252,12 @@ func (s signer) VerifyValidationSignature(v mining.Validation) error {
 	b, err := json.Marshal(validationRaw{
 		PublicKey: v.PublicKey(),
 		Status:    v.Status(),
-		Timestamp: v.Timestamp(),
+		Timestamp: v.Timestamp().Unix(),
 	})
 	if err != nil {
 		return err
 	}
+
 	return checkSignature(v.PublicKey(), string(b), v.Signature())
 }
 
@@ -417,11 +418,12 @@ func (s signer) SignValidation(v mining.Validation, pvKey string) (mining.Valida
 	b, err := json.Marshal(validationRaw{
 		PublicKey: v.PublicKey(),
 		Status:    v.Status(),
-		Timestamp: v.Timestamp(),
+		Timestamp: v.Timestamp().Unix(),
 	})
 	if err != nil {
 		return nil, err
 	}
+
 	sig, err := sign(pvKey, string(b))
 	if err != nil {
 		return nil, err

@@ -1,8 +1,6 @@
 package crypto
 
 import (
-	"time"
-
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
@@ -21,7 +19,7 @@ type masterValidation struct {
 
 type validation struct {
 	Status    mining.ValidationStatus `json:"status"`
-	Timestamp time.Time               `json:"timestamp"`
+	Timestamp int64                   `json:"timestamp"`
 	Pubk      string                  `json:"public_key"`
 	Sig       string                  `json:"signature"`
 }
@@ -93,6 +91,6 @@ type lockRaw struct {
 
 type validationRaw struct {
 	Status    mining.ValidationStatus `json:"status"`
-	Timestamp time.Time               `json:"timestamp"`
+	Timestamp int64                   `json:"timestamp"`
 	PublicKey string                  `json:"public_key"`
 }
