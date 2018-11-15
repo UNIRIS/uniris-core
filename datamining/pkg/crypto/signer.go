@@ -14,8 +14,6 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
-
-	accountMining "github.com/uniris/uniris-core/datamining/pkg/account/mining"
 )
 
 type ecdsaSignature struct {
@@ -24,9 +22,11 @@ type ecdsaSignature struct {
 
 //Signer defines methods to handle signatures
 type Signer interface {
-	mining.Signer
-	accountMining.KeychainSigner
-	accountMining.BiometricSigner
+	mining.PowSigVerifier
+	mining.ValidationVerifier
+	mining.ValidationSigner
+	account.KeychainSignatureVerifier
+	account.BiometricSignatureVerifier
 	rpc.Signer
 }
 
@@ -40,17 +40,36 @@ func NewSigner() Signer {
 func (s signer) VerifyTransactionDataSignature(txType mining.TransactionType, pubKey string, data interface{}, sig string) error {
 	switch txType {
 	case mining.KeychainTransaction:
-		return s.VerifyKeychainDataSignature(pubKey, data.(account.KeychainData), sig)
+		kc := data.(account.KeychainData)
+		b, err := json.Marshal(keychainRaw{
+			EncryptedWallet:    kc.CipherWallet(),
+			EncryptedAddrRobot: kc.CipherAddrRobot(),
+			PersonPublicKey:    kc.PersonPublicKey(),
+		})
+		if err != nil {
+			return err
+		}
+		return checkSignature(pubKey, string(b), sig)
 	case mining.BiometricTransaction:
-		return s.VerifyBiometricDataSignature(pubKey, data.(account.BiometricData), sig)
+		bio := data.(account.BiometricData)
+		b, err := json.Marshal(biometricRaw{
+			EncryptedAddrPerson: bio.CipherAddrPerson(),
+			EncryptedAddrRobot:  bio.CipherAddrRobot(),
+			EncryptedAESKey:     bio.CipherAESKey(),
+			PersonHash:          bio.PersonHash(),
+			PersonPublicKey:     bio.PersonPublicKey(),
+		})
+		if err != nil {
+			return err
+		}
+		return checkSignature(pubKey, string(b), sig)
 	}
 
 	return mining.ErrUnsupportedTransaction
 }
 
-func (s signer) VerifyBiometricDataSignature(pubKey string, data account.BiometricData, sig string) error {
+func (s signer) VerifyBiometricDataSignatures(data account.BiometricData) error {
 	b, err := json.Marshal(biometricRaw{
-		BIODPublicKey:       data.BiodPublicKey(),
 		EncryptedAddrPerson: data.CipherAddrPerson(),
 		EncryptedAddrRobot:  data.CipherAddrRobot(),
 		EncryptedAESKey:     data.CipherAESKey(),
@@ -60,12 +79,14 @@ func (s signer) VerifyBiometricDataSignature(pubKey string, data account.Biometr
 	if err != nil {
 		return err
 	}
-	return checkSignature(pubKey, string(b), sig)
+	if err := checkSignature(data.PersonPublicKey(), string(b), data.Signatures().Person()); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (s signer) VerifyKeychainDataSignature(pubKey string, data account.KeychainData, sig string) error {
+func (s signer) VerifyKeychainDataSignatures(data account.KeychainData) error {
 	b, err := json.Marshal(keychainRaw{
-		BIODPublicKey:      data.BiodPublicKey(),
 		EncryptedWallet:    data.CipherWallet(),
 		EncryptedAddrRobot: data.CipherAddrRobot(),
 		PersonPublicKey:    data.PersonPublicKey(),
@@ -73,7 +94,10 @@ func (s signer) VerifyKeychainDataSignature(pubKey string, data account.Keychain
 	if err != nil {
 		return err
 	}
-	return checkSignature(pubKey, string(b), sig)
+	if err := checkSignature(data.PersonPublicKey(), string(b), data.Signatures().Person()); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s signer) VerifyHashSignature(pubKey string, hash string, sig string) error {
@@ -212,6 +236,19 @@ func (s signer) VerifyBiometricResponseSignature(pubKey string, res *api.Biometr
 		return err
 	}
 	return checkSignature(pubKey, string(b), res.Signature)
+}
+
+func (s signer) VerifyValidationSignature(v mining.Validation) error {
+	b, err := json.Marshal(validationRaw{
+		PublicKey: v.PublicKey(),
+		Status:    v.Status(),
+		Timestamp: v.Timestamp().Unix(),
+	})
+	if err != nil {
+		return err
+	}
+
+	return checkSignature(v.PublicKey(), string(b), v.Signature())
 }
 
 func (s signer) SignBiometricResponse(res *api.BiometricResponse, pvKey string) error {
@@ -367,16 +404,22 @@ func (s signer) SignLockRequest(req *api.LockRequest, pvKey string) error {
 	return nil
 }
 
-func (s signer) SignValidation(data mining.Validation, pvKey string) (string, error) {
+func (s signer) SignValidation(v mining.Validation, pvKey string) (mining.Validation, error) {
 	b, err := json.Marshal(validationRaw{
-		PublicKey: data.PublicKey(),
-		Status:    data.Status(),
-		Timestamp: data.Timestamp(),
+		PublicKey: v.PublicKey(),
+		Status:    v.Status(),
+		Timestamp: v.Timestamp().Unix(),
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return sign(pvKey, string(b))
+
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return nil, err
+	}
+
+	return mining.NewValidation(v.Status(), v.Timestamp(), v.PublicKey(), sig), nil
 }
 
 func (s signer) SignValidationResponse(res *api.ValidationResponse, pvKey string) error {

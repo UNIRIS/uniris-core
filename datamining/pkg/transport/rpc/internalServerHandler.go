@@ -85,7 +85,6 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 		cKeychain.CipherAddrRobot(),
 		cKeychain.CipherWallet(),
 		cKeychain.PersonPublicKey(),
-		cKeychain.BiodPublicKey(),
 		account.NewSignatures(req.SignatureKeychainData.Biod, req.SignatureKeychainData.Person),
 	)
 
@@ -130,7 +129,6 @@ func (s internalSrvHandler) CreateBiometric(ctx context.Context, req *api.Biomet
 		cBio.CipherAddrPerson(),
 		cBio.CipherAESKey(),
 		cBio.PersonPublicKey(),
-		cBio.BiodPublicKey(),
 		account.NewSignatures(req.SignatureBiometricData.Biod, req.SignatureBiometricData.Person),
 	)
 

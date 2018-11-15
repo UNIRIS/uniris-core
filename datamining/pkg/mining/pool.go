@@ -15,10 +15,10 @@ type PoolRequester interface {
 	RequestUnlock(lockPool datamining.Pool, lock lock.TransactionLock) error
 
 	//RequestValidations asks a validation pool to perform checks on a transaction
-	RequestValidations(vPool datamining.Pool, txHash string, data interface{}, txType TransactionType) ([]Validation, error)
+	RequestValidations(minValid int, vPool datamining.Pool, txHash string, data interface{}, txType TransactionType) ([]Validation, error)
 
 	//RequestStorage asks a storage pool to store the transaction
-	RequestStorage(sPool datamining.Pool, data interface{}, end Endorsement, txType TransactionType) error
+	RequestStorage(minReplicas int, sPool datamining.Pool, data interface{}, end Endorsement, txType TransactionType) error
 }
 
 //PoolFinder defines methods to find miners to perform validation

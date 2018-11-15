@@ -45,11 +45,11 @@ func (s mockSigner) VerifyLockRequestSignature(pubkey string, req *api.LockReque
 	return nil
 }
 
-func (s mockSigner) VerifyBiometricDataSignature(pubKey string, data account.BiometricData, sig string) error {
+func (s mockSigner) VerifyBiometricDataSignatures(account.BiometricData) error {
 	return nil
 }
 
-func (s mockSigner) VerifyKeychainDataSignature(pubKey string, data account.KeychainData, sig string) error {
+func (s mockSigner) VerifyKeychainDataSignatures(account.KeychainData) error {
 	return nil
 }
 
@@ -73,6 +73,10 @@ func (s mockSigner) VerifyBiometricResponseSignature(pubKey string, res *api.Bio
 	return nil
 }
 
+func (s mockSigner) VerifyValidationSignature(v mining.Validation) error {
+	return nil
+}
+
 func (s mockSigner) SignBiometricResponse(res *api.BiometricResponse, pvKey string) error {
 	res.Signature = "sig"
 	return nil
@@ -82,8 +86,8 @@ func (s mockSigner) SignKeychainResponse(res *api.KeychainResponse, pvKey string
 	return nil
 }
 
-func (s mockSigner) SignValidation(v mining.Validation, pvKey string) (string, error) {
-	return "sig", nil
+func (s mockSigner) SignValidation(v mining.Validation, pvKey string) (mining.Validation, error) {
+	return mining.NewValidation(v.Status(), v.Timestamp(), v.PublicKey(), "sig"), nil
 }
 
 func (s mockSigner) SignValidationResponse(res *api.ValidationResponse, pvKey string) error {

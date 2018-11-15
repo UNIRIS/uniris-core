@@ -37,7 +37,7 @@ func TestExecutePOW(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, valid)
 
-	assert.Equal(t, "my key", valid.ProofOfWorkRobotKey())
+	assert.Equal(t, "key1", valid.ProofOfWorkKey())
 	assert.Equal(t, "my key", valid.ProofOfWorkValidation().PublicKey())
 	assert.Equal(t, ValidationOK, valid.ProofOfWorkValidation().Status())
 }
@@ -70,7 +70,7 @@ func TestExecutePOW_KO(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, valid)
 
-	assert.Equal(t, "my key", valid.ProofOfWorkRobotKey())
+	assert.Equal(t, "", valid.ProofOfWorkKey())
 	assert.Equal(t, "my key", valid.ProofOfWorkValidation().PublicKey())
 	assert.Equal(t, ValidationKO, valid.ProofOfWorkValidation().Status())
 }
@@ -88,8 +88,8 @@ func (s mockPowSigner) VerifyTransactionDataSignature(txType TransactionType, pu
 	return nil
 }
 
-func (s mockPowSigner) SignValidation(v Validation, pvKey string) (string, error) {
-	return "sig", nil
+func (s mockPowSigner) SignValidation(v Validation, pvKey string) (Validation, error) {
+	return NewValidation(v.Status(), v.Timestamp(), v.PublicKey(), "sig"), nil
 }
 
 type mockBadPowSigner struct{}
@@ -98,6 +98,6 @@ func (s mockBadPowSigner) VerifyTransactionDataSignature(txType TransactionType,
 	return errors.New("Invalid signature")
 }
 
-func (s mockBadPowSigner) SignValidation(v Validation, pvKey string) (string, error) {
-	return "sig", nil
+func (s mockBadPowSigner) SignValidation(v Validation, pvKey string) (Validation, error) {
+	return NewValidation(v.Status(), v.Timestamp(), v.PublicKey(), "sig"), nil
 }

@@ -133,7 +133,6 @@ func (h externalSrvHandler) LeadKeychainMining(ctx context.Context, req *api.Key
 		keychainSigLess.CipherAddrRobot(),
 		keychainSigLess.CipherWallet(),
 		keychainSigLess.PersonPublicKey(),
-		keychainSigLess.BiodPublicKey(),
 		account.NewSignatures(req.SignatureKeychainData.Biod, req.SignatureKeychainData.Person),
 	)
 
@@ -170,7 +169,6 @@ func (h externalSrvHandler) LeadBiometricMining(ctx context.Context, req *api.Bi
 		bioSigLess.CipherAddrPerson(),
 		bioSigLess.CipherAESKey(),
 		bioSigLess.PersonPublicKey(),
-		bioSigLess.BiodPublicKey(),
 		account.NewSignatures(req.SignatureBioData.Biod, req.SignatureBioData.Person),
 	)
 

@@ -41,9 +41,9 @@ type TransactionMiner interface {
 	CheckAsSlave(txHash string, data interface{}) error
 }
 
-//Signer defines methods to handle lead mining signing
-type Signer interface {
-	PowSigner
+type signer interface {
+	PowSigVerifier
+	ValidationSigner
 }
 
 //Service defines methods for global mining
@@ -67,18 +67,19 @@ type Service interface {
 }
 
 type service struct {
+	aiClient   AIClient
 	notif      Notifier
 	poolF      PoolFinder
 	poolR      PoolRequester
-	signer     Signer
+	signer     signer
 	biodLister biodlisting.Service
 	config     system.UnirisConfig
 	txMiners   map[TransactionType]TransactionMiner
 }
 
 //NewService creates a new global mining service
-func NewService(n Notifier, pF PoolFinder, pR PoolRequester, sig Signer, biodLister biodlisting.Service, config system.UnirisConfig, txMiners map[TransactionType]TransactionMiner) Service {
-	return service{n, pF, pR, sig, biodLister, config, txMiners}
+func NewService(aiCli AIClient, n Notifier, pF PoolFinder, pR PoolRequester, signer signer, biodLister biodlisting.Service, config system.UnirisConfig, txMiners map[TransactionType]TransactionMiner) Service {
+	return service{aiCli, n, pF, pR, signer, biodLister, config, txMiners}
 }
 
 func (s service) LeadMining(txHash string, addr string, data interface{}, vPool datamining.Pool, txType TransactionType, biodSig string) error {
@@ -114,7 +115,14 @@ func (s service) LeadMining(txHash string, addr string, data interface{}, vPool 
 		return err
 	}
 
-	if err := s.poolR.RequestStorage(sPool, data, endorsement, txType); err != nil {
+	minReplicas, err := s.aiClient.GetMininumReplications(txHash)
+	if err != nil {
+		return err
+	}
+	if err := s.poolR.RequestStorage(minReplicas, sPool, data, endorsement, txType); err != nil {
+		if err := s.notif.NotifyTransactionStatus(txHash, TxInvalid); err != nil {
+			return err
+		}
 		return err
 	}
 	if err := s.notif.NotifyTransactionStatus(txHash, TxReplicated); err != nil {
@@ -175,8 +183,9 @@ func (s service) mine(txHash string, data interface{}, addr string, biodSig stri
 
 	//Execute the Proof of Work
 	pow := pow{
-		lastVPool:   lastVPool,
-		lister:      s.biodLister,
+		lastVPool: lastVPool,
+		lister:    s.biodLister,
+		//TODO: use the real keys and not the shared ones
 		robotPubKey: s.config.SharedKeys.RobotPublicKey,
 		robotPvKey:  s.config.SharedKeys.RobotPrivateKey,
 		signer:      s.signer,
@@ -189,8 +198,13 @@ func (s service) mine(txHash string, data interface{}, addr string, biodSig stri
 		return nil, err
 	}
 
+	minValid, err := s.aiClient.GetMininumValidations(txHash)
+	if err != nil {
+		return nil, err
+	}
+
 	//Ask a pool of peers to validate the transaction
-	valids, err := s.poolR.RequestValidations(vPool, txHash, data, txType)
+	valids, err := s.poolR.RequestValidations(minValid, vPool, txHash, data, txType)
 	if err != nil {
 		return nil, err
 	}
@@ -224,15 +238,15 @@ func (s service) Validate(txHash string, data interface{}, txType TransactionTyp
 }
 
 func (s service) buildValidation(status ValidationStatus) (Validation, error) {
-	//TODO: use the real public key not the shared one
+	//TODO: use the real keys and not the shared ones
 	v := validation{
 		pubk:      s.config.SharedKeys.RobotPublicKey,
 		status:    status,
 		timestamp: time.Now(),
 	}
-	signature, err := s.signer.SignValidation(v, s.config.SharedKeys.RobotPrivateKey)
+	sValid, err := s.signer.SignValidation(v, s.config.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, err
 	}
-	return NewValidation(v.status, v.timestamp, v.pubk, signature), nil
+	return sValid, nil
 }

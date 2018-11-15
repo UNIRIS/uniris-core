@@ -42,8 +42,7 @@ func (d decrypter) DecryptBiometricData(data string, pvKey string) (account.Biom
 		bio.EncryptedAddrRobot,
 		bio.EncryptedAddrPerson,
 		bio.EncryptedAESKey,
-		bio.PersonPublicKey,
-		bio.BIODPublicKey, nil), nil
+		bio.PersonPublicKey, nil), nil
 }
 
 func (d decrypter) DecryptKeychainData(data string, pvKey string) (account.KeychainData, error) {
@@ -59,8 +58,7 @@ func (d decrypter) DecryptKeychainData(data string, pvKey string) (account.Keych
 	return account.NewKeychainData(
 		keychain.EncryptedAddrRobot,
 		keychain.EncryptedWallet,
-		keychain.PersonPublicKey,
-		keychain.BIODPublicKey, nil), nil
+		keychain.PersonPublicKey, nil), nil
 }
 
 func decrypt(privk string, data string) (string, error) {

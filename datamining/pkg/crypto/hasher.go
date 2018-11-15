@@ -8,15 +8,13 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 
 	"github.com/uniris/uniris-core/datamining/pkg/account"
-	accountMining "github.com/uniris/uniris-core/datamining/pkg/account/mining"
-	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 )
 
 //Hasher defines methods for hashing
 type Hasher interface {
-	accountMining.KeychainHasher
-	accountMining.BiometricHasher
-	rpc.Hasher
+	account.KeychainHasher
+	account.BiometricHasher
+	lock.Hasher
 }
 
 type hasher struct{}
@@ -45,7 +43,7 @@ func (h hasher) HashBiometric(data account.Biometric) (string, error) {
 			Pubk:      v.PublicKey(),
 			Sig:       v.Signature(),
 			Status:    v.Status(),
-			Timestamp: v.Timestamp(),
+			Timestamp: v.Timestamp().Unix(),
 		})
 	}
 	b, err := json.Marshal(biometric{
@@ -53,7 +51,6 @@ func (h hasher) HashBiometric(data account.Biometric) (string, error) {
 		EncryptedAddrPerson: data.CipherAddrPerson(),
 		EncryptedAddrRobot:  data.CipherAddrRobot(),
 		EncryptedAESKey:     data.CipherAESKey(),
-		BIODPublicKey:       data.BiodPublicKey(),
 		PersonPublicKey:     data.PersonPublicKey(),
 		BIODSignature:       data.Signatures().Biod(),
 		PersonSignature:     data.Signatures().Person(),
@@ -61,13 +58,13 @@ func (h hasher) HashBiometric(data account.Biometric) (string, error) {
 			LastTxHash: data.Endorsement().LastTransactionHash(),
 			TxHash:     data.Endorsement().TransactionHash(),
 			MasterValidation: masterValidation{
-				LastTxRvk:   data.Endorsement().MasterValidation().LastTransactionMiners(),
-				PowRobotKey: data.Endorsement().MasterValidation().ProofOfWorkRobotKey(),
+				LastTxRvk: data.Endorsement().MasterValidation().LastTransactionMiners(),
+				PowKey:    data.Endorsement().MasterValidation().ProofOfWorkKey(),
 				PowValid: validation{
 					Pubk:      data.Endorsement().MasterValidation().ProofOfWorkValidation().PublicKey(),
 					Sig:       data.Endorsement().MasterValidation().ProofOfWorkValidation().Signature(),
 					Status:    data.Endorsement().MasterValidation().ProofOfWorkValidation().Status(),
-					Timestamp: data.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp(),
+					Timestamp: data.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix(),
 				},
 			},
 			Validations: valids,
@@ -86,14 +83,13 @@ func (h hasher) HashKeychain(data account.Keychain) (string, error) {
 			Pubk:      v.PublicKey(),
 			Sig:       v.Signature(),
 			Status:    v.Status(),
-			Timestamp: v.Timestamp(),
+			Timestamp: v.Timestamp().Unix(),
 		})
 	}
 	b, err := json.Marshal(keychain{
 		Address:            data.Address(),
 		EncryptedWallet:    data.CipherWallet(),
 		EncryptedAddrRobot: data.CipherAddrRobot(),
-		BIODPublicKey:      data.BiodPublicKey(),
 		PersonPublicKey:    data.PersonPublicKey(),
 		BIODSignature:      data.Signatures().Biod(),
 		PersonSignature:    data.Signatures().Person(),
@@ -101,13 +97,13 @@ func (h hasher) HashKeychain(data account.Keychain) (string, error) {
 			LastTxHash: data.Endorsement().LastTransactionHash(),
 			TxHash:     data.Endorsement().TransactionHash(),
 			MasterValidation: masterValidation{
-				LastTxRvk:   data.Endorsement().MasterValidation().LastTransactionMiners(),
-				PowRobotKey: data.Endorsement().MasterValidation().ProofOfWorkRobotKey(),
+				LastTxRvk: data.Endorsement().MasterValidation().LastTransactionMiners(),
+				PowKey:    data.Endorsement().MasterValidation().ProofOfWorkKey(),
 				PowValid: validation{
 					Pubk:      data.Endorsement().MasterValidation().ProofOfWorkValidation().PublicKey(),
 					Sig:       data.Endorsement().MasterValidation().ProofOfWorkValidation().Signature(),
 					Status:    data.Endorsement().MasterValidation().ProofOfWorkValidation().Status(),
-					Timestamp: data.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp(),
+					Timestamp: data.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix(),
 				},
 			},
 			Validations: valids,
@@ -119,17 +115,12 @@ func (h hasher) HashKeychain(data account.Keychain) (string, error) {
 	return hashBytes(b), nil
 }
 
-func (h hasher) NewBiometricDataHash(data account.BiometricData) (string, error) {
-	return h.HashBiometricData(data)
-}
-
 func (h hasher) HashBiometricData(data account.BiometricData) (string, error) {
 	b, err := json.Marshal(biometricData{
 		PersonHash:          data.PersonHash(),
 		EncryptedAddrPerson: data.CipherAddrPerson(),
 		EncryptedAddrRobot:  data.CipherAddrRobot(),
 		EncryptedAESKey:     data.CipherAESKey(),
-		BIODPublicKey:       data.BiodPublicKey(),
 		PersonPublicKey:     data.PersonPublicKey(),
 		BIODSignature:       data.Signatures().Biod(),
 		PersonSignature:     data.Signatures().Person(),
@@ -140,15 +131,10 @@ func (h hasher) HashBiometricData(data account.BiometricData) (string, error) {
 	return hashBytes(b), nil
 }
 
-func (h hasher) NewKeychainDataHash(data account.KeychainData) (string, error) {
-	return h.HashKeychainData(data)
-}
-
 func (h hasher) HashKeychainData(data account.KeychainData) (string, error) {
 	b, err := json.Marshal(keychainData{
 		EncryptedAddrRobot: data.CipherAddrRobot(),
 		EncryptedWallet:    data.CipherWallet(),
-		BIODPublicKey:      data.BiodPublicKey(),
 		PersonPublicKey:    data.PersonPublicKey(),
 		BIODSignature:      data.Signatures().Biod(),
 		PersonSignature:    data.Signatures().Person(),

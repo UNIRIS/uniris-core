@@ -9,6 +9,7 @@ import (
 
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
+	mocktransport "github.com/uniris/uniris-core/datamining/pkg/transport/mock"
 
 	"github.com/stretchr/testify/assert"
 
@@ -69,7 +70,7 @@ func TestRequestBiometricClient(t *testing.T) {
 
 	db.StoreBiometric(
 		account.NewBiometric(
-			account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", "pub", account.NewSignatures("sig", "sig")),
+			account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", account.NewSignatures("sig", "sig")),
 			mining.NewEndorsement("", "hash",
 				mining.NewMasterValidation([]string{"hash"}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
 				[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")}),
@@ -130,7 +131,7 @@ func TestRequestKeychainClient(t *testing.T) {
 	db.StoreKeychain(
 		account.NewKeychain(
 			"hash",
-			account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig")),
+			account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig")),
 			mining.NewEndorsement("", "hash",
 				mining.NewMasterValidation([]string{"hash"}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
 				[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")}),
@@ -299,7 +300,8 @@ func TestRequestKeychainValidationClient(t *testing.T) {
 		},
 	}
 
-	miner := mining.NewService(nil, nil, nil, mockcrypto.NewSigner(), nil, conf, txMiners)
+	aiClient := mocktransport.NewAIClient()
+	miner := mining.NewService(aiClient, nil, nil, nil, mockcrypto.NewSigner(), nil, conf, txMiners)
 
 	grpcServer := grpc.NewServer()
 	defer grpcServer.Stop()
@@ -322,7 +324,7 @@ func TestRequestKeychainValidationClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig"))
+	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
 
 	cli := NewExternalClient(crypto, conf)
 	valid, err := cli.RequestValidation("127.0.0.1", mining.KeychainTransaction, "hash", keychainData)
@@ -354,7 +356,8 @@ func TestRequestBiometricValidationClient(t *testing.T) {
 		},
 	}
 
-	miner := mining.NewService(nil, nil, nil, mockcrypto.NewSigner(), nil, conf, txMiners)
+	aiClient := mocktransport.NewAIClient()
+	miner := mining.NewService(aiClient, nil, nil, nil, mockcrypto.NewSigner(), nil, conf, txMiners)
 
 	grpcServer := grpc.NewServer()
 	defer grpcServer.Stop()
@@ -377,7 +380,7 @@ func TestRequestBiometricValidationClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	bioData := account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", "pub", account.NewSignatures("sig", "sig"))
+	bioData := account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", account.NewSignatures("sig", "sig"))
 
 	cli := NewExternalClient(crypto, conf)
 	valid, err := cli.RequestValidation("127.0.0.1", mining.BiometricTransaction, "hash", bioData)
@@ -393,7 +396,9 @@ Scenario: Call RequestStorage GRPC endpoint for keychain
 */
 func TestRequestKeychainStorageClient(t *testing.T) {
 	db := mockstorage.NewDatabase()
-	accAdder := accountAdding.NewService(db)
+	accLister := accountListing.NewService(db)
+	aiClient := mocktransport.NewAIClient()
+	accAdder := accountAdding.NewService(aiClient, db, accLister, mockcrypto.NewSigner(), mockcrypto.NewHasher())
 
 	crypto := Crypto{
 		decrypter: mockcrypto.NewDecrypter(),
@@ -429,9 +434,9 @@ func TestRequestKeychainStorageClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig"))
+	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
 	end := mining.NewEndorsement("", "hash",
-		mining.NewMasterValidation([]string{""}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
+		mining.NewMasterValidation([]string{""}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")},
 	)
 
@@ -451,7 +456,9 @@ Scenario: Call RequestStorage GRPC endpoint for biometric
 */
 func TestRequestBiometricStorageClient(t *testing.T) {
 	db := mockstorage.NewDatabase()
-	accAdder := accountAdding.NewService(db)
+	accLister := accountListing.NewService(db)
+	aiClient := mocktransport.NewAIClient()
+	accAdder := accountAdding.NewService(aiClient, db, accLister, mockcrypto.NewSigner(), mockcrypto.NewHasher())
 
 	crypto := Crypto{
 		decrypter: mockcrypto.NewDecrypter(),
@@ -487,9 +494,9 @@ func TestRequestBiometricStorageClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	bioData := account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", "pub", account.NewSignatures("sig", "sig"))
+	bioData := account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", account.NewSignatures("sig", "sig"))
 	end := mining.NewEndorsement("", "hash",
-		mining.NewMasterValidation([]string{""}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
+		mining.NewMasterValidation([]string{""}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")},
 	)
 

@@ -23,9 +23,10 @@ func TestMine(t *testing.T) {
 	biodLister := biodlisting.NewService(mockBiodDatabase{})
 
 	s := service{
-		notif:  &mockNotifier{},
-		signer: mockSrvSigner{},
-		poolR:  mockPoolRequester{},
+		aiClient: mockAIClient{},
+		notif:    &mockNotifier{},
+		signer:   mockSrvSigner{},
+		poolR:    mockPoolRequester{},
 		txMiners: map[TransactionType]TransactionMiner{
 			KeychainTransaction: mockMiner{},
 		},
@@ -145,8 +146,8 @@ func (s mockSrvSigner) VerifyTransactionDataSignature(txType TransactionType, pu
 	return nil
 }
 
-func (s mockSrvSigner) SignValidation(v Validation, pvKey string) (string, error) {
-	return "sig", nil
+func (s mockSrvSigner) SignValidation(v Validation, pvKey string) (Validation, error) {
+	return NewValidation(v.Status(), v.Timestamp(), v.PublicKey(), "sig"), nil
 }
 
 type mockMiner struct{}
@@ -197,7 +198,7 @@ func (r mockPoolRequester) RequestUnlock(datamining.Pool, lock.TransactionLock) 
 	return nil
 }
 
-func (r mockPoolRequester) RequestValidations(sPool datamining.Pool, txHash string, data interface{}, txType TransactionType) ([]Validation, error) {
+func (r mockPoolRequester) RequestValidations(minValid int, sPool datamining.Pool, txHash string, data interface{}, txType TransactionType) ([]Validation, error) {
 	return []Validation{
 		NewValidation(
 			ValidationOK,
@@ -207,7 +208,7 @@ func (r mockPoolRequester) RequestValidations(sPool datamining.Pool, txHash stri
 		)}, nil
 }
 
-func (r mockPoolRequester) RequestStorage(sPool datamining.Pool, data interface{}, end Endorsement, txType TransactionType) error {
+func (r mockPoolRequester) RequestStorage(minReplicas int, sPool datamining.Pool, data interface{}, end Endorsement, txType TransactionType) error {
 	return nil
 }
 
@@ -215,4 +216,14 @@ type mockBiodDatabase struct{}
 
 func (db mockBiodDatabase) ListBiodPubKeys() ([]string, error) {
 	return []string{"key1", "key2"}, nil
+}
+
+type mockAIClient struct{}
+
+func (ai mockAIClient) GetMininumValidations(txHash string) (int, error) {
+	return 1, nil
+}
+
+func (ai mockAIClient) GetMininumReplications(txHash string) (int, error) {
+	return 1, nil
 }

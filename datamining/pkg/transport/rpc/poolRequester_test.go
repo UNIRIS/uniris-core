@@ -37,7 +37,7 @@ func TestRequestBiometric(t *testing.T) {
 
 	db.StoreBiometric(
 		account.NewBiometric(
-			account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", "pub", account.NewSignatures("sig", "sig")),
+			account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", account.NewSignatures("sig", "sig")),
 			nil,
 		),
 	)
@@ -75,7 +75,7 @@ func TestRequestKeychain(t *testing.T) {
 	db.StoreKeychain(
 		account.NewKeychain(
 			"hash",
-			account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig")),
+			account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig")),
 			nil,
 		),
 	)
@@ -197,12 +197,41 @@ func TestRequestValidations(t *testing.T) {
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")},
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")})
 
-	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig"))
+	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
 
-	valids, err := pr.RequestValidations(pool, "hash", keychainData, mining.KeychainTransaction)
+	valids, err := pr.RequestValidations(2, pool, "hash", keychainData, mining.KeychainTransaction)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, valids)
 	assert.Equal(t, 2, len(valids))
+}
+
+/*
+Scenario: Request transaction validations and get invalid minimum validations
+	Given an transaction hash and data associated
+	When I want to validate them
+	Then it launches a pool of goroutines and validate the information but the number of validation is less than the minimum
+*/
+func TestRequestValidationsWithLessThanMinimumValidations(t *testing.T) {
+	conf := system.UnirisConfig{}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+		hasher:    mockcrypto.NewHasher(),
+	}
+
+	db := mockstorage.NewDatabase()
+
+	cli := mock.NewExternalClient(db)
+
+	pr := NewPoolRequester(cli, conf, crypto)
+	pool := datamining.NewPool(
+		datamining.Peer{IP: net.ParseIP("127.0.0.1")},
+		datamining.Peer{IP: net.ParseIP("127.0.0.1")})
+
+	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
+
+	_, err := pr.RequestValidations(5, pool, "hash", keychainData, mining.KeychainTransaction)
+	assert.Equal(t, "Minimum validations are not reached", err.Error())
 }
 
 /*
@@ -223,7 +252,7 @@ func TestRequestStorage(t *testing.T) {
 
 	cli := mock.NewExternalClient(db)
 
-	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig"))
+	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
 	end := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{""}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")},
@@ -233,7 +262,7 @@ func TestRequestStorage(t *testing.T) {
 	pool := datamining.NewPool(
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")},
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")})
-	err := pr.RequestStorage(pool, keychainData, end, mining.KeychainTransaction)
+	err := pr.RequestStorage(1, pool, keychainData, end, mining.KeychainTransaction)
 	assert.Nil(t, err)
 
 	kc, _ := db.FindLastKeychain("address")

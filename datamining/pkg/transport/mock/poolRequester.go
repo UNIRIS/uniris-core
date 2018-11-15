@@ -30,11 +30,11 @@ func (r mockPoolRequester) RequestUnlock(lockPool datamining.Pool, txLock lock.T
 	return r.cli.RequestUnlock("127.0.0.1", txLock)
 }
 
-func (r mockPoolRequester) RequestValidations(sPool datamining.Pool, txHash string, data interface{}, txType mining.TransactionType) ([]mining.Validation, error) {
+func (r mockPoolRequester) RequestValidations(minValid int, sPool datamining.Pool, txHash string, data interface{}, txType mining.TransactionType) ([]mining.Validation, error) {
 	v, _ := r.cli.RequestValidation("127.0.0.1", txType, txHash, data)
 	return []mining.Validation{v}, nil
 }
 
-func (r mockPoolRequester) RequestStorage(sPool datamining.Pool, data interface{}, end mining.Endorsement, txType mining.TransactionType) error {
+func (r mockPoolRequester) RequestStorage(minReplicas int, sPool datamining.Pool, data interface{}, end mining.Endorsement, txType mining.TransactionType) error {
 	return r.cli.RequestStorage("127.0.0.1", txType, data, end)
 }

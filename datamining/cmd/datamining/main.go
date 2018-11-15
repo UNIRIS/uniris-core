@@ -54,7 +54,7 @@ func main() {
 	biodLister := biodlisting.NewService(db)
 	lockSrv := lock.NewService(db)
 	accountLister := accountListing.NewService(db)
-	accountAdder := accountAdding.NewService(db)
+	accountAdder := accountAdding.NewService(aiClient, db, accountLister, signer, hasher)
 
 	txMiners := map[mining.TransactionType]mining.TransactionMiner{
 		mining.KeychainTransaction:  accountMining.NewKeychainMiner(signer, hasher, accountLister),
@@ -62,6 +62,7 @@ func main() {
 	}
 
 	miningSrv := mining.NewService(
+		aiClient,
 		mocktransport.NewNotifier(),
 		poolFinder,
 		poolRequester,

@@ -24,3 +24,15 @@ func (c aiClient) GetMasterPeer(txHash string) (datamining.Peer, error) {
 func (c aiClient) GetValidationPool(txHash string) (datamining.Pool, error) {
 	return datamining.NewPool(datamining.Peer{IP: net.ParseIP("127.0.0.1")}), nil
 }
+
+func (c aiClient) CheckStorageAuthorization(txHash string) error {
+	return nil
+}
+
+func (c aiClient) GetMininumValidations(txHash string) (int, error) {
+	return 1, nil
+}
+
+func (c aiClient) GetMininumReplications(txHash string) (int, error) {
+	return 1, nil
+}

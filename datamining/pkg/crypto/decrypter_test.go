@@ -67,7 +67,6 @@ func TestDecryptBiometricData(t *testing.T) {
 		EncryptedAddrRobot:  "addr",
 		EncryptedAESKey:     "enc aes key",
 		PersonPublicKey:     "pub",
-		BIODPublicKey:       "pub",
 	}
 
 	superKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -88,7 +87,6 @@ func TestDecryptBiometricData(t *testing.T) {
 	assert.Equal(t, "addr", bioData.CipherAddrRobot())
 	assert.Equal(t, "enc aes key", bioData.CipherAESKey())
 	assert.Equal(t, "pub", bioData.PersonPublicKey())
-	assert.Equal(t, "pub", bioData.BiodPublicKey())
 }
 
 /*
@@ -102,7 +100,6 @@ func TestDecryptKeychaincData(t *testing.T) {
 		EncryptedWallet:    "enc wallet",
 		EncryptedAddrRobot: "addr",
 		PersonPublicKey:    "pub",
-		BIODPublicKey:      "pub",
 	}
 
 	superKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -121,5 +118,4 @@ func TestDecryptKeychaincData(t *testing.T) {
 	assert.Equal(t, "enc wallet", keychainData.CipherWallet())
 	assert.Equal(t, "addr", keychainData.CipherAddrRobot())
 	assert.Equal(t, "pub", keychainData.PersonPublicKey())
-	assert.Equal(t, "pub", keychainData.BiodPublicKey())
 }

@@ -18,7 +18,6 @@ func (b dataBuilder) buildBiometricData(data *api.BiometricData) account.Biometr
 		data.CipherAddrBio,
 		data.CipherAESKey,
 		data.PersonPubk,
-		data.BiodPubk,
 		sigs)
 }
 
@@ -28,7 +27,6 @@ func (b dataBuilder) buildKeychainData(data *api.KeychainData) account.KeychainD
 		data.CipherAddrRobot,
 		data.CipherWallet,
 		data.PersonPubk,
-		data.BiodPubk,
 		sigs,
 	)
 }
@@ -38,6 +36,7 @@ func (b dataBuilder) buildEndorsement(data *api.Endorsement) mining.Endorsement 
 	for _, v := range data.Validations {
 		valids = append(valids, b.buildValidation(v))
 	}
+
 	return mining.NewEndorsement(
 		data.LastTransactionHash,
 		data.TransactionHash,
@@ -49,7 +48,7 @@ func (b dataBuilder) buildEndorsement(data *api.Endorsement) mining.Endorsement 
 func (b dataBuilder) buildMasterValidation(mv *api.MasterValidation) mining.MasterValidation {
 	return mining.NewMasterValidation(
 		mv.LastTransactionMiners,
-		mv.ProofOfWorkRobotKey,
+		mv.ProofOfWorkKey,
 		b.buildValidation(mv.ProofOfWorkValidation),
 	)
 }

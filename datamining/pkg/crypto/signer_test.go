@@ -74,13 +74,12 @@ Scenario: Verifies keychain transaction signature
 	Then I get not error
 */
 func TestVerifyTransactionKeychainSignature(t *testing.T) {
-	k := account.NewKeychainData("cipher addr", "cipher wallet", "person pub", "biod pub", account.NewSignatures("sig", "sig"))
+	k := account.NewKeychainData("cipher addr", "cipher wallet", "person pub", account.NewSignatures("sig", "sig"))
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
 
 	data := keychainRaw{
-		BIODPublicKey:      k.BiodPublicKey(),
 		EncryptedAddrRobot: k.CipherAddrRobot(),
 		EncryptedWallet:    k.CipherWallet(),
 		PersonPublicKey:    k.PersonPublicKey(),
@@ -99,7 +98,7 @@ Scenario: Verify biometric transaction signature
 	Then I get not error
 */
 func TestVerifyTransactionBiometricSignature(t *testing.T) {
-	bio := account.NewBiometricData("hash", "cipher addr", "cipher addr", "cipher aes key", "person pub", "biod pub", account.NewSignatures("sig", "sig"))
+	bio := account.NewBiometricData("hash", "cipher addr", "cipher addr", "cipher aes key", "person pub", account.NewSignatures("sig", "sig"))
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -107,7 +106,6 @@ func TestVerifyTransactionBiometricSignature(t *testing.T) {
 	data := biometricRaw{
 		PersonHash:          bio.PersonHash(),
 		EncryptedAESKey:     bio.CipherAESKey(),
-		BIODPublicKey:       bio.BiodPublicKey(),
 		EncryptedAddrRobot:  bio.CipherAddrRobot(),
 		EncryptedAddrPerson: bio.CipherAddrPerson(),
 		PersonPublicKey:     bio.PersonPublicKey(),
@@ -150,7 +148,6 @@ func TestSignAndVerifyKeychainValidationRequestSignature(t *testing.T) {
 
 	req := &api.KeychainValidationRequest{
 		Data: &api.KeychainData{
-			BiodPubk:        "pub",
 			CipherAddrRobot: "enc addr",
 			CipherWallet:    "enc wallet",
 			PersonPubk:      "pub",
@@ -182,7 +179,6 @@ func TestSignAndVerifyBiometricValidationRequestSignature(t *testing.T) {
 
 	req := &api.BiometricValidationRequest{
 		Data: &api.BiometricData{
-			BiodPubk:        "pub",
 			CipherAddrRobot: "enc addr",
 			CipherAddrBio:   "enc addr",
 			CipherAESKey:    "enc aes key",
@@ -216,7 +212,6 @@ func TestSignAndVerifyKeychainStorageRequestSignature(t *testing.T) {
 
 	req := &api.KeychainStorageRequest{
 		Data: &api.KeychainData{
-			BiodPubk:        "pub",
 			CipherAddrRobot: "enc addr",
 			CipherWallet:    "enc wallet",
 			PersonPubk:      "pub",
@@ -230,7 +225,7 @@ func TestSignAndVerifyKeychainStorageRequestSignature(t *testing.T) {
 			TransactionHash:     "hash",
 			MasterValidation: &api.MasterValidation{
 				LastTransactionMiners: []string{"hash"},
-				ProofOfWorkRobotKey:   "key",
+				ProofOfWorkKey:        "key",
 				ProofOfWorkValidation: &api.Validation{
 					PublicKey: "key",
 					Signature: "sig",
@@ -261,7 +256,6 @@ func TestSignAndVerifyBiometricStorageRequestSignature(t *testing.T) {
 
 	req := &api.BiometricStorageRequest{
 		Data: &api.BiometricData{
-			BiodPubk:        "pub",
 			CipherAddrRobot: "enc addr",
 			CipherAddrBio:   "enc addr",
 			CipherAESKey:    "enc aes key",
@@ -277,7 +271,7 @@ func TestSignAndVerifyBiometricStorageRequestSignature(t *testing.T) {
 			TransactionHash:     "hash",
 			MasterValidation: &api.MasterValidation{
 				LastTransactionMiners: []string{"hash"},
-				ProofOfWorkRobotKey:   "key",
+				ProofOfWorkKey:        "key",
 				ProofOfWorkValidation: &api.Validation{
 					PublicKey: "key",
 					Signature: "sig",
@@ -506,7 +500,6 @@ func TestSignAndVerifyBiometricResponseSignature(t *testing.T) {
 
 	res := &api.BiometricResponse{
 		Data: &api.BiometricData{
-			BiodPubk:        "pub",
 			CipherAddrRobot: "enc addr",
 			CipherAddrBio:   "enc addr",
 			CipherAESKey:    "enc aes key",
@@ -522,7 +515,7 @@ func TestSignAndVerifyBiometricResponseSignature(t *testing.T) {
 			TransactionHash:     "hash",
 			MasterValidation: &api.MasterValidation{
 				LastTransactionMiners: []string{"hash"},
-				ProofOfWorkRobotKey:   "key",
+				ProofOfWorkKey:        "key",
 				ProofOfWorkValidation: &api.Validation{
 					PublicKey: "key",
 					Signature: "sig",
@@ -551,7 +544,6 @@ func TestSignAndVerifyKeychainResponseSignature(t *testing.T) {
 
 	res := &api.KeychainResponse{
 		Data: &api.KeychainData{
-			BiodPubk:        "pub",
 			CipherAddrRobot: "enc addr",
 			CipherWallet:    "enc wallet",
 			PersonPubk:      "pub",
@@ -565,7 +557,7 @@ func TestSignAndVerifyKeychainResponseSignature(t *testing.T) {
 			TransactionHash:     "hash",
 			MasterValidation: &api.MasterValidation{
 				LastTransactionMiners: []string{"hash"},
-				ProofOfWorkRobotKey:   "key",
+				ProofOfWorkKey:        "key",
 				ProofOfWorkValidation: &api.Validation{
 					PublicKey: "key",
 					Signature: "sig",
@@ -579,4 +571,23 @@ func TestSignAndVerifyKeychainResponseSignature(t *testing.T) {
 	assert.NotEmpty(t, res.Signature)
 
 	assert.Nil(t, NewSigner().VerifyKeychainResponseSignature(hex.EncodeToString(pubKey), res))
+}
+
+/*
+Scenario: Sign and checks validation signature
+	Given a validation and a key pair
+	When I want to sign the validation and checks the signature generated
+	Then I get not error
+*/
+func TestSignAndVerifyValidationSignature(t *testing.T) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pvKey, _ := x509.MarshalECPrivateKey(key)
+	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
+
+	v := mining.NewValidation(mining.ValidationOK, time.Now(), hex.EncodeToString(pubKey), "")
+	sValid, err := NewSigner().SignValidation(v, hex.EncodeToString(pvKey))
+	assert.Nil(t, err)
+	assert.NotEmpty(t, sValid.Signature())
+
+	assert.Nil(t, NewSigner().VerifyValidationSignature(sValid))
 }

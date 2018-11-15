@@ -160,6 +160,7 @@ func (pR poolR) RequestLock(lastValidPool datamining.Pool, txLock lock.Transacti
 			if err := pR.cli.RequestLock(p.IP.String(), txLock); err != nil {
 				log.Printf("Unexpected error during lock requesting for the peer %s\n", p.IP.String())
 				log.Printf("Details: %s\n", err.Error())
+				return
 			}
 			atomic.AddInt32(&ackLock, 1)
 		}(p)
@@ -190,6 +191,7 @@ func (pR poolR) RequestUnlock(lastValidPool datamining.Pool, txLock lock.Transac
 			if err := pR.cli.RequestUnlock(p.IP.String(), txLock); err != nil {
 				log.Printf("Unexpected error during unlock requesting for the peer %s\n", p.IP.String())
 				log.Printf("Details: %s\n", err.Error())
+				return
 			}
 			atomic.AddInt32(&ackUnLock, 1)
 		}(p)
@@ -207,7 +209,7 @@ func (pR poolR) RequestUnlock(lastValidPool datamining.Pool, txLock lock.Transac
 	return nil
 }
 
-func (pR poolR) RequestValidations(validPool datamining.Pool, txHash string, data interface{}, txType mining.TransactionType) ([]mining.Validation, error) {
+func (pR poolR) RequestValidations(minValids int, validPool datamining.Pool, txHash string, data interface{}, txType mining.TransactionType) ([]mining.Validation, error) {
 	valids := make([]mining.Validation, 0)
 
 	var wg sync.WaitGroup
@@ -222,6 +224,7 @@ func (pR poolR) RequestValidations(validPool datamining.Pool, txHash string, dat
 			if err != nil {
 				log.Printf("Unexpected error during validation requesting for the peer %s\n", p.IP.String())
 				log.Printf("Details: %s\n", err.Error())
+				return
 			}
 
 			vChan <- v
@@ -237,8 +240,6 @@ func (pR poolR) RequestValidations(validPool datamining.Pool, txHash string, dat
 		valids = append(valids, v)
 	}
 
-	//TODO: specify minium required validations
-	minValids := 1
 	if len(valids) < minValids {
 		return nil, errors.New("Minimum validations are not reached")
 	}
@@ -246,7 +247,7 @@ func (pR poolR) RequestValidations(validPool datamining.Pool, txHash string, dat
 	return valids, nil
 }
 
-func (pR poolR) RequestStorage(sPool datamining.Pool, data interface{}, end mining.Endorsement, txType mining.TransactionType) error {
+func (pR poolR) RequestStorage(minReplicas int, sPool datamining.Pool, data interface{}, end mining.Endorsement, txType mining.TransactionType) error {
 
 	var wg sync.WaitGroup
 	wg.Add(len(sPool.Peers()))
@@ -259,6 +260,7 @@ func (pR poolR) RequestStorage(sPool datamining.Pool, data interface{}, end mini
 			if err := pR.cli.RequestStorage(p.IP.String(), txType, data, end); err != nil {
 				log.Printf("Unexpected error during storage requesting for the peer %s\n", p.IP.String())
 				log.Printf("Details: %s\n", err.Error())
+				return
 			}
 			atomic.AddInt32(&ackStore, 1)
 		}(p)
@@ -266,10 +268,8 @@ func (pR poolR) RequestStorage(sPool datamining.Pool, data interface{}, end mini
 
 	wg.Wait()
 
-	//TODO: specify replication factor to acknowledges data strorage
-	replicationFactor := 1
 	ackStoreFinal := atomic.LoadInt32(&ackStore)
-	if int(ackStoreFinal) < replicationFactor {
+	if int(ackStoreFinal) < minReplicas {
 		return errors.New("Transaction storage failed")
 	}
 
