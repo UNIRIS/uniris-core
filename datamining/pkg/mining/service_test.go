@@ -208,7 +208,7 @@ func (r mockPoolRequester) RequestValidations(minValid int, sPool datamining.Poo
 		)}, nil
 }
 
-func (r mockPoolRequester) RequestStorage(sPool datamining.Pool, data interface{}, end Endorsement, txType TransactionType) error {
+func (r mockPoolRequester) RequestStorage(minReplicas int, sPool datamining.Pool, data interface{}, end Endorsement, txType TransactionType) error {
 	return nil
 }
 
@@ -221,5 +221,9 @@ func (db mockBiodDatabase) ListBiodPubKeys() ([]string, error) {
 type mockAIClient struct{}
 
 func (ai mockAIClient) GetMininumValidations(txHash string) (int, error) {
+	return 1, nil
+}
+
+func (ai mockAIClient) GetMininumReplications(txHash string) (int, error) {
 	return 1, nil
 }

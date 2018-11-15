@@ -32,3 +32,7 @@ func (c aiClient) CheckStorageAuthorization(txHash string) error {
 func (c aiClient) GetMininumValidations(txHash string) (int, error) {
 	return 1, nil
 }
+
+func (c aiClient) GetMininumReplications(txHash string) (int, error) {
+	return 1, nil
+}

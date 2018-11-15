@@ -225,7 +225,7 @@ func TestSignAndVerifyKeychainStorageRequestSignature(t *testing.T) {
 			TransactionHash:     "hash",
 			MasterValidation: &api.MasterValidation{
 				LastTransactionMiners: []string{"hash"},
-				ProofOfWorkRobotKey:   "key",
+				ProofOfWorkKey:        "key",
 				ProofOfWorkValidation: &api.Validation{
 					PublicKey: "key",
 					Signature: "sig",
@@ -271,7 +271,7 @@ func TestSignAndVerifyBiometricStorageRequestSignature(t *testing.T) {
 			TransactionHash:     "hash",
 			MasterValidation: &api.MasterValidation{
 				LastTransactionMiners: []string{"hash"},
-				ProofOfWorkRobotKey:   "key",
+				ProofOfWorkKey:        "key",
 				ProofOfWorkValidation: &api.Validation{
 					PublicKey: "key",
 					Signature: "sig",
@@ -515,7 +515,7 @@ func TestSignAndVerifyBiometricResponseSignature(t *testing.T) {
 			TransactionHash:     "hash",
 			MasterValidation: &api.MasterValidation{
 				LastTransactionMiners: []string{"hash"},
-				ProofOfWorkRobotKey:   "key",
+				ProofOfWorkKey:        "key",
 				ProofOfWorkValidation: &api.Validation{
 					PublicKey: "key",
 					Signature: "sig",
@@ -557,7 +557,7 @@ func TestSignAndVerifyKeychainResponseSignature(t *testing.T) {
 			TransactionHash:     "hash",
 			MasterValidation: &api.MasterValidation{
 				LastTransactionMiners: []string{"hash"},
-				ProofOfWorkRobotKey:   "key",
+				ProofOfWorkKey:        "key",
 				ProofOfWorkValidation: &api.Validation{
 					PublicKey: "key",
 					Signature: "sig",

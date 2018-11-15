@@ -35,6 +35,6 @@ func (r mockPoolRequester) RequestValidations(minValid int, sPool datamining.Poo
 	return []mining.Validation{v}, nil
 }
 
-func (r mockPoolRequester) RequestStorage(sPool datamining.Pool, data interface{}, end mining.Endorsement, txType mining.TransactionType) error {
+func (r mockPoolRequester) RequestStorage(minReplicas int, sPool datamining.Pool, data interface{}, end mining.Endorsement, txType mining.TransactionType) error {
 	return r.cli.RequestStorage("127.0.0.1", txType, data, end)
 }

@@ -46,7 +46,7 @@ Scenario: Hash a biometric data
 	Then it produces a hash
 */
 func TestHashBiometricData(t *testing.T) {
-	bio := account.NewBiometricData("hash", "addr", "addr", "aesKey", "pub", "pub", account.NewSignatures("sig", "sig"))
+	bio := account.NewBiometricData("hash", "addr", "addr", "aesKey", "pub", account.NewSignatures("sig", "sig"))
 	hash, err := NewHasher().HashBiometricData(bio)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, hash)
@@ -59,7 +59,7 @@ Scenario: Hash a keychain data
 	Then it produces a hash
 */
 func TestHashKeychainData(t *testing.T) {
-	kc := account.NewKeychainData("addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig"))
+	kc := account.NewKeychainData("addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
 	hash, err := NewHasher().HashKeychainData(kc)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, hash)
@@ -90,7 +90,7 @@ Scenario: Hash a biometric
 	Then it produces a hash
 */
 func TestHashBiometric(t *testing.T) {
-	data := account.NewBiometricData("hash", "addr", "addr", "aesKey", "pub", "pub", account.NewSignatures("sig", "sig"))
+	data := account.NewBiometricData("hash", "addr", "addr", "aesKey", "pub", account.NewSignatures("sig", "sig"))
 	end := mining.NewEndorsement("last hash", "hash",
 		mining.NewMasterValidation([]string{"pubkey"}, "pubkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature")},
@@ -109,7 +109,7 @@ Scenario: Hash a keychain
 	Then it produces a hash
 */
 func TestHashKeychain(t *testing.T) {
-	data := account.NewKeychainData("addr", "enc wallet", "pub", "pub", account.NewSignatures("sig", "sig"))
+	data := account.NewKeychainData("addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
 	end := mining.NewEndorsement("last hash", "hash",
 		mining.NewMasterValidation([]string{"pubkey"}, "pubkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature")},

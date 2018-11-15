@@ -262,7 +262,7 @@ func TestRequestStorage(t *testing.T) {
 	pool := datamining.NewPool(
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")},
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")})
-	err := pr.RequestStorage(pool, keychainData, end, mining.KeychainTransaction)
+	err := pr.RequestStorage(1, pool, keychainData, end, mining.KeychainTransaction)
 	assert.Nil(t, err)
 
 	kc, _ := db.FindLastKeychain("address")

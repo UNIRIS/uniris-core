@@ -247,7 +247,7 @@ func (pR poolR) RequestValidations(minValids int, validPool datamining.Pool, txH
 	return valids, nil
 }
 
-func (pR poolR) RequestStorage(sPool datamining.Pool, data interface{}, end mining.Endorsement, txType mining.TransactionType) error {
+func (pR poolR) RequestStorage(minReplicas int, sPool datamining.Pool, data interface{}, end mining.Endorsement, txType mining.TransactionType) error {
 
 	var wg sync.WaitGroup
 	wg.Add(len(sPool.Peers()))
@@ -268,10 +268,8 @@ func (pR poolR) RequestStorage(sPool datamining.Pool, data interface{}, end mini
 
 	wg.Wait()
 
-	//TODO: specify replication factor to acknowledges data strorage
-	replicationFactor := 1
 	ackStoreFinal := atomic.LoadInt32(&ackStore)
-	if int(ackStoreFinal) < replicationFactor {
+	if int(ackStoreFinal) < minReplicas {
 		return errors.New("Transaction storage failed")
 	}
 

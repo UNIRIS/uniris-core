@@ -115,7 +115,11 @@ func (s service) LeadMining(txHash string, addr string, data interface{}, vPool 
 		return err
 	}
 
-	if err := s.poolR.RequestStorage(sPool, data, endorsement, txType); err != nil {
+	minReplicas, err := s.aiClient.GetMininumReplications(txHash)
+	if err != nil {
+		return err
+	}
+	if err := s.poolR.RequestStorage(minReplicas, sPool, data, endorsement, txType); err != nil {
 		if err := s.notif.NotifyTransactionStatus(txHash, TxInvalid); err != nil {
 			return err
 		}
