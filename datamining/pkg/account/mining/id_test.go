@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
@@ -17,7 +18,9 @@ Scenario: Checks the ID data integrity
 */
 func TestIDIntegrity(t *testing.T) {
 	miner := idMiner{hasher: mockIDHasher{}}
-	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop)
 	err := miner.checkDataIntegrity("hash", id)
 	assert.Nil(t, err)
 }
@@ -30,7 +33,9 @@ Scenario: Checks the ID data integrity
 */
 func TestInvalidIDIntegrity(t *testing.T) {
 	miner := idMiner{hasher: mockBadIDHasher{}}
-	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop)
 	err := miner.checkDataIntegrity("hash", id)
 	assert.Equal(t, mining.ErrInvalidTransaction, err)
 }
@@ -43,7 +48,9 @@ Scenario: Check ID data as master peer
 */
 func TestIDMasterCheck(t *testing.T) {
 	miner := NewIDMiner(mockIDSigner{}, mockIDHasher{})
-	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop)
 	err := miner.CheckAsMaster("hash", id)
 	assert.Nil(t, err)
 }
@@ -56,7 +63,9 @@ Scenario: Check ID data as slave peer
 */
 func TestIDSlaveCheck(t *testing.T) {
 	miner := NewIDMiner(mockIDSigner{}, mockIDHasher{})
-	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop)
 	err := miner.CheckAsSlave("hash", id)
 	assert.Nil(t, err)
 }

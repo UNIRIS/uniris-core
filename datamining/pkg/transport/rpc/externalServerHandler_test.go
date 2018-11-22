@@ -34,7 +34,10 @@ func TestGetID(t *testing.T) {
 	db := mockstorage.NewDatabase()
 	accLister := accountListing.NewService(db)
 
-	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop)
 	endors := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{"hash"}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pub key", "sig")),
 		[]mining.Validation{})
@@ -66,7 +69,10 @@ func TestGetKeychain(t *testing.T) {
 	db := mockstorage.NewDatabase()
 	accLister := accountListing.NewService(db)
 
-	kc := account.NewKeychain("enc address", "enc wallet", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+	kc := account.NewKeychain("enc address", "enc wallet", "id pub", "id sig", "em sig", prop)
 	endors := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{"hash"}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pub key", "sig")),
 		[]mining.Validation{})
@@ -295,6 +301,12 @@ func TestValidateKeychain(t *testing.T) {
 			IDPublicKey:          "pubk",
 			IDSignature:          "sig",
 			EmitterSignature:     "sig",
+			Proposal: &api.Proposal{
+				SharedEmitterKeyPair: &api.KeyPairProposal{
+					EncryptedPrivateKey: "enc pv key",
+					PublicKey:           "pub key",
+				},
+			},
 		},
 		TransactionHash: "hash",
 	})
@@ -339,6 +351,12 @@ func TestValidateID(t *testing.T) {
 			PublicKey:            "pubk",
 			IDSignature:          "sig",
 			EmitterSignature:     "sig",
+			Proposal: &api.Proposal{
+				SharedEmitterKeyPair: &api.KeyPairProposal{
+					EncryptedPrivateKey: "enc pv key",
+					PublicKey:           "pub key",
+				},
+			},
 		},
 		TransactionHash: "hash",
 	})
@@ -376,6 +394,12 @@ func TestStoreKeychain(t *testing.T) {
 			IDPublicKey:          "pubk",
 			IDSignature:          "sig",
 			EmitterSignature:     "sig",
+			Proposal: &api.Proposal{
+				SharedEmitterKeyPair: &api.KeyPairProposal{
+					EncryptedPrivateKey: "enc pv key",
+					PublicKey:           "pub key",
+				},
+			},
 		},
 		Endorsement: &api.Endorsement{
 			LastTransactionHash: "",
@@ -439,6 +463,12 @@ func TestStoreID(t *testing.T) {
 			PublicKey:            "pubk",
 			IDSignature:          "sig",
 			EmitterSignature:     "sig",
+			Proposal: &api.Proposal{
+				SharedEmitterKeyPair: &api.KeyPairProposal{
+					EncryptedPrivateKey: "enc pv key",
+					PublicKey:           "pub key",
+				},
+			},
 		},
 		Endorsement: &api.Endorsement{
 			LastTransactionHash: "",

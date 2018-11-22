@@ -24,17 +24,6 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-type accountCreationResult struct {
-	ID       transactionResult `json:"id"`
-	Keychain transactionResult `json:"keychain"`
-}
-
-type transactionResult struct {
-	TransactionHash string `json:"transaction_hash"`
-	MasterPeerIP    string `json:"master_peer_ip"`
-	Signature       string `json:"signature"`
-}
-
 //Signer define methods to handle signatures
 type Signer interface {
 	rpc.SignatureHandler
@@ -52,9 +41,8 @@ func NewSigner() Signer {
 
 func (s signer) VerifyAccountCreationRequestSignature(data adding.AccountCreationRequest, pubKey string) error {
 	b, err := json.Marshal(adding.AccountCreationRequest{
-		EncryptedID:           data.EncryptedID,
-		EncryptedKeychain:     data.EncryptedKeychain,
-		SharedEmitterProposal: data.SharedEmitterProposal,
+		EncryptedID:       data.EncryptedID,
+		EncryptedKeychain: data.EncryptedKeychain,
 	})
 	if err != nil {
 		return err
@@ -107,16 +95,14 @@ func (s signer) SignAccountResult(res *listing.AccountResult, pvKey string) erro
 	return nil
 }
 func (s signer) SignAccountCreationResult(res *adding.AccountCreationResult, pvKey string) error {
-	b, err := json.Marshal(struct {
-		Transactions accountCreationResult `json:"transactions"`
-	}{
-		Transactions: accountCreationResult{
-			ID: transactionResult{
+	b, err := json.Marshal(adding.AccountCreationResult{
+		Transactions: adding.AccountCreationTransactionsResult{
+			ID: adding.TransactionResult{
 				MasterPeerIP:    res.Transactions.ID.MasterPeerIP,
 				Signature:       res.Transactions.ID.Signature,
 				TransactionHash: res.Transactions.ID.TransactionHash,
 			},
-			Keychain: transactionResult{
+			Keychain: adding.TransactionResult{
 				MasterPeerIP:    res.Transactions.Keychain.MasterPeerIP,
 				TransactionHash: res.Transactions.Keychain.TransactionHash,
 				Signature:       res.Transactions.Keychain.Signature,

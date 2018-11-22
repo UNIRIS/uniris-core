@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uniris/uniris-core/datamining/pkg"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uniris/uniris-core/datamining/pkg/account"
@@ -21,7 +23,8 @@ func TestGetLastKeychain(t *testing.T) {
 	db := new(databasemock)
 	s := NewService(db)
 
-	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
 
 	endors1 := mining.NewEndorsement(
 		"", "hash1",
@@ -65,7 +68,8 @@ func TestGetID(t *testing.T) {
 	db := new(databasemock)
 	s := NewService(db)
 
-	id := account.NewID("hash1", "enc addr robot", "enc addr person", "enc aes key", "id pub key", "id sig", "em sig")
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	id := account.NewID("hash1", "enc addr robot", "enc addr person", "enc aes key", "id pub key", "id sig", "em sig", prop)
 
 	endors := mining.NewEndorsement(
 		"", "hash1",

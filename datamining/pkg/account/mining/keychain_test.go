@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/account/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
@@ -19,7 +20,9 @@ Scenario: Get last transaction hash
 */
 func TestKeychainGetLastTransactionHash(t *testing.T) {
 	db := mock.NewDatabase()
-	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig")
+
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
 	eKc := account.NewEndorsedKeychain("address", kc, mining.NewEndorsement("", "hash", nil, nil))
 	db.StoreKeychain(eKc)
 	miner := keychainMiner{accLister: listing.NewService(db)}
@@ -36,7 +39,8 @@ Scenario: Checks the keychain data integrity
 */
 func TestKeychainIntegrity(t *testing.T) {
 	miner := keychainMiner{hasher: mockKeychainHasher{}}
-	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
 	err := miner.checkDataIntegrity("hash", kc)
 	assert.Nil(t, err)
 }
@@ -49,7 +53,9 @@ Scenario: Checks the keychain data integrity
 */
 func TestInvalidKeychainIntegrity(t *testing.T) {
 	miner := keychainMiner{hasher: mockBadKeychainHasher{}}
-	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
 	err := miner.checkDataIntegrity("hash", kc)
 	assert.Equal(t, mining.ErrInvalidTransaction, err)
 }
@@ -62,7 +68,10 @@ Scenario: Check keychain data as master peer
 */
 func TestKeychainMasterCheck(t *testing.T) {
 	miner := NewKeychainMiner(mockKeychainSigner{}, mockKeychainHasher{}, nil)
-	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig")
+
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
 	err := miner.CheckAsMaster("hash", kc)
 	assert.Nil(t, err)
 }
@@ -75,7 +84,9 @@ Scenario: Check keychain data as slave peer
 */
 func TestKeychainSlaveCheck(t *testing.T) {
 	miner := NewKeychainMiner(mockKeychainSigner{}, mockKeychainHasher{}, nil)
-	data := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+
+	data := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
 	err := miner.CheckAsSlave("hash", data)
 	assert.Nil(t, err)
 }

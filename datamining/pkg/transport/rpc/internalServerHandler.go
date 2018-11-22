@@ -39,12 +39,12 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 		return nil, err
 	}
 
-	biometric, err := s.pR.RequestID(idPool, req.EncryptedIDHash)
+	id, err := s.pR.RequestID(idPool, req.EncryptedIDHash)
 	if err != nil {
 		return nil, err
 	}
 
-	clearAddr, err := s.crypto.decrypter.DecryptHash(biometric.EncryptedAddrByRobot(), s.conf.SharedKeys.RobotPrivateKey)
+	clearAddr, err := s.crypto.decrypter.DecryptHash(id.EncryptedAddrByRobot(), s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
@@ -54,7 +54,7 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 		return nil, err
 	}
 
-	keychain, err := s.pR.RequestKeychain(keychainPool, biometric.EncryptedAddrByRobot())
+	keychain, err := s.pR.RequestKeychain(keychainPool, id.EncryptedAddrByRobot())
 	if err != nil {
 		return nil, err
 	}
@@ -64,9 +64,9 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 	}
 
 	res := &api.AccountSearchResult{
-		EncryptedAESkey:  biometric.EncryptedAESKey(),
+		EncryptedAESkey:  id.EncryptedAESKey(),
 		EncryptedWallet:  keychain.EncryptedWallet(),
-		EncryptedAddress: biometric.EncryptedAddrByID(),
+		EncryptedAddress: id.EncryptedAddrByID(),
 	}
 	if err := s.crypto.signer.SignAccountSearchResult(res, s.conf.SharedKeys.RobotPrivateKey); err != nil {
 		return nil, err

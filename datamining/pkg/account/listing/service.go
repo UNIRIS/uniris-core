@@ -34,17 +34,17 @@ func NewService(repo Repository) Service {
 }
 
 func (s service) GetID(idHash string) (account.EndorsedID, error) {
-	w, err := s.repo.FindID(idHash)
+	id, err := s.repo.FindID(idHash)
 	if err != nil {
 		return nil, err
 	}
-	return w, nil
+	return id, nil
 }
 
 func (s service) GetLastKeychain(addr string) (account.EndorsedKeychain, error) {
-	w, err := s.repo.FindLastKeychain(addr)
+	kc, err := s.repo.FindLastKeychain(addr)
 	if err != nil {
 		return nil, err
 	}
-	return w, nil
+	return kc, nil
 }

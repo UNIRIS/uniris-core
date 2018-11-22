@@ -35,9 +35,13 @@ func TestRequestID(t *testing.T) {
 
 	db := mockstorage.NewDatabase()
 
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
 	db.StoreID(
 		account.NewEndorsedID(
-			account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig"),
+			account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop),
 			nil,
 		),
 	)
@@ -72,10 +76,14 @@ func TestRequestKeychain(t *testing.T) {
 
 	db := mockstorage.NewDatabase()
 
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
 	db.StoreKeychain(
 		account.NewEndorsedKeychain(
 			"hash",
-			account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig"),
+			account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop),
 			nil,
 		),
 	)
@@ -197,7 +205,11 @@ func TestRequestValidations(t *testing.T) {
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")},
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")})
 
-	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
 
 	valids, err := pr.RequestValidations(2, pool, "hash", keychain, mining.KeychainTransaction)
 	assert.Nil(t, err)
@@ -228,7 +240,10 @@ func TestRequestValidationsWithLessThanMinimumValidations(t *testing.T) {
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")},
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")})
 
-	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
 
 	_, err := pr.RequestValidations(5, pool, "hash", keychain, mining.KeychainTransaction)
 	assert.Equal(t, "Minimum validations are not reached", err.Error())
@@ -252,7 +267,10 @@ func TestRequestStorage(t *testing.T) {
 
 	cli := mock.NewExternalClient(db)
 
-	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
 	end := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{""}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")},

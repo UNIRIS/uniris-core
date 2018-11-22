@@ -54,6 +54,12 @@ func (h hasher) HashEndorsedID(id account.EndorsedID) (string, error) {
 		PublicKey:            id.PublicKey(),
 		EmitterSignature:     id.EmitterSignature(),
 		IDSignature:          id.IDSignature(),
+		Proposal: proposal{
+			SharedEmitterKeyPair: proposalKeypair{
+				EncryptedPrivateKey: id.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           id.Proposal().SharedEmitterKeyPair().PublicKey(),
+			},
+		},
 		Endorsement: endorsement{
 			LastTxHash: id.Endorsement().LastTransactionHash(),
 			TxHash:     id.Endorsement().TransactionHash(),
@@ -93,6 +99,12 @@ func (h hasher) HashEndorsedKeychain(kc account.EndorsedKeychain) (string, error
 		IDPublicKey:          kc.IDPublicKey(),
 		EmitterSignature:     kc.EmitterSignature(),
 		IDSignature:          kc.IDSignature(),
+		Proposal: proposal{
+			SharedEmitterKeyPair: proposalKeypair{
+				EncryptedPrivateKey: kc.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           kc.Proposal().SharedEmitterKeyPair().PublicKey(),
+			},
+		},
 		Endorsement: endorsement{
 			LastTxHash: kc.Endorsement().LastTransactionHash(),
 			TxHash:     kc.Endorsement().TransactionHash(),
@@ -124,6 +136,12 @@ func (h hasher) HashID(data account.ID) (string, error) {
 		PublicKey:            data.PublicKey(),
 		EmitterSignature:     data.EmitterSignature(),
 		IDSignature:          data.IDSignature(),
+		Proposal: proposal{
+			SharedEmitterKeyPair: proposalKeypair{
+				EncryptedPrivateKey: data.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           data.Proposal().SharedEmitterKeyPair().PublicKey(),
+			},
+		},
 	})
 	if err != nil {
 		return "", err
@@ -138,6 +156,12 @@ func (h hasher) HashKeychain(kc account.Keychain) (string, error) {
 		IDPublicKey:          kc.IDPublicKey(),
 		EmitterSignature:     kc.EmitterSignature(),
 		IDSignature:          kc.IDSignature(),
+		Proposal: proposal{
+			SharedEmitterKeyPair: proposalKeypair{
+				EncryptedPrivateKey: kc.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           kc.Proposal().SharedEmitterKeyPair().PublicKey(),
+			},
+		},
 	})
 	if err != nil {
 		return "", err

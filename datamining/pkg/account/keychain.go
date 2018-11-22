@@ -1,6 +1,7 @@
 package account
 
 import (
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
@@ -21,31 +22,42 @@ type Keychain interface {
 
 	//EmitterSignature returns the signature provided by the emitter's device
 	EmitterSignature() string
+
+	//Proposal returns the proposal for this transaction
+	Proposal() datamining.Proposal
 }
 
 type keychain struct {
-	cipherAddr   string
-	cipherWallet string
-	personPubk   string
-	idSig        string
-	emSig        string
+	encAddr   string
+	encWallet string
+	idPubk    string
+	idSig     string
+	emSig     string
+	prop      datamining.Proposal
 }
 
 //NewKeychain creates a new keychain
-func NewKeychain(encAddrRobot, encWallet, idPubk, idSig, emSig string) Keychain {
-	return keychain{encAddrRobot, encWallet, idPubk, idSig, emSig}
+func NewKeychain(encAddrRobot, encWallet, idPubk, idSig, emSig string, prop datamining.Proposal) Keychain {
+	return keychain{
+		encAddr:   encAddrRobot,
+		encWallet: encWallet,
+		idPubk:    idPubk,
+		idSig:     idSig,
+		emSig:     emSig,
+		prop:      prop,
+	}
 }
 
 func (k keychain) EncryptedAddrByRobot() string {
-	return k.cipherAddr
+	return k.encAddr
 }
 
 func (k keychain) EncryptedWallet() string {
-	return k.cipherWallet
+	return k.encWallet
 }
 
 func (k keychain) IDPublicKey() string {
-	return k.personPubk
+	return k.idPubk
 }
 
 func (k keychain) IDSignature() string {
@@ -54,6 +66,10 @@ func (k keychain) IDSignature() string {
 
 func (k keychain) EmitterSignature() string {
 	return k.emSig
+}
+
+func (k keychain) Proposal() datamining.Proposal {
+	return k.prop
 }
 
 //EndorsedKeychain aggregates keychain and it's endorsement
@@ -100,6 +116,10 @@ func (eK endorsedKeychain) IDSignature() string {
 
 func (eK endorsedKeychain) EmitterSignature() string {
 	return eK.k.EmitterSignature()
+}
+
+func (eK endorsedKeychain) Proposal() datamining.Proposal {
+	return eK.k.Proposal()
 }
 
 func (eK endorsedKeychain) Endorsement() mining.Endorsement {

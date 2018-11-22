@@ -45,6 +45,12 @@ func (s signer) VerifyTransactionDataSignature(txType mining.TransactionType, pu
 			EncryptedWallet:      kc.EncryptedWallet(),
 			EncryptedAddrByRobot: kc.EncryptedAddrByRobot(),
 			IDPublicKey:          kc.IDPublicKey(),
+			Proposal: proposal{
+				SharedEmitterKeyPair: proposalKeypair{
+					EncryptedPrivateKey: kc.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+					PublicKey:           kc.Proposal().SharedEmitterKeyPair().PublicKey(),
+				},
+			},
 		})
 		if err != nil {
 			return err
@@ -58,6 +64,12 @@ func (s signer) VerifyTransactionDataSignature(txType mining.TransactionType, pu
 			EncryptedAESKey:      id.EncryptedAESKey(),
 			Hash:                 id.Hash(),
 			PublicKey:            id.PublicKey(),
+			Proposal: proposal{
+				SharedEmitterKeyPair: proposalKeypair{
+					EncryptedPrivateKey: id.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+					PublicKey:           id.Proposal().SharedEmitterKeyPair().PublicKey(),
+				},
+			},
 		})
 		if err != nil {
 			return err
@@ -75,6 +87,12 @@ func (s signer) VerifyIDSignatures(id account.ID) error {
 		EncryptedAESKey:      id.EncryptedAESKey(),
 		Hash:                 id.Hash(),
 		PublicKey:            id.PublicKey(),
+		Proposal: proposal{
+			SharedEmitterKeyPair: proposalKeypair{
+				EncryptedPrivateKey: id.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           id.Proposal().SharedEmitterKeyPair().PublicKey(),
+			},
+		},
 	})
 	if err != nil {
 		return err
@@ -90,6 +108,12 @@ func (s signer) VerifyKeychainSignatures(kc account.Keychain) error {
 		EncryptedWallet:      kc.EncryptedWallet(),
 		EncryptedAddrByRobot: kc.EncryptedAddrByRobot(),
 		IDPublicKey:          kc.IDPublicKey(),
+		Proposal: proposal{
+			SharedEmitterKeyPair: proposalKeypair{
+				EncryptedPrivateKey: kc.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           kc.Proposal().SharedEmitterKeyPair().PublicKey(),
+			},
+		},
 	})
 	if err != nil {
 		return err

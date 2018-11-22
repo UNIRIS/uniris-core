@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
+	"github.com/uniris/uniris-core/datamining/pkg"
+
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 
@@ -37,6 +39,13 @@ func (d decrypter) DecryptID(data string, pvKey string) (account.ID, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair(
+			id.Proposal.SharedEmitterKeyPair.EncryptedPrivateKey,
+			id.Proposal.SharedEmitterKeyPair.PublicKey),
+	)
+
 	return account.NewID(
 		id.Hash,
 		id.EncryptedAddrByRobot,
@@ -44,7 +53,8 @@ func (d decrypter) DecryptID(data string, pvKey string) (account.ID, error) {
 		id.EncryptedAESKey,
 		id.PublicKey,
 		id.IDSignature,
-		id.EmitterSignature), nil
+		id.EmitterSignature,
+		prop), nil
 }
 
 func (d decrypter) DecryptKeychain(data string, pvKey string) (account.Keychain, error) {
@@ -57,12 +67,20 @@ func (d decrypter) DecryptKeychain(data string, pvKey string) (account.Keychain,
 	if err != nil {
 		return nil, err
 	}
+
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair(
+			kc.Proposal.SharedEmitterKeyPair.EncryptedPrivateKey,
+			kc.Proposal.SharedEmitterKeyPair.PublicKey),
+	)
+
 	return account.NewKeychain(
 		kc.EncryptedAddrByRobot,
 		kc.EncryptedWallet,
 		kc.IDPublicKey,
 		kc.IDSignature,
-		kc.EmitterSignature), nil
+		kc.EmitterSignature,
+		prop), nil
 }
 
 func decrypt(privk string, data string) (string, error) {

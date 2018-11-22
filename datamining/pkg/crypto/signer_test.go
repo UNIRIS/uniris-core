@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/uniris/uniris-core/datamining/pkg"
+
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -74,7 +76,8 @@ Scenario: Verifies keychain transaction signature
 	Then I get not error
 */
 func TestVerifyTransactionKeychainSignature(t *testing.T) {
-	k := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc key", "pub"))
+	k := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -83,6 +86,12 @@ func TestVerifyTransactionKeychainSignature(t *testing.T) {
 		EncryptedAddrByRobot: k.EncryptedAddrByRobot(),
 		EncryptedWallet:      k.EncryptedWallet(),
 		IDPublicKey:          k.IDPublicKey(),
+		Proposal: proposal{
+			SharedEmitterKeyPair: proposalKeypair{
+				EncryptedPrivateKey: prop.SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           prop.SharedEmitterKeyPair().PublicKey(),
+			},
+		},
 	}
 	b, _ := json.Marshal(data)
 
@@ -98,7 +107,9 @@ Scenario: Verify ID transaction signature
 	Then I get not error
 */
 func TestVerifyTransactionIDSignature(t *testing.T) {
-	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc key", "pub"))
+
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop)
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -109,6 +120,12 @@ func TestVerifyTransactionIDSignature(t *testing.T) {
 		EncryptedAddrByRobot: id.EncryptedAddrByRobot(),
 		EncryptedAddrByID:    id.EncryptedAddrByID(),
 		PublicKey:            id.PublicKey(),
+		Proposal: proposal{
+			SharedEmitterKeyPair: proposalKeypair{
+				EncryptedPrivateKey: prop.SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           prop.SharedEmitterKeyPair().PublicKey(),
+			},
+		},
 	}
 	b, _ := json.Marshal(data)
 
@@ -153,6 +170,12 @@ func TestSignAndVerifyKeychainValidationRequestSignature(t *testing.T) {
 			IDPublicKey:          "pub",
 			EmitterSignature:     "sig",
 			IDSignature:          "sig",
+			Proposal: &api.Proposal{
+				SharedEmitterKeyPair: &api.KeyPairProposal{
+					EncryptedPrivateKey: "enc pv key",
+					PublicKey:           "pub key",
+				},
+			},
 		},
 		TransactionHash: "txHash",
 	}
@@ -184,6 +207,12 @@ func TestSignAndVerifyIDValidationRequestSignature(t *testing.T) {
 			PublicKey:            "pub",
 			EmitterSignature:     "sig",
 			IDSignature:          "sig",
+			Proposal: &api.Proposal{
+				SharedEmitterKeyPair: &api.KeyPairProposal{
+					EncryptedPrivateKey: "enc prv key",
+					PublicKey:           "pub key",
+				},
+			},
 		},
 		TransactionHash: "txHash",
 	}
@@ -213,6 +242,12 @@ func TestSignAndVerifyKeychainStorageRequestSignature(t *testing.T) {
 			IDPublicKey:          "pub",
 			EmitterSignature:     "sig",
 			IDSignature:          "sig",
+			Proposal: &api.Proposal{
+				SharedEmitterKeyPair: &api.KeyPairProposal{
+					EncryptedPrivateKey: "enc prv key",
+					PublicKey:           "pub key",
+				},
+			},
 		},
 		Endorsement: &api.Endorsement{
 			LastTransactionHash: "",
@@ -257,6 +292,12 @@ func TestSignAndVerifyIDStorageRequestSignature(t *testing.T) {
 			PublicKey:            "pub",
 			EmitterSignature:     "sig",
 			IDSignature:          "sig",
+			Proposal: &api.Proposal{
+				SharedEmitterKeyPair: &api.KeyPairProposal{
+					EncryptedPrivateKey: "enc prv key",
+					PublicKey:           "pub key",
+				},
+			},
 		},
 		Endorsement: &api.Endorsement{
 			LastTransactionHash: "",
@@ -491,6 +532,12 @@ func TestSignAndVerifyIDResponseSignature(t *testing.T) {
 			PublicKey:            "pub",
 			EmitterSignature:     "sig",
 			IDSignature:          "sig",
+			Proposal: &api.Proposal{
+				SharedEmitterKeyPair: &api.KeyPairProposal{
+					EncryptedPrivateKey: "enc prv key",
+					PublicKey:           "pub key",
+				},
+			},
 		},
 		Endorsement: &api.Endorsement{
 			LastTransactionHash: "",
@@ -531,6 +578,12 @@ func TestSignAndVerifyKeychainResponseSignature(t *testing.T) {
 			IDPublicKey:          "pub",
 			EmitterSignature:     "sig",
 			IDSignature:          "sig",
+			Proposal: &api.Proposal{
+				SharedEmitterKeyPair: &api.KeyPairProposal{
+					EncryptedPrivateKey: "enc prv key",
+					PublicKey:           "pub key",
+				},
+			},
 		},
 		Endorsement: &api.Endorsement{
 			LastTransactionHash: "",

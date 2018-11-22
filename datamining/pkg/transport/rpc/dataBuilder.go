@@ -3,6 +3,8 @@ package rpc
 import (
 	"time"
 
+	"github.com/uniris/uniris-core/datamining/pkg"
+
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
@@ -11,22 +13,36 @@ import (
 type dataBuilder struct{}
 
 func (b dataBuilder) buildID(id *api.ID) account.ID {
+
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair(
+		id.Proposal.SharedEmitterKeyPair.EncryptedPrivateKey,
+		id.Proposal.SharedEmitterKeyPair.PublicKey,
+	))
+
 	return account.NewID(id.Hash,
 		id.EncryptedAddrByRobot,
 		id.EncryptedAddrByID,
 		id.EncryptedAESKey,
 		id.PublicKey,
 		id.IDSignature,
-		id.EmitterSignature)
+		id.EmitterSignature,
+		prop)
 }
 
 func (b dataBuilder) buildKeychain(kc *api.Keychain) account.Keychain {
+
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair(
+		kc.Proposal.SharedEmitterKeyPair.EncryptedPrivateKey,
+		kc.Proposal.SharedEmitterKeyPair.PublicKey,
+	))
+
 	return account.NewKeychain(
 		kc.EncryptedAddrByRobot,
 		kc.EncryptedWallet,
 		kc.IDPublicKey,
 		kc.IDSignature,
 		kc.EmitterSignature,
+		prop,
 	)
 }
 

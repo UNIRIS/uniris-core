@@ -16,9 +16,9 @@ func (d mockDecrypter) DecryptHash(hash string, pvKey string) (string, error) {
 }
 
 func (d mockDecrypter) DecryptKeychain(data string, pvKey string) (account.Keychain, error) {
-	return account.NewKeychain("", "", "", "id sig", "em sig"), nil
+	return account.NewKeychain("", "", "", "id sig", "em sig", nil), nil
 }
 
 func (d mockDecrypter) DecryptID(data string, pvKey string) (account.ID, error) {
-	return account.NewID("hash", "", "", "", "", "id sig", "em sig"), nil
+	return account.NewID("hash", "", "", "", "", "id sig", "em sig", nil), nil
 }

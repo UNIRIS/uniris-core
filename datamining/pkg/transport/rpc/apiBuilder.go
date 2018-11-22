@@ -17,6 +17,12 @@ func (b apiBuilder) buildID(id account.ID) *api.ID {
 		PublicKey:            id.PublicKey(),
 		IDSignature:          id.IDSignature(),
 		EmitterSignature:     id.EmitterSignature(),
+		Proposal: &api.Proposal{
+			SharedEmitterKeyPair: &api.KeyPairProposal{
+				EncryptedPrivateKey: id.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           id.Proposal().SharedEmitterKeyPair().PublicKey(),
+			},
+		},
 	}
 }
 
@@ -27,6 +33,12 @@ func (b apiBuilder) buildKeychain(kc account.Keychain) *api.Keychain {
 		IDPublicKey:          kc.IDPublicKey(),
 		EmitterSignature:     kc.EmitterSignature(),
 		IDSignature:          kc.IDSignature(),
+		Proposal: &api.Proposal{
+			SharedEmitterKeyPair: &api.KeyPairProposal{
+				EncryptedPrivateKey: kc.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           kc.Proposal().SharedEmitterKeyPair().PublicKey(),
+			},
+		},
 	}
 }
 

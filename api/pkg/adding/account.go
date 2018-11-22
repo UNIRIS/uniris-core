@@ -27,8 +27,7 @@ type ProposedKeyPair struct {
 
 //AccountCreationRequest represents the required data to create an account
 type AccountCreationRequest struct {
-	EncryptedID           string          `json:"encrypted_id"`
-	EncryptedKeychain     string          `json:"encrypted_keychain"`
-	SharedEmitterProposal ProposedKeyPair `json:"shared_emitter_proposal"`
-	Signature             string          `json:"signature,omitempty"`
+	EncryptedID       string `json:"encrypted_id"`
+	EncryptedKeychain string `json:"encrypted_keychain"`
+	Signature         string `json:"signature,omitempty"`
 }

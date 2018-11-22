@@ -1,6 +1,7 @@
 package account
 
 import (
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
@@ -27,6 +28,9 @@ type ID interface {
 
 	//EmitterSignature returns the signature provided by the emitter's device
 	EmitterSignature() string
+
+	//Proposal returns the proposal for this transaction
+	Proposal() datamining.Proposal
 }
 
 type id struct {
@@ -37,10 +41,11 @@ type id struct {
 	pubk         string
 	idSig        string
 	emSig        string
+	prop         datamining.Proposal
 }
 
 //NewID create new ID
-func NewID(hash, encAddrRobot, encAddrID, encAESKey, pubk, idSig, emSig string) ID {
+func NewID(hash, encAddrRobot, encAddrID, encAESKey, pubk, idSig, emSig string, prop datamining.Proposal) ID {
 	return id{
 		hash:         hash,
 		encAddrRobot: encAddrRobot,
@@ -49,6 +54,7 @@ func NewID(hash, encAddrRobot, encAddrID, encAESKey, pubk, idSig, emSig string) 
 		pubk:         pubk,
 		idSig:        idSig,
 		emSig:        emSig,
+		prop:         prop,
 	}
 }
 
@@ -78,6 +84,10 @@ func (id id) IDSignature() string {
 
 func (id id) EmitterSignature() string {
 	return id.emSig
+}
+
+func (id id) Proposal() datamining.Proposal {
+	return id.prop
 }
 
 //EndorsedID aggregates ID and its endorsement
@@ -124,6 +134,10 @@ func (eID endorsedID) IDSignature() string {
 
 func (eID endorsedID) EmitterSignature() string {
 	return eID.id.EmitterSignature()
+}
+
+func (eID endorsedID) Proposal() datamining.Proposal {
+	return eID.id.Proposal()
 }
 
 func (eID endorsedID) Endorsement() mining.Endorsement {

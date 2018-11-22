@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uniris/uniris-core/datamining/pkg"
+
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 
@@ -46,7 +48,9 @@ Scenario: Hash a ID
 	Then it produces a hash
 */
 func TestHashID(t *testing.T) {
-	id := account.NewID("hash", "addr", "addr", "aesKey", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+
+	id := account.NewID("hash", "addr", "addr", "aesKey", "id pub", "id sig", "em sig", prop)
 	hash, err := NewHasher().HashID(id)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, hash)
@@ -59,7 +63,9 @@ Scenario: Hash a keychain
 	Then it produces a hash
 */
 func TestHashKeychain(t *testing.T) {
-	kc := account.NewKeychain("addr", "enc wallet", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+
+	kc := account.NewKeychain("addr", "enc wallet", "id pub", "id sig", "em sig", prop)
 	hash, err := NewHasher().HashKeychain(kc)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, hash)
@@ -90,7 +96,8 @@ Scenario: Hash a endorsed id
 	Then it produces a hash
 */
 func TestHashEndorsedID(t *testing.T) {
-	id := account.NewID("hash", "addr", "addr", "aesKey", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	id := account.NewID("hash", "addr", "addr", "aesKey", "id pub", "id sig", "em sig", prop)
 	end := mining.NewEndorsement("last hash", "hash",
 		mining.NewMasterValidation([]string{"pubkey"}, "pubkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature")},
@@ -109,7 +116,9 @@ Scenario: Hash an endorsed keychain
 	Then it produces a hash
 */
 func TestHashEndorsedKeychain(t *testing.T) {
-	kc := account.NewKeychain("addr", "enc wallet", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+
+	kc := account.NewKeychain("addr", "enc wallet", "id pub", "id sig", "em sig", prop)
 	end := mining.NewEndorsement("last hash", "hash",
 		mining.NewMasterValidation([]string{"pubkey"}, "pubkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature")},

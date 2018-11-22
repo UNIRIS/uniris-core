@@ -143,7 +143,6 @@ definitions:
     required:
       - encrypted_id
       - encrypted_keychain
-      - shared_client_proposal
       - signature
     properties:
       encrypted_id:
@@ -152,12 +151,10 @@ definitions:
       encrypted_keychain:
         descrpition: Encrypted Keychain
         type: string
-      shared_emitter_proposal:
-          description: Proposed shared emitter keys
-          $ref: "#/definitions/ProposedKeyPair"
       signature:
         description: Request signature
         type: string
+
   AccountCreationResult:
     required:
       - transactions
@@ -194,13 +191,3 @@ definitions:
       signature:
         type: string
         description: Signature of the person
-  ProposedKeyPair:
-    required:
-      - encrypted_private_key
-      - public_key
-    encrypted_private_key:
-      type: string
-      description: Encrypted proposed private key
-    public_key:
-      type: string
-      descripion: Proposed public key

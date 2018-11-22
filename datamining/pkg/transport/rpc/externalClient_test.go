@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	mocktransport "github.com/uniris/uniris-core/datamining/pkg/transport/mock"
@@ -68,9 +69,13 @@ func TestRequestIDClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
 	db.StoreID(
 		account.NewEndorsedID(
-			account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig"),
+			account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop),
 			mining.NewEndorsement("", "hash",
 				mining.NewMasterValidation([]string{"hash"}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
 				[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")}),
@@ -128,10 +133,14 @@ func TestRequestKeychainClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
 	db.StoreKeychain(
 		account.NewEndorsedKeychain(
 			"hash",
-			account.NewKeychain("enc addr", "enc wallet", "id pub", "id pub", "em pub"),
+			account.NewKeychain("enc addr", "enc wallet", "id pub", "id pub", "em pub", prop),
 			mining.NewEndorsement("", "hash",
 				mining.NewMasterValidation([]string{"hash"}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
 				[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")}),
@@ -324,7 +333,11 @@ func TestRequestKeychainValidationClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
 
 	cli := NewExternalClient(crypto, conf)
 	valid, err := cli.RequestValidation("127.0.0.1", mining.KeychainTransaction, "hash", keychain)
@@ -380,7 +393,11 @@ func TestRequestIDValidationClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop)
 
 	cli := NewExternalClient(crypto, conf)
 	valid, err := cli.RequestValidation("127.0.0.1", mining.IDTransaction, "hash", id)
@@ -434,7 +451,11 @@ func TestRequestKeychainStorageClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
 	end := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{""}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")},
@@ -494,7 +515,11 @@ func TestRequestIDStorageClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig")
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop)
 	end := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{""}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")},

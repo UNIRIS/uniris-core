@@ -56,11 +56,11 @@ func (d *database) FindLastKeychain(addr string) (account.EndorsedKeychain, erro
 }
 
 func (d *database) ListEmitterPublicKeys() ([]string, error) {
-	return []string{"3059301306072a8648ce3d020106082a8648ce3d03010703420004061a9f65f64c701af21bc93604b93d1502cf1f30a19a37f919cf99112d5991109ea67750a7ce5ef95054a920614aa94b33148c60f34b247de62e33a1d843be21"}, nil
+	return []string{"3059301306072a8648ce3d020106082a8648ce3d03010703420004d64bb03b6dc787c848937793988ca158bdd7e9317cd0fef0a1bc5f040343af9e629e2277ffe0cbca0197ca1a443340c7f1c98b07c4e1ea056f2d99655e69c096"}, nil
 }
 
-func (d *database) StoreKeychain(w account.EndorsedKeychain) error {
-	d.Keychains = append(d.Keychains, w)
+func (d *database) StoreKeychain(k account.EndorsedKeychain) error {
+	d.Keychains = append(d.Keychains, k)
 	return nil
 }
 

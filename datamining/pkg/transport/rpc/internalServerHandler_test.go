@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	mockcrypto "github.com/uniris/uniris-core/datamining/pkg/crypto/mock"
 	mockstorage "github.com/uniris/uniris-core/datamining/pkg/storage/mock"
@@ -27,10 +28,14 @@ func TestGetAccount(t *testing.T) {
 		signer:    mockcrypto.NewSigner(),
 		hasher:    mockcrypto.NewHasher(),
 	}
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
 	db := mockstorage.NewDatabase()
 	db.StoreID(
 		account.NewEndorsedID(
-			account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig"),
+			account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop),
 			nil,
 		),
 	)
@@ -38,7 +43,7 @@ func TestGetAccount(t *testing.T) {
 	db.StoreKeychain(
 		account.NewEndorsedKeychain(
 			"hash",
-			account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig"),
+			account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop),
 			nil,
 		),
 	)
