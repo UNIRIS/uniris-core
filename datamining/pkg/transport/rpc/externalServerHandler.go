@@ -57,31 +57,31 @@ func NewExternalServerHandler(srv Services, crypto Crypto, conf system.UnirisCon
 	}
 }
 
-func (h externalSrvHandler) GetBiometric(ctxt context.Context, req *api.BiometricRequest) (*api.BiometricResponse, error) {
-	if err := h.crypto.signer.VerifyHashSignature(h.conf.SharedKeys.RobotPublicKey, req.EncryptedPersonHash, req.Signature); err != nil {
+func (h externalSrvHandler) GetID(ctxt context.Context, req *api.IDRequest) (*api.IDResponse, error) {
+	if err := h.crypto.signer.VerifyHashSignature(h.conf.SharedKeys.RobotPublicKey, req.EncryptedIDHash, req.Signature); err != nil {
 		return nil, ErrInvalidSignature
 	}
 
-	personHash, err := h.crypto.decrypter.DecryptHash(req.EncryptedPersonHash, h.conf.SharedKeys.RobotPrivateKey)
+	idHash, err := h.crypto.decrypter.DecryptHash(req.EncryptedIDHash, h.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
 
-	biometric, err := h.services.accLister.GetBiometric(personHash)
+	id, err := h.services.accLister.GetID(idHash)
 	if err != nil {
 		return nil, err
 	}
 
-	if biometric == nil {
+	if id == nil {
 		return nil, errors.New(h.conf.Datamining.Errors.AccountNotExist)
 	}
 
-	res := &api.BiometricResponse{
-		Data:        h.api.buildBiometricData(biometric),
-		Endorsement: h.api.buildEndorsement(biometric.Endorsement()),
+	res := &api.IDResponse{
+		Data:        h.api.buildID(id),
+		Endorsement: h.api.buildEndorsement(id.Endorsement()),
 	}
 
-	if err := h.crypto.signer.SignBiometricResponse(res, h.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := h.crypto.signer.SignIDResponse(res, h.conf.SharedKeys.RobotPrivateKey); err != nil {
 		return nil, err
 	}
 
@@ -108,7 +108,7 @@ func (h externalSrvHandler) GetKeychain(ctxt context.Context, req *api.KeychainR
 	}
 
 	res := &api.KeychainResponse{
-		Data:        h.api.buildKeychainData(keychain),
+		Data:        h.api.buildKeychain(keychain),
 		Endorsement: h.api.buildEndorsement(keychain.Endorsement()),
 	}
 
@@ -124,19 +124,12 @@ func (h externalSrvHandler) LeadKeychainMining(ctx context.Context, req *api.Key
 		return nil, ErrInvalidSignature
 	}
 
-	keychainSigLess, err := h.crypto.decrypter.DecryptKeychainData(req.EncryptedKeychainData, h.conf.SharedKeys.RobotPrivateKey)
+	keychain, err := h.crypto.decrypter.DecryptKeychain(req.EncryptedKeychain, h.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
 
-	keychain := account.NewKeychainData(
-		keychainSigLess.CipherAddrRobot(),
-		keychainSigLess.CipherWallet(),
-		keychainSigLess.PersonPublicKey(),
-		account.NewSignatures(req.SignatureKeychainData.Biod, req.SignatureKeychainData.Person),
-	)
-
-	clearaddr, err := h.crypto.decrypter.DecryptHash(keychain.CipherAddrRobot(), h.conf.SharedKeys.RobotPrivateKey)
+	clearaddr, err := h.crypto.decrypter.DecryptHash(keychain.EncryptedAddrByRobot(), h.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
@@ -146,33 +139,24 @@ func (h externalSrvHandler) LeadKeychainMining(ctx context.Context, req *api.Key
 		pp = append(pp, datamining.Peer{IP: net.ParseIP(p)})
 	}
 	vPool := datamining.NewPool(pp...)
-	if err := h.services.mining.LeadMining(req.TransactionHash, clearaddr, keychain, vPool, mining.KeychainTransaction, keychain.Signatures().Biod()); err != nil {
+	if err := h.services.mining.LeadMining(req.TransactionHash, clearaddr, keychain, vPool, mining.KeychainTransaction, keychain.EmitterSignature()); err != nil {
 		return nil, err
 	}
 
 	return &empty.Empty{}, nil
 }
 
-func (h externalSrvHandler) LeadBiometricMining(ctx context.Context, req *api.BiometricLeadRequest) (*empty.Empty, error) {
-	if err := h.crypto.signer.VerifyBiometricLeadRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+func (h externalSrvHandler) LeadIDMining(ctx context.Context, req *api.IDLeadRequest) (*empty.Empty, error) {
+	if err := h.crypto.signer.VerifyIDLeadRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
 		return nil, ErrInvalidSignature
 	}
 
-	bioSigLess, err := h.crypto.decrypter.DecryptBiometricData(req.EncryptedBioData, h.conf.SharedKeys.RobotPrivateKey)
+	id, err := h.crypto.decrypter.DecryptID(req.EncryptedID, h.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
 
-	biometricData := account.NewBiometricData(
-		bioSigLess.PersonHash(),
-		bioSigLess.CipherAddrRobot(),
-		bioSigLess.CipherAddrPerson(),
-		bioSigLess.CipherAESKey(),
-		bioSigLess.PersonPublicKey(),
-		account.NewSignatures(req.SignatureBioData.Biod, req.SignatureBioData.Person),
-	)
-
-	clearaddr, err := h.crypto.decrypter.DecryptHash(biometricData.CipherAddrRobot(), h.conf.SharedKeys.RobotPrivateKey)
+	clearaddr, err := h.crypto.decrypter.DecryptHash(id.EncryptedAddrByRobot(), h.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
@@ -182,7 +166,7 @@ func (h externalSrvHandler) LeadBiometricMining(ctx context.Context, req *api.Bi
 		pp = append(pp, datamining.Peer{IP: net.ParseIP(p)})
 	}
 	vPool := datamining.NewPool(pp...)
-	if err := h.services.mining.LeadMining(req.TransactionHash, clearaddr, biometricData, vPool, mining.BiometricTransaction, biometricData.Signatures().Biod()); err != nil {
+	if err := h.services.mining.LeadMining(req.TransactionHash, clearaddr, id, vPool, mining.IDTransaction, id.EmitterSignature()); err != nil {
 		return nil, err
 	}
 
@@ -253,7 +237,7 @@ func (h externalSrvHandler) ValidateKeychain(ctx context.Context, req *api.Keych
 		return nil, err
 	}
 
-	valid, err := h.services.mining.Validate(req.TransactionHash, h.data.buildKeychainData(req.Data), mining.KeychainTransaction)
+	valid, err := h.services.mining.Validate(req.TransactionHash, h.data.buildKeychain(req.Data), mining.KeychainTransaction)
 	if err != nil {
 		return nil, err
 	}
@@ -275,12 +259,12 @@ func (h externalSrvHandler) ValidateKeychain(ctx context.Context, req *api.Keych
 	return res, nil
 }
 
-func (h externalSrvHandler) ValidateBiometric(ctx context.Context, req *api.BiometricValidationRequest) (*api.ValidationResponse, error) {
-	if err := h.crypto.signer.VerifyBiometricValidationRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+func (h externalSrvHandler) ValidateID(ctx context.Context, req *api.IDValidationRequest) (*api.ValidationResponse, error) {
+	if err := h.crypto.signer.VerifyIDValidationRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
 		return nil, err
 	}
 
-	valid, err := h.services.mining.Validate(req.TransactionHash, h.data.buildBiometricData(req.Data), mining.BiometricTransaction)
+	valid, err := h.services.mining.Validate(req.TransactionHash, h.data.buildID(req.Data), mining.IDTransaction)
 	if err != nil {
 		return nil, err
 	}
@@ -307,20 +291,20 @@ func (h externalSrvHandler) StoreKeychain(ctx context.Context, req *api.Keychain
 		return nil, err
 	}
 
-	clearaddr, err := h.crypto.decrypter.DecryptHash(req.Data.CipherAddrRobot, h.conf.SharedKeys.RobotPrivateKey)
+	clearaddr, err := h.crypto.decrypter.DecryptHash(req.Data.EncryptedAddrByRobot, h.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
 
-	keychain := account.NewKeychain(clearaddr,
-		h.data.buildKeychainData(req.Data),
+	keychain := account.NewEndorsedKeychain(clearaddr,
+		h.data.buildKeychain(req.Data),
 		h.data.buildEndorsement(req.Endorsement))
 
 	if err := h.services.accAdd.StoreKeychain(keychain); err != nil {
 		return nil, err
 	}
 
-	hash, err := h.crypto.hasher.HashKeychain(keychain)
+	hash, err := h.crypto.hasher.HashEndorsedKeychain(keychain)
 	if err != nil {
 		return nil, err
 	}
@@ -334,17 +318,17 @@ func (h externalSrvHandler) StoreKeychain(ctx context.Context, req *api.Keychain
 	return ack, nil
 }
 
-func (h externalSrvHandler) StoreBiometric(ctx context.Context, req *api.BiometricStorageRequest) (*api.StorageAck, error) {
-	if err := h.crypto.signer.VerifyBiometricStorageRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+func (h externalSrvHandler) StoreID(ctx context.Context, req *api.IDStorageRequest) (*api.StorageAck, error) {
+	if err := h.crypto.signer.VerifyIDStorageRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
 		return nil, err
 	}
 
-	biometric := account.NewBiometric(h.data.buildBiometricData(req.Data), h.data.buildEndorsement(req.Endorsement))
-	if err := h.services.accAdd.StoreBiometric(biometric); err != nil {
+	id := account.NewEndorsedID(h.data.buildID(req.Data), h.data.buildEndorsement(req.Endorsement))
+	if err := h.services.accAdd.StoreID(id); err != nil {
 		return nil, err
 	}
 
-	hash, err := h.crypto.hasher.HashBiometric(biometric)
+	hash, err := h.crypto.hasher.HashEndorsedID(id)
 	if err != nil {
 		return nil, err
 	}

@@ -15,8 +15,8 @@ import (
 	accountadding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
 	accountListing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
 	accountMining "github.com/uniris/uniris-core/datamining/pkg/account/mining"
-	biodlisting "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
 	mockcrypto "github.com/uniris/uniris-core/datamining/pkg/crypto/mock"
+	emListing "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	mockstorage "github.com/uniris/uniris-core/datamining/pkg/storage/mock"
@@ -25,22 +25,21 @@ import (
 )
 
 /*
-Scenario: Get biometric
-	Given a person hash and biometric already stored
+Scenario: Get ID
+	Given a id hash and ID already stored
 	When i want to retrive it
 	Then I get it from the db
 */
-func TestGetBiometric(t *testing.T) {
+func TestGetID(t *testing.T) {
 	db := mockstorage.NewDatabase()
 	accLister := accountListing.NewService(db)
 
-	sig := account.NewSignatures("sig1", "sig2")
-	bioData := account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", sig)
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig")
 	endors := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{"hash"}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pub key", "sig")),
 		[]mining.Validation{})
 
-	db.StoreBiometric(account.NewBiometric(bioData, endors))
+	db.StoreID(account.NewEndorsedID(id, endors))
 
 	srv := Services{accLister: accLister}
 	crypto := Crypto{
@@ -49,12 +48,12 @@ func TestGetBiometric(t *testing.T) {
 	}
 	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
 
-	res, err := h.GetBiometric(context.TODO(), &api.BiometricRequest{
-		EncryptedPersonHash: "enc hash",
+	res, err := h.GetID(context.TODO(), &api.IDRequest{
+		EncryptedIDHash: "enc hash",
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, "sig", res.Signature)
-	assert.Equal(t, "enc aes key", res.Data.CipherAESKey)
+	assert.Equal(t, "enc aes key", res.Data.EncryptedAESKey)
 }
 
 /*
@@ -67,13 +66,12 @@ func TestGetKeychain(t *testing.T) {
 	db := mockstorage.NewDatabase()
 	accLister := accountListing.NewService(db)
 
-	sig := account.NewSignatures("sig1", "sig2")
-	data := account.NewKeychainData("enc address", "cipher wallet", "pub", sig)
+	kc := account.NewKeychain("enc address", "enc wallet", "id pub", "id sig", "em sig")
 	endors := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{"hash"}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pub key", "sig")),
 		[]mining.Validation{})
 
-	db.StoreKeychain(account.NewKeychain("hash", data, endors))
+	db.StoreKeychain(account.NewEndorsedKeychain("hash", kc, endors))
 
 	srv := Services{accLister: accLister}
 	crypto := Crypto{
@@ -87,7 +85,7 @@ func TestGetKeychain(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, "sig", res.Signature)
-	assert.Equal(t, "cipher wallet", res.Data.CipherWallet)
+	assert.Equal(t, "enc wallet", res.Data.EncryptedWallet)
 }
 
 /*
@@ -103,7 +101,7 @@ func TestLeadKeychainMining(t *testing.T) {
 	poolF := mockPoolFinder{}
 	cli := mocktransport.NewExternalClient(db)
 	poolR := mocktransport.NewPoolRequester(cli)
-	biodlister := biodlisting.NewService(db)
+	emLister := emListing.NewService(db)
 	accLister := accountListing.NewService(db)
 	aiClient := mocktransport.NewAIClient()
 
@@ -111,7 +109,7 @@ func TestLeadKeychainMining(t *testing.T) {
 		mining.KeychainTransaction: accountMining.NewKeychainMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher(), accLister),
 	}
 
-	mineSrv := mining.NewService(aiClient, notifier, poolF, poolR, mockcrypto.NewSigner(), biodlister, system.UnirisConfig{}, txMiners)
+	mineSrv := mining.NewService(aiClient, notifier, poolF, poolR, mockcrypto.NewSigner(), emLister, system.UnirisConfig{}, txMiners)
 
 	accAdder := accountadding.NewService(aiClient, db, accLister, mockcrypto.NewSigner(), mockcrypto.NewHasher())
 
@@ -124,13 +122,9 @@ func TestLeadKeychainMining(t *testing.T) {
 	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
 
 	_, err := h.LeadKeychainMining(context.TODO(), &api.KeychainLeadRequest{
-		EncryptedKeychainData: "encrypted data",
-		SignatureKeychainData: &api.Signature{
-			Biod:   "sig",
-			Person: "sig",
-		},
-		TransactionHash:  "hash",
-		ValidatorPeerIPs: []string{"127.0.0.1"},
+		EncryptedKeychain: "encrypted data",
+		TransactionHash:   "hash",
+		ValidatorPeerIPs:  []string{"127.0.0.1"},
 	})
 	assert.Nil(t, err)
 
@@ -139,26 +133,26 @@ func TestLeadKeychainMining(t *testing.T) {
 }
 
 /*
-Scenario: Lead mining of biometric transaction
-	Given a lead biometric request
+Scenario: Lead mining of ID transaction
+	Given a lead ID request
 	When I mine the transaction
 	Then I got no error and the data is stored
 */
-func TestLeadBiometricMining(t *testing.T) {
+func TestLeadIDMining(t *testing.T) {
 	db := mockstorage.NewDatabase()
 	lockSrv := lock.NewService(db)
 	notifier := mockNotifier{}
 	poolF := mockPoolFinder{}
 	cli := mocktransport.NewExternalClient(db)
 	poolR := mocktransport.NewPoolRequester(cli)
-	biodlister := biodlisting.NewService(db)
+	emLister := emListing.NewService(db)
 	aiClient := mocktransport.NewAIClient()
 
 	txMiners := map[mining.TransactionType]mining.TransactionMiner{
-		mining.BiometricTransaction: accountMining.NewBiometricMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher()),
+		mining.IDTransaction: accountMining.NewIDMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher()),
 	}
 
-	mineSrv := mining.NewService(aiClient, notifier, poolF, poolR, mockcrypto.NewSigner(), biodlister, system.UnirisConfig{
+	mineSrv := mining.NewService(aiClient, notifier, poolF, poolR, mockcrypto.NewSigner(), emLister, system.UnirisConfig{
 		SharedKeys: system.SharedKeys{
 			RobotPublicKey: "robotkey",
 		},
@@ -175,19 +169,15 @@ func TestLeadBiometricMining(t *testing.T) {
 	}
 	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
 
-	_, err := h.LeadBiometricMining(context.TODO(), &api.BiometricLeadRequest{
-		EncryptedBioData: "encrypted data",
-		SignatureBioData: &api.Signature{
-			Biod:   "sig",
-			Person: "sig",
-		},
+	_, err := h.LeadIDMining(context.TODO(), &api.IDLeadRequest{
+		EncryptedID:      "encrypted data",
 		TransactionHash:  "hash",
 		ValidatorPeerIPs: []string{"127.0.0.1"},
 	})
 	assert.Nil(t, err)
 
-	biometric, _ := db.FindBiometric("personHash")
-	assert.NotNil(t, biometric)
+	id, _ := db.FindID("hash")
+	assert.NotNil(t, id)
 }
 
 /*
@@ -299,14 +289,12 @@ func TestValidateKeychain(t *testing.T) {
 	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
 
 	valid, err := h.ValidateKeychain(context.TODO(), &api.KeychainValidationRequest{
-		Data: &api.KeychainData{
-			CipherAddrRobot: "encrypted addr",
-			CipherWallet:    "cipher wallet",
-			PersonPubk:      "pubk",
-			Signature: &api.Signature{
-				Biod:   "sig",
-				Person: "sig",
-			},
+		Data: &api.Keychain{
+			EncryptedAddrByRobot: "encrypted addr",
+			EncryptedWallet:      "cipher wallet",
+			IDPublicKey:          "pubk",
+			IDSignature:          "sig",
+			EmitterSignature:     "sig",
 		},
 		TransactionHash: "hash",
 	})
@@ -318,15 +306,15 @@ func TestValidateKeychain(t *testing.T) {
 }
 
 /*
-Scenario: Validate biometric as slave
-	Given biometric transaction
+Scenario: Validate ID as slave
+	Given ID transaction
 	When I want to validate it
 	Then I get a validation
 */
-func TestValidateBiometric(t *testing.T) {
+func TestValidateID(t *testing.T) {
 
 	txMiners := map[mining.TransactionType]mining.TransactionMiner{
-		mining.BiometricTransaction: accountMining.NewBiometricMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher()),
+		mining.IDTransaction: accountMining.NewIDMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher()),
 	}
 
 	mineSrv := mining.NewService(nil, nil, nil, nil, mockcrypto.NewSigner(), nil, system.UnirisConfig{
@@ -343,16 +331,14 @@ func TestValidateBiometric(t *testing.T) {
 	}
 	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
 
-	valid, err := h.ValidateBiometric(context.TODO(), &api.BiometricValidationRequest{
-		Data: &api.BiometricData{
-			CipherAddrRobot: "encrypted addr",
-			CipherAddrBio:   "encrypted addr",
-			CipherAESKey:    "cipher aes",
-			PersonPubk:      "pubk",
-			Signature: &api.Signature{
-				Biod:   "sig",
-				Person: "sig",
-			},
+	valid, err := h.ValidateID(context.TODO(), &api.IDValidationRequest{
+		Data: &api.ID{
+			EncryptedAddrByRobot: "encrypted addr",
+			EncryptedAddrByID:    "encrypted addr",
+			EncryptedAESKey:      "cipher aes",
+			PublicKey:            "pubk",
+			IDSignature:          "sig",
+			EmitterSignature:     "sig",
 		},
 		TransactionHash: "hash",
 	})
@@ -384,14 +370,12 @@ func TestStoreKeychain(t *testing.T) {
 	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
 
 	ack, err := h.StoreKeychain(context.TODO(), &api.KeychainStorageRequest{
-		Data: &api.KeychainData{
-			CipherWallet:    "encrypted addr",
-			CipherAddrRobot: "encrypted addr",
-			PersonPubk:      "pubk",
-			Signature: &api.Signature{
-				Biod:   "sig",
-				Person: "sig",
-			},
+		Data: &api.Keychain{
+			EncryptedWallet:      "encrypted addr",
+			EncryptedAddrByRobot: "encrypted addr",
+			IDPublicKey:          "pubk",
+			IDSignature:          "sig",
+			EmitterSignature:     "sig",
 		},
 		Endorsement: &api.Endorsement{
 			LastTransactionHash: "",
@@ -427,12 +411,12 @@ func TestStoreKeychain(t *testing.T) {
 }
 
 /*
-Scenario: Store biometric transaction
-	Given a biometric transaction
+Scenario: Store ID transaction
+	Given a ID transaction
 	When I want to store it
 	Then I get retrieve it in the db
 */
-func TestStoreBiometric(t *testing.T) {
+func TestStoreID(t *testing.T) {
 	db := mockstorage.NewDatabase()
 
 	accLister := accountListing.NewService(db)
@@ -447,16 +431,14 @@ func TestStoreBiometric(t *testing.T) {
 	}
 	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
 
-	ack, err := h.StoreBiometric(context.TODO(), &api.BiometricStorageRequest{
-		Data: &api.BiometricData{
-			CipherAESKey:    "encrypted aes key",
-			PersonHash:      "hash",
-			CipherAddrRobot: "encrypted addr",
-			PersonPubk:      "pubk",
-			Signature: &api.Signature{
-				Biod:   "sig",
-				Person: "sig",
-			},
+	ack, err := h.StoreID(context.TODO(), &api.IDStorageRequest{
+		Data: &api.ID{
+			EncryptedAESKey:      "encrypted aes key",
+			Hash:                 "hash",
+			EncryptedAddrByRobot: "encrypted addr",
+			PublicKey:            "pubk",
+			IDSignature:          "sig",
+			EmitterSignature:     "sig",
 		},
 		Endorsement: &api.Endorsement{
 			LastTransactionHash: "",
@@ -486,11 +468,11 @@ func TestStoreBiometric(t *testing.T) {
 	assert.NotNil(t, ack)
 	assert.Equal(t, "sig", ack.Signature)
 
-	biometric, err := db.FindBiometric("hash")
+	id, err := db.FindID("hash")
 	assert.Nil(t, err)
-	assert.Equal(t, "encrypted aes key", biometric.CipherAESKey())
-	assert.NotNil(t, biometric.Endorsement())
-	assert.Equal(t, mining.ValidationOK, biometric.Endorsement().MasterValidation().ProofOfWorkValidation().Status())
+	assert.Equal(t, "encrypted aes key", id.EncryptedAESKey())
+	assert.NotNil(t, id.Endorsement())
+	assert.Equal(t, mining.ValidationOK, id.Endorsement().MasterValidation().ProofOfWorkValidation().Status())
 }
 
 type mockPoolFinder struct{}

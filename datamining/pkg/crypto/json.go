@@ -24,57 +24,57 @@ type validation struct {
 	Sig       string                  `json:"signature"`
 }
 
-type biometric struct {
-	PersonPublicKey     string      `json:"person_pubk"`
-	PersonHash          string      `json:"person_hash"`
-	EncryptedAESKey     string      `json:"encrypted_aes_key"`
-	EncryptedAddrPerson string      `json:"encrypted_addr_person"`
-	EncryptedAddrRobot  string      `json:"encrypted_addr_robot"`
-	BIODSignature       string      `json:"biod_sig"`
-	PersonSignature     string      `json:"person_sig"`
-	Endorsement         endorsement `json:"endorsement"`
+type endorsedID struct {
+	PublicKey            string      `json:"pubk"`
+	Hash                 string      `json:"hash"`
+	EncryptedAESKey      string      `json:"encrypted_aes_key"`
+	EncryptedAddrByID    string      `json:"encrypted_addr_id"`
+	EncryptedAddrByRobot string      `json:"encrypted_addr_robot"`
+	IDSignature          string      `json:"id_sig"`
+	EmitterSignature     string      `json:"em_sig"`
+	Endorsement          endorsement `json:"endorsement"`
 }
 
-type biometricRaw struct {
-	PersonPublicKey     string `json:"person_pubk"`
-	PersonHash          string `json:"person_hash"`
-	EncryptedAESKey     string `json:"encrypted_aes_key"`
-	EncryptedAddrPerson string `json:"encrypted_addr_person"`
-	EncryptedAddrRobot  string `json:"encrypted_addr_robot"`
+type idWithoutSig struct {
+	PublicKey            string `json:"pubk"`
+	Hash                 string `json:"hash"`
+	EncryptedAESKey      string `json:"encrypted_aes_key"`
+	EncryptedAddrByID    string `json:"encrypted_addr_id"`
+	EncryptedAddrByRobot string `json:"encrypted_addr_robot"`
 }
 
-type biometricData struct {
-	PersonPublicKey     string `json:"person_pubk"`
-	PersonHash          string `json:"person_hash"`
-	EncryptedAESKey     string `json:"encrypted_aes_key"`
-	EncryptedAddrPerson string `json:"encrypted_addr_person"`
-	EncryptedAddrRobot  string `json:"encrypted_addr_robot"`
-	BIODSignature       string `json:"biod_sig"`
-	PersonSignature     string `json:"person_sig"`
+type id struct {
+	PublicKey            string `json:"pubk"`
+	Hash                 string `json:"hash"`
+	EncryptedAESKey      string `json:"encrypted_aes_key"`
+	EncryptedAddrByID    string `json:"encrypted_addr_id"`
+	EncryptedAddrByRobot string `json:"encrypted_addr_robot"`
+	IDSignature          string `json:"id_sig"`
+	EmitterSignature     string `json:"em_sig"`
+}
+
+type endorsedKeychain struct {
+	Address              string      `json:"address"`
+	IDPublicKey          string      `json:"id_pubk"`
+	EncryptedWallet      string      `json:"encrypted_wal"`
+	EncryptedAddrByRobot string      `json:"encrypted_addr_robot"`
+	EmitterSignature     string      `json:"em_sig"`
+	IDSignature          string      `json:"id_sig"`
+	Endorsement          endorsement `json:"endorsement"`
 }
 
 type keychain struct {
-	Address            string      `json:"address"`
-	PersonPublicKey    string      `json:"person_pubk"`
-	EncryptedWallet    string      `json:"encrypted_wal"`
-	EncryptedAddrRobot string      `json:"encrypted_addr_robot"`
-	BIODSignature      string      `json:"biod_sig"`
-	PersonSignature    string      `json:"person_sig"`
-	Endorsement        endorsement `json:"endorsement"`
+	IDPublicKey          string `json:"id_pubk"`
+	EncryptedWallet      string `json:"encrypted_wal"`
+	EncryptedAddrByRobot string `json:"encrypted_addr_robot"`
+	EmitterSignature     string `json:"em_sig"`
+	IDSignature          string `json:"id_sig"`
 }
 
-type keychainData struct {
-	PersonPublicKey    string `json:"person_pubk"`
-	EncryptedWallet    string `json:"encrypted_wal"`
-	EncryptedAddrRobot string `json:"encrypted_addr_robot"`
-	BIODSignature      string `json:"biod_sig"`
-	PersonSignature    string `json:"person_sig"`
-}
-
-type keychainRaw struct {
-	PersonPublicKey    string `json:"person_pubk"`
-	EncryptedWallet    string `json:"encrypted_wal"`
-	EncryptedAddrRobot string `json:"encrypted_addr_robot"`
+type keychainWithoutSig struct {
+	IDPublicKey          string `json:"id_pubk"`
+	EncryptedWallet      string `json:"encrypted_wal"`
+	EncryptedAddrByRobot string `json:"encrypted_addr_robot"`
 }
 
 type lockRaw struct {
@@ -83,7 +83,7 @@ type lockRaw struct {
 	Address        string `json:"address"`
 }
 
-type validationRaw struct {
+type validationWithoutSig struct {
 	Status    mining.ValidationStatus `json:"status"`
 	Timestamp int64                   `json:"timestamp"`
 	PublicKey string                  `json:"public_key"`

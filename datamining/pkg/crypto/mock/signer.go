@@ -24,20 +24,20 @@ func (s mockSigner) VerifyHashSignature(pubKey string, text string, sig string) 
 func (s mockSigner) VerifyKeychainLeadRequestSignature(pubKey string, data *api.KeychainLeadRequest) error {
 	return nil
 }
-func (s mockSigner) VerifyBiometricLeadRequestSignature(pubKey string, data *api.BiometricLeadRequest) error {
+func (s mockSigner) VerifyIDLeadRequestSignature(pubKey string, data *api.IDLeadRequest) error {
 	return nil
 }
 
 func (s mockSigner) VerifyKeychainValidationRequestSignature(pubKey string, data *api.KeychainValidationRequest) error {
 	return nil
 }
-func (s mockSigner) VerifyBiometricValidationRequestSignature(pubKey string, data *api.BiometricValidationRequest) error {
+func (s mockSigner) VerifyIDValidationRequestSignature(pubKey string, data *api.IDValidationRequest) error {
 	return nil
 }
 func (s mockSigner) VerifyKeychainStorageRequestSignature(pubKey string, data *api.KeychainStorageRequest) error {
 	return nil
 }
-func (s mockSigner) VerifyBiometricStorageRequestSignature(pubKey string, data *api.BiometricStorageRequest) error {
+func (s mockSigner) VerifyIDStorageRequestSignature(pubKey string, data *api.IDStorageRequest) error {
 	return nil
 }
 
@@ -45,11 +45,11 @@ func (s mockSigner) VerifyLockRequestSignature(pubkey string, req *api.LockReque
 	return nil
 }
 
-func (s mockSigner) VerifyBiometricDataSignatures(account.BiometricData) error {
+func (s mockSigner) VerifyIDSignatures(account.ID) error {
 	return nil
 }
 
-func (s mockSigner) VerifyKeychainDataSignatures(account.KeychainData) error {
+func (s mockSigner) VerifyKeychainSignatures(account.Keychain) error {
 	return nil
 }
 
@@ -69,7 +69,7 @@ func (s mockSigner) VerifyKeychainResponseSignature(pubKey string, res *api.Keyc
 	return nil
 }
 
-func (s mockSigner) VerifyBiometricResponseSignature(pubKey string, res *api.BiometricResponse) error {
+func (s mockSigner) VerifyIDResponseSignature(pubKey string, res *api.IDResponse) error {
 	return nil
 }
 
@@ -77,7 +77,7 @@ func (s mockSigner) VerifyValidationSignature(v mining.Validation) error {
 	return nil
 }
 
-func (s mockSigner) SignBiometricResponse(res *api.BiometricResponse, pvKey string) error {
+func (s mockSigner) SignIDResponse(res *api.IDResponse, pvKey string) error {
 	res.Signature = "sig"
 	return nil
 }
@@ -99,7 +99,7 @@ func (s mockSigner) SignKeychainLeadRequest(req *api.KeychainLeadRequest, pvKey 
 	req.SignatureRequest = "sig"
 	return nil
 }
-func (s mockSigner) SignBiometricLeadRequest(req *api.BiometricLeadRequest, pvKey string) error {
+func (s mockSigner) SignIDLeadRequest(req *api.IDLeadRequest, pvKey string) error {
 	req.SignatureRequest = "sig"
 	return nil
 }
@@ -107,7 +107,7 @@ func (s mockSigner) SignKeychainValidationRequestSignature(req *api.KeychainVali
 	req.Signature = "sig"
 	return nil
 }
-func (s mockSigner) SignBiometricValidationRequestSignature(req *api.BiometricValidationRequest, pvKey string) error {
+func (s mockSigner) SignIDValidationRequestSignature(req *api.IDValidationRequest, pvKey string) error {
 	req.Signature = "sig"
 	return nil
 }
@@ -115,7 +115,7 @@ func (s mockSigner) SignKeychainStorageRequestSignature(req *api.KeychainStorage
 	req.Signature = "sig"
 	return nil
 }
-func (s mockSigner) SignBiometricStorageRequestSignature(req *api.BiometricStorageRequest, pvKey string) error {
+func (s mockSigner) SignIDStorageRequestSignature(req *api.IDStorageRequest, pvKey string) error {
 	req.Signature = "sig"
 	return nil
 }

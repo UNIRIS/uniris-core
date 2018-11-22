@@ -4,53 +4,61 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
-//KeychainData describe a keychain data
-type KeychainData interface {
+//Keychain describe a keychain
+type Keychain interface {
 
-	//CipherAddrRobot returns encrypted address by the shared robot key
-	CipherAddrRobot() string
+	//EncryptedAddrByRobot returns encrypted address by the shared robot key
+	EncryptedAddrByRobot() string
 
-	//CipherWallet returns encrypted wallet by the person AES key
-	CipherWallet() string
+	//EncryptedWallet returns encrypted wallet by the person AES key
+	EncryptedWallet() string
 
-	//PersonPublicKey returns the person public key
-	PersonPublicKey() string
+	//IDPublicKey returns the ID public key
+	IDPublicKey() string
 
-	//Signature returns the signatures of the keychain data
-	Signatures() Signatures
+	//IDSignature returns the signature provided by the ID
+	IDSignature() string
+
+	//EmitterSignature returns the signature provided by the emitter's device
+	EmitterSignature() string
 }
 
-type keyChainData struct {
+type keychain struct {
 	cipherAddr   string
 	cipherWallet string
 	personPubk   string
-	sigs         Signatures
+	idSig        string
+	emSig        string
 }
 
-//NewKeychainData creates a new keychain data
-func NewKeychainData(cipherAddr, cipherWallet, personPubk string, sigs Signatures) KeychainData {
-	return keyChainData{cipherAddr, cipherWallet, personPubk, sigs}
+//NewKeychain creates a new keychain
+func NewKeychain(encAddrRobot, encWallet, idPubk, idSig, emSig string) Keychain {
+	return keychain{encAddrRobot, encWallet, idPubk, idSig, emSig}
 }
 
-func (k keyChainData) CipherAddrRobot() string {
+func (k keychain) EncryptedAddrByRobot() string {
 	return k.cipherAddr
 }
 
-func (k keyChainData) CipherWallet() string {
+func (k keychain) EncryptedWallet() string {
 	return k.cipherWallet
 }
 
-func (k keyChainData) PersonPublicKey() string {
+func (k keychain) IDPublicKey() string {
 	return k.personPubk
 }
 
-func (k keyChainData) Signatures() Signatures {
-	return k.sigs
+func (k keychain) IDSignature() string {
+	return k.idSig
 }
 
-//Keychain aggregates keychain data and it's endorsement
-type Keychain interface {
-	KeychainData
+func (k keychain) EmitterSignature() string {
+	return k.emSig
+}
+
+//EndorsedKeychain aggregates keychain and it's endorsement
+type EndorsedKeychain interface {
+	Keychain
 
 	//Address returns the keychain address
 	Address() string
@@ -59,37 +67,41 @@ type Keychain interface {
 	Endorsement() mining.Endorsement
 }
 
-type keychain struct {
+type endorsedKeychain struct {
 	address     string
-	data        KeychainData
+	k           Keychain
 	endorsement mining.Endorsement
 }
 
-//NewKeychain creates a new keychain aggregate
-func NewKeychain(address string, data KeychainData, endor mining.Endorsement) Keychain {
-	return keychain{address, data, endor}
+//NewEndorsedKeychain creates a new keychain endorsed
+func NewEndorsedKeychain(address string, k Keychain, endor mining.Endorsement) EndorsedKeychain {
+	return endorsedKeychain{address, k, endor}
 }
 
-func (k keychain) Address() string {
-	return k.address
+func (eK endorsedKeychain) Address() string {
+	return eK.address
 }
 
-func (k keychain) CipherAddrRobot() string {
-	return k.data.CipherAddrRobot()
+func (eK endorsedKeychain) EncryptedAddrByRobot() string {
+	return eK.k.EncryptedAddrByRobot()
 }
 
-func (k keychain) CipherWallet() string {
-	return k.data.CipherWallet()
+func (eK endorsedKeychain) EncryptedWallet() string {
+	return eK.k.EncryptedWallet()
 }
 
-func (k keychain) PersonPublicKey() string {
-	return k.data.PersonPublicKey()
+func (eK endorsedKeychain) IDPublicKey() string {
+	return eK.k.IDPublicKey()
 }
 
-func (k keychain) Signatures() Signatures {
-	return k.data.Signatures()
+func (eK endorsedKeychain) IDSignature() string {
+	return eK.k.IDSignature()
 }
 
-func (k keychain) Endorsement() mining.Endorsement {
-	return k.endorsement
+func (eK endorsedKeychain) EmitterSignature() string {
+	return eK.k.EmitterSignature()
+}
+
+func (eK endorsedKeychain) Endorsement() mining.Endorsement {
+	return eK.endorsement
 }

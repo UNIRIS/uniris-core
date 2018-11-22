@@ -15,10 +15,10 @@ func NewPoolRequester(cli mockExtClient) mockPoolRequester {
 	return mockPoolRequester{cli}
 }
 
-func (r mockPoolRequester) RequestBiometric(sPool datamining.Pool, personHash string) (account.Biometric, error) {
-	return r.cli.RequestBiometric("127.0.0.1", personHash)
+func (r mockPoolRequester) RequestID(sPool datamining.Pool, idHash string) (account.EndorsedID, error) {
+	return r.cli.RequestID("127.0.0.1", idHash)
 }
-func (r mockPoolRequester) RequestKeychain(sPool datamining.Pool, addr string) (account.Keychain, error) {
+func (r mockPoolRequester) RequestKeychain(sPool datamining.Pool, addr string) (account.EndorsedKeychain, error) {
 	return r.cli.RequestKeychain("127.0.0.1", addr)
 }
 

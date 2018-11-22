@@ -55,18 +55,20 @@ func TestDecryptHash(t *testing.T) {
 }
 
 /*
-Scenario: Decrypt biometric data
-	Given an encrypted biometric data
+Scenario: Decrypt ID
+	Given an encrypted ID
 	When I want to decrypt it
-	Then it serialize json and build biometric data without signatures
+	Then it serialize json and build ID
 */
-func TestDecryptBiometricData(t *testing.T) {
-	bioRaw := biometricRaw{
-		PersonHash:          "hash",
-		EncryptedAddrPerson: "addr",
-		EncryptedAddrRobot:  "addr",
-		EncryptedAESKey:     "enc aes key",
-		PersonPublicKey:     "pub",
+func TestDecryptID(t *testing.T) {
+	id := id{
+		Hash:                 "hash",
+		EncryptedAddrByID:    "addr",
+		EncryptedAddrByRobot: "addr",
+		EncryptedAESKey:      "enc aes key",
+		PublicKey:            "pub",
+		IDSignature:          "sig",
+		EmitterSignature:     "sig",
 	}
 
 	superKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -74,19 +76,21 @@ func TestDecryptBiometricData(t *testing.T) {
 	pu, _ := x509.ParsePKIXPublicKey(pbKey)
 	robotEciesKey := ecies.ImportECDSAPublic(pu.(*ecdsa.PublicKey))
 
-	b, _ := json.Marshal(bioRaw)
+	b, _ := json.Marshal(id)
 
 	cipher, _ := ecies.Encrypt(rand.Reader, robotEciesKey, b, nil, nil)
 
 	pvkey, _ := x509.MarshalECPrivateKey(superKey)
 
-	bioData, err := NewDecrypter().DecryptBiometricData(hex.EncodeToString(cipher), hex.EncodeToString(pvkey))
+	newID, err := NewDecrypter().DecryptID(hex.EncodeToString(cipher), hex.EncodeToString(pvkey))
 	assert.Nil(t, err)
-	assert.Equal(t, "hash", bioData.PersonHash())
-	assert.Equal(t, "addr", bioData.CipherAddrPerson())
-	assert.Equal(t, "addr", bioData.CipherAddrRobot())
-	assert.Equal(t, "enc aes key", bioData.CipherAESKey())
-	assert.Equal(t, "pub", bioData.PersonPublicKey())
+	assert.Equal(t, "hash", newID.Hash())
+	assert.Equal(t, "addr", newID.EncryptedAddrByID())
+	assert.Equal(t, "addr", newID.EncryptedAddrByRobot())
+	assert.Equal(t, "enc aes key", newID.EncryptedAESKey())
+	assert.Equal(t, "pub", newID.PublicKey())
+	assert.Equal(t, "sig", newID.IDSignature())
+	assert.Equal(t, "sig", newID.EmitterSignature())
 }
 
 /*
@@ -96,10 +100,12 @@ Scenario: Decrypt keychain data
 	Then it serialize json and build biometric data without signatures
 */
 func TestDecryptKeychaincData(t *testing.T) {
-	bioRaw := keychainRaw{
-		EncryptedWallet:    "enc wallet",
-		EncryptedAddrRobot: "addr",
-		PersonPublicKey:    "pub",
+	kc := keychain{
+		EncryptedWallet:      "enc wallet",
+		EncryptedAddrByRobot: "addr",
+		IDPublicKey:          "pub",
+		IDSignature:          "sig",
+		EmitterSignature:     "sig",
 	}
 
 	superKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -107,15 +113,17 @@ func TestDecryptKeychaincData(t *testing.T) {
 	pu, _ := x509.ParsePKIXPublicKey(pbKey)
 	robotEciesKey := ecies.ImportECDSAPublic(pu.(*ecdsa.PublicKey))
 
-	b, _ := json.Marshal(bioRaw)
+	b, _ := json.Marshal(kc)
 
 	cipher, _ := ecies.Encrypt(rand.Reader, robotEciesKey, b, nil, nil)
 
 	pvkey, _ := x509.MarshalECPrivateKey(superKey)
 
-	keychainData, err := NewDecrypter().DecryptKeychainData(hex.EncodeToString(cipher), hex.EncodeToString(pvkey))
+	keychain, err := NewDecrypter().DecryptKeychain(hex.EncodeToString(cipher), hex.EncodeToString(pvkey))
 	assert.Nil(t, err)
-	assert.Equal(t, "enc wallet", keychainData.CipherWallet())
-	assert.Equal(t, "addr", keychainData.CipherAddrRobot())
-	assert.Equal(t, "pub", keychainData.PersonPublicKey())
+	assert.Equal(t, "enc wallet", keychain.EncryptedWallet())
+	assert.Equal(t, "addr", keychain.EncryptedAddrByRobot())
+	assert.Equal(t, "pub", keychain.IDPublicKey())
+	assert.Equal(t, "sig", keychain.EmitterSignature())
+	assert.Equal(t, "sig", keychain.IDSignature())
 }

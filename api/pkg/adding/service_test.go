@@ -21,22 +21,14 @@ func TestAddAccount(t *testing.T) {
 	}
 
 	req := AccountCreationRequest{
-		EncryptedBioData:      "encrypted bio data",
-		EncryptedKeychainData: "encrypted wallet data",
-		SignatureRequest:      "signature request",
-		SignaturesBio: Signatures{
-			BiodSig:   "biod signature",
-			PersonSig: "person sig",
-		},
-		SignaturesKeychain: Signatures{
-			BiodSig:   "biod signature",
-			PersonSig: "person sig",
-		},
+		EncryptedID:       "encrypted ID",
+		EncryptedKeychain: "encrypted keychain",
+		Signature:         "signature request",
 	}
 
 	res, err := s.AddAccount(req)
 	assert.Nil(t, err)
-	assert.Equal(t, "transaction hash", res.Transactions.Biometric.TransactionHash)
+	assert.Equal(t, "transaction hash", res.Transactions.ID.TransactionHash)
 	assert.Equal(t, "transaction hash", res.Transactions.Keychain.TransactionHash)
 	assert.Equal(t, "signature of the response", res.Signature)
 }
@@ -55,17 +47,9 @@ func TestAddAccountInvalidSig(t *testing.T) {
 	}
 
 	req := AccountCreationRequest{
-		EncryptedBioData:      "encrypted bio data",
-		EncryptedKeychainData: "encrypted wallet data",
-		SignatureRequest:      "signature request",
-		SignaturesBio: Signatures{
-			BiodSig:   "biod signature",
-			PersonSig: "person sig",
-		},
-		SignaturesKeychain: Signatures{
-			BiodSig:   "biod signature",
-			PersonSig: "person sig",
-		},
+		EncryptedID:       "encrypted bio data",
+		EncryptedKeychain: "encrypted wallet data",
+		Signature:         "signature",
 	}
 
 	_, err := s.AddAccount(req)
@@ -77,7 +61,7 @@ type mockClient struct{}
 func (c mockClient) AddAccount(AccountCreationRequest) (*AccountCreationResult, error) {
 	return &AccountCreationResult{
 		Transactions: AccountCreationTransactionsResult{
-			Biometric: TransactionResult{
+			ID: TransactionResult{
 				TransactionHash: "transaction hash",
 			},
 			Keychain: TransactionResult{

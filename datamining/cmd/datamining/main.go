@@ -11,7 +11,7 @@ import (
 	accountAdding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
 	accountListing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
 	accountMining "github.com/uniris/uniris-core/datamining/pkg/account/mining"
-	biodlisting "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
+	emlisting "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
@@ -51,14 +51,14 @@ func main() {
 	grpcClient := rpc.NewExternalClient(rpcCrypto, *config)
 	poolRequester := rpc.NewPoolRequester(grpcClient, *config, rpcCrypto)
 
-	biodLister := biodlisting.NewService(db)
+	emLister := emlisting.NewService(db)
 	lockSrv := lock.NewService(db)
 	accountLister := accountListing.NewService(db)
 	accountAdder := accountAdding.NewService(aiClient, db, accountLister, signer, hasher)
 
 	txMiners := map[mining.TransactionType]mining.TransactionMiner{
-		mining.KeychainTransaction:  accountMining.NewKeychainMiner(signer, hasher, accountLister),
-		mining.BiometricTransaction: accountMining.NewBiometricMiner(signer, hasher),
+		mining.KeychainTransaction: accountMining.NewKeychainMiner(signer, hasher, accountLister),
+		mining.IDTransaction:       accountMining.NewIDMiner(signer, hasher),
 	}
 
 	miningSrv := mining.NewService(
@@ -67,7 +67,7 @@ func main() {
 		poolFinder,
 		poolRequester,
 		signer,
-		biodLister,
+		emLister,
 		*config,
 		txMiners,
 	)

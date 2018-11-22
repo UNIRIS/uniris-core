@@ -43,7 +43,7 @@ func (c robotClient) GetAccount(encHash string) (*listing.AccountResult, error) 
 	client := api.NewInternalClient(conn)
 
 	res, err := client.GetAccount(context.Background(), &api.AccountSearchRequest{
-		EncryptedHashPerson: encHash,
+		EncryptedIDHash: encHash,
 	})
 	if err != nil {
 		s, _ := status.FromError(err)
@@ -81,12 +81,8 @@ func (c robotClient) AddAccount(req adding.AccountCreationRequest) (*adding.Acco
 
 	client := api.NewInternalClient(conn)
 
-	resBio, err := client.CreateBiometric(context.Background(), &api.BiometricCreationRequest{
-		EncryptedBiometricData: req.EncryptedBioData,
-		SignatureBiometricData: &api.Signature{
-			Person: req.SignaturesBio.PersonSig,
-			Biod:   req.SignaturesBio.BiodSig,
-		},
+	resBio, err := client.CreateID(context.Background(), &api.IDCreationRequest{
+		EncryptedID: req.EncryptedID,
 	})
 	if err != nil {
 		return nil, err
@@ -97,18 +93,14 @@ func (c robotClient) AddAccount(req adding.AccountCreationRequest) (*adding.Acco
 	}
 
 	resKeychain, err := client.CreateKeychain(context.Background(), &api.KeychainCreationRequest{
-		EncryptedKeychainData: req.EncryptedKeychainData,
-		SignatureKeychainData: &api.Signature{
-			Person: req.SignaturesKeychain.PersonSig,
-			Biod:   req.SignaturesKeychain.BiodSig,
-		},
+		EncryptedKeychain: req.EncryptedKeychain,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	txs := adding.AccountCreationTransactionsResult{
-		Biometric: adding.TransactionResult{
+		ID: adding.TransactionResult{
 			TransactionHash: resBio.TransactionHash,
 			MasterPeerIP:    resBio.MasterPeerIP,
 			Signature:       resBio.Signature,

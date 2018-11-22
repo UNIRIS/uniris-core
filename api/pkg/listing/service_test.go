@@ -51,7 +51,7 @@ func (c mockClient) GetAccount(encHash string) (*AccountResult, error) {
 		EncryptedAESKey:  "encrypted_aes_key",
 		EncryptedAddress: "encrypted_address",
 		EncryptedWallet:  "encrypted_wallet",
-		SignatureRequest: "sig",
+		Signature:        "sig",
 	}, nil
 }
 

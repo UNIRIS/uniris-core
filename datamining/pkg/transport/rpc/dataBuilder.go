@@ -10,24 +10,23 @@ import (
 
 type dataBuilder struct{}
 
-func (b dataBuilder) buildBiometricData(data *api.BiometricData) account.BiometricData {
-	sigs := account.NewSignatures(data.Signature.Biod, data.Signature.Person)
-	return account.NewBiometricData(
-		data.PersonHash,
-		data.CipherAddrRobot,
-		data.CipherAddrBio,
-		data.CipherAESKey,
-		data.PersonPubk,
-		sigs)
+func (b dataBuilder) buildID(id *api.ID) account.ID {
+	return account.NewID(id.Hash,
+		id.EncryptedAddrByRobot,
+		id.EncryptedAddrByID,
+		id.EncryptedAESKey,
+		id.PublicKey,
+		id.IDSignature,
+		id.EmitterSignature)
 }
 
-func (b dataBuilder) buildKeychainData(data *api.KeychainData) account.KeychainData {
-	sigs := account.NewSignatures(data.Signature.Biod, data.Signature.Person)
-	return account.NewKeychainData(
-		data.CipherAddrRobot,
-		data.CipherWallet,
-		data.PersonPubk,
-		sigs,
+func (b dataBuilder) buildKeychain(kc *api.Keychain) account.Keychain {
+	return account.NewKeychain(
+		kc.EncryptedAddrByRobot,
+		kc.EncryptedWallet,
+		kc.IDPublicKey,
+		kc.IDSignature,
+		kc.EmitterSignature,
 	)
 }
 

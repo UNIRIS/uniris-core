@@ -16,7 +16,6 @@ type UnirisConfig struct {
 
 //SharedKeys describes the uniris shared keys
 type SharedKeys struct {
-	BiodPublicKey   string `yaml:"biodPublicKey"`
 	RobotPrivateKey string `yaml:"robotPrivateKey"`
 	RobotPublicKey  string `yaml:"robotPublicKey"`
 }
@@ -44,7 +43,6 @@ func BuildFromEnv() (*UnirisConfig, error) {
 
 	dataminingErrAccountNotExist := os.Getenv("UNIRIS_DATAMINING_ERROR_ACCOUNT_NOT_EXIST")
 
-	sharedBiodPublicKey := os.Getenv("UNIRIS_SHARED_KEYS_BIOD_PUBLIC_KEY")
 	sharedRobotPublicKey := os.Getenv("UNIRIS_SHARED_KEYS_ROBOT_PUBLIC_KEY")
 	sharedRobotPrivateKey := os.Getenv("UNIRIS_SHARED_KEYS_ROBOT_PRIVATE_KEY")
 
@@ -56,7 +54,6 @@ func BuildFromEnv() (*UnirisConfig, error) {
 			},
 		},
 		SharedKeys: SharedKeys{
-			BiodPublicKey:   sharedBiodPublicKey,
 			RobotPublicKey:  sharedRobotPublicKey,
 			RobotPrivateKey: sharedRobotPrivateKey,
 		},

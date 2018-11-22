@@ -4,22 +4,22 @@ import (
 	"time"
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
-	"github.com/uniris/uniris-core/datamining/pkg/biod/listing"
+	emlisting "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
 )
 
 type pow struct {
 	txType      TransactionType
 	txData      interface{}
 	lastVPool   datamining.Pool
-	txBiodSig   string
-	lister      listing.Service
+	txEmSig     string
+	emLister    emlisting.Service
 	signer      signer
 	robotPubKey string
 	robotPvKey  string
 }
 
 func (p pow) execute() (MasterValidation, error) {
-	keys, err := p.lister.ListBiodPubKeys()
+	emKeys, err := p.emLister.ListEmitterPublicKeys()
 	if err != nil {
 		return nil, err
 	}
@@ -27,8 +27,8 @@ func (p pow) execute() (MasterValidation, error) {
 	//Find the public key which matches the transaction signature
 	status := ValidationKO
 	var matchedKey string
-	for _, k := range keys {
-		err := p.signer.VerifyTransactionDataSignature(p.txType, k, p.txData, p.txBiodSig)
+	for _, k := range emKeys {
+		err := p.signer.VerifyTransactionDataSignature(p.txType, k, p.txData, p.txEmSig)
 		if err == nil {
 			matchedKey = k
 			status = ValidationOK

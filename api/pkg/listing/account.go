@@ -5,5 +5,5 @@ type AccountResult struct {
 	EncryptedAESKey  string `json:"encrypted_aes_key"`
 	EncryptedWallet  string `json:"encrypted_wallet"`
 	EncryptedAddress string `json:"encrypted_address"`
-	SignatureRequest string `json:"signature_request"`
+	Signature        string `json:"signature,omitempty"`
 }

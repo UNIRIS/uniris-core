@@ -29,22 +29,22 @@ func NewInternalServerHandler(pR PoolRequester, aiClient AIClient, crypto Crypto
 
 //GetAccount implements the protobuf GetAccount request handler
 func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSearchRequest) (*api.AccountSearchResult, error) {
-	personHash, err := s.crypto.decrypter.DecryptHash(req.EncryptedHashPerson, s.conf.SharedKeys.RobotPrivateKey)
+	idHash, err := s.crypto.decrypter.DecryptHash(req.EncryptedIDHash, s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
 
-	biometricPool, err := s.aiClient.GetStoragePool(personHash)
+	idPool, err := s.aiClient.GetStoragePool(idHash)
 	if err != nil {
 		return nil, err
 	}
 
-	biometric, err := s.pR.RequestBiometric(biometricPool, req.EncryptedHashPerson)
+	biometric, err := s.pR.RequestID(idPool, req.EncryptedIDHash)
 	if err != nil {
 		return nil, err
 	}
 
-	clearAddr, err := s.crypto.decrypter.DecryptHash(biometric.CipherAddrRobot(), s.conf.SharedKeys.RobotPrivateKey)
+	clearAddr, err := s.crypto.decrypter.DecryptHash(biometric.EncryptedAddrByRobot(), s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
@@ -54,7 +54,7 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 		return nil, err
 	}
 
-	keychain, err := s.pR.RequestKeychain(keychainPool, biometric.CipherAddrRobot())
+	keychain, err := s.pR.RequestKeychain(keychainPool, biometric.EncryptedAddrByRobot())
 	if err != nil {
 		return nil, err
 	}
@@ -64,9 +64,9 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 	}
 
 	res := &api.AccountSearchResult{
-		EncryptedAESkey:  biometric.CipherAESKey(),
-		EncryptedWallet:  keychain.CipherWallet(),
-		EncryptedAddress: biometric.CipherAddrPerson(),
+		EncryptedAESkey:  biometric.EncryptedAESKey(),
+		EncryptedWallet:  keychain.EncryptedWallet(),
+		EncryptedAddress: biometric.EncryptedAddrByID(),
 	}
 	if err := s.crypto.signer.SignAccountSearchResult(res, s.conf.SharedKeys.RobotPrivateKey); err != nil {
 		return nil, err
@@ -76,19 +76,12 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 }
 
 func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.KeychainCreationRequest) (*api.CreationResult, error) {
-	cKeychain, err := s.crypto.decrypter.DecryptKeychainData(req.EncryptedKeychainData, s.conf.SharedKeys.RobotPrivateKey)
+	keychain, err := s.crypto.decrypter.DecryptKeychain(req.EncryptedKeychain, s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
-	keychainData := account.NewKeychainData(
-		cKeychain.CipherAddrRobot(),
-		cKeychain.CipherWallet(),
-		cKeychain.PersonPublicKey(),
-		account.NewSignatures(req.SignatureKeychainData.Biod, req.SignatureKeychainData.Person),
-	)
-
-	txHash, err := s.crypto.hasher.HashKeychainData(keychainData)
+	txHash, err := s.crypto.hasher.HashKeychain(keychain)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +96,7 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 	}
 
 	extCli := NewExternalClient(s.crypto, s.conf)
-	go extCli.LeadKeychainMining(master.IP.String(), txHash, req.EncryptedKeychainData, req.SignatureKeychainData, validPool.Peers().IPs())
+	go extCli.LeadKeychainMining(master.IP.String(), txHash, req.EncryptedKeychain, validPool.Peers().IPs())
 
 	res := &api.CreationResult{
 		TransactionHash: txHash,
@@ -117,22 +110,13 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 	return res, nil
 }
 
-func (s internalSrvHandler) CreateBiometric(ctx context.Context, req *api.BiometricCreationRequest) (*api.CreationResult, error) {
-	cBio, err := s.crypto.decrypter.DecryptBiometricData(req.EncryptedBiometricData, s.conf.SharedKeys.RobotPrivateKey)
+func (s internalSrvHandler) CreateID(ctx context.Context, req *api.IDCreationRequest) (*api.CreationResult, error) {
+	id, err := s.crypto.decrypter.DecryptID(req.EncryptedID, s.conf.SharedKeys.RobotPrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
-	bio := account.NewBiometricData(
-		cBio.PersonHash(),
-		cBio.CipherAddrRobot(),
-		cBio.CipherAddrPerson(),
-		cBio.CipherAESKey(),
-		cBio.PersonPublicKey(),
-		account.NewSignatures(req.SignatureBiometricData.Biod, req.SignatureBiometricData.Person),
-	)
-
-	txHash, err := s.crypto.hasher.HashBiometricData(bio)
+	txHash, err := s.crypto.hasher.HashID(id)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +131,7 @@ func (s internalSrvHandler) CreateBiometric(ctx context.Context, req *api.Biomet
 	}
 
 	extCli := NewExternalClient(s.crypto, s.conf)
-	go extCli.LeadBiometricMining(master.IP.String(), txHash, req.EncryptedBiometricData, req.SignatureBiometricData, validPool.Peers().IPs())
+	go extCli.LeadIDMining(master.IP.String(), txHash, req.EncryptedID, validPool.Peers().IPs())
 
 	res := &api.CreationResult{
 		TransactionHash: txHash,

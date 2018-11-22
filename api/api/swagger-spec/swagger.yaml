@@ -56,12 +56,12 @@ paths:
             in: path
             required: true
             type: string
-            description: Encrypted hash of the person's public key
+            description: Encrypted hash of the ID's public key
           - name: signature
             in: query
             required: true
             type: string
-            description: Signature of the encrypted hash by the shared private key of client devices
+            description: Signature of the encrypted hash by the shared emitter private key
         responses:
           "200":
             description: Existance of the account
@@ -81,19 +81,19 @@ paths:
         summary: Get account's details
         description: |
           Retrieve account details by requesting the data service of the UNIRIS robot.
-          All the data are encrypted and need to be decrypted by the client.
+          All the data are encrypted and need to be decrypted by the emitter.
         operationId: getAccount
         parameters:
           - name: hash
             in: path
             required: true
             type: string
-            description: Encrypted hash of the person's public key
+            description: Encrypted hash of the ID 's public key
           - name: signature
             in: query
             required: true
             type: string
-            description: Signature of the encrypted hash by the shared private key of client devices
+            description: Signature of the encrypted hash by the shared emitter private key
         responses:
           "200":
             description: Encrypted account details
@@ -125,7 +125,7 @@ definitions:
       - encrypted_wallet
       - encrypted_aes_key
       - encrypted_address
-      - signature_request
+      - signature
     properties:
       encrypted_wallet:
         description: Encrypted Wallet details
@@ -136,30 +136,26 @@ definitions:
       encrypted_address:
         description: Encryted address with EM key
         type: string
-      signature_request:
+      signature:
         description: Request signature
         type: string
   AccountCreationRequest:
     required:
-      - encrypted_bio_data
-      - encrypted_keychain_data
-      - signatures_bio
-      - signatures_keychain
-      - signature_request
+      - encrypted_id
+      - encrypted_keychain
+      - shared_client_proposal
+      - signature
     properties:
-      encrypted_bio_data:
-        description: Encrypted Biometric data
+      encrypted_id:
+        description: Encrypted ID
         type: string
-      encrypted_keychain_data:
-        descrpition: Encrypted Keychain data
+      encrypted_keychain:
+        descrpition: Encrypted Keychain
         type: string
-      signatures_bio:
-        description: Biometric data signatures
-        $ref: "#/definitions/Signatures"
-      signatures_keychain:
-        description: Keychain data signatures
-        $ref: "#/definitions/Signatures"
-      signature_request:
+      shared_emitter_proposal:
+          description: Proposed shared emitter keys
+          $ref: "#/definitions/ProposedKeyPair"
+      signature:
         description: Request signature
         type: string
   AccountCreationResult:
@@ -172,30 +168,17 @@ definitions:
         type: object
         properties:
           required:
-            - biometric
+            - id
             - keychain
-          biometric:
+          id:
             $ref: "#/definitions/TransactionResult"
-            description: Biometric transaction result
+            description: ID transaction result
           keychain:
             $ref: "#/definitions/TransactionResult"
             description: Keychain transaction result
       signature:
         description: Signature of the response
         type: string
-
-  Signatures:
-    required:
-      - biod_sig
-      - person_sig
-    properties:
-      biod_sig:
-        description: Signature performed by the biometric device
-        type: string
-      person_sig:
-        description: Signature performed by the person
-        type: string
-
 
   TransactionResult:
     required:
@@ -211,3 +194,13 @@ definitions:
       signature:
         type: string
         description: Signature of the person
+  ProposedKeyPair:
+    required:
+      - encrypted_private_key
+      - public_key
+    encrypted_private_key:
+      type: string
+      description: Encrypted proposed private key
+    public_key:
+      type: string
+      descripion: Proposed public key

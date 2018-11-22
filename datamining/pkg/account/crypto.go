@@ -2,32 +2,34 @@ package account
 
 //KeychainSignatureVerifier define methods to handle keychain signatures verification
 type KeychainSignatureVerifier interface {
-	//VerifyKeychainDataSignatures checks the signatures of the keychain data
-	VerifyKeychainDataSignatures(KeychainData) error
+
+	//VerifyKeychainSignatures checks the signatures of the keychain
+	VerifyKeychainSignatures(Keychain) error
 }
 
-//BiometricSignatureVerifier define methods to handle biometric signatures verification
-type BiometricSignatureVerifier interface {
-	//VerifyBiometricDataSignature checks the signatures
-	VerifyBiometricDataSignatures(BiometricData) error
+//IDSignatureVerifier define methods to handle biometric signatures verification
+type IDSignatureVerifier interface {
+
+	//VerifyIDSignatures checks the signatures of the ID
+	VerifyIDSignatures(ID) error
 }
 
 //KeychainHasher defines methods to handle keychain hashing
 type KeychainHasher interface {
 
-	//HashKeychain produces hash of the keychain (including data, address and endorsement)
-	HashKeychain(Keychain) (string, error)
+	//HashEndorsedKeychain produces hash of the endorsed keychain
+	HashEndorsedKeychain(EndorsedKeychain) (string, error)
 
-	//HashKeychainData produces hash of the keychain data
-	HashKeychainData(KeychainData) (string, error)
+	//HashKeychain produces hash of the keychain
+	HashKeychain(Keychain) (string, error)
 }
 
-//BiometricHasher defines methods to handle keychain hashing
-type BiometricHasher interface {
+//IDHasher defines methods to handle ID hashing
+type IDHasher interface {
 
-	//HashBiometric produces hash of the biometric (including data and endorsement)
-	HashBiometric(Biometric) (string, error)
+	//HashEndorsedID produces hash of the endorsed ID
+	HashEndorsedID(EndorsedID) (string, error)
 
-	//HashBiometricData produces hash of the biometric data
-	HashBiometricData(BiometricData) (string, error)
+	//HashID produces hash of the ID
+	HashID(ID) (string, error)
 }

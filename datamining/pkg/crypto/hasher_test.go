@@ -40,27 +40,27 @@ func TestHashBytes(t *testing.T) {
 }
 
 /*
-Scenario: Hash a biometric data
-	Given biometric data
+Scenario: Hash a ID
+	Given ID
 	When I want to hash it, I create a JSON of it
 	Then it produces a hash
 */
-func TestHashBiometricData(t *testing.T) {
-	bio := account.NewBiometricData("hash", "addr", "addr", "aesKey", "pub", account.NewSignatures("sig", "sig"))
-	hash, err := NewHasher().HashBiometricData(bio)
+func TestHashID(t *testing.T) {
+	id := account.NewID("hash", "addr", "addr", "aesKey", "id pub", "id sig", "em sig")
+	hash, err := NewHasher().HashID(id)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, hash)
 }
 
 /*
-Scenario: Hash a keychain data
-	Given a keychain data
+Scenario: Hash a keychain
+	Given a keychain
 	When I want to hash it, I create a JSON of it
 	Then it produces a hash
 */
-func TestHashKeychainData(t *testing.T) {
-	kc := account.NewKeychainData("addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
-	hash, err := NewHasher().HashKeychainData(kc)
+func TestHashKeychain(t *testing.T) {
+	kc := account.NewKeychain("addr", "enc wallet", "id pub", "id sig", "em sig")
+	hash, err := NewHasher().HashKeychain(kc)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, hash)
 }
@@ -84,39 +84,39 @@ func TestHashLock(t *testing.T) {
 }
 
 /*
-Scenario: Hash a biometric
-	Given a biometric transaction
+Scenario: Hash a endorsed id
+	Given an endorsed id
 	When I want to hash it, I create JSON of it
 	Then it produces a hash
 */
-func TestHashBiometric(t *testing.T) {
-	data := account.NewBiometricData("hash", "addr", "addr", "aesKey", "pub", account.NewSignatures("sig", "sig"))
+func TestHashEndorsedID(t *testing.T) {
+	id := account.NewID("hash", "addr", "addr", "aesKey", "id pub", "id sig", "em sig")
 	end := mining.NewEndorsement("last hash", "hash",
 		mining.NewMasterValidation([]string{"pubkey"}, "pubkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature")},
 	)
 
-	bio := account.NewBiometric(data, end)
-	hash, err := NewHasher().HashBiometric(bio)
+	eID := account.NewEndorsedID(id, end)
+	hash, err := NewHasher().HashEndorsedID(eID)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, hash)
 }
 
 /*
-Scenario: Hash a keychain
-	Given a keychain transaction
+Scenario: Hash an endorsed keychain
+	Given an endorsed keychain
 	When I want to hash it, I create JSON of it
 	Then it produces a hash
 */
-func TestHashKeychain(t *testing.T) {
-	data := account.NewKeychainData("addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
+func TestHashEndorsedKeychain(t *testing.T) {
+	kc := account.NewKeychain("addr", "enc wallet", "id pub", "id sig", "em sig")
 	end := mining.NewEndorsement("last hash", "hash",
 		mining.NewMasterValidation([]string{"pubkey"}, "pubkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "signature")},
 	)
 
-	bio := account.NewKeychain("address", data, end)
-	hash, err := NewHasher().HashKeychain(bio)
+	eKC := account.NewEndorsedKeychain("address", kc, end)
+	hash, err := NewHasher().HashEndorsedKeychain(eKC)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, hash)
 }

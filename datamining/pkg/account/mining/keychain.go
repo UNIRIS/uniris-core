@@ -29,11 +29,11 @@ func (m keychainMiner) GetLastTransactionHash(addr string) (string, error) {
 }
 
 func (m keychainMiner) CheckAsMaster(txHash string, data interface{}) error {
-	keychain := data.(account.KeychainData)
+	keychain := data.(account.Keychain)
 	if err := m.checkDataIntegrity(txHash, keychain); err != nil {
 		return err
 	}
-	if err := m.sigVerifier.VerifyKeychainDataSignatures(keychain); err != nil {
+	if err := m.sigVerifier.VerifyKeychainSignatures(keychain); err != nil {
 		return err
 	}
 
@@ -41,19 +41,20 @@ func (m keychainMiner) CheckAsMaster(txHash string, data interface{}) error {
 }
 
 func (m keychainMiner) CheckAsSlave(txHash string, data interface{}) error {
-	keychain := data.(account.KeychainData)
+	keychain := data.(account.Keychain)
 	if err := m.checkDataIntegrity(txHash, keychain); err != nil {
 		return err
 	}
-	if err := m.sigVerifier.VerifyKeychainDataSignatures(keychain); err != nil {
+	if err := m.sigVerifier.VerifyKeychainSignatures(keychain); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (m keychainMiner) checkDataIntegrity(txHash string, data account.KeychainData) error {
-	hash, err := m.hasher.HashKeychainData(data)
+func (m keychainMiner) checkDataIntegrity(txHash string, kc account.Keychain) error {
+	hash, err := m.hasher.HashKeychain(kc)
+
 	if err != nil {
 		return err
 	}

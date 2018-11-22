@@ -1,17 +1,15 @@
 syntax = "proto3";
 
-import "common.proto";
-
 package api;
 
 service Internal {
     rpc GetAccount (AccountSearchRequest) returns (AccountSearchResult) {}
     rpc CreateKeychain(KeychainCreationRequest) returns (CreationResult) {}
-    rpc CreateBiometric(BiometricCreationRequest) returns (CreationResult) {}
+    rpc CreateID(IDCreationRequest) returns (CreationResult) {}
 }
 
 message AccountSearchRequest {
-    string EncryptedHashPerson = 1;
+    string EncryptedIDHash = 1;
 }
 
 message AccountSearchResult {
@@ -22,13 +20,11 @@ message AccountSearchResult {
 }
 
 message KeychainCreationRequest {
-    string EncryptedKeychainData = 1;
-    Signature SignatureKeychainData = 2;
+    string EncryptedKeychain = 1;
 }
 
-message BiometricCreationRequest {
-    string EncryptedBiometricData = 1;
-    Signature SignatureBiometricData = 2;
+message IDCreationRequest {
+    string EncryptedID = 1;
 }
 
 message CreationResult {

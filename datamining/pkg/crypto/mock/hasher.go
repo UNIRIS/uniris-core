@@ -15,21 +15,14 @@ func NewHasher() mockHasher {
 func (h mockHasher) HashKeychain(account.Keychain) (string, error) {
 	return "hash", nil
 }
-func (h mockHasher) HashBiometric(account.Biometric) (string, error) {
+func (h mockHasher) HashID(account.ID) (string, error) {
 	return "hash", nil
 }
 
-func (h mockHasher) NewKeychainDataHash(account.KeychainData) (string, error) {
+func (h mockHasher) HashEndorsedKeychain(account.EndorsedKeychain) (string, error) {
 	return "hash", nil
 }
-func (h mockHasher) NewBiometricDataHash(account.BiometricData) (string, error) {
-	return "hash", nil
-}
-
-func (h mockHasher) HashKeychainData(account.KeychainData) (string, error) {
-	return "hash", nil
-}
-func (h mockHasher) HashBiometricData(account.BiometricData) (string, error) {
+func (h mockHasher) HashEndorsedID(account.EndorsedID) (string, error) {
 	return "hash", nil
 }
 

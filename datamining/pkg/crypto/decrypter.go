@@ -27,38 +27,42 @@ func (d decrypter) DecryptHash(hash string, pvKey string) (string, error) {
 	return decrypt(pvKey, hash)
 }
 
-func (d decrypter) DecryptBiometricData(data string, pvKey string) (account.BiometricData, error) {
+func (d decrypter) DecryptID(data string, pvKey string) (account.ID, error) {
 	clear, err := decrypt(pvKey, data)
 	if err != nil {
 		return nil, err
 	}
-	var bio biometricRaw
-	err = json.Unmarshal([]byte(clear), &bio)
+	var id id
+	err = json.Unmarshal([]byte(clear), &id)
 	if err != nil {
 		return nil, err
 	}
-	return account.NewBiometricData(
-		bio.PersonHash,
-		bio.EncryptedAddrRobot,
-		bio.EncryptedAddrPerson,
-		bio.EncryptedAESKey,
-		bio.PersonPublicKey, nil), nil
+	return account.NewID(
+		id.Hash,
+		id.EncryptedAddrByRobot,
+		id.EncryptedAddrByID,
+		id.EncryptedAESKey,
+		id.PublicKey,
+		id.IDSignature,
+		id.EmitterSignature), nil
 }
 
-func (d decrypter) DecryptKeychainData(data string, pvKey string) (account.KeychainData, error) {
+func (d decrypter) DecryptKeychain(data string, pvKey string) (account.Keychain, error) {
 	clear, err := decrypt(pvKey, data)
 	if err != nil {
 		return nil, err
 	}
-	var keychain keychainRaw
-	err = json.Unmarshal([]byte(clear), &keychain)
+	var kc keychain
+	err = json.Unmarshal([]byte(clear), &kc)
 	if err != nil {
 		return nil, err
 	}
-	return account.NewKeychainData(
-		keychain.EncryptedAddrRobot,
-		keychain.EncryptedWallet,
-		keychain.PersonPublicKey, nil), nil
+	return account.NewKeychain(
+		kc.EncryptedAddrByRobot,
+		kc.EncryptedWallet,
+		kc.IDPublicKey,
+		kc.IDSignature,
+		kc.EmitterSignature), nil
 }
 
 func decrypt(privk string, data string) (string, error) {
