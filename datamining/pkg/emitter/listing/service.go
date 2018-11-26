@@ -18,7 +18,7 @@ type service struct {
 	repo Repository
 }
 
-//NewService creates a new service for biometric devices listing
+//NewService creates a new service for ID devices listing
 func NewService(repo Repository) Service {
 	return service{repo}
 }

@@ -93,7 +93,7 @@ func TestRequestIDClient(t *testing.T) {
 Scenario: Call RequestKeychain GRPC endpoint
 	Given a keychain stored and a encrypted address
 	When I want to retrieve it, the client call the GRPC endpoint
-	Then I retrieve the biometric data stored
+	Then I retrieve the ID data stored
 */
 func TestRequestKeychainClient(t *testing.T) {
 

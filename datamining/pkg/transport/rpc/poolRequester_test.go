@@ -20,10 +20,10 @@ import (
 )
 
 /*
-Scenario: Request biometric data
+Scenario: Request ID data
 	Given an encypted person hash and storage pool
-	When I want to retrieve the biometric data related to this hash
-	Then it launches a pool of goroutines and requests the biometric data without error
+	When I want to retrieve the ID data related to this hash
+	Then it launches a pool of goroutines and requests the ID data without error
 */
 func TestRequestID(t *testing.T) {
 	conf := system.UnirisConfig{}

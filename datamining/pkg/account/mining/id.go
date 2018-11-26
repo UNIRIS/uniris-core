@@ -10,7 +10,7 @@ type idMiner struct {
 	hasher      account.IDHasher
 }
 
-//NewIDMiner creates a miner for the biometric transaction
+//NewIDMiner creates a miner for the ID transaction
 func NewIDMiner(sigVerifier account.IDSignatureVerifier, hasher account.IDHasher) mining.TransactionMiner {
 	return idMiner{sigVerifier, hasher}
 }

@@ -19,7 +19,7 @@ import (
 Scenario: Get account
 	Given a person hash
 	When I want to get the account
-	Then I get the encrypted keychain and biometric data
+	Then I get the encrypted keychain and ID data
 */
 func TestGetAccount(t *testing.T) {
 	conf := system.UnirisConfig{}
@@ -91,8 +91,8 @@ func TestCreateKeychain(t *testing.T) {
 }
 
 /*
-Scenario: Create biometric
-	Given a biometric creation request
+Scenario: Create ID
+	Given a ID creation request
 	When I want create it
 	Then the mining process started and the keychain is stored
 */

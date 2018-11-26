@@ -97,7 +97,7 @@ func TestDecryptID(t *testing.T) {
 Scenario: Decrypt keychain data
 	Given an encrypted keychain data
 	When I want to decrypt it
-	Then it serialize json and build biometric data without signatures
+	Then it serialize json and build ID data without signatures
 */
 func TestDecryptKeychaincData(t *testing.T) {
 	kc := keychain{
