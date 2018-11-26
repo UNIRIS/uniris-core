@@ -2,7 +2,6 @@ package listing
 
 import (
 	"errors"
-	"log"
 
 	"github.com/uniris/uniris-core/api/pkg/system"
 )
@@ -51,7 +50,6 @@ func (s service) ExistAccount(encryptedHash string, sig string) error {
 
 func (s service) GetAccount(encryptedHash string, sig string) (*AccountResult, error) {
 	verifKey := s.conf.SharedKeys.EmitterRequestKey().PublicKey
-	log.Print(verifKey)
 	if err := s.sigVerif.VerifyHashSignature(encryptedHash, verifKey, sig); err != nil {
 		return nil, err
 	}

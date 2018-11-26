@@ -20,7 +20,7 @@ func TestGetAccount(t *testing.T) {
 		sigVerif: mockGoodSignatureVerif{},
 		conf: system.UnirisConfig{
 			SharedKeys: system.SharedKeys{
-				EmKeys: []system.KeyPair{
+				Emitter: []system.KeyPair{
 					system.KeyPair{
 						PublicKey: "my key",
 					},
@@ -48,7 +48,7 @@ func TestGetAccountInvalidSig(t *testing.T) {
 		sigVerif: mockBadSignatureVerif{},
 		conf: system.UnirisConfig{
 			SharedKeys: system.SharedKeys{
-				EmKeys: []system.KeyPair{
+				Emitter: []system.KeyPair{
 					system.KeyPair{
 						PublicKey: "my key",
 					},
