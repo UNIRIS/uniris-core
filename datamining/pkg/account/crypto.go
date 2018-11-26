@@ -7,7 +7,7 @@ type KeychainSignatureVerifier interface {
 	VerifyKeychainSignatures(Keychain) error
 }
 
-//IDSignatureVerifier define methods to handle biometric signatures verification
+//IDSignatureVerifier define methods to handle ID signatures verification
 type IDSignatureVerifier interface {
 
 	//VerifyIDSignatures checks the signatures of the ID

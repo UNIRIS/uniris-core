@@ -52,14 +52,15 @@ func (h hasher) HashEndorsedID(id account.EndorsedID) (string, error) {
 		EncryptedAddrByRobot: id.EncryptedAddrByRobot(),
 		EncryptedAESKey:      id.EncryptedAESKey(),
 		PublicKey:            id.PublicKey(),
-		EmitterSignature:     id.EmitterSignature(),
-		IDSignature:          id.IDSignature(),
 		Proposal: proposal{
 			SharedEmitterKeyPair: proposalKeypair{
 				EncryptedPrivateKey: id.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
 				PublicKey:           id.Proposal().SharedEmitterKeyPair().PublicKey(),
 			},
 		},
+		EmitterSignature: id.EmitterSignature(),
+		IDSignature:      id.IDSignature(),
+
 		Endorsement: endorsement{
 			LastTxHash: id.Endorsement().LastTransactionHash(),
 			TxHash:     id.Endorsement().TransactionHash(),
@@ -97,14 +98,14 @@ func (h hasher) HashEndorsedKeychain(kc account.EndorsedKeychain) (string, error
 		EncryptedWallet:      kc.EncryptedWallet(),
 		EncryptedAddrByRobot: kc.EncryptedAddrByRobot(),
 		IDPublicKey:          kc.IDPublicKey(),
-		EmitterSignature:     kc.EmitterSignature(),
-		IDSignature:          kc.IDSignature(),
 		Proposal: proposal{
 			SharedEmitterKeyPair: proposalKeypair{
 				EncryptedPrivateKey: kc.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
 				PublicKey:           kc.Proposal().SharedEmitterKeyPair().PublicKey(),
 			},
 		},
+		EmitterSignature: kc.EmitterSignature(),
+		IDSignature:      kc.IDSignature(),
 		Endorsement: endorsement{
 			LastTxHash: kc.Endorsement().LastTransactionHash(),
 			TxHash:     kc.Endorsement().TransactionHash(),
@@ -134,14 +135,14 @@ func (h hasher) HashID(data account.ID) (string, error) {
 		EncryptedAddrByRobot: data.EncryptedAddrByRobot(),
 		EncryptedAESKey:      data.EncryptedAESKey(),
 		PublicKey:            data.PublicKey(),
-		EmitterSignature:     data.EmitterSignature(),
-		IDSignature:          data.IDSignature(),
 		Proposal: proposal{
 			SharedEmitterKeyPair: proposalKeypair{
 				EncryptedPrivateKey: data.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
 				PublicKey:           data.Proposal().SharedEmitterKeyPair().PublicKey(),
 			},
 		},
+		EmitterSignature: data.EmitterSignature(),
+		IDSignature:      data.IDSignature(),
 	})
 	if err != nil {
 		return "", err
@@ -154,14 +155,14 @@ func (h hasher) HashKeychain(kc account.Keychain) (string, error) {
 		EncryptedAddrByRobot: kc.EncryptedAddrByRobot(),
 		EncryptedWallet:      kc.EncryptedWallet(),
 		IDPublicKey:          kc.IDPublicKey(),
-		EmitterSignature:     kc.EmitterSignature(),
-		IDSignature:          kc.IDSignature(),
 		Proposal: proposal{
 			SharedEmitterKeyPair: proposalKeypair{
 				EncryptedPrivateKey: kc.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
 				PublicKey:           kc.Proposal().SharedEmitterKeyPair().PublicKey(),
 			},
 		},
+		EmitterSignature: kc.EmitterSignature(),
+		IDSignature:      kc.IDSignature(),
 	})
 	if err != nil {
 		return "", err

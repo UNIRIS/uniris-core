@@ -17,34 +17,34 @@ type Keychain interface {
 	//IDPublicKey returns the ID public key
 	IDPublicKey() string
 
+	//Proposal returns the proposal for this transaction
+	Proposal() datamining.Proposal
+
 	//IDSignature returns the signature provided by the ID
 	IDSignature() string
 
 	//EmitterSignature returns the signature provided by the emitter's device
 	EmitterSignature() string
-
-	//Proposal returns the proposal for this transaction
-	Proposal() datamining.Proposal
 }
 
 type keychain struct {
 	encAddr   string
 	encWallet string
 	idPubk    string
+	prop      datamining.Proposal
 	idSig     string
 	emSig     string
-	prop      datamining.Proposal
 }
 
 //NewKeychain creates a new keychain
-func NewKeychain(encAddrRobot, encWallet, idPubk, idSig, emSig string, prop datamining.Proposal) Keychain {
+func NewKeychain(encAddrRobot, encWallet, idPubk string, prop datamining.Proposal, idSig, emSig string) Keychain {
 	return keychain{
 		encAddr:   encAddrRobot,
 		encWallet: encWallet,
 		idPubk:    idPubk,
+		prop:      prop,
 		idSig:     idSig,
 		emSig:     emSig,
-		prop:      prop,
 	}
 }
 
@@ -64,12 +64,12 @@ func (k keychain) IDSignature() string {
 	return k.idSig
 }
 
-func (k keychain) EmitterSignature() string {
-	return k.emSig
-}
-
 func (k keychain) Proposal() datamining.Proposal {
 	return k.prop
+}
+
+func (k keychain) EmitterSignature() string {
+	return k.emSig
 }
 
 //EndorsedKeychain aggregates keychain and it's endorsement
@@ -110,16 +110,16 @@ func (eK endorsedKeychain) IDPublicKey() string {
 	return eK.k.IDPublicKey()
 }
 
+func (eK endorsedKeychain) Proposal() datamining.Proposal {
+	return eK.k.Proposal()
+}
+
 func (eK endorsedKeychain) IDSignature() string {
 	return eK.k.IDSignature()
 }
 
 func (eK endorsedKeychain) EmitterSignature() string {
 	return eK.k.EmitterSignature()
-}
-
-func (eK endorsedKeychain) Proposal() datamining.Proposal {
-	return eK.k.Proposal()
 }
 
 func (eK endorsedKeychain) Endorsement() mining.Endorsement {

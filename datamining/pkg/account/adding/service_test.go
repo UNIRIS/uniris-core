@@ -35,7 +35,7 @@ func TestStoreKeychain(t *testing.T) {
 		},
 	)
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
-	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	eKc := account.NewEndorsedKeychain("addr", kc, end)
 
 	err := s.StoreKeychain(eKc)
@@ -66,7 +66,7 @@ func TestStoreKeychainWithMasterValidKO(t *testing.T) {
 		},
 	)
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
-	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	eKC := account.NewEndorsedKeychain("addr", kc, end)
 
 	err := s.StoreKeychain(eKC)
@@ -99,7 +99,7 @@ func TestStoreKeychainWithOneSlaveValidKO(t *testing.T) {
 		},
 	)
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
-	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	eKC := account.NewEndorsedKeychain("addr", kc, end)
 
 	err := s.StoreKeychain(eKC)
@@ -131,7 +131,7 @@ func TestInvalidLastTransactionKeychain(t *testing.T) {
 	)
 
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
-	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	eKc1 := account.NewEndorsedKeychain("addr", kc, end1)
 
 	assert.Nil(t, s.StoreKeychain(eKc1))
@@ -178,7 +178,7 @@ func TestStoreKeychainWithZeroValidations(t *testing.T) {
 		[]mining.Validation{},
 	)
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
-	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	eKC := account.NewEndorsedKeychain("addr", kc, end)
 
 	assert.Equal(t, ErrInvalidValidationNumber, s.StoreKeychain(eKC))
@@ -205,7 +205,7 @@ func TestStoreKeychainWithInvalidTxHash(t *testing.T) {
 	)
 
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
-	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	eKC := account.NewEndorsedKeychain("addr", kc, end)
 
 	assert.Equal(t, ErrInvalidDataIntegrity, s.StoreKeychain(eKC))
@@ -231,7 +231,7 @@ func TestStoreID(t *testing.T) {
 	)
 
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
-	id := account.NewID("hash", "enc addr robot", "enc addr person", "enc aes key", "id pub", "id sig", "em pub", prop)
+	id := account.NewID("hash", "enc addr robot", "enc addr person", "enc aes key", "id pub", prop, "id sig", "em pub")
 	eID := account.NewEndorsedID(id, end)
 	err := s.StoreID(eID)
 	assert.Nil(t, err)
@@ -261,7 +261,7 @@ func TestStoreIDWithZeroValidations(t *testing.T) {
 	)
 
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
-	id := account.NewID("hash", "enc addr robot", "enc addr person", "enc aes key", "id pub", "id sig", "em pub", prop)
+	id := account.NewID("hash", "enc addr robot", "enc addr person", "enc aes key", "id pub", prop, "id sig", "em pub")
 	eID := account.NewEndorsedID(id, end)
 
 	assert.Equal(t, ErrInvalidValidationNumber, s.StoreID(eID))
@@ -289,7 +289,7 @@ func TestStoreIDWithMasterValidKO(t *testing.T) {
 	)
 
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
-	id := account.NewID("hash", "enc addr robot", "enc addr person", "enc aes key", "id pub", "id sig", "em pub", prop)
+	id := account.NewID("hash", "enc addr robot", "enc addr person", "enc aes key", "id pub", prop, "id sig", "em pub")
 	eID := account.NewEndorsedID(id, end)
 
 	err := s.StoreID(eID)
@@ -320,7 +320,7 @@ func TestStoreIDWithOneSlaveValidKO(t *testing.T) {
 		},
 	)
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
-	id := account.NewID("hash", "enc addr robot", "enc addr person", "enc aes key", "id pub", "id sig", "em pub", prop)
+	id := account.NewID("hash", "enc addr robot", "enc addr person", "enc aes key", "id pub", prop, "id sig", "em pub")
 	eID := account.NewEndorsedID(id, end)
 
 	err := s.StoreID(eID)
@@ -350,7 +350,7 @@ func TestStoreIDWithInvalidTxHash(t *testing.T) {
 		},
 	)
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
-	id := account.NewID("hash", "enc addr robot", "enc addr person", "enc aes key", "id pub", "id sig", "em pub", prop)
+	id := account.NewID("hash", "enc addr robot", "enc addr person", "enc aes key", "id pub", prop, "id sig", "em pub")
 	eID := account.NewEndorsedID(id, end)
 
 	assert.Equal(t, ErrInvalidDataIntegrity, s.StoreID(eID))

@@ -24,9 +24,9 @@ func (b dataBuilder) buildID(id *api.ID) account.ID {
 		id.EncryptedAddrByID,
 		id.EncryptedAESKey,
 		id.PublicKey,
+		prop,
 		id.IDSignature,
-		id.EmitterSignature,
-		prop)
+		id.EmitterSignature)
 }
 
 func (b dataBuilder) buildKeychain(kc *api.Keychain) account.Keychain {
@@ -40,9 +40,9 @@ func (b dataBuilder) buildKeychain(kc *api.Keychain) account.Keychain {
 		kc.EncryptedAddrByRobot,
 		kc.EncryptedWallet,
 		kc.IDPublicKey,
+		prop,
 		kc.IDSignature,
 		kc.EmitterSignature,
-		prop,
 	)
 }
 

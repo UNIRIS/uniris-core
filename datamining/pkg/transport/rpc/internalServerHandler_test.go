@@ -35,7 +35,7 @@ func TestGetAccount(t *testing.T) {
 	db := mockstorage.NewDatabase()
 	db.StoreID(
 		account.NewEndorsedID(
-			account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop),
+			account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", prop, "id sig", "em sig"),
 			nil,
 		),
 	)
@@ -43,7 +43,7 @@ func TestGetAccount(t *testing.T) {
 	db.StoreKeychain(
 		account.NewEndorsedKeychain(
 			"hash",
-			account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop),
+			account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig"),
 			nil,
 		),
 	)

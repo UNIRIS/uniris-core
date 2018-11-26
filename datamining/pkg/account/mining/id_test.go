@@ -20,7 +20,7 @@ func TestIDIntegrity(t *testing.T) {
 	miner := idMiner{hasher: mockIDHasher{}}
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
 
-	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop)
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", prop, "id sig", "em sig")
 	err := miner.checkDataIntegrity("hash", id)
 	assert.Nil(t, err)
 }
@@ -35,7 +35,7 @@ func TestInvalidIDIntegrity(t *testing.T) {
 	miner := idMiner{hasher: mockBadIDHasher{}}
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
 
-	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop)
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", prop, "id sig", "em sig")
 	err := miner.checkDataIntegrity("hash", id)
 	assert.Equal(t, mining.ErrInvalidTransaction, err)
 }
@@ -50,7 +50,7 @@ func TestIDMasterCheck(t *testing.T) {
 	miner := NewIDMiner(mockIDSigner{}, mockIDHasher{})
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
 
-	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop)
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", prop, "id sig", "em sig")
 	err := miner.CheckAsMaster("hash", id)
 	assert.Nil(t, err)
 }
@@ -65,7 +65,7 @@ func TestIDSlaveCheck(t *testing.T) {
 	miner := NewIDMiner(mockIDSigner{}, mockIDHasher{})
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
 
-	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop)
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", prop, "id sig", "em sig")
 	err := miner.CheckAsSlave("hash", id)
 	assert.Nil(t, err)
 }

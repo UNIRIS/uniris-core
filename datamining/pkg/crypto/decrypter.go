@@ -52,9 +52,9 @@ func (d decrypter) DecryptID(data string, pvKey string) (account.ID, error) {
 		id.EncryptedAddrByID,
 		id.EncryptedAESKey,
 		id.PublicKey,
+		prop,
 		id.IDSignature,
-		id.EmitterSignature,
-		prop), nil
+		id.EmitterSignature), nil
 }
 
 func (d decrypter) DecryptKeychain(data string, pvKey string) (account.Keychain, error) {
@@ -78,9 +78,9 @@ func (d decrypter) DecryptKeychain(data string, pvKey string) (account.Keychain,
 		kc.EncryptedAddrByRobot,
 		kc.EncryptedWallet,
 		kc.IDPublicKey,
+		prop,
 		kc.IDSignature,
-		kc.EmitterSignature,
-		prop), nil
+		kc.EmitterSignature), nil
 }
 
 func decrypt(privk string, data string) (string, error) {

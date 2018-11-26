@@ -15,14 +15,14 @@ func (b apiBuilder) buildID(id account.ID) *api.ID {
 		EncryptedAESKey:      id.EncryptedAESKey(),
 		Hash:                 id.Hash(),
 		PublicKey:            id.PublicKey(),
-		IDSignature:          id.IDSignature(),
-		EmitterSignature:     id.EmitterSignature(),
 		Proposal: &api.Proposal{
 			SharedEmitterKeyPair: &api.KeyPairProposal{
 				EncryptedPrivateKey: id.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
 				PublicKey:           id.Proposal().SharedEmitterKeyPair().PublicKey(),
 			},
 		},
+		IDSignature:      id.IDSignature(),
+		EmitterSignature: id.EmitterSignature(),
 	}
 }
 
@@ -31,14 +31,14 @@ func (b apiBuilder) buildKeychain(kc account.Keychain) *api.Keychain {
 		EncryptedAddrByRobot: kc.EncryptedAddrByRobot(),
 		EncryptedWallet:      kc.EncryptedWallet(),
 		IDPublicKey:          kc.IDPublicKey(),
-		EmitterSignature:     kc.EmitterSignature(),
-		IDSignature:          kc.IDSignature(),
 		Proposal: &api.Proposal{
 			SharedEmitterKeyPair: &api.KeyPairProposal{
 				EncryptedPrivateKey: kc.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
 				PublicKey:           kc.Proposal().SharedEmitterKeyPair().PublicKey(),
 			},
 		},
+		EmitterSignature: kc.EmitterSignature(),
+		IDSignature:      kc.IDSignature(),
 	}
 }
 

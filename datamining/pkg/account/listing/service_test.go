@@ -24,7 +24,7 @@ func TestGetLastKeychain(t *testing.T) {
 	s := NewService(db)
 
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
-	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 
 	endors1 := mining.NewEndorsement(
 		"", "hash1",
@@ -69,7 +69,7 @@ func TestGetID(t *testing.T) {
 	s := NewService(db)
 
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
-	id := account.NewID("hash1", "enc addr robot", "enc addr person", "enc aes key", "id pub key", "id sig", "em sig", prop)
+	id := account.NewID("hash1", "enc addr robot", "enc addr person", "enc aes key", "id pub key", prop, "id sig", "em sig")
 
 	endors := mining.NewEndorsement(
 		"", "hash1",

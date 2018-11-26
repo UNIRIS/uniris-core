@@ -37,7 +37,7 @@ func TestGetID(t *testing.T) {
 	prop := datamining.NewProposal(
 		datamining.NewProposedKeyPair("enc pv key", "pub key"),
 	)
-	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop)
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", prop, "id sig", "em sig")
 	endors := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{"hash"}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pub key", "sig")),
 		[]mining.Validation{})
@@ -72,7 +72,7 @@ func TestGetKeychain(t *testing.T) {
 	prop := datamining.NewProposal(
 		datamining.NewProposedKeyPair("enc pv key", "pub key"),
 	)
-	kc := account.NewKeychain("enc address", "enc wallet", "id pub", "id sig", "em sig", prop)
+	kc := account.NewKeychain("enc address", "enc wallet", "id pub", prop, "id sig", "em sig")
 	endors := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{"hash"}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pub key", "sig")),
 		[]mining.Validation{})

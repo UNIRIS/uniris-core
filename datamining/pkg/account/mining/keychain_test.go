@@ -22,7 +22,7 @@ func TestKeychainGetLastTransactionHash(t *testing.T) {
 	db := mock.NewDatabase()
 
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
-	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	eKc := account.NewEndorsedKeychain("address", kc, mining.NewEndorsement("", "hash", nil, nil))
 	db.StoreKeychain(eKc)
 	miner := keychainMiner{accLister: listing.NewService(db)}
@@ -40,7 +40,7 @@ Scenario: Checks the keychain data integrity
 func TestKeychainIntegrity(t *testing.T) {
 	miner := keychainMiner{hasher: mockKeychainHasher{}}
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
-	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	err := miner.checkDataIntegrity("hash", kc)
 	assert.Nil(t, err)
 }
@@ -55,7 +55,7 @@ func TestInvalidKeychainIntegrity(t *testing.T) {
 	miner := keychainMiner{hasher: mockBadKeychainHasher{}}
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
 
-	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	err := miner.checkDataIntegrity("hash", kc)
 	assert.Equal(t, mining.ErrInvalidTransaction, err)
 }
@@ -71,7 +71,7 @@ func TestKeychainMasterCheck(t *testing.T) {
 
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
 
-	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	err := miner.CheckAsMaster("hash", kc)
 	assert.Nil(t, err)
 }
@@ -86,7 +86,7 @@ func TestKeychainSlaveCheck(t *testing.T) {
 	miner := NewKeychainMiner(mockKeychainSigner{}, mockKeychainHasher{}, nil)
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
 
-	data := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	data := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	err := miner.CheckAsSlave("hash", data)
 	assert.Nil(t, err)
 }

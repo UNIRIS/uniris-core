@@ -67,8 +67,14 @@ func TestDecryptID(t *testing.T) {
 		EncryptedAddrByRobot: "addr",
 		EncryptedAESKey:      "enc aes key",
 		PublicKey:            "pub",
-		IDSignature:          "sig",
-		EmitterSignature:     "sig",
+		Proposal: proposal{
+			SharedEmitterKeyPair: proposalKeypair{
+				EncryptedPrivateKey: "enc pv key",
+				PublicKey:           "pub",
+			},
+		},
+		IDSignature:      "sig",
+		EmitterSignature: "sig",
 	}
 
 	superKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -104,8 +110,14 @@ func TestDecryptKeychaincData(t *testing.T) {
 		EncryptedWallet:      "enc wallet",
 		EncryptedAddrByRobot: "addr",
 		IDPublicKey:          "pub",
-		IDSignature:          "sig",
-		EmitterSignature:     "sig",
+		Proposal: proposal{
+			SharedEmitterKeyPair: proposalKeypair{
+				EncryptedPrivateKey: "enc pv key",
+				PublicKey:           "pub",
+			},
+		},
+		IDSignature:      "sig",
+		EmitterSignature: "sig",
 	}
 
 	superKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

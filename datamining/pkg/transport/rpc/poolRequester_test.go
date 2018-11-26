@@ -41,7 +41,7 @@ func TestRequestID(t *testing.T) {
 
 	db.StoreID(
 		account.NewEndorsedID(
-			account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop),
+			account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", prop, "id sig", "em sig"),
 			nil,
 		),
 	)
@@ -83,7 +83,7 @@ func TestRequestKeychain(t *testing.T) {
 	db.StoreKeychain(
 		account.NewEndorsedKeychain(
 			"hash",
-			account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop),
+			account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig"),
 			nil,
 		),
 	)
@@ -209,7 +209,7 @@ func TestRequestValidations(t *testing.T) {
 		datamining.NewProposedKeyPair("enc pv key", "pub key"),
 	)
 
-	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 
 	valids, err := pr.RequestValidations(2, pool, "hash", keychain, mining.KeychainTransaction)
 	assert.Nil(t, err)
@@ -243,7 +243,7 @@ func TestRequestValidationsWithLessThanMinimumValidations(t *testing.T) {
 	prop := datamining.NewProposal(
 		datamining.NewProposedKeyPair("enc pv key", "pub key"),
 	)
-	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 
 	_, err := pr.RequestValidations(5, pool, "hash", keychain, mining.KeychainTransaction)
 	assert.Equal(t, "Minimum validations are not reached", err.Error())
@@ -270,7 +270,7 @@ func TestRequestStorage(t *testing.T) {
 	prop := datamining.NewProposal(
 		datamining.NewProposedKeyPair("enc pv key", "pub key"),
 	)
-	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	end := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{""}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")},

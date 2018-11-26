@@ -139,7 +139,7 @@ func (s service) StoreID(id account.EndorsedID) error {
 		return err
 	}
 
-	//Check integrity of the biometric
+	//Check integrity of the ID
 	if err := s.checkIDEndorsementHash(id.Endorsement(), id); err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func (s service) StoreID(id account.EndorsedID) error {
 		return ErrInvalidValidationNumber
 	}
 
-	//If the biometric contains any KO validations, it will be stored on the KO database
+	//If the ID contains any KO validations, it will be stored on the KO database
 	if s.isKO(id.Endorsement()) {
 		return s.repo.StoreKOID(id)
 	}

@@ -23,14 +23,14 @@ type ID interface {
 	//PublicKey returns ID public key
 	PublicKey() string
 
+	//Proposal returns the proposal for this transaction
+	Proposal() datamining.Proposal
+
 	//IDSignature returns the signature provided by the ID
 	IDSignature() string
 
 	//EmitterSignature returns the signature provided by the emitter's device
 	EmitterSignature() string
-
-	//Proposal returns the proposal for this transaction
-	Proposal() datamining.Proposal
 }
 
 type id struct {
@@ -39,22 +39,22 @@ type id struct {
 	encAddrID    string
 	encAESKey    string
 	pubk         string
+	prop         datamining.Proposal
 	idSig        string
 	emSig        string
-	prop         datamining.Proposal
 }
 
 //NewID create new ID
-func NewID(hash, encAddrRobot, encAddrID, encAESKey, pubk, idSig, emSig string, prop datamining.Proposal) ID {
+func NewID(hash, encAddrRobot, encAddrID, encAESKey, pubk string, prop datamining.Proposal, idSig, emSig string) ID {
 	return id{
 		hash:         hash,
 		encAddrRobot: encAddrRobot,
 		encAddrID:    encAddrID,
 		encAESKey:    encAESKey,
 		pubk:         pubk,
+		prop:         prop,
 		idSig:        idSig,
 		emSig:        emSig,
-		prop:         prop,
 	}
 }
 
@@ -78,16 +78,16 @@ func (id id) PublicKey() string {
 	return id.pubk
 }
 
+func (id id) Proposal() datamining.Proposal {
+	return id.prop
+}
+
 func (id id) IDSignature() string {
 	return id.idSig
 }
 
 func (id id) EmitterSignature() string {
 	return id.emSig
-}
-
-func (id id) Proposal() datamining.Proposal {
-	return id.prop
 }
 
 //EndorsedID aggregates ID and its endorsement
@@ -132,12 +132,12 @@ func (eID endorsedID) IDSignature() string {
 	return eID.id.IDSignature()
 }
 
-func (eID endorsedID) EmitterSignature() string {
-	return eID.id.EmitterSignature()
-}
-
 func (eID endorsedID) Proposal() datamining.Proposal {
 	return eID.id.Proposal()
+}
+
+func (eID endorsedID) EmitterSignature() string {
+	return eID.id.EmitterSignature()
 }
 
 func (eID endorsedID) Endorsement() mining.Endorsement {

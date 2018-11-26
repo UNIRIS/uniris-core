@@ -30,9 +30,9 @@ type endorsedID struct {
 	EncryptedAESKey      string      `json:"encrypted_aes_key"`
 	EncryptedAddrByID    string      `json:"encrypted_addr_id"`
 	EncryptedAddrByRobot string      `json:"encrypted_addr_robot"`
+	Proposal             proposal    `json:"proposal"`
 	IDSignature          string      `json:"id_sig"`
 	EmitterSignature     string      `json:"em_sig"`
-	Proposal             proposal    `json:"proposal"`
 	Endorsement          endorsement `json:"endorsement"`
 }
 
@@ -51,9 +51,9 @@ type id struct {
 	EncryptedAESKey      string   `json:"encrypted_aes_key"`
 	EncryptedAddrByID    string   `json:"encrypted_addr_id"`
 	EncryptedAddrByRobot string   `json:"encrypted_addr_robot"`
+	Proposal             proposal `json:"proposal"`
 	IDSignature          string   `json:"id_sig"`
 	EmitterSignature     string   `json:"em_sig"`
-	Proposal             proposal `json:"proposal"`
 }
 
 type endorsedKeychain struct {
@@ -61,9 +61,9 @@ type endorsedKeychain struct {
 	IDPublicKey          string      `json:"id_pubk"`
 	EncryptedWallet      string      `json:"encrypted_wal"`
 	EncryptedAddrByRobot string      `json:"encrypted_addr_robot"`
-	EmitterSignature     string      `json:"em_sig"`
-	IDSignature          string      `json:"id_sig"`
 	Proposal             proposal    `json:"proposal"`
+	IDSignature          string      `json:"id_sig"`
+	EmitterSignature     string      `json:"em_sig"`
 	Endorsement          endorsement `json:"endorsement"`
 }
 
@@ -71,9 +71,9 @@ type keychain struct {
 	IDPublicKey          string   `json:"id_pubk"`
 	EncryptedWallet      string   `json:"encrypted_wal"`
 	EncryptedAddrByRobot string   `json:"encrypted_addr_robot"`
+	Proposal             proposal `json:"proposal"`
 	EmitterSignature     string   `json:"em_sig"`
 	IDSignature          string   `json:"id_sig"`
-	Proposal             proposal `json:"proposal"`
 }
 
 type keychainWithoutSig struct {

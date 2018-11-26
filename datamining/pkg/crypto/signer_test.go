@@ -77,7 +77,7 @@ Scenario: Verifies keychain transaction signature
 */
 func TestVerifyTransactionKeychainSignature(t *testing.T) {
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc key", "pub"))
-	k := account.NewKeychain("enc addr", "enc wallet", "id pub", "id sig", "em sig", prop)
+	k := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
@@ -109,7 +109,7 @@ Scenario: Verify ID transaction signature
 func TestVerifyTransactionIDSignature(t *testing.T) {
 	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc key", "pub"))
 
-	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", "id sig", "em sig", prop)
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", prop, "id sig", "em sig")
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
