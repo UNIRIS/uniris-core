@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/uniris/uniris-core/api/pkg/system"
 )
 
 /*
@@ -15,9 +16,17 @@ Scenario: Enroll an user
 */
 func TestAddAccount(t *testing.T) {
 	s := service{
-		client:       mockClient{},
-		sigVerif:     mockGoodSignatureVerifer{},
-		sharedBioPub: "my key",
+		client:   mockClient{},
+		sigVerif: mockGoodSignatureVerifer{},
+		conf: system.UnirisConfig{
+			SharedKeys: system.SharedKeys{
+				EmKeys: []system.KeyPair{
+					system.KeyPair{
+						PublicKey: "my key",
+					},
+				},
+			},
+		},
 	}
 
 	req := AccountCreationRequest{
@@ -41,9 +50,17 @@ Scenario: Catch invalid signature when get account's details from the robot
 */
 func TestAddAccountInvalidSig(t *testing.T) {
 	s := service{
-		client:       mockClient{},
-		sigVerif:     mockBadSignatureVerifer{},
-		sharedBioPub: "my key",
+		client:   mockClient{},
+		sigVerif: mockBadSignatureVerifer{},
+		conf: system.UnirisConfig{
+			SharedKeys: system.SharedKeys{
+				EmKeys: []system.KeyPair{
+					system.KeyPair{
+						PublicKey: "my key",
+					},
+				},
+			},
+		},
 	}
 
 	req := AccountCreationRequest{

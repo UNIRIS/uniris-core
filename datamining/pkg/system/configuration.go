@@ -2,22 +2,33 @@ package system
 
 import (
 	"io/ioutil"
-	"os"
-	"strconv"
 
 	yaml "gopkg.in/yaml.v2"
 )
 
 //UnirisConfig describes the uniris robot main configuration
 type UnirisConfig struct {
-	SharedKeys SharedKeys              `yaml:"sharedKeys"`
+	PublicKey  string                `yaml:"publicKey"`
+	PrivateKey string                `yaml:"privateKey"`
+	SharedKeys SharedKeys            `yaml:"sharedKeys"`
+	Services   ServicesConfiguration `yaml:"services"`
+}
+
+//ServicesConfiguration describes the services configuration
+type ServicesConfiguration struct {
 	Datamining DataMiningConfiguration `yaml:"datamining"`
+}
+
+//KeyPair represent a keypair
+type KeyPair struct {
+	PrivateKey string `yaml:"priv"`
+	PublicKey  string `yaml:"pub"`
 }
 
 //SharedKeys describes the uniris shared keys
 type SharedKeys struct {
-	RobotPrivateKey string `yaml:"robotPrivateKey"`
-	RobotPublicKey  string `yaml:"robotPublicKey"`
+	EmKeys []KeyPair `yaml:"em"`
+	Robot  KeyPair   `yaml:"robot"`
 }
 
 //DataMiningConfiguration describes the datamining configuration
@@ -30,34 +41,6 @@ type DataMiningConfiguration struct {
 //DataMininingErrors defines the datamining errors
 type DataMininingErrors struct {
 	AccountNotExist string `yaml:"accountNotExist"`
-}
-
-//BuildFromEnv creates configurtion from env variables
-func BuildFromEnv() (*UnirisConfig, error) {
-
-	intDataminingPort := os.Getenv("UNIRIS_DATAMINING_INTERNAL_PORT")
-	_intDataminingport, err := strconv.Atoi(intDataminingPort)
-	if err != nil {
-		return nil, err
-	}
-
-	dataminingErrAccountNotExist := os.Getenv("UNIRIS_DATAMINING_ERROR_ACCOUNT_NOT_EXIST")
-
-	sharedRobotPublicKey := os.Getenv("UNIRIS_SHARED_KEYS_ROBOT_PUBLIC_KEY")
-	sharedRobotPrivateKey := os.Getenv("UNIRIS_SHARED_KEYS_ROBOT_PRIVATE_KEY")
-
-	return &UnirisConfig{
-		Datamining: DataMiningConfiguration{
-			InternalPort: _intDataminingport,
-			Errors: DataMininingErrors{
-				AccountNotExist: dataminingErrAccountNotExist,
-			},
-		},
-		SharedKeys: SharedKeys{
-			RobotPublicKey:  sharedRobotPublicKey,
-			RobotPrivateKey: sharedRobotPrivateKey,
-		},
-	}, nil
 }
 
 //BuildFromFile creates configuration from configuration file

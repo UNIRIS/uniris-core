@@ -71,7 +71,7 @@ func (pR poolR) RequestID(sPool datamining.Pool, idHash string) (account.Endorse
 	}
 
 	if len(ids) == 0 {
-		return nil, errors.New(pR.conf.Datamining.Errors.AccountNotExist)
+		return nil, errors.New(pR.conf.Services.Datamining.Errors.AccountNotExist)
 	}
 
 	//Checks the consistency of the retrieved results
@@ -125,7 +125,7 @@ func (pR poolR) RequestKeychain(sPool datamining.Pool, encAddress string) (accou
 	}
 
 	if len(keychains) == 0 {
-		return nil, errors.New(pR.conf.Datamining.Errors.AccountNotExist)
+		return nil, errors.New(pR.conf.Services.Datamining.Errors.AccountNotExist)
 	}
 
 	//Checks the consistency of the retrieved results

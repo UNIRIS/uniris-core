@@ -29,7 +29,7 @@ func NewInternalServerHandler(pR PoolRequester, aiClient AIClient, crypto Crypto
 
 //GetAccount implements the protobuf GetAccount request handler
 func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSearchRequest) (*api.AccountSearchResult, error) {
-	idHash, err := s.crypto.decrypter.DecryptHash(req.EncryptedIDHash, s.conf.SharedKeys.RobotPrivateKey)
+	idHash, err := s.crypto.decrypter.DecryptHash(req.EncryptedIDHash, s.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
@@ -44,7 +44,7 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 		return nil, err
 	}
 
-	clearAddr, err := s.crypto.decrypter.DecryptHash(id.EncryptedAddrByRobot(), s.conf.SharedKeys.RobotPrivateKey)
+	clearAddr, err := s.crypto.decrypter.DecryptHash(id.EncryptedAddrByRobot(), s.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
@@ -60,7 +60,7 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 	}
 
 	if keychain == nil {
-		return nil, errors.New(s.conf.Datamining.Errors.AccountNotExist)
+		return nil, errors.New(s.conf.Services.Datamining.Errors.AccountNotExist)
 	}
 
 	res := &api.AccountSearchResult{
@@ -68,7 +68,7 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 		EncryptedWallet:  keychain.EncryptedWallet(),
 		EncryptedAddress: id.EncryptedAddrByID(),
 	}
-	if err := s.crypto.signer.SignAccountSearchResult(res, s.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := s.crypto.signer.SignAccountSearchResult(res, s.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 
@@ -76,7 +76,7 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 }
 
 func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.KeychainCreationRequest) (*api.CreationResult, error) {
-	keychain, err := s.crypto.decrypter.DecryptKeychain(req.EncryptedKeychain, s.conf.SharedKeys.RobotPrivateKey)
+	keychain, err := s.crypto.decrypter.DecryptKeychain(req.EncryptedKeychain, s.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 		MasterPeerIP:    master.IP.String(),
 	}
 
-	if err := s.crypto.signer.SignCreationResult(res, s.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := s.crypto.signer.SignCreationResult(res, s.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 
@@ -111,7 +111,7 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 }
 
 func (s internalSrvHandler) CreateID(ctx context.Context, req *api.IDCreationRequest) (*api.CreationResult, error) {
-	id, err := s.crypto.decrypter.DecryptID(req.EncryptedID, s.conf.SharedKeys.RobotPrivateKey)
+	id, err := s.crypto.decrypter.DecryptID(req.EncryptedID, s.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (s internalSrvHandler) CreateID(ctx context.Context, req *api.IDCreationReq
 		MasterPeerIP:    master.IP.String(),
 	}
 
-	if err := s.crypto.signer.SignCreationResult(res, s.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := s.crypto.signer.SignCreationResult(res, s.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 

@@ -58,11 +58,11 @@ func NewExternalServerHandler(srv Services, crypto Crypto, conf system.UnirisCon
 }
 
 func (h externalSrvHandler) GetID(ctxt context.Context, req *api.IDRequest) (*api.IDResponse, error) {
-	if err := h.crypto.signer.VerifyHashSignature(h.conf.SharedKeys.RobotPublicKey, req.EncryptedIDHash, req.Signature); err != nil {
+	if err := h.crypto.signer.VerifyHashSignature(h.conf.SharedKeys.Robot.PublicKey, req.EncryptedIDHash, req.Signature); err != nil {
 		return nil, ErrInvalidSignature
 	}
 
-	idHash, err := h.crypto.decrypter.DecryptHash(req.EncryptedIDHash, h.conf.SharedKeys.RobotPrivateKey)
+	idHash, err := h.crypto.decrypter.DecryptHash(req.EncryptedIDHash, h.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
@@ -73,7 +73,7 @@ func (h externalSrvHandler) GetID(ctxt context.Context, req *api.IDRequest) (*ap
 	}
 
 	if id == nil {
-		return nil, errors.New(h.conf.Datamining.Errors.AccountNotExist)
+		return nil, errors.New(h.conf.Services.Datamining.Errors.AccountNotExist)
 	}
 
 	res := &api.IDResponse{
@@ -81,7 +81,7 @@ func (h externalSrvHandler) GetID(ctxt context.Context, req *api.IDRequest) (*ap
 		Endorsement: h.api.buildEndorsement(id.Endorsement()),
 	}
 
-	if err := h.crypto.signer.SignIDResponse(res, h.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := h.crypto.signer.SignIDResponse(res, h.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 
@@ -89,11 +89,11 @@ func (h externalSrvHandler) GetID(ctxt context.Context, req *api.IDRequest) (*ap
 }
 
 func (h externalSrvHandler) GetKeychain(ctxt context.Context, req *api.KeychainRequest) (*api.KeychainResponse, error) {
-	if err := h.crypto.signer.VerifyHashSignature(h.conf.SharedKeys.RobotPublicKey, req.EncryptedAddress, req.Signature); err != nil {
+	if err := h.crypto.signer.VerifyHashSignature(h.conf.SharedKeys.Robot.PublicKey, req.EncryptedAddress, req.Signature); err != nil {
 		return nil, ErrInvalidSignature
 	}
 
-	clearAddress, err := h.crypto.decrypter.DecryptHash(req.EncryptedAddress, h.conf.SharedKeys.RobotPrivateKey)
+	clearAddress, err := h.crypto.decrypter.DecryptHash(req.EncryptedAddress, h.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
@@ -104,7 +104,7 @@ func (h externalSrvHandler) GetKeychain(ctxt context.Context, req *api.KeychainR
 	}
 
 	if keychain == nil {
-		return nil, errors.New(h.conf.Datamining.Errors.AccountNotExist)
+		return nil, errors.New(h.conf.Services.Datamining.Errors.AccountNotExist)
 	}
 
 	res := &api.KeychainResponse{
@@ -112,7 +112,7 @@ func (h externalSrvHandler) GetKeychain(ctxt context.Context, req *api.KeychainR
 		Endorsement: h.api.buildEndorsement(keychain.Endorsement()),
 	}
 
-	if err := h.crypto.signer.SignKeychainResponse(res, h.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := h.crypto.signer.SignKeychainResponse(res, h.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 
@@ -120,16 +120,16 @@ func (h externalSrvHandler) GetKeychain(ctxt context.Context, req *api.KeychainR
 }
 
 func (h externalSrvHandler) LeadKeychainMining(ctx context.Context, req *api.KeychainLeadRequest) (*empty.Empty, error) {
-	if err := h.crypto.signer.VerifyKeychainLeadRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyKeychainLeadRequestSignature(h.conf.SharedKeys.Robot.PublicKey, req); err != nil {
 		return nil, ErrInvalidSignature
 	}
 
-	keychain, err := h.crypto.decrypter.DecryptKeychain(req.EncryptedKeychain, h.conf.SharedKeys.RobotPrivateKey)
+	keychain, err := h.crypto.decrypter.DecryptKeychain(req.EncryptedKeychain, h.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
 
-	clearaddr, err := h.crypto.decrypter.DecryptHash(keychain.EncryptedAddrByRobot(), h.conf.SharedKeys.RobotPrivateKey)
+	clearaddr, err := h.crypto.decrypter.DecryptHash(keychain.EncryptedAddrByRobot(), h.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
@@ -147,16 +147,16 @@ func (h externalSrvHandler) LeadKeychainMining(ctx context.Context, req *api.Key
 }
 
 func (h externalSrvHandler) LeadIDMining(ctx context.Context, req *api.IDLeadRequest) (*empty.Empty, error) {
-	if err := h.crypto.signer.VerifyIDLeadRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyIDLeadRequestSignature(h.conf.SharedKeys.Robot.PublicKey, req); err != nil {
 		return nil, ErrInvalidSignature
 	}
 
-	id, err := h.crypto.decrypter.DecryptID(req.EncryptedID, h.conf.SharedKeys.RobotPrivateKey)
+	id, err := h.crypto.decrypter.DecryptID(req.EncryptedID, h.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
 
-	clearaddr, err := h.crypto.decrypter.DecryptHash(id.EncryptedAddrByRobot(), h.conf.SharedKeys.RobotPrivateKey)
+	clearaddr, err := h.crypto.decrypter.DecryptHash(id.EncryptedAddrByRobot(), h.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
@@ -174,7 +174,7 @@ func (h externalSrvHandler) LeadIDMining(ctx context.Context, req *api.IDLeadReq
 }
 
 func (h externalSrvHandler) LockTransaction(ctx context.Context, req *api.LockRequest) (*api.LockAck, error) {
-	if err := h.crypto.signer.VerifyLockRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyLockRequestSignature(h.conf.SharedKeys.Robot.PublicKey, req); err != nil {
 		return nil, err
 	}
 
@@ -196,7 +196,7 @@ func (h externalSrvHandler) LockTransaction(ctx context.Context, req *api.LockRe
 	ack := &api.LockAck{
 		LockHash: lockHash,
 	}
-	if err := h.crypto.signer.SignLockAck(ack, h.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := h.crypto.signer.SignLockAck(ack, h.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 	return ack, nil
@@ -204,7 +204,7 @@ func (h externalSrvHandler) LockTransaction(ctx context.Context, req *api.LockRe
 
 func (h externalSrvHandler) UnlockTransaction(ctx context.Context, req *api.LockRequest) (*api.LockAck, error) {
 
-	if err := h.crypto.signer.VerifyLockRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyLockRequestSignature(h.conf.SharedKeys.Robot.PublicKey, req); err != nil {
 		return nil, err
 	}
 
@@ -226,14 +226,14 @@ func (h externalSrvHandler) UnlockTransaction(ctx context.Context, req *api.Lock
 	ack := &api.LockAck{
 		LockHash: lockHash,
 	}
-	if err := h.crypto.signer.SignLockAck(ack, h.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := h.crypto.signer.SignLockAck(ack, h.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 	return ack, nil
 }
 
 func (h externalSrvHandler) ValidateKeychain(ctx context.Context, req *api.KeychainValidationRequest) (*api.ValidationResponse, error) {
-	if err := h.crypto.signer.VerifyKeychainValidationRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyKeychainValidationRequestSignature(h.conf.SharedKeys.Robot.PublicKey, req); err != nil {
 		return nil, err
 	}
 
@@ -252,7 +252,7 @@ func (h externalSrvHandler) ValidateKeychain(ctx context.Context, req *api.Keych
 	res := &api.ValidationResponse{
 		Validation: vRes,
 	}
-	if err := h.crypto.signer.SignValidationResponse(res, h.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := h.crypto.signer.SignValidationResponse(res, h.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 
@@ -260,7 +260,7 @@ func (h externalSrvHandler) ValidateKeychain(ctx context.Context, req *api.Keych
 }
 
 func (h externalSrvHandler) ValidateID(ctx context.Context, req *api.IDValidationRequest) (*api.ValidationResponse, error) {
-	if err := h.crypto.signer.VerifyIDValidationRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyIDValidationRequestSignature(h.conf.SharedKeys.Robot.PublicKey, req); err != nil {
 		return nil, err
 	}
 
@@ -279,7 +279,7 @@ func (h externalSrvHandler) ValidateID(ctx context.Context, req *api.IDValidatio
 	res := &api.ValidationResponse{
 		Validation: vRes,
 	}
-	if err := h.crypto.signer.SignValidationResponse(res, h.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := h.crypto.signer.SignValidationResponse(res, h.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 
@@ -287,11 +287,11 @@ func (h externalSrvHandler) ValidateID(ctx context.Context, req *api.IDValidatio
 }
 
 func (h externalSrvHandler) StoreKeychain(ctx context.Context, req *api.KeychainStorageRequest) (*api.StorageAck, error) {
-	if err := h.crypto.signer.VerifyKeychainStorageRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyKeychainStorageRequestSignature(h.conf.SharedKeys.Robot.PublicKey, req); err != nil {
 		return nil, err
 	}
 
-	clearaddr, err := h.crypto.decrypter.DecryptHash(req.Data.EncryptedAddrByRobot, h.conf.SharedKeys.RobotPrivateKey)
+	clearaddr, err := h.crypto.decrypter.DecryptHash(req.Data.EncryptedAddrByRobot, h.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, ErrInvalidEncryption
 	}
@@ -312,14 +312,14 @@ func (h externalSrvHandler) StoreKeychain(ctx context.Context, req *api.Keychain
 	ack := &api.StorageAck{
 		StorageHash: hash,
 	}
-	if err := h.crypto.signer.SignStorageAck(ack, h.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := h.crypto.signer.SignStorageAck(ack, h.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 	return ack, nil
 }
 
 func (h externalSrvHandler) StoreID(ctx context.Context, req *api.IDStorageRequest) (*api.StorageAck, error) {
-	if err := h.crypto.signer.VerifyIDStorageRequestSignature(h.conf.SharedKeys.RobotPublicKey, req); err != nil {
+	if err := h.crypto.signer.VerifyIDStorageRequestSignature(h.conf.SharedKeys.Robot.PublicKey, req); err != nil {
 		return nil, err
 	}
 
@@ -336,7 +336,7 @@ func (h externalSrvHandler) StoreID(ctx context.Context, req *api.IDStorageReque
 	ack := &api.StorageAck{
 		StorageHash: hash,
 	}
-	if err := h.crypto.signer.SignStorageAck(ack, h.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := h.crypto.signer.SignStorageAck(ack, h.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 	return ack, nil

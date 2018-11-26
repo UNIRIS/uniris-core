@@ -148,7 +148,11 @@ func (s service) findPools(addr string) (datamining.Pool, datamining.Pool, error
 
 func (s service) requestLock(txHash string, addr string, lastVPool datamining.Pool) error {
 	//Build lock transaction
-	lock := lock.TransactionLock{TxHash: txHash, MasterRobotKey: s.config.SharedKeys.RobotPublicKey, Address: addr}
+	lock := lock.TransactionLock{
+		TxHash:         txHash,
+		MasterRobotKey: s.config.SharedKeys.Robot.PublicKey,
+		Address:        addr,
+	}
 
 	if err := s.poolR.RequestLock(lastVPool, lock); err != nil {
 		return err
@@ -162,9 +166,11 @@ func (s service) requestLock(txHash string, addr string, lastVPool datamining.Po
 
 func (s service) requestUnlock(txHash string, addr string, lastVPool datamining.Pool) error {
 	//Build unlock transaction
-
-	//TODO: use the real public key not shared one
-	lock := lock.TransactionLock{TxHash: txHash, MasterRobotKey: s.config.SharedKeys.RobotPublicKey, Address: addr}
+	lock := lock.TransactionLock{
+		TxHash:         txHash,
+		MasterRobotKey: s.config.SharedKeys.Robot.PublicKey,
+		Address:        addr,
+	}
 	if err := s.poolR.RequestUnlock(lastVPool, lock); err != nil {
 		return err
 	}
@@ -183,11 +189,10 @@ func (s service) mine(txHash string, data interface{}, addr string, txEmSig stri
 
 	//Execute the Proof of Work
 	pow := pow{
-		lastVPool: lastVPool,
-		emLister:  s.emLister,
-		//TODO: use the real keys and not the shared ones
-		robotPubKey: s.config.SharedKeys.RobotPublicKey,
-		robotPvKey:  s.config.SharedKeys.RobotPrivateKey,
+		lastVPool:   lastVPool,
+		emLister:    s.emLister,
+		robotPubKey: s.config.PublicKey,
+		robotPvKey:  s.config.PrivateKey,
 		signer:      s.signer,
 		txEmSig:     txEmSig,
 		txData:      data,
@@ -238,13 +243,12 @@ func (s service) Validate(txHash string, data interface{}, txType TransactionTyp
 }
 
 func (s service) buildValidation(status ValidationStatus) (Validation, error) {
-	//TODO: use the real keys and not the shared ones
 	v := validation{
-		pubk:      s.config.SharedKeys.RobotPublicKey,
+		pubk:      s.config.PublicKey,
 		status:    status,
 		timestamp: time.Now(),
 	}
-	sValid, err := s.signer.SignValidation(v, s.config.SharedKeys.RobotPrivateKey)
+	sValid, err := s.signer.SignValidation(v, s.config.PrivateKey)
 	if err != nil {
 		return nil, err
 	}

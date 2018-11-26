@@ -96,8 +96,11 @@ func TestValidateTx(t *testing.T) {
 			KeychainTransaction: mockMiner{},
 		},
 		config: system.UnirisConfig{
+			PublicKey: "pub key",
 			SharedKeys: system.SharedKeys{
-				RobotPublicKey: "pub key",
+				Robot: system.KeyPair{
+					PublicKey: "pub key",
+				},
 			},
 		},
 		signer: mockSrvSigner{},
@@ -124,8 +127,11 @@ func TestValidateInvalidTx(t *testing.T) {
 			KeychainTransaction: mockBadMiner{},
 		},
 		config: system.UnirisConfig{
+			PublicKey: "pub key",
 			SharedKeys: system.SharedKeys{
-				RobotPublicKey: "pub key",
+				Robot: system.KeyPair{
+					PublicKey: "pub key",
+				},
 			},
 		},
 		signer: mockSrvSigner{},

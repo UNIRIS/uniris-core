@@ -2,6 +2,9 @@ package listing
 
 import (
 	"errors"
+	"log"
+
+	"github.com/uniris/uniris-core/api/pkg/system"
 )
 
 //ErrAccountNotExist is returned when the requested account not exist
@@ -24,17 +27,17 @@ type Service interface {
 }
 
 type service struct {
-	client       RobotClient
-	sigVerif     SignatureVerifier
-	sharedBioPub string
+	client   RobotClient
+	sigVerif SignatureVerifier
+	conf     system.UnirisConfig
 }
 
 //NewService creates a new listing service
-func NewService(sharedBioPub string, client RobotClient, sigVerif SignatureVerifier) Service {
+func NewService(conf system.UnirisConfig, client RobotClient, sigVerif SignatureVerifier) Service {
 	return service{
-		sharedBioPub: sharedBioPub,
-		client:       client,
-		sigVerif:     sigVerif,
+		conf:     conf,
+		client:   client,
+		sigVerif: sigVerif,
 	}
 }
 
@@ -47,7 +50,9 @@ func (s service) ExistAccount(encryptedHash string, sig string) error {
 }
 
 func (s service) GetAccount(encryptedHash string, sig string) (*AccountResult, error) {
-	if err := s.sigVerif.VerifyHashSignature(encryptedHash, s.sharedBioPub, sig); err != nil {
+	verifKey := s.conf.SharedKeys.EmitterRequestKey().PublicKey
+	log.Print(verifKey)
+	if err := s.sigVerif.VerifyHashSignature(encryptedHash, verifKey, sig); err != nil {
 		return nil, err
 	}
 

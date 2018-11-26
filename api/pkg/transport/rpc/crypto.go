@@ -13,11 +13,19 @@ type SignatureHandler interface {
 }
 
 type signatureChecker interface {
+
+	//VerifyAccountSearchResultSignature checks the signature of the account search result
 	VerifyAccountSearchResultSignature(pubKey string, res *api.AccountSearchResult) error
+
+	//VerifyCreationResultSignature checks the signature of the creation result
 	VerifyCreationResultSignature(pubKey string, res *api.CreationResult) error
 }
 
 type signatureBuilder interface {
+
+	//SignAccountResult signs account research result
 	SignAccountResult(res *listing.AccountResult, pvKey string) error
+
+	//SignAccountCreationResult signs the account creation result
 	SignAccountCreationResult(res *adding.AccountCreationResult, pvKey string) error
 }

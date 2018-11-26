@@ -61,7 +61,7 @@ func NewExternalClient(crypto Crypto, conf system.UnirisConfig) ExternalClient {
 }
 
 func (c externalClient) LeadKeychainMining(ip string, txHash string, encData string, validators []string) error {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -76,7 +76,7 @@ func (c externalClient) LeadKeychainMining(ip string, txHash string, encData str
 		TransactionHash:   txHash,
 		ValidatorPeerIPs:  validators,
 	}
-	if err := c.crypto.signer.SignKeychainLeadRequest(req, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignKeychainLeadRequest(req, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return err
 	}
 
@@ -89,7 +89,7 @@ func (c externalClient) LeadKeychainMining(ip string, txHash string, encData str
 }
 
 func (c externalClient) LeadIDMining(ip string, txHash string, encData string, validators []string) error {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -104,7 +104,7 @@ func (c externalClient) LeadIDMining(ip string, txHash string, encData string, v
 		TransactionHash:  txHash,
 		ValidatorPeerIPs: validators,
 	}
-	if err := c.crypto.signer.SignIDLeadRequest(req, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignIDLeadRequest(req, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return err
 	}
 	_, err = client.LeadIDMining(context.Background(), req)
@@ -116,7 +116,7 @@ func (c externalClient) LeadIDMining(ip string, txHash string, encData string, v
 }
 
 func (c externalClient) RequestID(ip string, encIDHash string) (account.EndorsedID, error) {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -126,7 +126,7 @@ func (c externalClient) RequestID(ip string, encIDHash string) (account.Endorsed
 
 	client := api.NewExternalClient(conn)
 
-	sigReq, err := c.crypto.signer.SignHash(encIDHash, c.conf.SharedKeys.RobotPrivateKey)
+	sigReq, err := c.crypto.signer.SignHash(encIDHash, c.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func (c externalClient) RequestID(ip string, encIDHash string) (account.Endorsed
 		return nil, errors.New(s.Message())
 	}
 
-	if err := c.crypto.signer.VerifyIDResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyIDResponseSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return nil, err
 	}
 
@@ -150,7 +150,7 @@ func (c externalClient) RequestID(ip string, encIDHash string) (account.Endorsed
 }
 
 func (c externalClient) RequestKeychain(ip string, encAddress string) (account.EndorsedKeychain, error) {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -160,7 +160,7 @@ func (c externalClient) RequestKeychain(ip string, encAddress string) (account.E
 
 	client := api.NewExternalClient(conn)
 
-	sigReq, err := c.crypto.signer.SignHash(encAddress, c.conf.SharedKeys.RobotPrivateKey)
+	sigReq, err := c.crypto.signer.SignHash(encAddress, c.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -174,12 +174,12 @@ func (c externalClient) RequestKeychain(ip string, encAddress string) (account.E
 		return nil, errors.New(s.Message())
 	}
 
-	clearaddr, err := c.crypto.decrypter.DecryptHash(res.Data.EncryptedAddrByRobot, c.conf.SharedKeys.RobotPrivateKey)
+	clearaddr, err := c.crypto.decrypter.DecryptHash(res.Data.EncryptedAddrByRobot, c.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := c.crypto.signer.VerifyKeychainResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyKeychainResponseSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return nil, err
 	}
 
@@ -191,7 +191,7 @@ func (c externalClient) RequestKeychain(ip string, encAddress string) (account.E
 }
 
 func (c externalClient) RequestLock(ip string, txLock lock.TransactionLock) error {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -206,7 +206,7 @@ func (c externalClient) RequestLock(ip string, txLock lock.TransactionLock) erro
 		TransactionHash: txLock.TxHash,
 		Address:         txLock.Address,
 	}
-	if err := c.crypto.signer.SignLockRequest(lockReq, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignLockRequest(lockReq, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return err
 	}
 
@@ -216,7 +216,7 @@ func (c externalClient) RequestLock(ip string, txLock lock.TransactionLock) erro
 		return errors.New(s.Message())
 	}
 
-	if err := c.crypto.signer.VerifyLockAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyLockAckSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return err
 	}
 
@@ -226,7 +226,7 @@ func (c externalClient) RequestLock(ip string, txLock lock.TransactionLock) erro
 }
 
 func (c externalClient) RequestUnlock(ip string, txLock lock.TransactionLock) error {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -241,7 +241,7 @@ func (c externalClient) RequestUnlock(ip string, txLock lock.TransactionLock) er
 		TransactionHash: txLock.TxHash,
 		Address:         txLock.Address,
 	}
-	if err := c.crypto.signer.SignLockRequest(lockReq, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignLockRequest(lockReq, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return err
 	}
 
@@ -251,7 +251,7 @@ func (c externalClient) RequestUnlock(ip string, txLock lock.TransactionLock) er
 		return errors.New(s.Message())
 	}
 
-	if err := c.crypto.signer.VerifyLockAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyLockAckSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return err
 	}
 
@@ -261,7 +261,7 @@ func (c externalClient) RequestUnlock(ip string, txLock lock.TransactionLock) er
 }
 
 func (c externalClient) RequestValidation(ip string, txType mining.TransactionType, txHash string, data interface{}) (mining.Validation, error) {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -282,7 +282,7 @@ func (c externalClient) RequestValidation(ip string, txType mining.TransactionTy
 }
 
 func (c externalClient) RequestStorage(ip string, txType mining.TransactionType, data interface{}, end mining.Endorsement) error {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -309,7 +309,7 @@ func (c externalClient) validateKeychain(client api.ExternalClient, txHash strin
 		Data:            kc,
 		TransactionHash: txHash,
 	}
-	if err := c.crypto.signer.SignKeychainValidationRequestSignature(req, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignKeychainValidationRequestSignature(req, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 
@@ -319,7 +319,7 @@ func (c externalClient) validateKeychain(client api.ExternalClient, txHash strin
 		return nil, errors.New(s.Message())
 	}
 
-	if err := c.crypto.signer.VerifyValidationResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyValidationResponseSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return nil, err
 	}
 
@@ -331,7 +331,7 @@ func (c externalClient) validateID(client api.ExternalClient, txHash string, id 
 		Data:            id,
 		TransactionHash: txHash,
 	}
-	if err := c.crypto.signer.SignIDValidationRequestSignature(req, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignIDValidationRequestSignature(req, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 	res, err := client.ValidateID(context.Background(), req)
@@ -340,7 +340,7 @@ func (c externalClient) validateID(client api.ExternalClient, txHash string, id 
 		return nil, errors.New(s.Message())
 	}
 
-	if err := c.crypto.signer.VerifyValidationResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyValidationResponseSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return nil, err
 	}
 
@@ -352,7 +352,7 @@ func (c externalClient) storeKeychain(client api.ExternalClient, kc *api.Keychai
 		Data:        kc,
 		Endorsement: end,
 	}
-	if err := c.crypto.signer.SignKeychainStorageRequestSignature(req, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignKeychainStorageRequestSignature(req, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return err
 	}
 
@@ -362,7 +362,7 @@ func (c externalClient) storeKeychain(client api.ExternalClient, kc *api.Keychai
 		return errors.New(s.Message())
 	}
 
-	if err := c.crypto.signer.VerifyStorageAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyStorageAckSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return err
 	}
 
@@ -376,7 +376,7 @@ func (c externalClient) storeID(client api.ExternalClient, id *api.ID, end *api.
 		Data:        id,
 		Endorsement: end,
 	}
-	if err := c.crypto.signer.SignIDStorageRequestSignature(req, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignIDStorageRequestSignature(req, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return err
 	}
 
@@ -386,7 +386,7 @@ func (c externalClient) storeID(client api.ExternalClient, id *api.ID, end *api.
 		return errors.New(s.Message())
 	}
 
-	if err := c.crypto.signer.VerifyStorageAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyStorageAckSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return err
 	}
 

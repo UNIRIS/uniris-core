@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	defaultConfFile = "../../../default-conf.yml"
+	defaultConfFile = "../../../conf.yaml"
 )
 
 func main() {
@@ -38,25 +38,25 @@ func main() {
 	log.Print("=================================")
 	log.Printf("Network type: %s", conf.Network)
 	log.Printf("Key: %s", conf.PublicKey)
-	log.Printf("Port: %d", conf.Discovery.Port)
+	log.Printf("Port: %d", conf.Services.Discovery.Port)
 	log.Printf("Version: %s", conf.Version)
 
 	//Initialize middlewares dependencies
-	repo, err := redis.NewRepository(conf.Discovery.Redis)
+	repo, err := redis.NewRepository(conf.Services.Discovery.Redis)
 	if err != nil {
 		log.Fatal("Cannot connect with redis")
 	}
-	notif := amqp.NewNotifier(conf.Discovery.AMQP)
+	notif := amqp.NewNotifier(conf.Services.Discovery.AMQP)
 
 	//Initializes the infrastructure implementations
 	var np monitoring.PeerNetworker
-	if conf.Network == "public" {
+	if conf.Network.Type == "public" {
 		np = system.NewPublicNetworker()
 	} else {
-		if conf.NetworkInterface == "" {
+		if conf.Network.Interface == "" {
 			log.Fatal("Missing the network interface configuration when using the private network")
 		}
-		np = system.NewPrivateNetworker(conf.NetworkInterface)
+		np = system.NewPrivateNetworker(conf.Network.Interface)
 	}
 	pos := system.NewPeerPositioner()
 	msg := rpc.NewMessenger()
@@ -68,7 +68,7 @@ func main() {
 
 	//Initializes the seeds
 	seeds := make([]discovery.Seed, 0)
-	for _, s := range conf.Discovery.Seeds {
+	for _, s := range conf.Services.Discovery.Seeds {
 		seeds = append(seeds, discovery.Seed{
 			IP:        net.ParseIP(s.IP),
 			Port:      s.Port,
@@ -80,7 +80,7 @@ func main() {
 	}
 
 	//Stores the startup peer
-	startPeer, err := boot.Startup(conf.PublicKey, conf.Discovery.Port, conf.Version)
+	startPeer, err := boot.Startup(conf.PublicKey, conf.Services.Discovery.Port, conf.Version)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -90,7 +90,7 @@ func main() {
 
 	//Starts server
 	go func() {
-		if err := startServer(conf.Discovery.Port, repo, notif); err != nil {
+		if err := startServer(conf.Services.Discovery.Port, repo, notif); err != nil {
 			log.Fatal(err)
 		}
 	}()

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +17,7 @@ import (
 )
 
 const (
-	defaultConfFile = "../../../default-conf.yml"
+	defaultConfFile = "../../../conf.yaml"
 )
 
 func main() {
@@ -38,31 +37,23 @@ func main() {
 	r.StaticFile("/swagger.yaml", swaggerFile)
 
 	signer := crypto.NewSigner()
-	client := rpc.NewRobotClient(*config, signer)
-	lister := listing.NewService(config.SharedKeys.BiodPublicKey, client, signer)
-	adder := adding.NewService(config.SharedKeys.BiodPublicKey, client, signer)
+	client := rpc.NewRobotClient(config, signer)
+	lister := listing.NewService(config, client, signer)
+	adder := adding.NewService(config, client, signer)
 
-	rest.Handler(r, config.SharedKeys.RobotPrivateKey, lister, adder)
+	rest.Handler(r, lister, adder)
 
-	r.Run(fmt.Sprintf(":%d", config.API.Port))
+	r.Run(fmt.Sprintf(":%d", config.Services.API.Port))
 }
 
-func loadConfiguration() (*system.UnirisConfig, error) {
+func loadConfiguration() (conf system.UnirisConfig, err error) {
 	confFile := flag.String("config", defaultConfFile, "Configuration file")
 	flag.Parse()
 
 	confFilePath, err := filepath.Abs(*confFile)
-	if _, err := os.Stat(confFilePath); os.IsNotExist(err) {
-		conf, err := system.BuildFromEnv()
-		if err != nil {
-			return nil, err
-		}
-		return conf, nil
-	}
-
-	conf, err := system.BuildFromFile(confFilePath)
+	conf, err = system.BuildFromFile(confFilePath)
 	if err != nil {
-		return nil, err
+		return
 	}
 	return conf, nil
 }

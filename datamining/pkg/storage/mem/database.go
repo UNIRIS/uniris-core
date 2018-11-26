@@ -6,6 +6,7 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	account_adding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
 	account_listing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
+	em_adding "github.com/uniris/uniris-core/datamining/pkg/emitter/adding"
 	em_listing "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 )
@@ -15,15 +16,17 @@ type Repo interface {
 	account_adding.Repository
 	account_listing.Repository
 	em_listing.Repository
+	em_adding.Repository
 	lock.Repository
 }
 
 type database struct {
-	IDs         []account.EndorsedID
-	KOIDs       []account.EndorsedID
-	Keychains   []account.EndorsedKeychain
-	KOKeychains []account.EndorsedKeychain
-	Locks       []lock.TransactionLock
+	IDs            []account.EndorsedID
+	KOIDs          []account.EndorsedID
+	Keychains      []account.EndorsedKeychain
+	KOKeychains    []account.EndorsedKeychain
+	Locks          []lock.TransactionLock
+	SharedEmPubKey []string
 }
 
 //NewDatabase creates a new mock database
@@ -55,8 +58,13 @@ func (d *database) FindLastKeychain(addr string) (account.EndorsedKeychain, erro
 	return nil, nil
 }
 
+func (d *database) StoreEmitterSharedKey(pubKey string) error {
+	d.SharedEmPubKey = append(d.SharedEmPubKey, pubKey)
+	return nil
+}
+
 func (d *database) ListEmitterPublicKeys() ([]string, error) {
-	return []string{"3059301306072a8648ce3d020106082a8648ce3d03010703420004d64bb03b6dc787c848937793988ca158bdd7e9317cd0fef0a1bc5f040343af9e629e2277ffe0cbca0197ca1a443340c7f1c98b07c4e1ea056f2d99655e69c096"}, nil
+	return d.SharedEmPubKey, nil
 }
 
 func (d *database) StoreKeychain(k account.EndorsedKeychain) error {

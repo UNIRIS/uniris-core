@@ -32,7 +32,7 @@ func NewRobotClient(conf system.UnirisConfig, sigHandler SignatureHandler) Robot
 }
 
 func (c robotClient) GetAccount(encHash string) (*listing.AccountResult, error) {
-	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Datamining.InternalPort)
+	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Services.Datamining.InternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -47,13 +47,13 @@ func (c robotClient) GetAccount(encHash string) (*listing.AccountResult, error) 
 	})
 	if err != nil {
 		s, _ := status.FromError(err)
-		if s.Message() == c.conf.Datamining.Errors.AccountNotExist {
+		if s.Message() == c.conf.Services.Datamining.Errors.AccountNotExist {
 			return nil, listing.ErrAccountNotExist
 		}
 		return nil, errors.New(s.Message())
 	}
 
-	if err := c.sigHandler.VerifyAccountSearchResultSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.sigHandler.VerifyAccountSearchResultSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return nil, err
 	}
 
@@ -63,7 +63,7 @@ func (c robotClient) GetAccount(encHash string) (*listing.AccountResult, error) 
 		EncryptedWallet:  res.EncryptedWallet,
 	}
 
-	if err := c.sigHandler.SignAccountResult(resAcc, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.sigHandler.SignAccountResult(resAcc, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 
@@ -71,7 +71,7 @@ func (c robotClient) GetAccount(encHash string) (*listing.AccountResult, error) 
 }
 
 func (c robotClient) AddAccount(req adding.AccountCreationRequest) (*adding.AccountCreationResult, error) {
-	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Datamining.InternalPort)
+	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Services.Datamining.InternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -81,14 +81,15 @@ func (c robotClient) AddAccount(req adding.AccountCreationRequest) (*adding.Acco
 
 	client := api.NewInternalClient(conn)
 
-	resBio, err := client.CreateID(context.Background(), &api.IDCreationRequest{
+	resID, err := client.CreateID(context.Background(), &api.IDCreationRequest{
 		EncryptedID: req.EncryptedID,
 	})
 	if err != nil {
-		return nil, err
+		s, _ := status.FromError(err)
+		return nil, errors.New(s.Message())
 	}
 
-	if err := c.sigHandler.VerifyCreationResultSignature(c.conf.SharedKeys.RobotPublicKey, resBio); err != nil {
+	if err := c.sigHandler.VerifyCreationResultSignature(c.conf.SharedKeys.Robot.PublicKey, resID); err != nil {
 		return nil, err
 	}
 
@@ -96,14 +97,15 @@ func (c robotClient) AddAccount(req adding.AccountCreationRequest) (*adding.Acco
 		EncryptedKeychain: req.EncryptedKeychain,
 	})
 	if err != nil {
-		return nil, err
+		s, _ := status.FromError(err)
+		return nil, errors.New(s.Message())
 	}
 
 	txs := adding.AccountCreationTransactionsResult{
 		ID: adding.TransactionResult{
-			TransactionHash: resBio.TransactionHash,
-			MasterPeerIP:    resBio.MasterPeerIP,
-			Signature:       resBio.Signature,
+			TransactionHash: resID.TransactionHash,
+			MasterPeerIP:    resID.MasterPeerIP,
+			Signature:       resID.Signature,
 		},
 		Keychain: adding.TransactionResult{
 			TransactionHash: resKeychain.TransactionHash,
@@ -116,7 +118,7 @@ func (c robotClient) AddAccount(req adding.AccountCreationRequest) (*adding.Acco
 		Transactions: txs,
 	}
 
-	if err := c.sigHandler.SignAccountCreationResult(res, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.sigHandler.SignAccountCreationResult(res, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 

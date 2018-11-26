@@ -49,7 +49,9 @@ func TestGetID(t *testing.T) {
 		decrypter: mockcrypto.NewDecrypter(),
 		signer:    mockcrypto.NewSigner(),
 	}
-	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
+	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{
+		PublicKey: "robotkey",
+	})
 
 	res, err := h.GetID(context.TODO(), &api.IDRequest{
 		EncryptedIDHash: "enc hash",
@@ -84,7 +86,9 @@ func TestGetKeychain(t *testing.T) {
 		decrypter: mockcrypto.NewDecrypter(),
 		signer:    mockcrypto.NewSigner(),
 	}
-	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
+	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{
+		PublicKey: "robotkey",
+	})
 	res, err := h.GetKeychain(context.TODO(), &api.KeychainRequest{
 		EncryptedAddress: "enc address",
 	})
@@ -115,7 +119,11 @@ func TestLeadKeychainMining(t *testing.T) {
 		mining.KeychainTransaction: accountMining.NewKeychainMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher(), accLister),
 	}
 
-	mineSrv := mining.NewService(aiClient, notifier, poolF, poolR, mockcrypto.NewSigner(), emLister, system.UnirisConfig{}, txMiners)
+	conf := system.UnirisConfig{
+		PublicKey: "robotkey",
+	}
+
+	mineSrv := mining.NewService(aiClient, notifier, poolF, poolR, mockcrypto.NewSigner(), emLister, conf, txMiners)
 
 	accAdder := accountadding.NewService(aiClient, db, accLister, mockcrypto.NewSigner(), mockcrypto.NewHasher())
 
@@ -125,7 +133,7 @@ func TestLeadKeychainMining(t *testing.T) {
 		signer:    mockcrypto.NewSigner(),
 		hasher:    mockcrypto.NewHasher(),
 	}
-	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
+	h := NewExternalServerHandler(srv, crypto, conf)
 
 	_, err := h.LeadKeychainMining(context.TODO(), &api.KeychainLeadRequest{
 		EncryptedKeychain: "encrypted data",
@@ -154,15 +162,15 @@ func TestLeadIDMining(t *testing.T) {
 	emLister := emListing.NewService(db)
 	aiClient := mocktransport.NewAIClient()
 
+	conf := system.UnirisConfig{
+		PublicKey: "robotkey",
+	}
+
 	txMiners := map[mining.TransactionType]mining.TransactionMiner{
 		mining.IDTransaction: accountMining.NewIDMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher()),
 	}
 
-	mineSrv := mining.NewService(aiClient, notifier, poolF, poolR, mockcrypto.NewSigner(), emLister, system.UnirisConfig{
-		SharedKeys: system.SharedKeys{
-			RobotPublicKey: "robotkey",
-		},
-	}, txMiners)
+	mineSrv := mining.NewService(aiClient, notifier, poolF, poolR, mockcrypto.NewSigner(), emLister, conf, txMiners)
 
 	accLister := accountListing.NewService(db)
 	accAdder := accountadding.NewService(aiClient, db, accLister, mockcrypto.NewSigner(), mockcrypto.NewHasher())
@@ -173,7 +181,7 @@ func TestLeadIDMining(t *testing.T) {
 		signer:    mockcrypto.NewSigner(),
 		hasher:    mockcrypto.NewHasher(),
 	}
-	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
+	h := NewExternalServerHandler(srv, crypto, conf)
 
 	_, err := h.LeadIDMining(context.TODO(), &api.IDLeadRequest{
 		EncryptedID:      "encrypted data",
@@ -202,7 +210,9 @@ func TestLockTransaction(t *testing.T) {
 		signer:    mockcrypto.NewSigner(),
 		hasher:    mockcrypto.NewHasher(),
 	}
-	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
+	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{
+		PublicKey: "robotkey",
+	})
 
 	ack, err := h.LockTransaction(context.TODO(), &api.LockRequest{
 		MasterRobotKey:  "robotkey",
@@ -237,7 +247,9 @@ func TestUnlockTransaction(t *testing.T) {
 		signer:    mockcrypto.NewSigner(),
 		hasher:    mockcrypto.NewHasher(),
 	}
-	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{})
+	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{
+		PublicKey: "robotkey",
+	})
 
 	_, err := h.LockTransaction(context.TODO(), &api.LockRequest{
 		MasterRobotKey:  "robotkey",
@@ -281,18 +293,18 @@ func TestValidateKeychain(t *testing.T) {
 		mining.KeychainTransaction: accountMining.NewKeychainMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher(), nil),
 	}
 
-	mineSrv := mining.NewService(nil, nil, nil, nil, mockcrypto.NewSigner(), nil, system.UnirisConfig{
-		SharedKeys: system.SharedKeys{
-			RobotPublicKey: "robotkey",
-		},
-	}, txMiners)
+	conf := system.UnirisConfig{
+		PublicKey: "robotkey",
+	}
+
+	mineSrv := mining.NewService(nil, nil, nil, nil, mockcrypto.NewSigner(), nil, conf, txMiners)
 
 	services := Services{mining: mineSrv}
 	crypto := Crypto{
 		decrypter: mockcrypto.NewDecrypter(),
 		signer:    mockcrypto.NewSigner(),
 	}
-	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
+	h := NewExternalServerHandler(services, crypto, conf)
 
 	valid, err := h.ValidateKeychain(context.TODO(), &api.KeychainValidationRequest{
 		Data: &api.Keychain{
@@ -329,11 +341,11 @@ func TestValidateID(t *testing.T) {
 		mining.IDTransaction: accountMining.NewIDMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher()),
 	}
 
-	mineSrv := mining.NewService(nil, nil, nil, nil, mockcrypto.NewSigner(), nil, system.UnirisConfig{
-		SharedKeys: system.SharedKeys{
-			RobotPublicKey: "robotkey",
-		},
-	}, txMiners)
+	conf := system.UnirisConfig{
+		PublicKey: "robotkey",
+	}
+
+	mineSrv := mining.NewService(nil, nil, nil, nil, mockcrypto.NewSigner(), nil, conf, txMiners)
 
 	services := Services{mining: mineSrv}
 	crypto := Crypto{
@@ -341,7 +353,7 @@ func TestValidateID(t *testing.T) {
 		signer:    mockcrypto.NewSigner(),
 		hasher:    mockcrypto.NewHasher(),
 	}
-	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
+	h := NewExternalServerHandler(services, crypto, conf)
 
 	valid, err := h.ValidateID(context.TODO(), &api.IDValidationRequest{
 		Data: &api.ID{
@@ -385,7 +397,9 @@ func TestStoreKeychain(t *testing.T) {
 		signer:    mockcrypto.NewSigner(),
 		hasher:    mockcrypto.NewHasher(),
 	}
-	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
+	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{
+		PublicKey: "robotkey",
+	})
 
 	ack, err := h.StoreKeychain(context.TODO(), &api.KeychainStorageRequest{
 		Data: &api.Keychain{
@@ -453,7 +467,9 @@ func TestStoreID(t *testing.T) {
 		signer:    mockcrypto.NewSigner(),
 		hasher:    mockcrypto.NewHasher(),
 	}
-	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{})
+	h := NewExternalServerHandler(services, crypto, system.UnirisConfig{
+		PublicKey: "robotkey",
+	})
 
 	ack, err := h.StoreID(context.TODO(), &api.IDStorageRequest{
 		Data: &api.ID{

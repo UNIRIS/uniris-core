@@ -44,8 +44,10 @@ func TestRequestIDClient(t *testing.T) {
 
 	port := 2000
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
@@ -107,8 +109,10 @@ func TestRequestKeychainClient(t *testing.T) {
 
 	port := 2001
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
@@ -173,8 +177,10 @@ func TestRequestLockClient(t *testing.T) {
 
 	port := 2002
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
@@ -233,8 +239,10 @@ func TestRequestUnLockClient(t *testing.T) {
 
 	port := 2003
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
@@ -304,8 +312,10 @@ func TestRequestKeychainValidationClient(t *testing.T) {
 
 	port := 2004
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
@@ -364,8 +374,10 @@ func TestRequestIDValidationClient(t *testing.T) {
 
 	port := 2005
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
@@ -425,8 +437,10 @@ func TestRequestKeychainStorageClient(t *testing.T) {
 
 	port := 2006
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
@@ -489,8 +503,10 @@ func TestRequestIDStorageClient(t *testing.T) {
 
 	port := 2007
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
