@@ -81,7 +81,7 @@ paths:
         summary: Get account's details
         description: |
           Retrieve account details by requesting the data service of the UNIRIS robot.
-          All the data are encrypted and need to be decrypted by the emitter.
+          All the data are encrypted and need to be decrypted by the emitter using ID keys.
         operationId: getAccount
         parameters:
           - name: hash
