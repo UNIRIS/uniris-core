@@ -38,49 +38,49 @@ func NewPoolRequester(cli ExternalClient, conf system.UnirisConfig, crypto Crypt
 	}
 }
 
-func (pR poolR) RequestBiometric(sPool datamining.Pool, personHash string) (account.Biometric, error) {
-	biometrics := make([]account.Biometric, 0)
+func (pR poolR) RequestID(sPool datamining.Pool, idHash string) (account.EndorsedID, error) {
+	ids := make([]account.EndorsedID, 0)
 
 	var wg sync.WaitGroup
 	wg.Add(len(sPool.Peers()))
 
-	bioChan := make(chan account.Biometric)
+	idChan := make(chan account.EndorsedID)
 
 	for _, p := range sPool.Peers() {
 		go func(p datamining.Peer) {
 			defer wg.Done()
 
-			b, err := pR.cli.RequestBiometric(p.IP.String(), personHash)
+			id, err := pR.cli.RequestID(p.IP.String(), idHash)
 			if err != nil {
-				log.Printf("Unexpected error during biometric requesting for the peer %s\n", p.IP.String())
+				log.Printf("Unexpected error during ID requesting for the peer %s\n", p.IP.String())
 				log.Printf("Details: %s\n", err.Error())
 				return
 			}
 
-			bioChan <- b
+			idChan <- id
 		}(p)
 	}
 
 	go func() {
 		wg.Wait()
-		close(bioChan)
+		close(idChan)
 	}()
 
-	for bio := range bioChan {
-		biometrics = append(biometrics, bio)
+	for id := range idChan {
+		ids = append(ids, id)
 	}
 
-	if len(biometrics) == 0 {
-		return nil, errors.New(pR.conf.Datamining.Errors.AccountNotExist)
+	if len(ids) == 0 {
+		return nil, errors.New(pR.conf.Services.Datamining.Errors.AccountNotExist)
 	}
 
 	//Checks the consistency of the retrieved results
-	firstHash, err := pR.crypto.hasher.HashBiometric(biometrics[0])
+	firstHash, err := pR.crypto.hasher.HashEndorsedID(ids[0])
 	if err != nil {
 		return nil, err
 	}
-	for i := 1; i < len(biometrics); i++ {
-		hash, err := pR.crypto.hasher.HashBiometric(biometrics[i])
+	for i := 1; i < len(ids); i++ {
+		hash, err := pR.crypto.hasher.HashEndorsedID(ids[i])
 		if err != nil {
 			return nil, err
 		}
@@ -89,17 +89,17 @@ func (pR poolR) RequestBiometric(sPool datamining.Pool, personHash string) (acco
 		}
 	}
 
-	return biometrics[0], nil
+	return ids[0], nil
 }
 
-func (pR poolR) RequestKeychain(sPool datamining.Pool, encAddress string) (account.Keychain, error) {
+func (pR poolR) RequestKeychain(sPool datamining.Pool, encAddress string) (account.EndorsedKeychain, error) {
 
-	keychains := make([]account.Keychain, 0)
+	keychains := make([]account.EndorsedKeychain, 0)
 
 	var wg sync.WaitGroup
 	wg.Add(len(sPool.Peers()))
 
-	kcChan := make(chan account.Keychain)
+	kcChan := make(chan account.EndorsedKeychain)
 
 	for _, p := range sPool.Peers() {
 		go func(p datamining.Peer) {
@@ -125,16 +125,16 @@ func (pR poolR) RequestKeychain(sPool datamining.Pool, encAddress string) (accou
 	}
 
 	if len(keychains) == 0 {
-		return nil, errors.New(pR.conf.Datamining.Errors.AccountNotExist)
+		return nil, errors.New(pR.conf.Services.Datamining.Errors.AccountNotExist)
 	}
 
 	//Checks the consistency of the retrieved results
-	firstHash, err := pR.crypto.hasher.HashKeychain(keychains[0])
+	firstHash, err := pR.crypto.hasher.HashEndorsedKeychain(keychains[0])
 	if err != nil {
 		return nil, err
 	}
 	for i := 1; i < len(keychains); i++ {
-		hash, err := pR.crypto.hasher.HashKeychain(keychains[i])
+		hash, err := pR.crypto.hasher.HashEndorsedKeychain(keychains[i])
 		if err != nil {
 			return nil, err
 		}

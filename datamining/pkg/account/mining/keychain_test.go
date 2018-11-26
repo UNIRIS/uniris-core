@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/account/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
@@ -19,10 +20,11 @@ Scenario: Get last transaction hash
 */
 func TestKeychainGetLastTransactionHash(t *testing.T) {
 	db := mock.NewDatabase()
-	sigs := account.NewSignatures("sig1", "sig2")
-	data := account.NewKeychainData("enc addr", "enc wallet", "pub", sigs)
-	kc := account.NewKeychain("address", data, mining.NewEndorsement("", "hash", nil, nil))
-	db.StoreKeychain(kc)
+
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
+	eKc := account.NewEndorsedKeychain("address", kc, mining.NewEndorsement("", "hash", nil, nil))
+	db.StoreKeychain(eKc)
 	miner := keychainMiner{accLister: listing.NewService(db)}
 	lastHash, err := miner.GetLastTransactionHash("address")
 	assert.Nil(t, err)
@@ -37,9 +39,9 @@ Scenario: Checks the keychain data integrity
 */
 func TestKeychainIntegrity(t *testing.T) {
 	miner := keychainMiner{hasher: mockKeychainHasher{}}
-	sigs := account.NewSignatures("sig1", "sig2")
-	data := account.NewKeychainData("enc addr", "enc wallet", "pub", sigs)
-	err := miner.checkDataIntegrity("hash", data)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
+	err := miner.checkDataIntegrity("hash", kc)
 	assert.Nil(t, err)
 }
 
@@ -51,9 +53,10 @@ Scenario: Checks the keychain data integrity
 */
 func TestInvalidKeychainIntegrity(t *testing.T) {
 	miner := keychainMiner{hasher: mockBadKeychainHasher{}}
-	sigs := account.NewSignatures("sig1", "sig2")
-	data := account.NewKeychainData("enc addr", "enc wallet", "pub", sigs)
-	err := miner.checkDataIntegrity("hash", data)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
+	err := miner.checkDataIntegrity("hash", kc)
 	assert.Equal(t, mining.ErrInvalidTransaction, err)
 }
 
@@ -65,9 +68,11 @@ Scenario: Check keychain data as master peer
 */
 func TestKeychainMasterCheck(t *testing.T) {
 	miner := NewKeychainMiner(mockKeychainSigner{}, mockKeychainHasher{}, nil)
-	sigs := account.NewSignatures("sig1", "sig2")
-	data := account.NewKeychainData("enc addr", "enc wallet", "pub", sigs)
-	err := miner.CheckAsMaster("hash", data)
+
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
+	err := miner.CheckAsMaster("hash", kc)
 	assert.Nil(t, err)
 }
 
@@ -79,34 +84,35 @@ Scenario: Check keychain data as slave peer
 */
 func TestKeychainSlaveCheck(t *testing.T) {
 	miner := NewKeychainMiner(mockKeychainSigner{}, mockKeychainHasher{}, nil)
-	sigs := account.NewSignatures("sig1", "sig2")
-	data := account.NewKeychainData("enc addr", "enc wallet", "pub", sigs)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+
+	data := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	err := miner.CheckAsSlave("hash", data)
 	assert.Nil(t, err)
 }
 
 type mockKeychainHasher struct{}
 
-func (h mockKeychainHasher) HashKeychainData(data account.KeychainData) (string, error) {
+func (h mockKeychainHasher) HashKeychain(data account.Keychain) (string, error) {
 	return "hash", nil
 }
 
-func (h mockKeychainHasher) HashKeychain(data account.Keychain) (string, error) {
+func (h mockKeychainHasher) HashEndorsedKeychain(data account.EndorsedKeychain) (string, error) {
 	return "hash", nil
 }
 
 type mockBadKeychainHasher struct{}
 
-func (h mockBadKeychainHasher) HashKeychainData(data account.KeychainData) (string, error) {
+func (h mockBadKeychainHasher) HashKeychain(data account.Keychain) (string, error) {
 	return "other hash", nil
 }
 
-func (h mockBadKeychainHasher) HashKeychain(data account.Keychain) (string, error) {
+func (h mockBadKeychainHasher) HashEndorsedKeychain(data account.EndorsedKeychain) (string, error) {
 	return "other hash", nil
 }
 
 type mockKeychainSigner struct{}
 
-func (s mockKeychainSigner) VerifyKeychainDataSignatures(account.KeychainData) error {
+func (s mockKeychainSigner) VerifyKeychainSignatures(account.Keychain) error {
 	return nil
 }

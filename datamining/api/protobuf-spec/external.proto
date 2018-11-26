@@ -2,26 +2,24 @@ syntax = "proto3";
 
 import "google/protobuf/empty.proto";
 
-import "common.proto";
-
 package api;
 
 service External {
 
-    rpc GetBiometric(BiometricRequest) returns(BiometricResponse) {}
+    rpc GetID(IDRequest) returns(IDResponse) {}
     rpc GetKeychain(KeychainRequest) returns(KeychainResponse) {}
 
     rpc LockTransaction(LockRequest) returns (LockAck) {}
     rpc UnlockTransaction(LockRequest) returns (LockAck) {}
 
     rpc LeadKeychainMining(KeychainLeadRequest) returns (google.protobuf.Empty) {}
-    rpc LeadBiometricMining(BiometricLeadRequest) returns (google.protobuf.Empty) {}
+    rpc LeadIDMining(IDLeadRequest) returns (google.protobuf.Empty) {}
     
     rpc ValidateKeychain(KeychainValidationRequest) returns (ValidationResponse) {}
-    rpc ValidateBiometric(BiometricValidationRequest) returns (ValidationResponse) {}
+    rpc ValidateID(IDValidationRequest) returns (ValidationResponse) {}
 
     rpc StoreKeychain(KeychainStorageRequest) returns (StorageAck) {}
-    rpc StoreBiometric(BiometricStorageRequest) returns (StorageAck) {}
+    rpc StoreID(IDStorageRequest) returns (StorageAck) {}
 }
 
 message LockAck {
@@ -37,39 +35,37 @@ message StorageAck {
 message KeychainLeadRequest {
     string TransactionHash = 1;
     repeated string ValidatorPeerIPs = 2;
-    string EncryptedKeychainData = 3;
-    Signature SignatureKeychainData = 4;
+    string EncryptedKeychain = 3;
     string SignatureRequest = 5;
 }
 
-message BiometricLeadRequest {
+message IDLeadRequest {
     string TransactionHash = 1;
     repeated string ValidatorPeerIPs = 2;
-    string EncryptedBioData = 3;
-    Signature SignatureBioData = 4;
+    string EncryptedID = 3;
     string SignatureRequest = 5;
 }
 
 message KeychainValidationRequest {
     string TransactionHash = 1;
-    KeychainData Data = 2;
+    Keychain Data = 2;
     string Signature = 3;
 }
 
-message BiometricValidationRequest {
+message IDValidationRequest {
     string TransactionHash = 1;
-    BiometricData Data = 2;
+    ID Data = 2;
     string Signature = 3;
 }
 
 message KeychainStorageRequest {
-    KeychainData Data = 1;
+    Keychain Data = 1;
     Endorsement Endorsement = 2;
     string Signature = 3;
 }
 
-message BiometricStorageRequest {
-    BiometricData Data = 1;
+message IDStorageRequest {
+    ID Data = 1;
     Endorsement Endorsement = 2;
     string Signature = 3;
 }
@@ -81,20 +77,24 @@ message LockRequest {
     string Signature = 4;
 }
 
-message KeychainData {
-	string CipherAddrRobot = 1;
-	string CipherWallet = 2;
-	string PersonPubk = 3;
-    Signature Signature = 5;
+message Keychain {
+	string EncryptedAddrByRobot = 1;
+	string EncryptedWallet = 2;
+	string IDPublicKey = 3;
+    Proposal Proposal = 6;
+    string IDSignature = 4;
+    string EmitterSignature = 5;
 }
 
-message BiometricData {
-    string PersonHash = 1;
-    string CipherAddrRobot = 2;
-    string CipherAddrBio = 3;
-	string CipherAESKey = 4;
-	string PersonPubk = 5;
-    Signature Signature = 7;
+message ID {
+    string Hash = 1;
+    string EncryptedAddrByRobot = 2;
+    string EncryptedAddrByID = 3;
+	string EncryptedAESKey = 4;
+	string PublicKey = 5;
+    Proposal Proposal = 8;
+    string IDSignature = 6;
+    string EmitterSignature = 7;
 }
 
 message Endorsement {
@@ -127,8 +127,8 @@ message Validation {
     }
 }
 
-message BiometricRequest {
-    string EncryptedPersonHash= 1;
+message IDRequest {
+    string EncryptedIDHash = 1;
     string Signature = 2;
 }
 
@@ -137,14 +137,23 @@ message KeychainRequest {
     string Signature = 2;
 }
 
-message BiometricResponse {
-    BiometricData Data = 1;
+message IDResponse {
+    ID Data = 1;
     Endorsement Endorsement = 2;
     string Signature = 3;
 }
 
 message KeychainResponse {
-    KeychainData Data = 1;
+    Keychain Data = 1;
     Endorsement Endorsement = 2;
     string Signature = 3;
+}
+
+message Proposal {
+    KeyPairProposal SharedEmitterKeyPair = 1;
+}
+
+message KeyPairProposal {
+    string EncryptedPrivateKey = 1;
+    string PublicKey = 2;
 }

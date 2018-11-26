@@ -6,7 +6,7 @@ import (
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 
-	biodlisting "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
+	emlisting "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 )
@@ -21,11 +21,11 @@ var ErrInvalidTransaction = errors.New("Invalid transaction")
 type TransactionType int
 
 const (
-	//KeychainTransaction represents transaction related to keychain (wallet)
+	//KeychainTransaction represents transaction related to keychain
 	KeychainTransaction TransactionType = 0
 
-	//BiometricTransaction represents transaction related to biometric data
-	BiometricTransaction TransactionType = 1
+	//IDTransaction represents transaction related to ID data
+	IDTransaction TransactionType = 1
 )
 
 //TransactionMiner define methods a transaction miner must define
@@ -67,19 +67,19 @@ type Service interface {
 }
 
 type service struct {
-	aiClient   AIClient
-	notif      Notifier
-	poolF      PoolFinder
-	poolR      PoolRequester
-	signer     signer
-	biodLister biodlisting.Service
-	config     system.UnirisConfig
-	txMiners   map[TransactionType]TransactionMiner
+	aiClient AIClient
+	notif    Notifier
+	poolF    PoolFinder
+	poolR    PoolRequester
+	signer   signer
+	emLister emlisting.Service
+	config   system.UnirisConfig
+	txMiners map[TransactionType]TransactionMiner
 }
 
 //NewService creates a new global mining service
-func NewService(aiCli AIClient, n Notifier, pF PoolFinder, pR PoolRequester, signer signer, biodLister biodlisting.Service, config system.UnirisConfig, txMiners map[TransactionType]TransactionMiner) Service {
-	return service{aiCli, n, pF, pR, signer, biodLister, config, txMiners}
+func NewService(aiCli AIClient, n Notifier, pF PoolFinder, pR PoolRequester, signer signer, emLister emlisting.Service, config system.UnirisConfig, txMiners map[TransactionType]TransactionMiner) Service {
+	return service{aiCli, n, pF, pR, signer, emLister, config, txMiners}
 }
 
 func (s service) LeadMining(txHash string, addr string, data interface{}, vPool datamining.Pool, txType TransactionType, biodSig string) error {
@@ -148,7 +148,11 @@ func (s service) findPools(addr string) (datamining.Pool, datamining.Pool, error
 
 func (s service) requestLock(txHash string, addr string, lastVPool datamining.Pool) error {
 	//Build lock transaction
-	lock := lock.TransactionLock{TxHash: txHash, MasterRobotKey: s.config.SharedKeys.RobotPublicKey, Address: addr}
+	lock := lock.TransactionLock{
+		TxHash:         txHash,
+		MasterRobotKey: s.config.SharedKeys.Robot.PublicKey,
+		Address:        addr,
+	}
 
 	if err := s.poolR.RequestLock(lastVPool, lock); err != nil {
 		return err
@@ -162,9 +166,11 @@ func (s service) requestLock(txHash string, addr string, lastVPool datamining.Po
 
 func (s service) requestUnlock(txHash string, addr string, lastVPool datamining.Pool) error {
 	//Build unlock transaction
-
-	//TODO: use the real public key not shared one
-	lock := lock.TransactionLock{TxHash: txHash, MasterRobotKey: s.config.SharedKeys.RobotPublicKey, Address: addr}
+	lock := lock.TransactionLock{
+		TxHash:         txHash,
+		MasterRobotKey: s.config.SharedKeys.Robot.PublicKey,
+		Address:        addr,
+	}
 	if err := s.poolR.RequestUnlock(lastVPool, lock); err != nil {
 		return err
 	}
@@ -175,7 +181,7 @@ func (s service) requestUnlock(txHash string, addr string, lastVPool datamining.
 	return nil
 }
 
-func (s service) mine(txHash string, data interface{}, addr string, biodSig string, lastVPool, vPool datamining.Pool, txType TransactionType) (Endorsement, error) {
+func (s service) mine(txHash string, data interface{}, addr string, txEmSig string, lastVPool, vPool datamining.Pool, txType TransactionType) (Endorsement, error) {
 	//Execute transaction specific master checks
 	if err := s.txMiners[txType].CheckAsMaster(txHash, data); err != nil {
 		return nil, err
@@ -183,13 +189,12 @@ func (s service) mine(txHash string, data interface{}, addr string, biodSig stri
 
 	//Execute the Proof of Work
 	pow := pow{
-		lastVPool: lastVPool,
-		lister:    s.biodLister,
-		//TODO: use the real keys and not the shared ones
-		robotPubKey: s.config.SharedKeys.RobotPublicKey,
-		robotPvKey:  s.config.SharedKeys.RobotPrivateKey,
+		lastVPool:   lastVPool,
+		emLister:    s.emLister,
+		robotPubKey: s.config.PublicKey,
+		robotPvKey:  s.config.PrivateKey,
 		signer:      s.signer,
-		txBiodSig:   biodSig,
+		txEmSig:     txEmSig,
 		txData:      data,
 		txType:      txType,
 	}
@@ -238,13 +243,12 @@ func (s service) Validate(txHash string, data interface{}, txType TransactionTyp
 }
 
 func (s service) buildValidation(status ValidationStatus) (Validation, error) {
-	//TODO: use the real keys and not the shared ones
 	v := validation{
-		pubk:      s.config.SharedKeys.RobotPublicKey,
+		pubk:      s.config.PublicKey,
 		status:    status,
 		timestamp: time.Now(),
 	}
-	sValid, err := s.signer.SignValidation(v, s.config.SharedKeys.RobotPrivateKey)
+	sValid, err := s.signer.SignValidation(v, s.config.PrivateKey)
 	if err != nil {
 		return nil, err
 	}

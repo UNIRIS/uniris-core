@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/uniris/uniris-core/api/pkg/system"
 )
 
 /*
@@ -15,28 +16,28 @@ Scenario: Enroll an user
 */
 func TestAddAccount(t *testing.T) {
 	s := service{
-		client:       mockClient{},
-		sigVerif:     mockGoodSignatureVerifer{},
-		sharedBioPub: "my key",
+		client:   mockClient{},
+		sigVerif: mockGoodSignatureVerifer{},
+		conf: system.UnirisConfig{
+			SharedKeys: system.SharedKeys{
+				Emitter: []system.KeyPair{
+					system.KeyPair{
+						PublicKey: "my key",
+					},
+				},
+			},
+		},
 	}
 
 	req := AccountCreationRequest{
-		EncryptedBioData:      "encrypted bio data",
-		EncryptedKeychainData: "encrypted wallet data",
-		SignatureRequest:      "signature request",
-		SignaturesBio: Signatures{
-			BiodSig:   "biod signature",
-			PersonSig: "person sig",
-		},
-		SignaturesKeychain: Signatures{
-			BiodSig:   "biod signature",
-			PersonSig: "person sig",
-		},
+		EncryptedID:       "encrypted ID",
+		EncryptedKeychain: "encrypted keychain",
+		Signature:         "signature request",
 	}
 
 	res, err := s.AddAccount(req)
 	assert.Nil(t, err)
-	assert.Equal(t, "transaction hash", res.Transactions.Biometric.TransactionHash)
+	assert.Equal(t, "transaction hash", res.Transactions.ID.TransactionHash)
 	assert.Equal(t, "transaction hash", res.Transactions.Keychain.TransactionHash)
 	assert.Equal(t, "signature of the response", res.Signature)
 }
@@ -49,23 +50,23 @@ Scenario: Catch invalid signature when get account's details from the robot
 */
 func TestAddAccountInvalidSig(t *testing.T) {
 	s := service{
-		client:       mockClient{},
-		sigVerif:     mockBadSignatureVerifer{},
-		sharedBioPub: "my key",
+		client:   mockClient{},
+		sigVerif: mockBadSignatureVerifer{},
+		conf: system.UnirisConfig{
+			SharedKeys: system.SharedKeys{
+				Emitter: []system.KeyPair{
+					system.KeyPair{
+						PublicKey: "my key",
+					},
+				},
+			},
+		},
 	}
 
 	req := AccountCreationRequest{
-		EncryptedBioData:      "encrypted bio data",
-		EncryptedKeychainData: "encrypted wallet data",
-		SignatureRequest:      "signature request",
-		SignaturesBio: Signatures{
-			BiodSig:   "biod signature",
-			PersonSig: "person sig",
-		},
-		SignaturesKeychain: Signatures{
-			BiodSig:   "biod signature",
-			PersonSig: "person sig",
-		},
+		EncryptedID:       "encrypted bio data",
+		EncryptedKeychain: "encrypted wallet data",
+		Signature:         "signature",
 	}
 
 	_, err := s.AddAccount(req)
@@ -77,7 +78,7 @@ type mockClient struct{}
 func (c mockClient) AddAccount(AccountCreationRequest) (*AccountCreationResult, error) {
 	return &AccountCreationResult{
 		Transactions: AccountCreationTransactionsResult{
-			Biometric: TransactionResult{
+			ID: TransactionResult{
 				TransactionHash: "transaction hash",
 			},
 			Keychain: TransactionResult{

@@ -13,11 +13,21 @@ import (
 
 //UnirisConfig describes the uniris robot main configuration
 type UnirisConfig struct {
-	Network          string `yaml:"network"`
-	NetworkInterface string `yaml:"networkInterface"`
-	PublicKey        string `yaml:"publicKey"`
-	Version          string `yaml:"version"`
-	Discovery        DiscoveryConfig
+	Network   Network               `yaml:"network"`
+	PublicKey string                `yaml:"publicKey"`
+	Version   string                `yaml:"version"`
+	Services  ServicesConfiguration `yaml:"services"`
+}
+
+//ServicesConfiguration describe the robot services configuration
+type ServicesConfiguration struct {
+	Discovery DiscoveryConfig
+}
+
+//Network describe the robot network
+type Network struct {
+	Type      string `yaml:"type"`
+	Interface string `yaml:"interface"`
 }
 
 //DiscoveryConfig describes the autodiscovery configuration
@@ -54,7 +64,7 @@ type AMQPConfig struct {
 func BuildFromEnv() (*UnirisConfig, error) {
 	ver := os.Getenv("UNIRIS_VERSION")
 	pbKey := os.Getenv("UNIRIS_PUBLICKEY")
-	network := os.Getenv("UNIRIS_NETWORK")
+	network := os.Getenv("UNIRIS_NETWORK_TYPE")
 	netiface := os.Getenv("UNIRIS_NETWORK_INTERFACE")
 	port := os.Getenv("UNIRIS_DISCOVERY_PORT")
 	seeds := os.Getenv("UNIRIS_DISCOVERY_SEEDS")
@@ -119,23 +129,28 @@ func BuildFromEnv() (*UnirisConfig, error) {
 	}
 
 	return &UnirisConfig{
-		Version:          ver,
-		PublicKey:        pbKey,
-		Network:          network,
-		NetworkInterface: netiface,
-		Discovery: DiscoveryConfig{
-			Port:  _port,
-			Seeds: _seeds,
-			Redis: RedisConfig{
-				Host: redisHost,
-				Port: _redisPort,
-				Pwd:  redisPwd,
-			},
-			AMQP: AMQPConfig{
-				Host:     amqpHost,
-				Port:     _amqpPort,
-				Username: amqpUsername,
-				Password: amqpPassword,
+		Version:   ver,
+		PublicKey: pbKey,
+
+		Network: Network{
+			Type:      network,
+			Interface: netiface,
+		},
+		Services: ServicesConfiguration{
+			Discovery: DiscoveryConfig{
+				Port:  _port,
+				Seeds: _seeds,
+				Redis: RedisConfig{
+					Host: redisHost,
+					Port: _redisPort,
+					Pwd:  redisPwd,
+				},
+				AMQP: AMQPConfig{
+					Host:     amqpHost,
+					Port:     _amqpPort,
+					Username: amqpUsername,
+					Password: amqpPassword,
+				},
 			},
 		},
 	}, nil

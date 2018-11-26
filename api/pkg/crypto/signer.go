@@ -24,22 +24,6 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-type signatures struct {
-	BiodSig   string `json:"biod_sig"`
-	PersonSig string `json:"person_sig"`
-}
-
-type accountCreationResult struct {
-	Biometric transactionResult `json:"biometric"`
-	Keychain  transactionResult `json:"keychain"`
-}
-
-type transactionResult struct {
-	TransactionHash string `json:"transaction_hash"`
-	MasterPeerIP    string `json:"master_peer_ip"`
-	Signature       string `json:"signature"`
-}
-
 //Signer define methods to handle signatures
 type Signer interface {
 	rpc.SignatureHandler
@@ -56,32 +40,19 @@ func NewSigner() Signer {
 }
 
 func (s signer) VerifyAccountCreationRequestSignature(data adding.AccountCreationRequest, pubKey string) error {
-	b, err := json.Marshal(struct {
-		EncryptedBioData      string     `json:"encrypted_bio_data"`
-		EncryptedKeychainData string     `json:"encrypted_keychain_data"`
-		SignaturesBio         signatures `json:"signatures_bio"`
-		SignaturesKeychain    signatures `json:"signatures_keychain"`
-	}{
-		EncryptedBioData:      data.EncryptedBioData,
-		EncryptedKeychainData: data.EncryptedKeychainData,
-		SignaturesBio: signatures{
-			BiodSig:   data.SignaturesBio.BiodSig,
-			PersonSig: data.SignaturesBio.PersonSig,
-		},
-		SignaturesKeychain: signatures{
-			BiodSig:   data.SignaturesKeychain.BiodSig,
-			PersonSig: data.SignaturesKeychain.PersonSig,
-		},
+	b, err := json.Marshal(adding.AccountCreationRequest{
+		EncryptedID:       data.EncryptedID,
+		EncryptedKeychain: data.EncryptedKeychain,
 	})
 	if err != nil {
 		return err
 	}
 
-	return checkSignature(pubKey, string(b), data.SignatureRequest)
+	return verifySignature(pubKey, string(b), data.Signature)
 }
 
 func (s signer) VerifyHashSignature(hashedData string, pubKey string, sig string) error {
-	return checkSignature(pubKey, hashedData, sig)
+	return verifySignature(pubKey, hashedData, sig)
 }
 
 func (s signer) VerifyAccountSearchResultSignature(pubKey string, res *api.AccountSearchResult) error {
@@ -93,7 +64,7 @@ func (s signer) VerifyAccountSearchResultSignature(pubKey string, res *api.Accou
 	if err != nil {
 		return err
 	}
-	return checkSignature(pubKey, string(b), res.Signature)
+	return verifySignature(pubKey, string(b), res.Signature)
 }
 func (s signer) VerifyCreationResultSignature(pubKey string, res *api.CreationResult) error {
 	b, err := json.Marshal(&api.CreationResult{
@@ -103,7 +74,7 @@ func (s signer) VerifyCreationResultSignature(pubKey string, res *api.CreationRe
 	if err != nil {
 		return err
 	}
-	return checkSignature(pubKey, string(b), res.Signature)
+	return verifySignature(pubKey, string(b), res.Signature)
 }
 
 func (s signer) SignAccountResult(res *listing.AccountResult, pvKey string) error {
@@ -120,20 +91,18 @@ func (s signer) SignAccountResult(res *listing.AccountResult, pvKey string) erro
 	if err != nil {
 		return err
 	}
-	res.SignatureRequest = sig
+	res.Signature = sig
 	return nil
 }
 func (s signer) SignAccountCreationResult(res *adding.AccountCreationResult, pvKey string) error {
-	b, err := json.Marshal(struct {
-		Transactions accountCreationResult `json:"transactions"`
-	}{
-		Transactions: accountCreationResult{
-			Biometric: transactionResult{
-				MasterPeerIP:    res.Transactions.Biometric.MasterPeerIP,
-				Signature:       res.Transactions.Biometric.Signature,
-				TransactionHash: res.Transactions.Biometric.TransactionHash,
+	b, err := json.Marshal(adding.AccountCreationResult{
+		Transactions: adding.AccountCreationTransactionsResult{
+			ID: adding.TransactionResult{
+				MasterPeerIP:    res.Transactions.ID.MasterPeerIP,
+				Signature:       res.Transactions.ID.Signature,
+				TransactionHash: res.Transactions.ID.TransactionHash,
 			},
-			Keychain: transactionResult{
+			Keychain: adding.TransactionResult{
 				MasterPeerIP:    res.Transactions.Keychain.MasterPeerIP,
 				TransactionHash: res.Transactions.Keychain.TransactionHash,
 				Signature:       res.Transactions.Keychain.Signature,
@@ -175,7 +144,7 @@ func sign(privk string, data string) (string, error) {
 
 }
 
-func checkSignature(pubk string, data string, sig string) error {
+func verifySignature(pubk string, data string, sig string) error {
 	var signature ecdsaSignature
 
 	decodedkey, err := hex.DecodeString(pubk)

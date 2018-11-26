@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	mockcrypto "github.com/uniris/uniris-core/datamining/pkg/crypto/mock"
 	mockstorage "github.com/uniris/uniris-core/datamining/pkg/storage/mock"
@@ -18,7 +19,7 @@ import (
 Scenario: Get account
 	Given a person hash
 	When I want to get the account
-	Then I get the encrypted keychain and biometric data
+	Then I get the encrypted keychain and ID data
 */
 func TestGetAccount(t *testing.T) {
 	conf := system.UnirisConfig{}
@@ -27,18 +28,22 @@ func TestGetAccount(t *testing.T) {
 		signer:    mockcrypto.NewSigner(),
 		hasher:    mockcrypto.NewHasher(),
 	}
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
 	db := mockstorage.NewDatabase()
-	db.StoreBiometric(
-		account.NewBiometric(
-			account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", account.NewSignatures("sig", "sig")),
+	db.StoreID(
+		account.NewEndorsedID(
+			account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", prop, "id sig", "em sig"),
 			nil,
 		),
 	)
 
 	db.StoreKeychain(
-		account.NewKeychain(
+		account.NewEndorsedKeychain(
 			"hash",
-			account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig")),
+			account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig"),
 			nil,
 		),
 	)
@@ -48,7 +53,7 @@ func TestGetAccount(t *testing.T) {
 	srvHandler := NewInternalServerHandler(poolR, mocktransport.NewAIClient(), crypto, conf)
 
 	res, err := srvHandler.GetAccount(context.TODO(), &api.AccountSearchRequest{
-		EncryptedHashPerson: "enc person hash",
+		EncryptedIDHash: "enc id hash",
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, "enc wallet", res.EncryptedWallet)
@@ -77,11 +82,7 @@ func TestCreateKeychain(t *testing.T) {
 	srvHandler := NewInternalServerHandler(poolR, aiCli, crypto, conf)
 
 	res, err := srvHandler.CreateKeychain(context.TODO(), &api.KeychainCreationRequest{
-		EncryptedKeychainData: "cipher data",
-		SignatureKeychainData: &api.Signature{
-			Biod:   "sig",
-			Person: "sig",
-		},
+		EncryptedKeychain: "cipher data",
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, "hash", res.TransactionHash)
@@ -90,12 +91,12 @@ func TestCreateKeychain(t *testing.T) {
 }
 
 /*
-Scenario: Create biometric
-	Given a biometric creation request
+Scenario: Create ID
+	Given a ID creation request
 	When I want create it
 	Then the mining process started and the keychain is stored
 */
-func TestCreateBiometric(t *testing.T) {
+func TestCreateID(t *testing.T) {
 
 	conf := system.UnirisConfig{}
 	crypto := Crypto{
@@ -109,12 +110,8 @@ func TestCreateBiometric(t *testing.T) {
 	aiCli := mocktransport.NewAIClient()
 	srvHandler := NewInternalServerHandler(poolR, aiCli, crypto, conf)
 
-	res, err := srvHandler.CreateBiometric(context.TODO(), &api.BiometricCreationRequest{
-		EncryptedBiometricData: "cipher data",
-		SignatureBiometricData: &api.Signature{
-			Biod:   "sig",
-			Person: "sig",
-		},
+	res, err := srvHandler.CreateID(context.TODO(), &api.IDCreationRequest{
+		EncryptedID: "cipher data",
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, "hash", res.TransactionHash)

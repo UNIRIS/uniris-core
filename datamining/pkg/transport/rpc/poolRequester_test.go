@@ -20,12 +20,12 @@ import (
 )
 
 /*
-Scenario: Request biometric data
+Scenario: Request ID data
 	Given an encypted person hash and storage pool
-	When I want to retrieve the biometric data related to this hash
-	Then it launches a pool of goroutines and requests the biometric data without error
+	When I want to retrieve the ID data related to this hash
+	Then it launches a pool of goroutines and requests the ID data without error
 */
-func TestRequestBiometric(t *testing.T) {
+func TestRequestID(t *testing.T) {
 	conf := system.UnirisConfig{}
 	crypto := Crypto{
 		decrypter: mockcrypto.NewDecrypter(),
@@ -35,9 +35,13 @@ func TestRequestBiometric(t *testing.T) {
 
 	db := mockstorage.NewDatabase()
 
-	db.StoreBiometric(
-		account.NewBiometric(
-			account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", account.NewSignatures("sig", "sig")),
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
+	db.StoreID(
+		account.NewEndorsedID(
+			account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", prop, "id sig", "em sig"),
 			nil,
 		),
 	)
@@ -48,12 +52,12 @@ func TestRequestBiometric(t *testing.T) {
 	pool := datamining.NewPool(
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")},
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")})
-	bio, err := pr.RequestBiometric(pool, "enc hash")
+	bio, err := pr.RequestID(pool, "enc hash")
 	assert.Nil(t, err)
 	assert.NotNil(t, bio)
 
-	assert.Equal(t, "hash", bio.PersonHash())
-	assert.Equal(t, "enc addr", bio.CipherAddrRobot())
+	assert.Equal(t, "hash", bio.Hash())
+	assert.Equal(t, "enc addr", bio.EncryptedAddrByRobot())
 }
 
 /*
@@ -72,10 +76,14 @@ func TestRequestKeychain(t *testing.T) {
 
 	db := mockstorage.NewDatabase()
 
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
 	db.StoreKeychain(
-		account.NewKeychain(
+		account.NewEndorsedKeychain(
 			"hash",
-			account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig")),
+			account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig"),
 			nil,
 		),
 	)
@@ -91,8 +99,8 @@ func TestRequestKeychain(t *testing.T) {
 	assert.NotNil(t, kc)
 
 	assert.Equal(t, "hash", kc.Address())
-	assert.Equal(t, "enc wallet", kc.CipherWallet())
-	assert.Equal(t, "enc addr", kc.CipherAddrRobot())
+	assert.Equal(t, "enc wallet", kc.EncryptedWallet())
+	assert.Equal(t, "enc addr", kc.EncryptedAddrByRobot())
 }
 
 /*
@@ -197,9 +205,13 @@ func TestRequestValidations(t *testing.T) {
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")},
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")})
 
-	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
 
-	valids, err := pr.RequestValidations(2, pool, "hash", keychainData, mining.KeychainTransaction)
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
+
+	valids, err := pr.RequestValidations(2, pool, "hash", keychain, mining.KeychainTransaction)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, valids)
 	assert.Equal(t, 2, len(valids))
@@ -228,9 +240,12 @@ func TestRequestValidationsWithLessThanMinimumValidations(t *testing.T) {
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")},
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")})
 
-	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 
-	_, err := pr.RequestValidations(5, pool, "hash", keychainData, mining.KeychainTransaction)
+	_, err := pr.RequestValidations(5, pool, "hash", keychain, mining.KeychainTransaction)
 	assert.Equal(t, "Minimum validations are not reached", err.Error())
 }
 
@@ -252,7 +267,10 @@ func TestRequestStorage(t *testing.T) {
 
 	cli := mock.NewExternalClient(db)
 
-	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	end := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{""}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")},
@@ -262,7 +280,7 @@ func TestRequestStorage(t *testing.T) {
 	pool := datamining.NewPool(
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")},
 		datamining.Peer{IP: net.ParseIP("127.0.0.1")})
-	err := pr.RequestStorage(1, pool, keychainData, end, mining.KeychainTransaction)
+	err := pr.RequestStorage(1, pool, keychain, end, mining.KeychainTransaction)
 	assert.Nil(t, err)
 
 	kc, _ := db.FindLastKeychain("address")

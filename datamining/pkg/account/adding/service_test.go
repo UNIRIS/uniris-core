@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uniris/uniris-core/datamining/pkg"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uniris/uniris-core/datamining/pkg/account"
@@ -25,8 +27,6 @@ func TestStoreKeychain(t *testing.T) {
 	lister := listing.NewService(repo)
 	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
-	sigs := account.NewSignatures("sig1", "sig2")
-
 	end := mining.NewEndorsement(
 		"", "hash",
 		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
@@ -34,14 +34,16 @@ func TestStoreKeychain(t *testing.T) {
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", sigs)
-	kc := account.NewKeychain("addr", data, end)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
+	eKc := account.NewEndorsedKeychain("addr", kc, end)
 
-	err := s.StoreKeychain(kc)
+	err := s.StoreKeychain(eKc)
 	assert.Nil(t, err)
 	assert.Len(t, repo.keychains, 1)
 	assert.Equal(t, "addr", repo.keychains[0].Address())
 	assert.Equal(t, "hash", repo.keychains[0].Endorsement().TransactionHash())
+	assert.Equal(t, "enc pv key", repo.keychains[0].Proposal().SharedEmitterKeyPair().EncryptedPrivateKey())
 }
 
 /*
@@ -56,8 +58,6 @@ func TestStoreKeychainWithMasterValidKO(t *testing.T) {
 	lister := listing.NewService(repo)
 	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
-	sigs := account.NewSignatures("sig1", "sig2")
-
 	end := mining.NewEndorsement(
 		"", "hash",
 		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationKO, time.Now(), "robotkey", "sig")),
@@ -65,10 +65,11 @@ func TestStoreKeychainWithMasterValidKO(t *testing.T) {
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", sigs)
-	kc := account.NewKeychain("addr", data, end)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
+	eKC := account.NewEndorsedKeychain("addr", kc, end)
 
-	err := s.StoreKeychain(kc)
+	err := s.StoreKeychain(eKC)
 	assert.Nil(t, err)
 
 	assert.Empty(t, repo.keychains)
@@ -88,7 +89,6 @@ func TestStoreKeychainWithOneSlaveValidKO(t *testing.T) {
 
 	lister := listing.NewService(repo)
 	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
-	sigs := account.NewSignatures("sig1", "sig2")
 
 	end := mining.NewEndorsement(
 		"", "hash",
@@ -98,10 +98,11 @@ func TestStoreKeychainWithOneSlaveValidKO(t *testing.T) {
 			mining.NewValidation(mining.ValidationKO, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", sigs)
-	kc := account.NewKeychain("addr", data, end)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
+	eKC := account.NewEndorsedKeychain("addr", kc, end)
 
-	err := s.StoreKeychain(kc)
+	err := s.StoreKeychain(eKC)
 	assert.Nil(t, err)
 
 	assert.Empty(t, repo.keychains)
@@ -121,8 +122,6 @@ func TestInvalidLastTransactionKeychain(t *testing.T) {
 	lister := listing.NewService(repo)
 	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
-	sigs := account.NewSignatures("sig1", "sig2")
-
 	end1 := mining.NewEndorsement(
 		"", "hash",
 		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
@@ -131,10 +130,11 @@ func TestInvalidLastTransactionKeychain(t *testing.T) {
 		},
 	)
 
-	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", sigs)
-	kc1 := account.NewKeychain("addr", data, end1)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
+	eKc1 := account.NewEndorsedKeychain("addr", kc, end1)
 
-	assert.Nil(t, s.StoreKeychain(kc1))
+	assert.Nil(t, s.StoreKeychain(eKc1))
 
 	end2 := mining.NewEndorsement(
 		"bad last hash", "hash",
@@ -144,9 +144,9 @@ func TestInvalidLastTransactionKeychain(t *testing.T) {
 		},
 	)
 
-	kc2 := account.NewKeychain("addr", data, end2)
+	eKc2 := account.NewEndorsedKeychain("addr", kc, end2)
 
-	assert.Equal(t, ErrInvalidDataIntegrity, s.StoreKeychain(kc2))
+	assert.Equal(t, ErrInvalidDataIntegrity, s.StoreKeychain(eKc2))
 
 	end3 := mining.NewEndorsement(
 		"", "hash",
@@ -156,9 +156,9 @@ func TestInvalidLastTransactionKeychain(t *testing.T) {
 		},
 	)
 
-	kc3 := account.NewKeychain("addr", data, end3)
+	eKc3 := account.NewEndorsedKeychain("addr", kc, end3)
 
-	assert.Equal(t, ErrInvalidDataIntegrity, s.StoreKeychain(kc3))
+	assert.Equal(t, ErrInvalidDataIntegrity, s.StoreKeychain(eKc3))
 }
 
 /*
@@ -172,16 +172,16 @@ func TestStoreKeychainWithZeroValidations(t *testing.T) {
 	lister := listing.NewService(repo)
 	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
-	sigs := account.NewSignatures("sig1", "sig2")
 	end := mining.NewEndorsement(
 		"", "hash",
 		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{},
 	)
-	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", sigs)
-	kc := account.NewKeychain("addr", data, end)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
+	eKC := account.NewEndorsedKeychain("addr", kc, end)
 
-	assert.Equal(t, ErrInvalidValidationNumber, s.StoreKeychain(kc))
+	assert.Equal(t, ErrInvalidValidationNumber, s.StoreKeychain(eKC))
 
 }
 
@@ -196,7 +196,6 @@ func TestStoreKeychainWithInvalidTxHash(t *testing.T) {
 	lister := listing.NewService(repo)
 	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
 
-	sigs := account.NewSignatures("sig1", "sig2")
 	end := mining.NewEndorsement(
 		"", "bad hash",
 		mining.NewMasterValidation([]string{}, "key1", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
@@ -205,24 +204,23 @@ func TestStoreKeychainWithInvalidTxHash(t *testing.T) {
 		},
 	)
 
-	data := account.NewKeychainData("enc addr", "enc wallet", "person pub", sigs)
-	kc := account.NewKeychain("addr", data, end)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	kc := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
+	eKC := account.NewEndorsedKeychain("addr", kc, end)
 
-	assert.Equal(t, ErrInvalidDataIntegrity, s.StoreKeychain(kc))
+	assert.Equal(t, ErrInvalidDataIntegrity, s.StoreKeychain(eKC))
 }
 
 /*
-Scenario: Store a biometric
-	Given a bio data
-	When I want to store a biometric data
-	Then the bio data are stored on the database
+Scenario: Store an ID
+	Given an ID
+	When I want to store it
+	Then the ID is stored on the database
 */
-func TestStoreBiometric(t *testing.T) {
+func TestStoreID(t *testing.T) {
 	repo := &databasemock{}
 	lister := listing.NewService(repo)
 	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
-
-	sigs := account.NewSignatures("sig1", "sig2")
 
 	end := mining.NewEndorsement(
 		"", "hash",
@@ -232,28 +230,29 @@ func TestStoreBiometric(t *testing.T) {
 		},
 	)
 
-	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", sigs)
-	bio := account.NewBiometric(data, end)
-	err := s.StoreBiometric(bio)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	id := account.NewID("hash", "enc addr robot", "enc addr person", "enc aes key", "id pub", prop, "id sig", "em pub")
+	eID := account.NewEndorsedID(id, end)
+	err := s.StoreID(eID)
 	assert.Nil(t, err)
-	l := len(repo.biometrics)
+	l := len(repo.ids)
 	assert.Equal(t, 1, l)
 	assert.Equal(t, 1, l)
-	assert.Equal(t, "pHash", repo.biometrics[0].PersonHash())
+	assert.Equal(t, "hash", repo.ids[0].Hash())
+	assert.Equal(t, "enc pv key", repo.ids[0].Proposal().SharedEmitterKeyPair().EncryptedPrivateKey())
+
 }
 
 /*
-Scenario: Store a biometric with a zero
-	Given a biometric without validations
+Scenario: Store a id with a zero
+	Given a id without validations
 	When I want to store it
 	Then I get the error
 */
-func TestStoreBiometricWithZeroValidations(t *testing.T) {
+func TestStoreIDWithZeroValidations(t *testing.T) {
 	repo := &databasemock{}
 	lister := listing.NewService(repo)
 	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
-
-	sigs := account.NewSignatures("sig1", "sig2")
 
 	end := mining.NewEndorsement(
 		"", "hash",
@@ -261,26 +260,25 @@ func TestStoreBiometricWithZeroValidations(t *testing.T) {
 		[]mining.Validation{},
 	)
 
-	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", sigs)
-	bio := account.NewBiometric(data, end)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	id := account.NewID("hash", "enc addr robot", "enc addr person", "enc aes key", "id pub", prop, "id sig", "em pub")
+	eID := account.NewEndorsedID(id, end)
 
-	assert.Equal(t, ErrInvalidValidationNumber, s.StoreBiometric(bio))
+	assert.Equal(t, ErrInvalidValidationNumber, s.StoreID(eID))
 
 }
 
 /*
-Scenario: Store a biometric with master validation KO
-	Given a biometric with a master validation as KO
-	When I want to store the biometric
-	Then I get the biometric is store on the KO database
+Scenario: Store a ID with master validation KO
+	Given an id with a master validation as KO
+	When I want to store the id
+	Then I get the id is store on the KO database
 */
-func TestStoreBiometricWithMasterValidKO(t *testing.T) {
+func TestStoreIDWithMasterValidKO(t *testing.T) {
 	repo := &databasemock{}
 
 	lister := listing.NewService(repo)
 	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
-
-	sigs := account.NewSignatures("sig1", "sig2")
 
 	end := mining.NewEndorsement(
 		"", "hash",
@@ -289,30 +287,30 @@ func TestStoreBiometricWithMasterValidKO(t *testing.T) {
 			mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", sigs)
-	bio := account.NewBiometric(data, end)
 
-	err := s.StoreBiometric(bio)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	id := account.NewID("hash", "enc addr robot", "enc addr person", "enc aes key", "id pub", prop, "id sig", "em pub")
+	eID := account.NewEndorsedID(id, end)
+
+	err := s.StoreID(eID)
 	assert.Nil(t, err)
 
-	assert.Empty(t, repo.biometrics)
-	assert.Len(t, repo.biometricsKO, 1)
-	assert.Equal(t, "enc aes key", repo.biometricsKO[0].CipherAESKey())
+	assert.Empty(t, repo.ids)
+	assert.Len(t, repo.idsKO, 1)
+	assert.Equal(t, "enc aes key", repo.idsKO[0].EncryptedAESKey())
 }
 
 /*
-Scenario: Store a biometric with one slave validation as KO
-	Given a biometric with one slave validation as KO
+Scenario: Store a id with one slave validation as KO
+	Given a id with one slave validation as KO
 	When I want to store the keychain
-	Then I get the biometric is store on the KO database
+	Then I get the id is store on the KO database
 */
-func TestStoreBiometricWithOneSlaveValidKO(t *testing.T) {
+func TestStoreIDWithOneSlaveValidKO(t *testing.T) {
 	repo := &databasemock{}
 
 	lister := listing.NewService(repo)
 	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
-
-	sigs := account.NewSignatures("sig1", "sig2")
 
 	end := mining.NewEndorsement(
 		"", "hash",
@@ -321,29 +319,28 @@ func TestStoreBiometricWithOneSlaveValidKO(t *testing.T) {
 			mining.NewValidation(mining.ValidationKO, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", sigs)
-	bio := account.NewBiometric(data, end)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	id := account.NewID("hash", "enc addr robot", "enc addr person", "enc aes key", "id pub", prop, "id sig", "em pub")
+	eID := account.NewEndorsedID(id, end)
 
-	err := s.StoreBiometric(bio)
+	err := s.StoreID(eID)
 	assert.Nil(t, err)
 
-	assert.Empty(t, repo.biometrics)
-	assert.Len(t, repo.biometricsKO, 1)
-	assert.Equal(t, "enc aes key", repo.biometricsKO[0].CipherAESKey())
+	assert.Empty(t, repo.ids)
+	assert.Len(t, repo.idsKO, 1)
+	assert.Equal(t, "enc aes key", repo.idsKO[0].EncryptedAESKey())
 }
 
 /*
-Scenario: Store a biometric with a invalid transaction hash
-	Given a biometric with invalid tx hash
+Scenario: Store a id with a invalid transaction hash
+	Given a id with invalid tx hash
 	When I want to store it
 	Then I get the error
 */
-func TestStoreBiometricWithInvalidTxHash(t *testing.T) {
+func TestStoreIDWithInvalidTxHash(t *testing.T) {
 	repo := &databasemock{}
 	lister := listing.NewService(repo)
 	s := NewService(mockAiClient{}, repo, lister, mockSigVerfier{}, mockHasher{})
-
-	sigs := account.NewSignatures("sig1", "sig2")
 
 	end := mining.NewEndorsement(
 		"", "bad hash",
@@ -352,10 +349,11 @@ func TestStoreBiometricWithInvalidTxHash(t *testing.T) {
 			mining.NewValidation(mining.ValidationKO, time.Now(), "pub", "sig"),
 		},
 	)
-	data := account.NewBiometricData("pHash", "enc addr robot", "enc addr person", "enc aes key", "person pub", sigs)
-	bio := account.NewBiometric(data, end)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	id := account.NewID("hash", "enc addr robot", "enc addr person", "enc aes key", "id pub", prop, "id sig", "em pub")
+	eID := account.NewEndorsedID(id, end)
 
-	assert.Equal(t, ErrInvalidDataIntegrity, s.StoreBiometric(bio))
+	assert.Equal(t, ErrInvalidDataIntegrity, s.StoreID(eID))
 }
 
 /*
@@ -390,42 +388,42 @@ func TestEndorsementWithBadMasterSignature(t *testing.T) {
 }
 
 type databasemock struct {
-	biometrics   []account.Biometric
-	keychains    []account.Keychain
-	biometricsKO []account.Biometric
-	keychainsKO  []account.Keychain
+	ids         []account.EndorsedID
+	keychains   []account.EndorsedKeychain
+	idsKO       []account.EndorsedID
+	keychainsKO []account.EndorsedKeychain
 }
 
-func (d *databasemock) StoreKeychain(kc account.Keychain) error {
+func (d *databasemock) StoreKeychain(kc account.EndorsedKeychain) error {
 	d.keychains = append(d.keychains, kc)
 	return nil
 }
 
-func (d *databasemock) StoreBiometric(b account.Biometric) error {
-	d.biometrics = append(d.biometrics, b)
+func (d *databasemock) StoreID(id account.EndorsedID) error {
+	d.ids = append(d.ids, id)
 	return nil
 }
 
-func (d *databasemock) StoreKOKeychain(kc account.Keychain) error {
+func (d *databasemock) StoreKOKeychain(kc account.EndorsedKeychain) error {
 	d.keychainsKO = append(d.keychainsKO, kc)
 	return nil
 }
 
-func (d *databasemock) StoreKOBiometric(b account.Biometric) error {
-	d.biometricsKO = append(d.biometricsKO, b)
+func (d *databasemock) StoreKOID(id account.EndorsedID) error {
+	d.idsKO = append(d.idsKO, id)
 	return nil
 }
 
-func (d *databasemock) FindBiometric(bh string) (account.Biometric, error) {
-	for _, b := range d.biometrics {
-		if b.PersonHash() == bh {
-			return b, nil
+func (d *databasemock) FindID(hash string) (account.EndorsedID, error) {
+	for _, id := range d.ids {
+		if id.Hash() == hash {
+			return id, nil
 		}
 	}
 	return nil, nil
 }
 
-func (d *databasemock) FindLastKeychain(addr string) (account.Keychain, error) {
+func (d *databasemock) FindLastKeychain(addr string) (account.EndorsedKeychain, error) {
 	sort.Slice(d.keychains, func(i, j int) bool {
 		iTimestamp := d.keychains[i].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()
 		jTimestamp := d.keychains[j].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()
@@ -442,10 +440,10 @@ func (d *databasemock) FindLastKeychain(addr string) (account.Keychain, error) {
 
 type mockSigVerfier struct{}
 
-func (v mockSigVerfier) VerifyKeychainDataSignatures(account.KeychainData) error {
+func (v mockSigVerfier) VerifyKeychainSignatures(account.Keychain) error {
 	return nil
 }
-func (v mockSigVerfier) VerifyBiometricDataSignatures(account.BiometricData) error {
+func (v mockSigVerfier) VerifyIDSignatures(account.ID) error {
 	return nil
 }
 func (v mockSigVerfier) VerifyValidationSignature(mining.Validation) error {
@@ -458,10 +456,10 @@ func (v mockSigVerfier) VerifyTransactionDataSignature(txType mining.Transaction
 
 type mockBadSigVerfier struct{}
 
-func (v mockBadSigVerfier) VerifyKeychainDataSignatures(account.KeychainData) error {
+func (v mockBadSigVerfier) VerifyKeychainSignatures(account.Keychain) error {
 	return nil
 }
-func (v mockBadSigVerfier) VerifyBiometricDataSignatures(account.BiometricData) error {
+func (v mockBadSigVerfier) VerifyIDSignatures(account.ID) error {
 	return nil
 }
 func (v mockBadSigVerfier) VerifyValidationSignature(valid mining.Validation) error {
@@ -487,18 +485,18 @@ func (ai mockAiClient) GetMininumValidations(txHash string) (int, error) {
 
 type mockHasher struct{}
 
-func (h mockHasher) HashKeychainData(account.KeychainData) (string, error) {
-	return "hash", nil
-}
-
 func (h mockHasher) HashKeychain(account.Keychain) (string, error) {
 	return "hash", nil
 }
 
-func (h mockHasher) HashBiometricData(account.BiometricData) (string, error) {
+func (h mockHasher) HashEndorsedKeychain(account.EndorsedKeychain) (string, error) {
 	return "hash", nil
 }
 
-func (h mockHasher) HashBiometric(account.Biometric) (string, error) {
+func (h mockHasher) HashID(account.ID) (string, error) {
+	return "hash", nil
+}
+
+func (h mockHasher) HashEndorsedID(account.EndorsedID) (string, error) {
 	return "hash", nil
 }

@@ -1,5 +1,9 @@
 package adding
 
+import (
+	"github.com/uniris/uniris-core/api/pkg/system"
+)
+
 //Service defines methods to adding to the blockchain
 type Service interface {
 	AddAccount(AccountCreationRequest) (*AccountCreationResult, error)
@@ -16,18 +20,19 @@ type SignatureVerifier interface {
 }
 
 type service struct {
-	sharedBioPub string
-	client       RobotClient
-	sigVerif     SignatureVerifier
+	conf     system.UnirisConfig
+	client   RobotClient
+	sigVerif SignatureVerifier
 }
 
 //NewService creates a new adding service
-func NewService(sharedBioPub string, cli RobotClient, sigVerif SignatureVerifier) Service {
-	return service{sharedBioPub, cli, sigVerif}
+func NewService(conf system.UnirisConfig, cli RobotClient, sigVerif SignatureVerifier) Service {
+	return service{conf, cli, sigVerif}
 }
 
 func (s service) AddAccount(req AccountCreationRequest) (*AccountCreationResult, error) {
-	if err := s.sigVerif.VerifyAccountCreationRequestSignature(req, s.sharedBioPub); err != nil {
+	verifKey := s.conf.SharedKeys.EmitterRequestKey().PublicKey
+	if err := s.sigVerif.VerifyAccountCreationRequestSignature(req, verifKey); err != nil {
 		return nil, err
 	}
 

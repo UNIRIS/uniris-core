@@ -8,41 +8,37 @@ import (
 
 type apiBuilder struct{}
 
-func (b apiBuilder) buildBiometricData(data account.BiometricData) *api.BiometricData {
-	return &api.BiometricData{
-		CipherAddrBio:   data.CipherAddrPerson(),
-		CipherAddrRobot: data.CipherAddrRobot(),
-		CipherAESKey:    data.CipherAESKey(),
-		PersonHash:      data.PersonHash(),
-		PersonPubk:      data.PersonPublicKey(),
-		Signature: &api.Signature{
-			Biod:   data.Signatures().Biod(),
-			Person: data.Signatures().Person(),
+func (b apiBuilder) buildID(id account.ID) *api.ID {
+	return &api.ID{
+		EncryptedAddrByID:    id.EncryptedAddrByID(),
+		EncryptedAddrByRobot: id.EncryptedAddrByRobot(),
+		EncryptedAESKey:      id.EncryptedAESKey(),
+		Hash:                 id.Hash(),
+		PublicKey:            id.PublicKey(),
+		Proposal: &api.Proposal{
+			SharedEmitterKeyPair: &api.KeyPairProposal{
+				EncryptedPrivateKey: id.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           id.Proposal().SharedEmitterKeyPair().PublicKey(),
+			},
 		},
+		IDSignature:      id.IDSignature(),
+		EmitterSignature: id.EmitterSignature(),
 	}
 }
 
-func (b apiBuilder) buildKeychainData(data account.KeychainData) *api.KeychainData {
-	return &api.KeychainData{
-		CipherAddrRobot: data.CipherAddrRobot(),
-		CipherWallet:    data.CipherWallet(),
-		PersonPubk:      data.PersonPublicKey(),
-		Signature: &api.Signature{
-			Biod:   data.Signatures().Biod(),
-			Person: data.Signatures().Person(),
+func (b apiBuilder) buildKeychain(kc account.Keychain) *api.Keychain {
+	return &api.Keychain{
+		EncryptedAddrByRobot: kc.EncryptedAddrByRobot(),
+		EncryptedWallet:      kc.EncryptedWallet(),
+		IDPublicKey:          kc.IDPublicKey(),
+		Proposal: &api.Proposal{
+			SharedEmitterKeyPair: &api.KeyPairProposal{
+				EncryptedPrivateKey: kc.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           kc.Proposal().SharedEmitterKeyPair().PublicKey(),
+			},
 		},
-	}
-}
-
-func buildKeychainDataForAPI(data account.KeychainData) *api.KeychainData {
-	return &api.KeychainData{
-		CipherAddrRobot: data.CipherAddrRobot(),
-		CipherWallet:    data.CipherWallet(),
-		PersonPubk:      data.PersonPublicKey(),
-		Signature: &api.Signature{
-			Biod:   data.Signatures().Biod(),
-			Person: data.Signatures().Person(),
-		},
+		EmitterSignature: kc.EmitterSignature(),
+		IDSignature:      kc.IDSignature(),
 	}
 }
 

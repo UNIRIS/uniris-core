@@ -24,7 +24,7 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type AccountSearchRequest struct {
-	EncryptedHashPerson  string   `protobuf:"bytes,1,opt,name=EncryptedHashPerson,proto3" json:"EncryptedHashPerson,omitempty"`
+	EncryptedIDHash      string   `protobuf:"bytes,1,opt,name=EncryptedIDHash,proto3" json:"EncryptedIDHash,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -34,7 +34,7 @@ func (m *AccountSearchRequest) Reset()         { *m = AccountSearchRequest{} }
 func (m *AccountSearchRequest) String() string { return proto.CompactTextString(m) }
 func (*AccountSearchRequest) ProtoMessage()    {}
 func (*AccountSearchRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_internal_a8365b84bbc69315, []int{0}
+	return fileDescriptor_internal_f4536b8c2a9c2411, []int{0}
 }
 func (m *AccountSearchRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AccountSearchRequest.Unmarshal(m, b)
@@ -54,9 +54,9 @@ func (m *AccountSearchRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AccountSearchRequest proto.InternalMessageInfo
 
-func (m *AccountSearchRequest) GetEncryptedHashPerson() string {
+func (m *AccountSearchRequest) GetEncryptedIDHash() string {
 	if m != nil {
-		return m.EncryptedHashPerson
+		return m.EncryptedIDHash
 	}
 	return ""
 }
@@ -75,7 +75,7 @@ func (m *AccountSearchResult) Reset()         { *m = AccountSearchResult{} }
 func (m *AccountSearchResult) String() string { return proto.CompactTextString(m) }
 func (*AccountSearchResult) ProtoMessage()    {}
 func (*AccountSearchResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_internal_a8365b84bbc69315, []int{1}
+	return fileDescriptor_internal_f4536b8c2a9c2411, []int{1}
 }
 func (m *AccountSearchResult) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AccountSearchResult.Unmarshal(m, b)
@@ -124,18 +124,17 @@ func (m *AccountSearchResult) GetSignature() string {
 }
 
 type KeychainCreationRequest struct {
-	EncryptedKeychainData string     `protobuf:"bytes,1,opt,name=EncryptedKeychainData,proto3" json:"EncryptedKeychainData,omitempty"`
-	SignatureKeychainData *Signature `protobuf:"bytes,2,opt,name=SignatureKeychainData,proto3" json:"SignatureKeychainData,omitempty"`
-	XXX_NoUnkeyedLiteral  struct{}   `json:"-"`
-	XXX_unrecognized      []byte     `json:"-"`
-	XXX_sizecache         int32      `json:"-"`
+	EncryptedKeychain    string   `protobuf:"bytes,1,opt,name=EncryptedKeychain,proto3" json:"EncryptedKeychain,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *KeychainCreationRequest) Reset()         { *m = KeychainCreationRequest{} }
 func (m *KeychainCreationRequest) String() string { return proto.CompactTextString(m) }
 func (*KeychainCreationRequest) ProtoMessage()    {}
 func (*KeychainCreationRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_internal_a8365b84bbc69315, []int{2}
+	return fileDescriptor_internal_f4536b8c2a9c2411, []int{2}
 }
 func (m *KeychainCreationRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_KeychainCreationRequest.Unmarshal(m, b)
@@ -155,64 +154,49 @@ func (m *KeychainCreationRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_KeychainCreationRequest proto.InternalMessageInfo
 
-func (m *KeychainCreationRequest) GetEncryptedKeychainData() string {
+func (m *KeychainCreationRequest) GetEncryptedKeychain() string {
 	if m != nil {
-		return m.EncryptedKeychainData
+		return m.EncryptedKeychain
 	}
 	return ""
 }
 
-func (m *KeychainCreationRequest) GetSignatureKeychainData() *Signature {
+type IDCreationRequest struct {
+	EncryptedID          string   `protobuf:"bytes,1,opt,name=EncryptedID,proto3" json:"EncryptedID,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *IDCreationRequest) Reset()         { *m = IDCreationRequest{} }
+func (m *IDCreationRequest) String() string { return proto.CompactTextString(m) }
+func (*IDCreationRequest) ProtoMessage()    {}
+func (*IDCreationRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_internal_f4536b8c2a9c2411, []int{3}
+}
+func (m *IDCreationRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_IDCreationRequest.Unmarshal(m, b)
+}
+func (m *IDCreationRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_IDCreationRequest.Marshal(b, m, deterministic)
+}
+func (dst *IDCreationRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_IDCreationRequest.Merge(dst, src)
+}
+func (m *IDCreationRequest) XXX_Size() int {
+	return xxx_messageInfo_IDCreationRequest.Size(m)
+}
+func (m *IDCreationRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_IDCreationRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_IDCreationRequest proto.InternalMessageInfo
+
+func (m *IDCreationRequest) GetEncryptedID() string {
 	if m != nil {
-		return m.SignatureKeychainData
-	}
-	return nil
-}
-
-type BiometricCreationRequest struct {
-	EncryptedBiometricData string     `protobuf:"bytes,1,opt,name=EncryptedBiometricData,proto3" json:"EncryptedBiometricData,omitempty"`
-	SignatureBiometricData *Signature `protobuf:"bytes,2,opt,name=SignatureBiometricData,proto3" json:"SignatureBiometricData,omitempty"`
-	XXX_NoUnkeyedLiteral   struct{}   `json:"-"`
-	XXX_unrecognized       []byte     `json:"-"`
-	XXX_sizecache          int32      `json:"-"`
-}
-
-func (m *BiometricCreationRequest) Reset()         { *m = BiometricCreationRequest{} }
-func (m *BiometricCreationRequest) String() string { return proto.CompactTextString(m) }
-func (*BiometricCreationRequest) ProtoMessage()    {}
-func (*BiometricCreationRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_internal_a8365b84bbc69315, []int{3}
-}
-func (m *BiometricCreationRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_BiometricCreationRequest.Unmarshal(m, b)
-}
-func (m *BiometricCreationRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_BiometricCreationRequest.Marshal(b, m, deterministic)
-}
-func (dst *BiometricCreationRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_BiometricCreationRequest.Merge(dst, src)
-}
-func (m *BiometricCreationRequest) XXX_Size() int {
-	return xxx_messageInfo_BiometricCreationRequest.Size(m)
-}
-func (m *BiometricCreationRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_BiometricCreationRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_BiometricCreationRequest proto.InternalMessageInfo
-
-func (m *BiometricCreationRequest) GetEncryptedBiometricData() string {
-	if m != nil {
-		return m.EncryptedBiometricData
+		return m.EncryptedID
 	}
 	return ""
-}
-
-func (m *BiometricCreationRequest) GetSignatureBiometricData() *Signature {
-	if m != nil {
-		return m.SignatureBiometricData
-	}
-	return nil
 }
 
 type CreationResult struct {
@@ -228,7 +212,7 @@ func (m *CreationResult) Reset()         { *m = CreationResult{} }
 func (m *CreationResult) String() string { return proto.CompactTextString(m) }
 func (*CreationResult) ProtoMessage()    {}
 func (*CreationResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_internal_a8365b84bbc69315, []int{4}
+	return fileDescriptor_internal_f4536b8c2a9c2411, []int{4}
 }
 func (m *CreationResult) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CreationResult.Unmarshal(m, b)
@@ -273,7 +257,7 @@ func init() {
 	proto.RegisterType((*AccountSearchRequest)(nil), "api.AccountSearchRequest")
 	proto.RegisterType((*AccountSearchResult)(nil), "api.AccountSearchResult")
 	proto.RegisterType((*KeychainCreationRequest)(nil), "api.KeychainCreationRequest")
-	proto.RegisterType((*BiometricCreationRequest)(nil), "api.BiometricCreationRequest")
+	proto.RegisterType((*IDCreationRequest)(nil), "api.IDCreationRequest")
 	proto.RegisterType((*CreationResult)(nil), "api.CreationResult")
 }
 
@@ -291,7 +275,7 @@ const _ = grpc.SupportPackageIsVersion4
 type InternalClient interface {
 	GetAccount(ctx context.Context, in *AccountSearchRequest, opts ...grpc.CallOption) (*AccountSearchResult, error)
 	CreateKeychain(ctx context.Context, in *KeychainCreationRequest, opts ...grpc.CallOption) (*CreationResult, error)
-	CreateBiometric(ctx context.Context, in *BiometricCreationRequest, opts ...grpc.CallOption) (*CreationResult, error)
+	CreateID(ctx context.Context, in *IDCreationRequest, opts ...grpc.CallOption) (*CreationResult, error)
 }
 
 type internalClient struct {
@@ -320,9 +304,9 @@ func (c *internalClient) CreateKeychain(ctx context.Context, in *KeychainCreatio
 	return out, nil
 }
 
-func (c *internalClient) CreateBiometric(ctx context.Context, in *BiometricCreationRequest, opts ...grpc.CallOption) (*CreationResult, error) {
+func (c *internalClient) CreateID(ctx context.Context, in *IDCreationRequest, opts ...grpc.CallOption) (*CreationResult, error) {
 	out := new(CreationResult)
-	err := c.cc.Invoke(ctx, "/api.Internal/CreateBiometric", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/api.Internal/CreateID", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +317,7 @@ func (c *internalClient) CreateBiometric(ctx context.Context, in *BiometricCreat
 type InternalServer interface {
 	GetAccount(context.Context, *AccountSearchRequest) (*AccountSearchResult, error)
 	CreateKeychain(context.Context, *KeychainCreationRequest) (*CreationResult, error)
-	CreateBiometric(context.Context, *BiometricCreationRequest) (*CreationResult, error)
+	CreateID(context.Context, *IDCreationRequest) (*CreationResult, error)
 }
 
 func RegisterInternalServer(s *grpc.Server, srv InternalServer) {
@@ -376,20 +360,20 @@ func _Internal_CreateKeychain_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Internal_CreateBiometric_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BiometricCreationRequest)
+func _Internal_CreateID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IDCreationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InternalServer).CreateBiometric(ctx, in)
+		return srv.(InternalServer).CreateID(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api.Internal/CreateBiometric",
+		FullMethod: "/api.Internal/CreateID",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InternalServer).CreateBiometric(ctx, req.(*BiometricCreationRequest))
+		return srv.(InternalServer).CreateID(ctx, req.(*IDCreationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -407,41 +391,37 @@ var _Internal_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Internal_CreateKeychain_Handler,
 		},
 		{
-			MethodName: "CreateBiometric",
-			Handler:    _Internal_CreateBiometric_Handler,
+			MethodName: "CreateID",
+			Handler:    _Internal_CreateID_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "internal.proto",
 }
 
-func init() { proto.RegisterFile("internal.proto", fileDescriptor_internal_a8365b84bbc69315) }
+func init() { proto.RegisterFile("internal.proto", fileDescriptor_internal_f4536b8c2a9c2411) }
 
-var fileDescriptor_internal_a8365b84bbc69315 = []byte{
-	// 400 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x93, 0xd1, 0x6e, 0xda, 0x30,
-	0x14, 0x86, 0xc9, 0x98, 0xa6, 0x71, 0x86, 0x60, 0x32, 0x83, 0x65, 0x88, 0x49, 0x93, 0xaf, 0xd0,
-	0x2e, 0xd0, 0xc4, 0xa6, 0xdd, 0x33, 0x60, 0x80, 0xa6, 0x49, 0x08, 0x2a, 0xf5, 0xda, 0x35, 0x47,
-	0xc5, 0x6a, 0xb0, 0x53, 0xdb, 0xb9, 0x40, 0xea, 0x6b, 0xf4, 0xa6, 0xaf, 0xd1, 0x07, 0xea, 0xab,
-	0x54, 0x09, 0x89, 0x69, 0xd2, 0xe4, 0xf6, 0x3f, 0x5f, 0x7e, 0xff, 0xf6, 0x7f, 0x02, 0x2d, 0x21,
-	0x2d, 0x6a, 0xc9, 0x82, 0x51, 0xa8, 0x95, 0x55, 0xa4, 0xce, 0x42, 0xd1, 0x6f, 0x72, 0x75, 0x38,
-	0x28, 0x79, 0x92, 0xe8, 0x12, 0x3e, 0x4d, 0x38, 0x57, 0x91, 0xb4, 0x5b, 0x64, 0x9a, 0xef, 0x37,
-	0x78, 0x1b, 0xa1, 0xb1, 0xe4, 0x07, 0x74, 0xe6, 0x92, 0xeb, 0x63, 0x68, 0x71, 0xb7, 0x64, 0x66,
-	0xbf, 0x46, 0x6d, 0x94, 0xf4, 0xbd, 0x6f, 0xde, 0xb0, 0xb1, 0x29, 0x1b, 0xd1, 0x47, 0x0f, 0x3a,
-	0x05, 0x2b, 0x13, 0x05, 0x96, 0x0c, 0xa1, 0xed, 0xf0, 0x4b, 0x16, 0x04, 0x68, 0x53, 0x97, 0xa2,
-	0x9c, 0x23, 0x27, 0xf3, 0xed, 0x0d, 0x1e, 0xfd, 0x37, 0x05, 0xf2, 0x24, 0x93, 0xef, 0xf0, 0xf1,
-	0x2c, 0xed, 0x76, 0x1a, 0x8d, 0xf1, 0xeb, 0x09, 0xfa, 0x4a, 0x27, 0x03, 0x68, 0x6c, 0xc5, 0xb5,
-	0x64, 0x36, 0xd2, 0xe8, 0xbf, 0x4d, 0xa0, 0xb3, 0x40, 0xef, 0x3d, 0xf8, 0xfc, 0x0f, 0x8f, 0x7c,
-	0xcf, 0x84, 0x9c, 0x6a, 0x64, 0x56, 0x28, 0x99, 0xbd, 0xc1, 0x2f, 0xe8, 0x3a, 0xb7, 0x8c, 0x99,
-	0x31, 0xcb, 0xd2, 0xfc, 0xe5, 0x43, 0x32, 0x83, 0xae, 0xb3, 0xcf, 0x7d, 0x15, 0xdf, 0xe5, 0xc3,
-	0xb8, 0x35, 0x62, 0xa1, 0x18, 0x39, 0x62, 0x53, 0x0e, 0xd3, 0x07, 0x0f, 0xfc, 0x3f, 0x42, 0x1d,
-	0xd0, 0x6a, 0xc1, 0x8b, 0xc1, 0x7e, 0x43, 0xcf, 0x9d, 0xed, 0xa0, 0x17, 0xc9, 0x2a, 0xa6, 0xe4,
-	0x2f, 0xf4, 0xdc, 0x69, 0xf9, 0xef, 0xca, 0xb3, 0x55, 0xd0, 0xf4, 0x0e, 0x5a, 0xe7, 0x48, 0x59,
-	0xc9, 0x17, 0x9a, 0x49, 0xc3, 0x78, 0x2c, 0xc6, 0x5b, 0x91, 0x95, 0x5c, 0x90, 0x09, 0x85, 0xe6,
-	0x7f, 0x66, 0x2c, 0xea, 0x35, 0xa2, 0x5e, 0xad, 0xd3, 0x86, 0x73, 0x5a, 0xbe, 0xb2, 0x7a, 0xa1,
-	0xb2, 0xf1, 0x93, 0x07, 0xef, 0x57, 0xe9, 0x62, 0x93, 0x29, 0xc0, 0x02, 0x6d, 0xba, 0x77, 0xe4,
-	0x4b, 0x72, 0x81, 0xb2, 0x85, 0xee, 0xfb, 0x65, 0xa3, 0x38, 0x3b, 0xad, 0x91, 0x79, 0x7a, 0x1f,
-	0x57, 0x01, 0x19, 0x24, 0x74, 0xc5, 0x62, 0xf4, 0x3b, 0xc9, 0x34, 0xff, 0x04, 0xb4, 0x46, 0x16,
-	0xd0, 0x3e, 0xd9, 0xb8, 0xd7, 0x22, 0x5f, 0x13, 0xb2, 0xaa, 0xc8, 0x0a, 0xa3, 0xab, 0x77, 0xc9,
-	0xbf, 0xf9, 0xf3, 0x39, 0x00, 0x00, 0xff, 0xff, 0x54, 0x84, 0x23, 0x14, 0xc0, 0x03, 0x00, 0x00,
+var fileDescriptor_internal_f4536b8c2a9c2411 = []byte{
+	// 336 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x92, 0x41, 0x4f, 0xc2, 0x40,
+	0x10, 0x85, 0xa9, 0x18, 0x03, 0xa3, 0x41, 0x59, 0x8c, 0x56, 0xc2, 0x81, 0xec, 0x89, 0x18, 0xc3,
+	0x41, 0xe3, 0xc1, 0x9b, 0x04, 0x08, 0x36, 0xc6, 0x84, 0x80, 0x89, 0xe7, 0xb1, 0x4c, 0xa4, 0xb1,
+	0xd9, 0xd6, 0xdd, 0xed, 0x81, 0xc4, 0x7f, 0xe5, 0x2f, 0xf1, 0x1f, 0x19, 0xca, 0x56, 0xda, 0x2d,
+	0x5c, 0xbf, 0x79, 0xf3, 0xb2, 0xef, 0xed, 0x40, 0x23, 0x10, 0x9a, 0xa4, 0xc0, 0xb0, 0x1f, 0xcb,
+	0x48, 0x47, 0xac, 0x8a, 0x71, 0xc0, 0x1f, 0xe1, 0x7c, 0xe0, 0xfb, 0x51, 0x22, 0xf4, 0x9c, 0x50,
+	0xfa, 0xcb, 0x19, 0x7d, 0x25, 0xa4, 0x34, 0xeb, 0xc1, 0xe9, 0x58, 0xf8, 0x72, 0x15, 0x6b, 0x5a,
+	0x78, 0xa3, 0x27, 0x54, 0x4b, 0xd7, 0xe9, 0x3a, 0xbd, 0xfa, 0xcc, 0xc6, 0xfc, 0xc7, 0x81, 0x96,
+	0x65, 0xa1, 0x92, 0xb0, 0xe8, 0xf0, 0x86, 0x61, 0x48, 0xba, 0xe4, 0xb0, 0xc1, 0x05, 0xe5, 0x60,
+	0x3c, 0xff, 0xa4, 0x95, 0x7b, 0x60, 0x29, 0x37, 0x98, 0x5d, 0xc3, 0xd9, 0x16, 0x2d, 0x16, 0x92,
+	0x94, 0x72, 0xab, 0xa9, 0xb4, 0xc4, 0x59, 0x07, 0xea, 0xf3, 0xe0, 0x43, 0xa0, 0x4e, 0x24, 0xb9,
+	0x87, 0xa9, 0x68, 0x0b, 0xf8, 0x04, 0x2e, 0x9f, 0x69, 0xe5, 0x2f, 0x31, 0x10, 0x43, 0x49, 0xa8,
+	0x83, 0x48, 0x64, 0xd1, 0x6f, 0xa0, 0xf9, 0x6f, 0x96, 0x69, 0xcc, 0xd3, 0xcb, 0x03, 0x7e, 0x0f,
+	0x4d, 0x6f, 0x64, 0x5b, 0x74, 0xe1, 0x38, 0x57, 0x93, 0x59, 0xce, 0x23, 0xfe, 0x0d, 0x8d, 0xed,
+	0x52, 0xd6, 0xd7, 0xab, 0x44, 0xa1, 0xd0, 0x5f, 0xc3, 0x7c, 0xe3, 0x16, 0x66, 0x1c, 0x4e, 0x5e,
+	0x50, 0x69, 0x92, 0x53, 0x22, 0xe9, 0x4d, 0x4d, 0x59, 0x05, 0x56, 0x4c, 0x5f, 0xb5, 0xd2, 0xdf,
+	0xfe, 0x3a, 0x50, 0xf3, 0xcc, 0x35, 0xb0, 0x21, 0xc0, 0x84, 0xb4, 0xf9, 0x42, 0x76, 0xd5, 0xc7,
+	0x38, 0xe8, 0xef, 0xba, 0x89, 0xb6, 0xbb, 0x6b, 0xb4, 0x7e, 0x3b, 0xaf, 0xb0, 0xb1, 0xc9, 0x43,
+	0x59, 0x31, 0xac, 0x93, 0xaa, 0xf7, 0x94, 0xdc, 0x6e, 0xa5, 0xd3, 0x62, 0x05, 0xbc, 0xc2, 0x1e,
+	0xa0, 0xb6, 0xb1, 0xf1, 0x46, 0xec, 0x22, 0x95, 0x94, 0xca, 0xdd, 0xb3, 0xfa, 0x7e, 0x94, 0x5e,
+	0xf5, 0xdd, 0x5f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x42, 0xb5, 0x1b, 0xff, 0xe7, 0x02, 0x00, 0x00,
 }

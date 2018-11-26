@@ -32,17 +32,17 @@ type Decrypter interface {
 	//DecryptHash decrypt a hash using the shared robot private key
 	DecryptHash(hash string, pvKey string) (string, error)
 
-	//DecryptKeychainData decrypt the account's keychain using the shared robot private key
-	DecryptKeychainData(data string, pvKey string) (account.KeychainData, error)
+	//DecryptKeychain decrypt the account's keychain using the shared robot private key
+	DecryptKeychain(data string, pvKey string) (account.Keychain, error)
 
-	//DecryptBiometricData decrypt the account's biometric using the shared robot private key
-	DecryptBiometricData(data string, pvKey string) (account.BiometricData, error)
+	//DecryptID decrypt the account's ID using the shared robot private key
+	DecryptID(data string, pvKey string) (account.ID, error)
 }
 
 //Hasher define methods to hash incoming data
 type Hasher interface {
 	account.KeychainHasher
-	account.BiometricHasher
+	account.IDHasher
 	lock.Hasher
 }
 
@@ -58,17 +58,17 @@ type signatureVerifier interface {
 	//Using the share robot public key
 	VerifyKeychainValidationRequestSignature(pubKey string, req *api.KeychainValidationRequest) error
 
-	//VerifyKeychainValidationRequestSignature checks the biometric validation request's signature
+	//VerifyIDValidationRequestSignature checks the ID validation request's signature
 	//Using the share robot public key
-	VerifyBiometricValidationRequestSignature(pubKey string, req *api.BiometricValidationRequest) error
+	VerifyIDValidationRequestSignature(pubKey string, req *api.IDValidationRequest) error
 
 	//VerifyKeychainStorageRequestSignature checks the keychain storage request's signature
 	//Using the share robot public key
 	VerifyKeychainStorageRequestSignature(pubKey string, req *api.KeychainStorageRequest) error
 
-	//VerifyBiometricStorageRequestSignature checks the biometric storage request's signature
+	//VerifyIDStorageRequestSignature checks the ID storage request's signature
 	//Using the share robot public key
-	VerifyBiometricStorageRequestSignature(pubKey string, req *api.BiometricStorageRequest) error
+	VerifyIDStorageRequestSignature(pubKey string, req *api.IDStorageRequest) error
 
 	//VerifyLockRequestSignature checks the lock request's signature using the share robot public key
 	VerifyLockRequestSignature(pubKey string, req *api.LockRequest) error
@@ -77,9 +77,9 @@ type signatureVerifier interface {
 	//Using the share robot public key
 	VerifyKeychainLeadRequestSignature(pubKey string, req *api.KeychainLeadRequest) error
 
-	//VerifyBiometricLeadRequestSignature checks the biometric lead mining request's signature
+	//VerifyIDLeadRequestSignature checks the ID lead mining request's signature
 	//Using the share robot public key
-	VerifyBiometricLeadRequestSignature(pubKey string, req *api.BiometricLeadRequest) error
+	VerifyIDLeadRequestSignature(pubKey string, req *api.IDLeadRequest) error
 
 	//VerifyValidationResponseSignature checks the signature of a validation response using the share robot public key
 	VerifyValidationResponseSignature(pubKey string, res *api.ValidationResponse) error
@@ -96,8 +96,8 @@ type signatureVerifier interface {
 	//VerifyKeychainResponseSignature checks the signature of a keychain response using the shared robot public key
 	VerifyKeychainResponseSignature(pubKey string, res *api.KeychainResponse) error
 
-	//VerifyBiometricResponseSignature checks the signature of a biometric response using the shared robot public key
-	VerifyBiometricResponseSignature(pubKey string, res *api.BiometricResponse) error
+	//VerifyIDResponseSignature checks the signature of a ID response using the shared robot public key
+	VerifyIDResponseSignature(pubKey string, res *api.IDResponse) error
 }
 
 type signatureBuilder interface {
@@ -105,8 +105,8 @@ type signatureBuilder interface {
 	//SignHash create a signature of hash using the shared robot private key
 	SignHash(text string, pvKey string) (string, error)
 
-	//SignBiometricResponse create a signature of the biometric response using the shared robot private key
-	SignBiometricResponse(res *api.BiometricResponse, pvKey string) error
+	//SignIDResponse create a signature of the ID response using the shared robot private key
+	SignIDResponse(res *api.IDResponse, pvKey string) error
 
 	//SignKeychainResponse create a signature of the keychain response using the shared robot private key
 	SignKeychainResponse(res *api.KeychainResponse, pvKey string) error
@@ -115,25 +115,25 @@ type signatureBuilder interface {
 	//Using the shared robot private key
 	SignKeychainLeadRequest(req *api.KeychainLeadRequest, pvKey string) error
 
-	//SignBiometricLeadRequest create a signature of the biometric lead mining's request
+	//SignIDLeadRequest create a signature of the ID lead mining's request
 	//Using the shared robot private key
-	SignBiometricLeadRequest(req *api.BiometricLeadRequest, pvKey string) error
+	SignIDLeadRequest(req *api.IDLeadRequest, pvKey string) error
 
 	//SignKeychainValidationRequestSignature create a signature of the keychain validation's request
 	//Using the shared robot private key
 	SignKeychainValidationRequestSignature(req *api.KeychainValidationRequest, pvKey string) error
 
-	//SignBiometricValidationRequestSignature create a signature of the biometric validation's request
+	//SignIDValidationRequestSignature create a signature of the ID validation's request
 	//Using the shared robot private key
-	SignBiometricValidationRequestSignature(req *api.BiometricValidationRequest, pvKey string) error
+	SignIDValidationRequestSignature(req *api.IDValidationRequest, pvKey string) error
 
 	//SignKeychainStorageRequestSignature create a signature of the keychain storage's request
 	//Using the shared robot private key
 	SignKeychainStorageRequestSignature(req *api.KeychainStorageRequest, pvKey string) error
 
-	//SignBiometricStorageRequestSignature create a signature of biometric storage'request
+	//SignIDStorageRequestSignature create a signature of ID storage'request
 	//Using the shared robot private key
-	SignBiometricStorageRequestSignature(req *api.BiometricStorageRequest, pvKey string) error
+	SignIDStorageRequestSignature(req *api.IDStorageRequest, pvKey string) error
 
 	//SignLockRequest create a signature of lock request using the shared robot private key
 	SignLockRequest(req *api.LockRequest, pvKey string) error

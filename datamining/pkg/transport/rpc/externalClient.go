@@ -19,16 +19,16 @@ import (
 type ExternalClient interface {
 
 	//LeadKeychainMining process the keychain mining as master robot
-	LeadKeychainMining(ip string, txHash string, encData string, sig *api.Signature, validators []string) error
+	LeadKeychainMining(ip string, txHash string, encData string, validators []string) error
 
-	//LeadBiometricMining process the biometric mining as master robot
-	LeadBiometricMining(ip string, txHash string, encData string, sig *api.Signature, validators []string) error
+	//LeadIDMining process the ID mining as master robot
+	LeadIDMining(ip string, txHash string, encData string, validators []string) error
 
-	//RequestBiometric requests a peer to retrive a biometric data from a given encrypted person hash
-	RequestBiometric(ip string, encPersonHash string) (account.Biometric, error)
+	//RequestID requests a peer to retrive a ID data from a given encrypted ID hash
+	RequestID(ip string, encPersonHash string) (account.EndorsedID, error)
 
 	//RequestKeychain requests a peer to retrieve the last keychain from a given encrypted address
-	RequestKeychain(ip string, encAddress string) (account.Keychain, error)
+	RequestKeychain(ip string, encAddress string) (account.EndorsedKeychain, error)
 
 	//RequestLock requests a peer to lock a given transaction
 	RequestLock(ip string, txLock lock.TransactionLock) error
@@ -60,8 +60,8 @@ func NewExternalClient(crypto Crypto, conf system.UnirisConfig) ExternalClient {
 	}
 }
 
-func (c externalClient) LeadKeychainMining(ip string, txHash string, encData string, sig *api.Signature, validators []string) error {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+func (c externalClient) LeadKeychainMining(ip string, txHash string, encData string, validators []string) error {
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -72,12 +72,11 @@ func (c externalClient) LeadKeychainMining(ip string, txHash string, encData str
 	client := api.NewExternalClient(conn)
 
 	req := &api.KeychainLeadRequest{
-		EncryptedKeychainData: encData,
-		SignatureKeychainData: sig,
-		TransactionHash:       txHash,
-		ValidatorPeerIPs:      validators,
+		EncryptedKeychain: encData,
+		TransactionHash:   txHash,
+		ValidatorPeerIPs:  validators,
 	}
-	if err := c.crypto.signer.SignKeychainLeadRequest(req, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignKeychainLeadRequest(req, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return err
 	}
 
@@ -89,8 +88,8 @@ func (c externalClient) LeadKeychainMining(ip string, txHash string, encData str
 	return nil
 }
 
-func (c externalClient) LeadBiometricMining(ip string, txHash string, encData string, sig *api.Signature, validators []string) error {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+func (c externalClient) LeadIDMining(ip string, txHash string, encData string, validators []string) error {
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -100,16 +99,15 @@ func (c externalClient) LeadBiometricMining(ip string, txHash string, encData st
 
 	client := api.NewExternalClient(conn)
 
-	req := &api.BiometricLeadRequest{
-		EncryptedBioData: encData,
-		SignatureBioData: sig,
+	req := &api.IDLeadRequest{
+		EncryptedID:      encData,
 		TransactionHash:  txHash,
 		ValidatorPeerIPs: validators,
 	}
-	if err := c.crypto.signer.SignBiometricLeadRequest(req, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignIDLeadRequest(req, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return err
 	}
-	_, err = client.LeadBiometricMining(context.Background(), req)
+	_, err = client.LeadIDMining(context.Background(), req)
 	if err != nil {
 		s, _ := status.FromError(err)
 		return errors.New(s.Message())
@@ -117,8 +115,8 @@ func (c externalClient) LeadBiometricMining(ip string, txHash string, encData st
 	return nil
 }
 
-func (c externalClient) RequestBiometric(ip string, encPersonHash string) (account.Biometric, error) {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+func (c externalClient) RequestID(ip string, encIDHash string) (account.EndorsedID, error) {
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -128,31 +126,31 @@ func (c externalClient) RequestBiometric(ip string, encPersonHash string) (accou
 
 	client := api.NewExternalClient(conn)
 
-	sigReq, err := c.crypto.signer.SignHash(encPersonHash, c.conf.SharedKeys.RobotPrivateKey)
+	sigReq, err := c.crypto.signer.SignHash(encIDHash, c.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := client.GetBiometric(context.Background(), &api.BiometricRequest{
-		EncryptedPersonHash: encPersonHash,
-		Signature:           sigReq,
+	res, err := client.GetID(context.Background(), &api.IDRequest{
+		EncryptedIDHash: encIDHash,
+		Signature:       sigReq,
 	})
 	if err != nil {
 		s, _ := status.FromError(err)
 		return nil, errors.New(s.Message())
 	}
 
-	if err := c.crypto.signer.VerifyBiometricResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyIDResponseSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return nil, err
 	}
 
-	return account.NewBiometric(
-		c.data.buildBiometricData(res.Data),
+	return account.NewEndorsedID(
+		c.data.buildID(res.Data),
 		c.data.buildEndorsement(res.Endorsement)), nil
 }
 
-func (c externalClient) RequestKeychain(ip string, encAddress string) (account.Keychain, error) {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+func (c externalClient) RequestKeychain(ip string, encAddress string) (account.EndorsedKeychain, error) {
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -162,7 +160,7 @@ func (c externalClient) RequestKeychain(ip string, encAddress string) (account.K
 
 	client := api.NewExternalClient(conn)
 
-	sigReq, err := c.crypto.signer.SignHash(encAddress, c.conf.SharedKeys.RobotPrivateKey)
+	sigReq, err := c.crypto.signer.SignHash(encAddress, c.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -176,24 +174,24 @@ func (c externalClient) RequestKeychain(ip string, encAddress string) (account.K
 		return nil, errors.New(s.Message())
 	}
 
-	clearaddr, err := c.crypto.decrypter.DecryptHash(res.Data.CipherAddrRobot, c.conf.SharedKeys.RobotPrivateKey)
+	clearaddr, err := c.crypto.decrypter.DecryptHash(res.Data.EncryptedAddrByRobot, c.conf.SharedKeys.Robot.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := c.crypto.signer.VerifyKeychainResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyKeychainResponseSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return nil, err
 	}
 
-	return account.NewKeychain(
+	return account.NewEndorsedKeychain(
 		clearaddr,
-		c.data.buildKeychainData(res.Data),
+		c.data.buildKeychain(res.Data),
 		c.data.buildEndorsement(res.Endorsement),
 	), nil
 }
 
 func (c externalClient) RequestLock(ip string, txLock lock.TransactionLock) error {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -208,7 +206,7 @@ func (c externalClient) RequestLock(ip string, txLock lock.TransactionLock) erro
 		TransactionHash: txLock.TxHash,
 		Address:         txLock.Address,
 	}
-	if err := c.crypto.signer.SignLockRequest(lockReq, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignLockRequest(lockReq, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return err
 	}
 
@@ -218,7 +216,7 @@ func (c externalClient) RequestLock(ip string, txLock lock.TransactionLock) erro
 		return errors.New(s.Message())
 	}
 
-	if err := c.crypto.signer.VerifyLockAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyLockAckSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return err
 	}
 
@@ -228,7 +226,7 @@ func (c externalClient) RequestLock(ip string, txLock lock.TransactionLock) erro
 }
 
 func (c externalClient) RequestUnlock(ip string, txLock lock.TransactionLock) error {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -243,7 +241,7 @@ func (c externalClient) RequestUnlock(ip string, txLock lock.TransactionLock) er
 		TransactionHash: txLock.TxHash,
 		Address:         txLock.Address,
 	}
-	if err := c.crypto.signer.SignLockRequest(lockReq, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignLockRequest(lockReq, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return err
 	}
 
@@ -253,7 +251,7 @@ func (c externalClient) RequestUnlock(ip string, txLock lock.TransactionLock) er
 		return errors.New(s.Message())
 	}
 
-	if err := c.crypto.signer.VerifyLockAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyLockAckSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return err
 	}
 
@@ -263,7 +261,7 @@ func (c externalClient) RequestUnlock(ip string, txLock lock.TransactionLock) er
 }
 
 func (c externalClient) RequestValidation(ip string, txType mining.TransactionType, txHash string, data interface{}) (mining.Validation, error) {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -275,16 +273,16 @@ func (c externalClient) RequestValidation(ip string, txType mining.TransactionTy
 
 	switch txType {
 	case mining.KeychainTransaction:
-		return c.validateKeychain(client, txHash, c.api.buildKeychainData(data.(account.KeychainData)))
-	case mining.BiometricTransaction:
-		return c.validateBiometric(client, txHash, c.api.buildBiometricData(data.(account.BiometricData)))
+		return c.validateKeychain(client, txHash, c.api.buildKeychain(data.(account.Keychain)))
+	case mining.IDTransaction:
+		return c.validateID(client, txHash, c.api.buildID(data.(account.ID)))
 	}
 
 	return nil, errors.New("Unsupported transaction type")
 }
 
 func (c externalClient) RequestStorage(ip string, txType mining.TransactionType, data interface{}, end mining.Endorsement) error {
-	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Datamining.ExternalPort)
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -298,20 +296,20 @@ func (c externalClient) RequestStorage(ip string, txType mining.TransactionType,
 
 	switch txType {
 	case mining.KeychainTransaction:
-		return c.storeKeychain(client, c.api.buildKeychainData(data.(account.KeychainData)), endorsement)
-	case mining.BiometricTransaction:
-		return c.storeBiometric(client, c.api.buildBiometricData(data.(account.BiometricData)), endorsement)
+		return c.storeKeychain(client, c.api.buildKeychain(data.(account.Keychain)), endorsement)
+	case mining.IDTransaction:
+		return c.storeID(client, c.api.buildID(data.(account.ID)), endorsement)
 	}
 
 	return nil
 }
 
-func (c externalClient) validateKeychain(client api.ExternalClient, txHash string, data *api.KeychainData) (mining.Validation, error) {
+func (c externalClient) validateKeychain(client api.ExternalClient, txHash string, kc *api.Keychain) (mining.Validation, error) {
 	req := &api.KeychainValidationRequest{
-		Data:            data,
+		Data:            kc,
 		TransactionHash: txHash,
 	}
-	if err := c.crypto.signer.SignKeychainValidationRequestSignature(req, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignKeychainValidationRequestSignature(req, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
 
@@ -321,40 +319,40 @@ func (c externalClient) validateKeychain(client api.ExternalClient, txHash strin
 		return nil, errors.New(s.Message())
 	}
 
-	if err := c.crypto.signer.VerifyValidationResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyValidationResponseSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return nil, err
 	}
 
 	return c.data.buildValidation(res.Validation), nil
 }
 
-func (c externalClient) validateBiometric(client api.ExternalClient, txHash string, data *api.BiometricData) (mining.Validation, error) {
-	req := &api.BiometricValidationRequest{
-		Data:            data,
+func (c externalClient) validateID(client api.ExternalClient, txHash string, id *api.ID) (mining.Validation, error) {
+	req := &api.IDValidationRequest{
+		Data:            id,
 		TransactionHash: txHash,
 	}
-	if err := c.crypto.signer.SignBiometricValidationRequestSignature(req, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignIDValidationRequestSignature(req, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
-	res, err := client.ValidateBiometric(context.Background(), req)
+	res, err := client.ValidateID(context.Background(), req)
 	if err != nil {
 		s, _ := status.FromError(err)
 		return nil, errors.New(s.Message())
 	}
 
-	if err := c.crypto.signer.VerifyValidationResponseSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyValidationResponseSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return nil, err
 	}
 
 	return c.data.buildValidation(res.Validation), nil
 }
 
-func (c externalClient) storeKeychain(client api.ExternalClient, data *api.KeychainData, end *api.Endorsement) error {
+func (c externalClient) storeKeychain(client api.ExternalClient, kc *api.Keychain, end *api.Endorsement) error {
 	req := &api.KeychainStorageRequest{
-		Data:        data,
+		Data:        kc,
 		Endorsement: end,
 	}
-	if err := c.crypto.signer.SignKeychainStorageRequestSignature(req, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignKeychainStorageRequestSignature(req, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return err
 	}
 
@@ -364,7 +362,7 @@ func (c externalClient) storeKeychain(client api.ExternalClient, data *api.Keych
 		return errors.New(s.Message())
 	}
 
-	if err := c.crypto.signer.VerifyStorageAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyStorageAckSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return err
 	}
 
@@ -373,22 +371,22 @@ func (c externalClient) storeKeychain(client api.ExternalClient, data *api.Keych
 	return nil
 }
 
-func (c externalClient) storeBiometric(client api.ExternalClient, data *api.BiometricData, end *api.Endorsement) error {
-	req := &api.BiometricStorageRequest{
-		Data:        data,
+func (c externalClient) storeID(client api.ExternalClient, id *api.ID, end *api.Endorsement) error {
+	req := &api.IDStorageRequest{
+		Data:        id,
 		Endorsement: end,
 	}
-	if err := c.crypto.signer.SignBiometricStorageRequestSignature(req, c.conf.SharedKeys.RobotPrivateKey); err != nil {
+	if err := c.crypto.signer.SignIDStorageRequestSignature(req, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return err
 	}
 
-	res, err := client.StoreBiometric(context.Background(), req)
+	res, err := client.StoreID(context.Background(), req)
 	if err != nil {
 		s, _ := status.FromError(err)
 		return errors.New(s.Message())
 	}
 
-	if err := c.crypto.signer.VerifyStorageAckSignature(c.conf.SharedKeys.RobotPublicKey, res); err != nil {
+	if err := c.crypto.signer.VerifyStorageAckSignature(c.conf.SharedKeys.Robot.PublicKey, res); err != nil {
 		return err
 	}
 

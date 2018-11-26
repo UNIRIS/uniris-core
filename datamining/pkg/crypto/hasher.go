@@ -13,7 +13,7 @@ import (
 //Hasher defines methods for hashing
 type Hasher interface {
 	account.KeychainHasher
-	account.BiometricHasher
+	account.IDHasher
 	lock.Hasher
 }
 
@@ -36,9 +36,9 @@ func (h hasher) HashLock(txLock lock.TransactionLock) (string, error) {
 	return hashBytes(b), nil
 }
 
-func (h hasher) HashBiometric(data account.Biometric) (string, error) {
+func (h hasher) HashEndorsedID(id account.EndorsedID) (string, error) {
 	valids := make([]validation, 0)
-	for _, v := range data.Endorsement().Validations() {
+	for _, v := range id.Endorsement().Validations() {
 		valids = append(valids, validation{
 			Pubk:      v.PublicKey(),
 			Sig:       v.Signature(),
@@ -46,25 +46,32 @@ func (h hasher) HashBiometric(data account.Biometric) (string, error) {
 			Timestamp: v.Timestamp().Unix(),
 		})
 	}
-	b, err := json.Marshal(biometric{
-		PersonHash:          data.PersonHash(),
-		EncryptedAddrPerson: data.CipherAddrPerson(),
-		EncryptedAddrRobot:  data.CipherAddrRobot(),
-		EncryptedAESKey:     data.CipherAESKey(),
-		PersonPublicKey:     data.PersonPublicKey(),
-		BIODSignature:       data.Signatures().Biod(),
-		PersonSignature:     data.Signatures().Person(),
+	b, err := json.Marshal(endorsedID{
+		Hash:                 id.Hash(),
+		EncryptedAddrByID:    id.EncryptedAddrByID(),
+		EncryptedAddrByRobot: id.EncryptedAddrByRobot(),
+		EncryptedAESKey:      id.EncryptedAESKey(),
+		PublicKey:            id.PublicKey(),
+		Proposal: proposal{
+			SharedEmitterKeyPair: proposalKeypair{
+				EncryptedPrivateKey: id.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           id.Proposal().SharedEmitterKeyPair().PublicKey(),
+			},
+		},
+		EmitterSignature: id.EmitterSignature(),
+		IDSignature:      id.IDSignature(),
+
 		Endorsement: endorsement{
-			LastTxHash: data.Endorsement().LastTransactionHash(),
-			TxHash:     data.Endorsement().TransactionHash(),
+			LastTxHash: id.Endorsement().LastTransactionHash(),
+			TxHash:     id.Endorsement().TransactionHash(),
 			MasterValidation: masterValidation{
-				LastTxRvk: data.Endorsement().MasterValidation().LastTransactionMiners(),
-				PowKey:    data.Endorsement().MasterValidation().ProofOfWorkKey(),
+				LastTxRvk: id.Endorsement().MasterValidation().LastTransactionMiners(),
+				PowKey:    id.Endorsement().MasterValidation().ProofOfWorkKey(),
 				PowValid: validation{
-					Pubk:      data.Endorsement().MasterValidation().ProofOfWorkValidation().PublicKey(),
-					Sig:       data.Endorsement().MasterValidation().ProofOfWorkValidation().Signature(),
-					Status:    data.Endorsement().MasterValidation().ProofOfWorkValidation().Status(),
-					Timestamp: data.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix(),
+					Pubk:      id.Endorsement().MasterValidation().ProofOfWorkValidation().PublicKey(),
+					Sig:       id.Endorsement().MasterValidation().ProofOfWorkValidation().Signature(),
+					Status:    id.Endorsement().MasterValidation().ProofOfWorkValidation().Status(),
+					Timestamp: id.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix(),
 				},
 			},
 			Validations: valids,
@@ -76,9 +83,9 @@ func (h hasher) HashBiometric(data account.Biometric) (string, error) {
 	return hashBytes(b), nil
 }
 
-func (h hasher) HashKeychain(data account.Keychain) (string, error) {
+func (h hasher) HashEndorsedKeychain(kc account.EndorsedKeychain) (string, error) {
 	valids := make([]validation, 0)
-	for _, v := range data.Endorsement().Validations() {
+	for _, v := range kc.Endorsement().Validations() {
 		valids = append(valids, validation{
 			Pubk:      v.PublicKey(),
 			Sig:       v.Signature(),
@@ -86,58 +93,76 @@ func (h hasher) HashKeychain(data account.Keychain) (string, error) {
 			Timestamp: v.Timestamp().Unix(),
 		})
 	}
+	b, err := json.Marshal(endorsedKeychain{
+		Address:              kc.Address(),
+		EncryptedWallet:      kc.EncryptedWallet(),
+		EncryptedAddrByRobot: kc.EncryptedAddrByRobot(),
+		IDPublicKey:          kc.IDPublicKey(),
+		Proposal: proposal{
+			SharedEmitterKeyPair: proposalKeypair{
+				EncryptedPrivateKey: kc.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           kc.Proposal().SharedEmitterKeyPair().PublicKey(),
+			},
+		},
+		EmitterSignature: kc.EmitterSignature(),
+		IDSignature:      kc.IDSignature(),
+		Endorsement: endorsement{
+			LastTxHash: kc.Endorsement().LastTransactionHash(),
+			TxHash:     kc.Endorsement().TransactionHash(),
+			MasterValidation: masterValidation{
+				LastTxRvk: kc.Endorsement().MasterValidation().LastTransactionMiners(),
+				PowKey:    kc.Endorsement().MasterValidation().ProofOfWorkKey(),
+				PowValid: validation{
+					Pubk:      kc.Endorsement().MasterValidation().ProofOfWorkValidation().PublicKey(),
+					Sig:       kc.Endorsement().MasterValidation().ProofOfWorkValidation().Signature(),
+					Status:    kc.Endorsement().MasterValidation().ProofOfWorkValidation().Status(),
+					Timestamp: kc.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix(),
+				},
+			},
+			Validations: valids,
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	return hashBytes(b), nil
+}
+
+func (h hasher) HashID(data account.ID) (string, error) {
+	b, err := json.Marshal(id{
+		Hash:                 data.Hash(),
+		EncryptedAddrByID:    data.EncryptedAddrByID(),
+		EncryptedAddrByRobot: data.EncryptedAddrByRobot(),
+		EncryptedAESKey:      data.EncryptedAESKey(),
+		PublicKey:            data.PublicKey(),
+		Proposal: proposal{
+			SharedEmitterKeyPair: proposalKeypair{
+				EncryptedPrivateKey: data.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           data.Proposal().SharedEmitterKeyPair().PublicKey(),
+			},
+		},
+		EmitterSignature: data.EmitterSignature(),
+		IDSignature:      data.IDSignature(),
+	})
+	if err != nil {
+		return "", err
+	}
+	return hashBytes(b), nil
+}
+
+func (h hasher) HashKeychain(kc account.Keychain) (string, error) {
 	b, err := json.Marshal(keychain{
-		Address:            data.Address(),
-		EncryptedWallet:    data.CipherWallet(),
-		EncryptedAddrRobot: data.CipherAddrRobot(),
-		PersonPublicKey:    data.PersonPublicKey(),
-		BIODSignature:      data.Signatures().Biod(),
-		PersonSignature:    data.Signatures().Person(),
-		Endorsement: endorsement{
-			LastTxHash: data.Endorsement().LastTransactionHash(),
-			TxHash:     data.Endorsement().TransactionHash(),
-			MasterValidation: masterValidation{
-				LastTxRvk: data.Endorsement().MasterValidation().LastTransactionMiners(),
-				PowKey:    data.Endorsement().MasterValidation().ProofOfWorkKey(),
-				PowValid: validation{
-					Pubk:      data.Endorsement().MasterValidation().ProofOfWorkValidation().PublicKey(),
-					Sig:       data.Endorsement().MasterValidation().ProofOfWorkValidation().Signature(),
-					Status:    data.Endorsement().MasterValidation().ProofOfWorkValidation().Status(),
-					Timestamp: data.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix(),
-				},
+		EncryptedAddrByRobot: kc.EncryptedAddrByRobot(),
+		EncryptedWallet:      kc.EncryptedWallet(),
+		IDPublicKey:          kc.IDPublicKey(),
+		Proposal: proposal{
+			SharedEmitterKeyPair: proposalKeypair{
+				EncryptedPrivateKey: kc.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
+				PublicKey:           kc.Proposal().SharedEmitterKeyPair().PublicKey(),
 			},
-			Validations: valids,
 		},
-	})
-	if err != nil {
-		return "", err
-	}
-	return hashBytes(b), nil
-}
-
-func (h hasher) HashBiometricData(data account.BiometricData) (string, error) {
-	b, err := json.Marshal(biometricData{
-		PersonHash:          data.PersonHash(),
-		EncryptedAddrPerson: data.CipherAddrPerson(),
-		EncryptedAddrRobot:  data.CipherAddrRobot(),
-		EncryptedAESKey:     data.CipherAESKey(),
-		PersonPublicKey:     data.PersonPublicKey(),
-		BIODSignature:       data.Signatures().Biod(),
-		PersonSignature:     data.Signatures().Person(),
-	})
-	if err != nil {
-		return "", err
-	}
-	return hashBytes(b), nil
-}
-
-func (h hasher) HashKeychainData(data account.KeychainData) (string, error) {
-	b, err := json.Marshal(keychainData{
-		EncryptedAddrRobot: data.CipherAddrRobot(),
-		EncryptedWallet:    data.CipherWallet(),
-		PersonPublicKey:    data.PersonPublicKey(),
-		BIODSignature:      data.Signatures().Biod(),
-		PersonSignature:    data.Signatures().Person(),
+		EmitterSignature: kc.EmitterSignature(),
+		IDSignature:      kc.IDSignature(),
 	})
 	if err != nil {
 		return "", err

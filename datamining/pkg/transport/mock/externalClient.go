@@ -4,7 +4,6 @@ import (
 	"errors"
 	"time"
 
-	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
@@ -20,20 +19,19 @@ func NewExternalClient(db mock.Database) mockExtClient {
 	return mockExtClient{db}
 }
 
-func (c mockExtClient) LeadKeychainMining(ip string, txHash string, encData string, sig *api.Signature, validators []string) error {
+func (c mockExtClient) LeadKeychainMining(ip string, txHash string, encData string, validators []string) error {
 	return nil
 }
 
-func (c mockExtClient) LeadBiometricMining(ip string, txHash string, encData string, sig *api.Signature, validators []string) error {
-
+func (c mockExtClient) LeadIDMining(ip string, txHash string, encData string, validators []string) error {
 	return nil
 }
 
-func (c mockExtClient) RequestBiometric(ip string, encPersonHash string) (account.Biometric, error) {
-	return c.db.FindBiometric("hash")
+func (c mockExtClient) RequestID(ip string, encPersonHash string) (account.EndorsedID, error) {
+	return c.db.FindID("hash")
 }
 
-func (c mockExtClient) RequestKeychain(ip string, encAddress string) (account.Keychain, error) {
+func (c mockExtClient) RequestKeychain(ip string, encAddress string) (account.EndorsedKeychain, error) {
 	return c.db.FindLastKeychain("hash")
 }
 
@@ -57,11 +55,11 @@ func (c mockExtClient) RequestValidation(ip string, txType mining.TransactionTyp
 func (c mockExtClient) RequestStorage(ip string, txType mining.TransactionType, data interface{}, end mining.Endorsement) error {
 	switch txType {
 	case mining.KeychainTransaction:
-		keychain := account.NewKeychain("address", data.(account.KeychainData), end)
+		keychain := account.NewEndorsedKeychain("address", data.(account.Keychain), end)
 		return c.db.StoreKeychain(keychain)
-	case mining.BiometricTransaction:
-		bio := account.NewBiometric(data.(account.BiometricData), end)
-		return c.db.StoreBiometric(bio)
+	case mining.IDTransaction:
+		bio := account.NewEndorsedID(data.(account.ID), end)
+		return c.db.StoreID(bio)
 	}
 
 	return errors.New("Unsupported storage")

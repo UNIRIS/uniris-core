@@ -20,16 +20,16 @@ var ErrInvalidValidationNumber = errors.New("Invalid validations number")
 //Repository handles account storage
 type Repository interface {
 	//StoreKeychain persists the keychain
-	StoreKeychain(account.Keychain) error
+	StoreKeychain(account.EndorsedKeychain) error
 
-	//StoreBiometric persists the biometric
-	StoreBiometric(account.Biometric) error
+	//StoreID persists the ID
+	StoreID(account.EndorsedID) error
 
 	//StoreKOKeychain persists the keychain in the KO database
-	StoreKOKeychain(account.Keychain) error
+	StoreKOKeychain(account.EndorsedKeychain) error
 
-	//StoreKOBiometric persists the biometric in the KO database
-	StoreKOBiometric(account.Biometric) error
+	//StoreKOID persists the ID in the KO database
+	StoreKOID(account.EndorsedID) error
 }
 
 //Service is the interface that provide methods for wallets transactions on robot side
@@ -39,25 +39,25 @@ type Service interface {
 	//
 	//It performs checks to insure the integrity of the keychain
 	//Determines if the keychain must be store in the KO, OK or pending database
-	StoreKeychain(account.Keychain) error
+	StoreKeychain(account.EndorsedKeychain) error
 
-	//StoreBiometric processes the biometric storage
+	//StoreID processes the ID storage
 	//
-	//It performs checks to insure the integrity of the biometric
-	//Determines if the biometric must be store in the KO, OK or pending database
-	StoreBiometric(account.Biometric) error
+	//It performs checks to insure the integrity of the ID
+	//Determines if the ID must be store in the KO, OK or pending database
+	StoreID(account.EndorsedID) error
 }
 
 type signatureVerifier interface {
 	account.KeychainSignatureVerifier
-	account.BiometricSignatureVerifier
+	account.IDSignatureVerifier
 	mining.ValidationVerifier
 	mining.PowSigVerifier
 }
 
 type hasher interface {
 	account.KeychainHasher
-	account.BiometricHasher
+	account.IDHasher
 }
 
 type service struct {
@@ -73,7 +73,7 @@ func NewService(aiClient AIClient, repo Repository, lister listing.Service, sigV
 	return service{aiClient, repo, lister, sigVerif, hash}
 }
 
-func (s service) StoreKeychain(kc account.Keychain) error {
+func (s service) StoreKeychain(kc account.EndorsedKeychain) error {
 	//Checks if the storage must done on this peer
 	if err := s.aiClient.CheckStorageAuthorization(kc.Endorsement().TransactionHash()); err != nil {
 		return err
@@ -90,13 +90,12 @@ func (s service) StoreKeychain(kc account.Keychain) error {
 
 	//Check the POW
 	matchedKey := kc.Endorsement().MasterValidation().ProofOfWorkKey()
-	biodSig := kc.Signatures().Biod()
-	if err := s.sigVerif.VerifyTransactionDataSignature(mining.KeychainTransaction, matchedKey, kc, biodSig); err != nil {
+	if err := s.sigVerif.VerifyTransactionDataSignature(mining.KeychainTransaction, matchedKey, kc, kc.EmitterSignature()); err != nil {
 		return ErrInvalidDataMining
 	}
 
 	//Checks signatures
-	if err := s.sigVerif.VerifyKeychainDataSignatures(kc); err != nil {
+	if err := s.sigVerif.VerifyKeychainSignatures(kc); err != nil {
 		return err
 	}
 	if err := s.verifyEndorsementSignatures(kc.Endorsement()); err != nil {
@@ -120,47 +119,46 @@ func (s service) StoreKeychain(kc account.Keychain) error {
 	return s.repo.StoreKeychain(kc)
 }
 
-func (s service) StoreBiometric(bio account.Biometric) error {
+func (s service) StoreID(id account.EndorsedID) error {
 	//Checks if the storage must done on this peer
-	if err := s.aiClient.CheckStorageAuthorization(bio.Endorsement().TransactionHash()); err != nil {
+	if err := s.aiClient.CheckStorageAuthorization(id.Endorsement().TransactionHash()); err != nil {
 		return err
 	}
 
 	//Check the POW
-	matchedKey := bio.Endorsement().MasterValidation().ProofOfWorkKey()
-	biodSig := bio.Signatures().Biod()
-	if err := s.sigVerif.VerifyTransactionDataSignature(mining.BiometricTransaction, matchedKey, bio, biodSig); err != nil {
+	matchedKey := id.Endorsement().MasterValidation().ProofOfWorkKey()
+	if err := s.sigVerif.VerifyTransactionDataSignature(mining.IDTransaction, matchedKey, id, id.EmitterSignature()); err != nil {
 		return ErrInvalidDataMining
 	}
 
 	//Checks signatures
-	if err := s.sigVerif.VerifyBiometricDataSignatures(bio); err != nil {
+	if err := s.sigVerif.VerifyIDSignatures(id); err != nil {
 		return err
 	}
-	if err := s.verifyEndorsementSignatures(bio.Endorsement()); err != nil {
+	if err := s.verifyEndorsementSignatures(id.Endorsement()); err != nil {
 		return err
 	}
 
-	//Check integrity of the biometric
-	if err := s.checkBiometricEndorsementHash(bio.Endorsement(), bio); err != nil {
+	//Check integrity of the ID
+	if err := s.checkIDEndorsementHash(id.Endorsement(), id); err != nil {
 		return err
 	}
 
 	//Checks if the validations matches the required validations for this transaction
-	minValids, err := s.aiClient.GetMininumValidations(bio.Endorsement().TransactionHash())
+	minValids, err := s.aiClient.GetMininumValidations(id.Endorsement().TransactionHash())
 	if err != nil {
 		return err
 	}
-	if len(bio.Endorsement().Validations()) < minValids {
+	if len(id.Endorsement().Validations()) < minValids {
 		return ErrInvalidValidationNumber
 	}
 
-	//If the biometric contains any KO validations, it will be stored on the KO database
-	if s.isKO(bio.Endorsement()) {
-		return s.repo.StoreKOBiometric(bio)
+	//If the ID contains any KO validations, it will be stored on the KO database
+	if s.isKO(id.Endorsement()) {
+		return s.repo.StoreKOID(id)
 	}
 
-	return s.repo.StoreBiometric(bio)
+	return s.repo.StoreID(id)
 }
 
 func (s service) isKO(end mining.Endorsement) bool {
@@ -191,13 +189,13 @@ func (s service) verifyEndorsementSignatures(end mining.Endorsement) error {
 	return nil
 }
 
-func (s service) checkKeychainEndorsementHash(end mining.Endorsement, data account.KeychainData, previousData account.KeychainData) error {
+func (s service) checkKeychainEndorsementHash(end mining.Endorsement, kc account.Keychain, prevKc account.Keychain) error {
 
-	if previousData != nil {
+	if prevKc != nil {
 		if end.LastTransactionHash() == "" {
 			return ErrInvalidDataIntegrity
 		}
-		prevHash, err := s.hasher.HashKeychainData(previousData)
+		prevHash, err := s.hasher.HashKeychain(prevKc)
 		if err != nil {
 			return err
 		}
@@ -206,7 +204,7 @@ func (s service) checkKeychainEndorsementHash(end mining.Endorsement, data accou
 		}
 	}
 
-	hash, err := s.hasher.HashKeychainData(data)
+	hash, err := s.hasher.HashKeychain(kc)
 	if err != nil {
 		return err
 	}
@@ -218,8 +216,8 @@ func (s service) checkKeychainEndorsementHash(end mining.Endorsement, data accou
 	return nil
 }
 
-func (s service) checkBiometricEndorsementHash(end mining.Endorsement, data account.BiometricData) error {
-	hash, err := s.hasher.HashBiometricData(data)
+func (s service) checkIDEndorsementHash(end mining.Endorsement, id account.ID) error {
+	hash, err := s.hasher.HashID(id)
 	if err != nil {
 		return err
 	}

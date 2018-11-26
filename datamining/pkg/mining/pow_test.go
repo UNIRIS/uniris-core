@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
-	"github.com/uniris/uniris-core/datamining/pkg/biod/listing"
+	emlisting "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
 )
 
 /*
@@ -18,17 +18,17 @@ Scenario: Execute the POW
 func TestExecutePOW(t *testing.T) {
 
 	repo := &mockDatabase{}
-	list := listing.NewService(repo)
+	emLister := emlisting.NewService(repo)
 
 	lastValidPool := datamining.NewPool(datamining.Peer{PublicKey: "key"})
 
 	pow := pow{
 		lastVPool:   lastValidPool,
-		lister:      list,
+		emLister:    emLister,
 		robotPubKey: "my key",
 		robotPvKey:  "my key",
 		signer:      mockPowSigner{},
-		txBiodSig:   "signature",
+		txEmSig:     "signature",
 		txData:      "data",
 		txType:      KeychainTransaction,
 	}
@@ -51,17 +51,17 @@ Scenario: Execute the POW and not find a match
 func TestExecutePOW_KO(t *testing.T) {
 
 	repo := &mockDatabase{}
-	list := listing.NewService(repo)
+	emLister := emlisting.NewService(repo)
 
 	lastValidPool := datamining.NewPool(datamining.Peer{PublicKey: "key"})
 
 	pow := pow{
 		lastVPool:   lastValidPool,
-		lister:      list,
+		emLister:    emLister,
 		robotPubKey: "my key",
 		robotPvKey:  "my key",
 		signer:      mockBadPowSigner{},
-		txBiodSig:   "signature",
+		txEmSig:     "signature",
 		txData:      "data",
 		txType:      KeychainTransaction,
 	}
@@ -78,7 +78,7 @@ func TestExecutePOW_KO(t *testing.T) {
 type mockDatabase struct {
 }
 
-func (d *mockDatabase) ListBiodPubKeys() ([]string, error) {
+func (d *mockDatabase) ListEmitterPublicKeys() ([]string, error) {
 	return []string{"key1", "key2", "key3"}, nil
 }
 

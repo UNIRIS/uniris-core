@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
-	biodlisting "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
+	emLister "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 )
@@ -20,7 +20,7 @@ Scenario: Mine a transaction
 	Then I get a master valid and a list of validations
 */
 func TestMine(t *testing.T) {
-	biodLister := biodlisting.NewService(mockBiodDatabase{})
+	emLister := emLister.NewService(mockEmDatabase{})
 
 	s := service{
 		aiClient: mockAIClient{},
@@ -30,7 +30,7 @@ func TestMine(t *testing.T) {
 		txMiners: map[TransactionType]TransactionMiner{
 			KeychainTransaction: mockMiner{},
 		},
-		biodLister: biodLister,
+		emLister: emLister,
 	}
 
 	endorsement, err := s.mine("txHash", "fake data", "addr", "biod sig",
@@ -96,8 +96,11 @@ func TestValidateTx(t *testing.T) {
 			KeychainTransaction: mockMiner{},
 		},
 		config: system.UnirisConfig{
+			PublicKey: "pub key",
 			SharedKeys: system.SharedKeys{
-				RobotPublicKey: "pub key",
+				Robot: system.KeyPair{
+					PublicKey: "pub key",
+				},
 			},
 		},
 		signer: mockSrvSigner{},
@@ -124,8 +127,11 @@ func TestValidateInvalidTx(t *testing.T) {
 			KeychainTransaction: mockBadMiner{},
 		},
 		config: system.UnirisConfig{
+			PublicKey: "pub key",
 			SharedKeys: system.SharedKeys{
-				RobotPublicKey: "pub key",
+				Robot: system.KeyPair{
+					PublicKey: "pub key",
+				},
 			},
 		},
 		signer: mockSrvSigner{},
@@ -212,9 +218,9 @@ func (r mockPoolRequester) RequestStorage(minReplicas int, sPool datamining.Pool
 	return nil
 }
 
-type mockBiodDatabase struct{}
+type mockEmDatabase struct{}
 
-func (db mockBiodDatabase) ListBiodPubKeys() ([]string, error) {
+func (db mockEmDatabase) ListEmitterPublicKeys() ([]string, error) {
 	return []string{"key1", "key2"}, nil
 }
 

@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uniris/uniris-core/datamining/pkg"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uniris/uniris-core/datamining/pkg/account"
@@ -21,8 +23,8 @@ func TestGetLastKeychain(t *testing.T) {
 	db := new(databasemock)
 	s := NewService(db)
 
-	sigs := account.NewSignatures("sig1", "sig2")
-	keychainData := account.NewKeychainData("cipher addr", "cipher wallet", "person pub", sigs)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 
 	endors1 := mining.NewEndorsement(
 		"", "hash1",
@@ -32,7 +34,7 @@ func TestGetLastKeychain(t *testing.T) {
 		},
 	)
 
-	kc1 := account.NewKeychain("address", keychainData, endors1)
+	eKc1 := account.NewEndorsedKeychain("address", keychain, endors1)
 
 	time.Sleep(1 * time.Second)
 	endors2 := mining.NewEndorsement(
@@ -43,31 +45,31 @@ func TestGetLastKeychain(t *testing.T) {
 		},
 	)
 
-	kc2 := account.NewKeychain("address", keychainData, endors2)
+	eKc2 := account.NewEndorsedKeychain("address", keychain, endors2)
 
-	db.Keychains = append(db.Keychains, kc1)
-	db.Keychains = append(db.Keychains, kc2)
+	db.Keychains = append(db.Keychains, eKc1)
+	db.Keychains = append(db.Keychains, eKc2)
 
-	keychain, err := s.GetLastKeychain("address")
+	kc, err := s.GetLastKeychain("address")
 	assert.Nil(t, err)
 	assert.NotNil(t, keychain)
-	assert.Equal(t, "hash2", keychain.Endorsement().TransactionHash())
-	assert.Equal(t, "hash1", keychain.Endorsement().LastTransactionHash())
+	assert.Equal(t, "hash2", kc.Endorsement().TransactionHash())
+	assert.Equal(t, "hash1", kc.Endorsement().LastTransactionHash())
 }
 
 /*
-Scenario: Get biometric
+Scenario: Get ID
 	Given a empty database
-	When I add a Biometric
-	Then return values of a GetBiometric are the exepeted ones
+	When I add an ID
+	Then return values of a GetID are the exepeted ones
 */
-func TestGetBiometric(t *testing.T) {
+func TestGetID(t *testing.T) {
 
 	db := new(databasemock)
 	s := NewService(db)
 
-	sigs := account.NewSignatures("sig1", "sig2")
-	data := account.NewBiometricData("hash1", "cipher addr robot", "cipher addr person", "cipher aes key", "person key", sigs)
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair("enc pv key", "pub key"))
+	id := account.NewID("hash1", "enc addr robot", "enc addr person", "enc aes key", "id pub key", prop, "id sig", "em sig")
 
 	endors := mining.NewEndorsement(
 		"", "hash1",
@@ -77,29 +79,29 @@ func TestGetBiometric(t *testing.T) {
 		},
 	)
 
-	b := account.NewBiometric(data, endors)
+	eID := account.NewEndorsedID(id, endors)
 
-	db.Biometrics = append(db.Biometrics, b)
-	wa, err := s.GetBiometric("hash1")
+	db.IDs = append(db.IDs, eID)
+	wa, err := s.GetID("hash1")
 	assert.Nil(t, err)
 	assert.NotNil(t, wa)
 }
 
 type databasemock struct {
-	Biometrics []account.Biometric
-	Keychains  []account.Keychain
+	IDs       []account.EndorsedID
+	Keychains []account.EndorsedKeychain
 }
 
-func (d *databasemock) FindBiometric(bh string) (account.Biometric, error) {
-	for _, b := range d.Biometrics {
-		if b.PersonHash() == bh {
-			return b, nil
+func (d *databasemock) FindID(idHash string) (account.EndorsedID, error) {
+	for _, id := range d.IDs {
+		if id.Hash() == idHash {
+			return id, nil
 		}
 	}
 	return nil, nil
 }
 
-func (d *databasemock) FindLastKeychain(addr string) (account.Keychain, error) {
+func (d *databasemock) FindLastKeychain(addr string) (account.EndorsedKeychain, error) {
 	sort.Slice(d.Keychains, func(i, j int) bool {
 		iTimestamp := d.Keychains[i].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()
 		jTimestamp := d.Keychains[j].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()

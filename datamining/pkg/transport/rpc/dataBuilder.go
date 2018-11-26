@@ -3,6 +3,8 @@ package rpc
 import (
 	"time"
 
+	"github.com/uniris/uniris-core/datamining/pkg"
+
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
@@ -10,24 +12,37 @@ import (
 
 type dataBuilder struct{}
 
-func (b dataBuilder) buildBiometricData(data *api.BiometricData) account.BiometricData {
-	sigs := account.NewSignatures(data.Signature.Biod, data.Signature.Person)
-	return account.NewBiometricData(
-		data.PersonHash,
-		data.CipherAddrRobot,
-		data.CipherAddrBio,
-		data.CipherAESKey,
-		data.PersonPubk,
-		sigs)
+func (b dataBuilder) buildID(id *api.ID) account.ID {
+
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair(
+		id.Proposal.SharedEmitterKeyPair.EncryptedPrivateKey,
+		id.Proposal.SharedEmitterKeyPair.PublicKey,
+	))
+
+	return account.NewID(id.Hash,
+		id.EncryptedAddrByRobot,
+		id.EncryptedAddrByID,
+		id.EncryptedAESKey,
+		id.PublicKey,
+		prop,
+		id.IDSignature,
+		id.EmitterSignature)
 }
 
-func (b dataBuilder) buildKeychainData(data *api.KeychainData) account.KeychainData {
-	sigs := account.NewSignatures(data.Signature.Biod, data.Signature.Person)
-	return account.NewKeychainData(
-		data.CipherAddrRobot,
-		data.CipherWallet,
-		data.PersonPubk,
-		sigs,
+func (b dataBuilder) buildKeychain(kc *api.Keychain) account.Keychain {
+
+	prop := datamining.NewProposal(datamining.NewProposedKeyPair(
+		kc.Proposal.SharedEmitterKeyPair.EncryptedPrivateKey,
+		kc.Proposal.SharedEmitterKeyPair.PublicKey,
+	))
+
+	return account.NewKeychain(
+		kc.EncryptedAddrByRobot,
+		kc.EncryptedWallet,
+		kc.IDPublicKey,
+		prop,
+		kc.IDSignature,
+		kc.EmitterSignature,
 	)
 }
 

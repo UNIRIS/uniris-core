@@ -6,7 +6,7 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	account_adding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
 	account_listing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
-	biod_listing "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
+	em_listing "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 )
 
@@ -14,7 +14,7 @@ import (
 type Database interface {
 	account_adding.Repository
 	account_listing.Repository
-	biod_listing.Repository
+	em_listing.Repository
 	lock.Repository
 }
 
@@ -24,23 +24,23 @@ func NewDatabase() Database {
 }
 
 type mockDatabase struct {
-	Biometrics   []account.Biometric
-	KOBiometrics []account.Biometric
-	Keychains    []account.Keychain
-	KOKeychains  []account.Keychain
-	Locks        []lock.TransactionLock
+	IDs         []account.EndorsedID
+	KOIDs       []account.EndorsedID
+	Keychains   []account.EndorsedKeychain
+	KOKeychains []account.EndorsedKeychain
+	Locks       []lock.TransactionLock
 }
 
-func (d mockDatabase) FindBiometric(hash string) (account.Biometric, error) {
-	for _, b := range d.Biometrics {
-		if b.PersonHash() == hash {
-			return b, nil
+func (d mockDatabase) FindID(hash string) (account.EndorsedID, error) {
+	for _, id := range d.IDs {
+		if id.Hash() == hash {
+			return id, nil
 		}
 	}
 	return nil, nil
 }
 
-func (d mockDatabase) FindLastKeychain(addr string) (account.Keychain, error) {
+func (d mockDatabase) FindLastKeychain(addr string) (account.EndorsedKeychain, error) {
 	sort.Slice(d.Keychains, func(i, j int) bool {
 		iTimestamp := d.Keychains[i].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()
 		jTimestamp := d.Keychains[j].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()
@@ -55,27 +55,27 @@ func (d mockDatabase) FindLastKeychain(addr string) (account.Keychain, error) {
 	return nil, nil
 }
 
-func (d mockDatabase) ListBiodPubKeys() ([]string, error) {
+func (d mockDatabase) ListEmitterPublicKeys() ([]string, error) {
 	return []string{"key1", "key2", "key3"}, nil
 }
 
-func (d *mockDatabase) StoreKeychain(k account.Keychain) error {
+func (d *mockDatabase) StoreKeychain(k account.EndorsedKeychain) error {
 	d.Keychains = append(d.Keychains, k)
 	return nil
 }
 
-func (d *mockDatabase) StoreKOKeychain(k account.Keychain) error {
+func (d *mockDatabase) StoreKOKeychain(k account.EndorsedKeychain) error {
 	d.KOKeychains = append(d.KOKeychains, k)
 	return nil
 }
 
-func (d *mockDatabase) StoreBiometric(b account.Biometric) error {
-	d.Biometrics = append(d.Biometrics, b)
+func (d *mockDatabase) StoreID(id account.EndorsedID) error {
+	d.IDs = append(d.IDs, id)
 	return nil
 }
 
-func (d *mockDatabase) StoreKOBiometric(b account.Biometric) error {
-	d.KOBiometrics = append(d.KOBiometrics, b)
+func (d *mockDatabase) StoreKOID(id account.EndorsedID) error {
+	d.KOIDs = append(d.KOIDs, id)
 	return nil
 }
 

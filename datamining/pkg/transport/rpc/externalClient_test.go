@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	mocktransport "github.com/uniris/uniris-core/datamining/pkg/transport/mock"
@@ -26,12 +27,12 @@ import (
 )
 
 /*
-Scenario: Call RequestBiometric GRPC endpoint
-	Given a biometric stored and a encrypted person hash
+Scenario: Call RequestID GRPC endpoint
+	Given an ID stored and a encrypted id hash
 	When I want to retrieve it, the client call the GRPC endpoint
-	Then I retrieve the biometric data stored
+	Then I retrieve the ID data stored
 */
-func TestRequestBiometricClient(t *testing.T) {
+func TestRequestIDClient(t *testing.T) {
 
 	db := mockstorage.NewDatabase()
 	accLister := accountListing.NewService(db)
@@ -43,8 +44,10 @@ func TestRequestBiometricClient(t *testing.T) {
 
 	port := 2000
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
@@ -68,9 +71,13 @@ func TestRequestBiometricClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	db.StoreBiometric(
-		account.NewBiometric(
-			account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", account.NewSignatures("sig", "sig")),
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
+	db.StoreID(
+		account.NewEndorsedID(
+			account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", prop, "id sig", "em sig"),
 			mining.NewEndorsement("", "hash",
 				mining.NewMasterValidation([]string{"hash"}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
 				[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")}),
@@ -78,17 +85,17 @@ func TestRequestBiometricClient(t *testing.T) {
 	)
 
 	cli := NewExternalClient(crypto, conf)
-	bio, err := cli.RequestBiometric("127.0.0.1", "hash")
+	bio, err := cli.RequestID("127.0.0.1", "hash")
 	assert.Nil(t, err)
 	assert.NotNil(t, bio)
-	assert.Equal(t, "enc aes key", bio.CipherAESKey())
+	assert.Equal(t, "enc aes key", bio.EncryptedAESKey())
 }
 
 /*
 Scenario: Call RequestKeychain GRPC endpoint
 	Given a keychain stored and a encrypted address
 	When I want to retrieve it, the client call the GRPC endpoint
-	Then I retrieve the biometric data stored
+	Then I retrieve the ID data stored
 */
 func TestRequestKeychainClient(t *testing.T) {
 
@@ -102,8 +109,10 @@ func TestRequestKeychainClient(t *testing.T) {
 
 	port := 2001
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
@@ -128,10 +137,14 @@ func TestRequestKeychainClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
 	db.StoreKeychain(
-		account.NewKeychain(
+		account.NewEndorsedKeychain(
 			"hash",
-			account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig")),
+			account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em pub"),
 			mining.NewEndorsement("", "hash",
 				mining.NewMasterValidation([]string{"hash"}, "key", mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")),
 				[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")}),
@@ -142,7 +155,7 @@ func TestRequestKeychainClient(t *testing.T) {
 	kc, err := cli.RequestKeychain("127.0.0.1", "hash")
 	assert.Nil(t, err)
 	assert.NotNil(t, kc)
-	assert.Equal(t, "enc wallet", kc.CipherWallet())
+	assert.Equal(t, "enc wallet", kc.EncryptedWallet())
 }
 
 /*
@@ -164,8 +177,10 @@ func TestRequestLockClient(t *testing.T) {
 
 	port := 2002
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
@@ -224,8 +239,10 @@ func TestRequestUnLockClient(t *testing.T) {
 
 	port := 2003
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
@@ -295,8 +312,10 @@ func TestRequestKeychainValidationClient(t *testing.T) {
 
 	port := 2004
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
@@ -324,23 +343,27 @@ func TestRequestKeychainValidationClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 
 	cli := NewExternalClient(crypto, conf)
-	valid, err := cli.RequestValidation("127.0.0.1", mining.KeychainTransaction, "hash", keychainData)
+	valid, err := cli.RequestValidation("127.0.0.1", mining.KeychainTransaction, "hash", keychain)
 	assert.Nil(t, err)
 	assert.NotNil(t, valid)
 }
 
 /*
-Scenario: Call RequestValidation GRPC endpoint for a biometric
-	Given a transaction hash, biometric data
+Scenario: Call RequestValidation GRPC endpoint for an ID
+	Given a transaction hash, ID data
 	When I want to validate it, the client call the GRPC endpoint
 	Then I get the validation processed
 */
-func TestRequestBiometricValidationClient(t *testing.T) {
+func TestRequestIDValidationClient(t *testing.T) {
 	txMiners := map[mining.TransactionType]mining.TransactionMiner{
-		mining.BiometricTransaction: accountMining.NewBiometricMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher()),
+		mining.IDTransaction: accountMining.NewIDMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher()),
 	}
 
 	crypto := Crypto{
@@ -351,8 +374,10 @@ func TestRequestBiometricValidationClient(t *testing.T) {
 
 	port := 2005
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
@@ -380,10 +405,14 @@ func TestRequestBiometricValidationClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	bioData := account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", account.NewSignatures("sig", "sig"))
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", prop, "id sig", "em sig")
 
 	cli := NewExternalClient(crypto, conf)
-	valid, err := cli.RequestValidation("127.0.0.1", mining.BiometricTransaction, "hash", bioData)
+	valid, err := cli.RequestValidation("127.0.0.1", mining.IDTransaction, "hash", id)
 	assert.Nil(t, err)
 	assert.NotNil(t, valid)
 }
@@ -408,8 +437,10 @@ func TestRequestKeychainStorageClient(t *testing.T) {
 
 	port := 2006
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
@@ -434,14 +465,18 @@ func TestRequestKeychainStorageClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	keychainData := account.NewKeychainData("enc addr", "enc wallet", "pub", account.NewSignatures("sig", "sig"))
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
+	keychain := account.NewKeychain("enc addr", "enc wallet", "id pub", prop, "id sig", "em sig")
 	end := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{""}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")},
 	)
 
 	cli := NewExternalClient(crypto, conf)
-	err := cli.RequestStorage("127.0.0.1", mining.KeychainTransaction, keychainData, end)
+	err := cli.RequestStorage("127.0.0.1", mining.KeychainTransaction, keychain, end)
 	assert.Nil(t, err)
 
 	kc, _ := db.FindLastKeychain("hash")
@@ -449,12 +484,12 @@ func TestRequestKeychainStorageClient(t *testing.T) {
 }
 
 /*
-Scenario: Call RequestStorage GRPC endpoint for biometric
-	Given a biometric data and its endorsement
+Scenario: Call RequestStorage GRPC endpoint for ID
+	Given an ID data and its endorsement
 	When I want to store it, the client call the GRPC endpoint
 	Then the data stored
 */
-func TestRequestBiometricStorageClient(t *testing.T) {
+func TestRequestIDStorageClient(t *testing.T) {
 	db := mockstorage.NewDatabase()
 	accLister := accountListing.NewService(db)
 	aiClient := mocktransport.NewAIClient()
@@ -468,8 +503,10 @@ func TestRequestBiometricStorageClient(t *testing.T) {
 
 	port := 2007
 	conf := system.UnirisConfig{
-		Datamining: system.DataMiningConfiguration{
-			ExternalPort: port,
+		Services: system.ServicesConfiguration{
+			Datamining: system.DataMiningConfiguration{
+				ExternalPort: port,
+			},
 		},
 	}
 
@@ -494,16 +531,20 @@ func TestRequestBiometricStorageClient(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	bioData := account.NewBiometricData("hash", "enc addr", "enc addr", "enc aes key", "pub", account.NewSignatures("sig", "sig"))
+	prop := datamining.NewProposal(
+		datamining.NewProposedKeyPair("enc pv key", "pub key"),
+	)
+
+	id := account.NewID("hash", "enc addr", "enc addr", "enc aes key", "id pub", prop, "id sig", "em sig")
 	end := mining.NewEndorsement("", "hash",
 		mining.NewMasterValidation([]string{""}, "robotkey", mining.NewValidation(mining.ValidationOK, time.Now(), "robotkey", "sig")),
 		[]mining.Validation{mining.NewValidation(mining.ValidationOK, time.Now(), "pub", "sig")},
 	)
 
 	cli := NewExternalClient(crypto, conf)
-	err := cli.RequestStorage("127.0.0.1", mining.BiometricTransaction, bioData, end)
+	err := cli.RequestStorage("127.0.0.1", mining.IDTransaction, id, end)
 	assert.Nil(t, err)
 
-	kc, _ := db.FindBiometric("hash")
+	kc, _ := db.FindID("hash")
 	assert.NotNil(t, kc)
 }

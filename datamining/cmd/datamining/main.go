@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"path/filepath"
 
 	accountAdding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
 	accountListing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
 	accountMining "github.com/uniris/uniris-core/datamining/pkg/account/mining"
-	biodlisting "github.com/uniris/uniris-core/datamining/pkg/biod/listing"
+	emlisting "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
@@ -27,7 +26,7 @@ import (
 )
 
 const (
-	defaultConfFile = "../../../default-conf.yml"
+	defaultConfFile = "../../../conf.yaml"
 )
 
 func main() {
@@ -38,6 +37,10 @@ func main() {
 	}
 
 	db := mem.NewDatabase()
+
+	for _, kp := range config.SharedKeys.EmKeys {
+		db.StoreEmitterSharedKey(kp.PublicKey)
+	}
 
 	poolFinder := mocktransport.NewPoolFinder()
 	aiClient := mocktransport.NewAIClient()
@@ -51,14 +54,14 @@ func main() {
 	grpcClient := rpc.NewExternalClient(rpcCrypto, *config)
 	poolRequester := rpc.NewPoolRequester(grpcClient, *config, rpcCrypto)
 
-	biodLister := biodlisting.NewService(db)
+	emLister := emlisting.NewService(db)
 	lockSrv := lock.NewService(db)
 	accountLister := accountListing.NewService(db)
 	accountAdder := accountAdding.NewService(aiClient, db, accountLister, signer, hasher)
 
 	txMiners := map[mining.TransactionType]mining.TransactionMiner{
-		mining.KeychainTransaction:  accountMining.NewKeychainMiner(signer, hasher, accountLister),
-		mining.BiometricTransaction: accountMining.NewBiometricMiner(signer, hasher),
+		mining.KeychainTransaction: accountMining.NewKeychainMiner(signer, hasher, accountLister),
+		mining.IDTransaction:       accountMining.NewIDMiner(signer, hasher),
 	}
 
 	miningSrv := mining.NewService(
@@ -67,7 +70,7 @@ func main() {
 		poolFinder,
 		poolRequester,
 		signer,
-		biodLister,
+		emLister,
 		*config,
 		txMiners,
 	)
@@ -78,7 +81,7 @@ func main() {
 		internalHandler := rpc.NewInternalServerHandler(poolRequester, aiClient, rpcCrypto, *config)
 
 		//Starts Internal grpc server
-		if err := startInternalServer(internalHandler, config.Datamining.InternalPort); err != nil {
+		if err := startInternalServer(internalHandler, config.Services.Datamining.InternalPort); err != nil {
 			log.Fatal(err)
 		}
 	}()
@@ -86,7 +89,7 @@ func main() {
 	//Starts Internal grpc server
 	rpcServices := rpc.NewExternalServices(lockSrv, miningSrv, accountAdder, accountLister)
 	externalHandler := rpc.NewExternalServerHandler(rpcServices, rpcCrypto, *config)
-	if err := startExternalServer(externalHandler, config.Datamining.ExternalPort); err != nil {
+	if err := startExternalServer(externalHandler, config.Services.Datamining.ExternalPort); err != nil {
 		log.Fatal(err)
 	}
 
@@ -128,14 +131,6 @@ func loadConfiguration() (*system.UnirisConfig, error) {
 	flag.Parse()
 
 	confFilePath, err := filepath.Abs(*confFile)
-	if _, err := os.Stat(confFilePath); os.IsNotExist(err) {
-		conf, err := system.BuildFromEnv()
-		if err != nil {
-			return nil, err
-		}
-		return conf, nil
-	}
-
 	conf, err := system.BuildFromFile(confFilePath)
 	if err != nil {
 		return nil, err
