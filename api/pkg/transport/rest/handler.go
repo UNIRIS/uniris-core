@@ -25,13 +25,14 @@ func Handler(r *gin.Engine, l listing.Service, a adding.Service) {
 		api.POST("/account", createAccount(a))
 		api.HEAD("/account/:hash", checkAccount(l))
 		api.GET("/account/:hash", getAccount(l))
+		api.GET("/sharedkeys/:pubKey", getSharedKeys(l))
 	}
 }
 
 func createAccount(a adding.Service) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
-		var req adding.AccountCreationRequest
+		var req *adding.AccountCreationRequest
 
 		if err := c.ShouldBindJSON(&req); err != nil {
 			e := createError(http.StatusBadRequest, err)
@@ -103,6 +104,28 @@ func getAccount(l listing.Service) func(c *gin.Context) {
 		}
 
 		c.JSON(http.StatusOK, acc)
+	}
+}
+
+func getSharedKeys(l listing.Service) func(c *gin.Context) {
+	return func(c *gin.Context) {
+
+		emPublicKey := c.Param("publicKey")
+		sig := c.Query("signature")
+
+		keys, err := l.GetSharedKeys(emPublicKey, sig)
+		if err != nil {
+			if err == listing.ErrUnauthorized {
+				e := createError(http.StatusUnauthorized, err)
+				c.JSON(e.Code, e)
+				return
+			}
+			e := createError(http.StatusInternalServerError, err)
+			c.JSON(e.Code, e)
+			return
+		}
+
+		c.JSON(http.StatusOK, keys)
 	}
 }
 

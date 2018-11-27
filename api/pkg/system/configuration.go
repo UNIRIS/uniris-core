@@ -2,45 +2,19 @@ package system
 
 import (
 	"io/ioutil"
-	"sort"
 
 	yaml "gopkg.in/yaml.v2"
 )
 
 //UnirisConfig describes the uniris robot main configuration
 type UnirisConfig struct {
-	Services   ServicesConfiguration `yaml:"services"`
-	SharedKeys SharedKeys            `yaml:"sharedKeys"`
+	Services ServicesConfiguration `yaml:"services"`
 }
 
 //ServicesConfiguration describes the services configuration
 type ServicesConfiguration struct {
 	API        APIConfiguration        `yaml:"api"`
 	Datamining DataMiningConfiguration `yaml:"datamining"`
-}
-
-//KeyPair represent a keypair
-type KeyPair struct {
-	PrivateKey string `yaml:"priv"`
-	PublicKey  string `yaml:"pub"`
-}
-
-//SharedKeys describes the uniris shared keys
-type SharedKeys struct {
-	Emitter []KeyPair `yaml:"em"`
-	Robot   KeyPair   `yaml:"robot"`
-}
-
-//SortEmitterKeys sorts the emitter shared keys by their public key
-func (sh *SharedKeys) SortEmitterKeys() {
-	sort.Slice(sh.Emitter, func(i, j int) bool {
-		return sh.Emitter[i].PublicKey < sh.Emitter[j].PublicKey
-	})
-}
-
-//EmitterRequestKey returns the shared emitter key for the request
-func (sh SharedKeys) EmitterRequestKey() KeyPair {
-	return sh.Emitter[0]
 }
 
 //APIConfiguration describes the api service configuration
@@ -70,8 +44,6 @@ func BuildFromFile(confFilePath string) (conf UnirisConfig, err error) {
 	if err != nil {
 		return
 	}
-
-	conf.SharedKeys.SortEmitterKeys()
 
 	return conf, nil
 }
