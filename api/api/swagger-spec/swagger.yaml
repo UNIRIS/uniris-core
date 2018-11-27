@@ -21,6 +21,33 @@ tags:
     description: Manage and query accounts
 
 paths:
+
+  /sharedkeys/{publicKey}:
+    tags:
+      - shared
+    summary: Get the latest shared keys
+    description: Retrieve the last shared keys shared between the robots
+    operationId: getSharedKeys
+    parameters:
+      - name: publicKey
+        in: path
+        required: true
+        description: Emitter public key
+      - name: signature
+        in: query
+        required: false
+        type: string
+        description: Signature of the public key
+    responses:
+      200:
+        description: Shared keys
+        schema:
+          $ref: "#/definitions/SharedKeysResponse"
+      default:
+        description: Error
+        schema:
+          $ref: "#/definitions/Error"
+
   /account:
     post:
       tags:
@@ -57,11 +84,6 @@ paths:
             required: true
             type: string
             description: Encrypted hash of the ID's public key
-          - name: signature
-            in: query
-            required: true
-            type: string
-            description: Signature of the encrypted hash by the shared emitter private key
         responses:
           "200":
             description: Existance of the account
@@ -173,9 +195,6 @@ definitions:
           keychain:
             $ref: "#/definitions/TransactionResult"
             description: Keychain transaction result
-      signature:
-        description: Signature of the response
-        type: string
 
   TransactionResult:
     required:
@@ -191,3 +210,29 @@ definitions:
       signature:
         type: string
         description: Signature of the person
+
+  SharedKeysResponse:
+    required:
+      - shared_emitter_keys
+      - shared_robot_pubkey
+    properties:
+      shared_robot_pubkey:
+        type: string
+        description: Shared robot public key
+      shared_emitter_keys:
+        description: List of the shared keys for the emitters
+        type: array
+        items:
+          type: object
+          required:
+            - public_key
+            - encrypted_private_key
+          properties:
+            public_key:
+              type: string
+              description: Shared emitter key public key
+            encrypted_private_key:
+              type: string
+              description: Encrypted shared emitter private key
+
+  
