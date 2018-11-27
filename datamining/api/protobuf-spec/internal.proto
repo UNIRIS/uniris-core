@@ -1,11 +1,15 @@
 syntax = "proto3";
 
+import "google/protobuf/empty.proto";
+
 package api;
 
 service Internal {
     rpc GetAccount (AccountSearchRequest) returns (AccountSearchResult) {}
     rpc CreateKeychain(KeychainCreationRequest) returns (CreationResult) {}
     rpc CreateID(IDCreationRequest) returns (CreationResult) {}
+    rpc GetSharedKeys(google.protobuf.Empty) returns(SharedKeysResult) {}
+    rpc IsEmitterAuthorized(AuthorizationRequest) returns (google.protobuf.Empty) {}
 }
 
 message AccountSearchRequest {
@@ -31,4 +35,19 @@ message CreationResult {
     string TransactionHash = 1;
     string MasterPeerIP = 2;
     string Signature = 3;
+}
+
+message SharedKeysResult {
+    string RobotPublicKey = 1;
+    string RobotPrivateKey = 2;
+    repeated SharedKeyPair EmitterKeys = 3;
+}
+
+message SharedKeyPair {
+    string EncryptedPrivateKey = 1;
+    string PublicKey = 2;
+}
+
+message AuthorizationRequest {
+    string PublicKey = 1;
 }

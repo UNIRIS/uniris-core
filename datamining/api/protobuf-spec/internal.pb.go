@@ -6,6 +6,7 @@ package api
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
+import empty "github.com/golang/protobuf/ptypes/empty"
 
 import (
 	context "golang.org/x/net/context"
@@ -34,7 +35,7 @@ func (m *AccountSearchRequest) Reset()         { *m = AccountSearchRequest{} }
 func (m *AccountSearchRequest) String() string { return proto.CompactTextString(m) }
 func (*AccountSearchRequest) ProtoMessage()    {}
 func (*AccountSearchRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_internal_f4536b8c2a9c2411, []int{0}
+	return fileDescriptor_internal_367d56c3e311acf5, []int{0}
 }
 func (m *AccountSearchRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AccountSearchRequest.Unmarshal(m, b)
@@ -75,7 +76,7 @@ func (m *AccountSearchResult) Reset()         { *m = AccountSearchResult{} }
 func (m *AccountSearchResult) String() string { return proto.CompactTextString(m) }
 func (*AccountSearchResult) ProtoMessage()    {}
 func (*AccountSearchResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_internal_f4536b8c2a9c2411, []int{1}
+	return fileDescriptor_internal_367d56c3e311acf5, []int{1}
 }
 func (m *AccountSearchResult) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AccountSearchResult.Unmarshal(m, b)
@@ -134,7 +135,7 @@ func (m *KeychainCreationRequest) Reset()         { *m = KeychainCreationRequest
 func (m *KeychainCreationRequest) String() string { return proto.CompactTextString(m) }
 func (*KeychainCreationRequest) ProtoMessage()    {}
 func (*KeychainCreationRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_internal_f4536b8c2a9c2411, []int{2}
+	return fileDescriptor_internal_367d56c3e311acf5, []int{2}
 }
 func (m *KeychainCreationRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_KeychainCreationRequest.Unmarshal(m, b)
@@ -172,7 +173,7 @@ func (m *IDCreationRequest) Reset()         { *m = IDCreationRequest{} }
 func (m *IDCreationRequest) String() string { return proto.CompactTextString(m) }
 func (*IDCreationRequest) ProtoMessage()    {}
 func (*IDCreationRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_internal_f4536b8c2a9c2411, []int{3}
+	return fileDescriptor_internal_367d56c3e311acf5, []int{3}
 }
 func (m *IDCreationRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_IDCreationRequest.Unmarshal(m, b)
@@ -212,7 +213,7 @@ func (m *CreationResult) Reset()         { *m = CreationResult{} }
 func (m *CreationResult) String() string { return proto.CompactTextString(m) }
 func (*CreationResult) ProtoMessage()    {}
 func (*CreationResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_internal_f4536b8c2a9c2411, []int{4}
+	return fileDescriptor_internal_367d56c3e311acf5, []int{4}
 }
 func (m *CreationResult) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CreationResult.Unmarshal(m, b)
@@ -253,12 +254,153 @@ func (m *CreationResult) GetSignature() string {
 	return ""
 }
 
+type SharedKeysResult struct {
+	RobotPublicKey       string           `protobuf:"bytes,1,opt,name=RobotPublicKey,proto3" json:"RobotPublicKey,omitempty"`
+	RobotPrivateKey      string           `protobuf:"bytes,2,opt,name=RobotPrivateKey,proto3" json:"RobotPrivateKey,omitempty"`
+	EmitterKeys          []*SharedKeyPair `protobuf:"bytes,3,rep,name=EmitterKeys,proto3" json:"EmitterKeys,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
+	XXX_unrecognized     []byte           `json:"-"`
+	XXX_sizecache        int32            `json:"-"`
+}
+
+func (m *SharedKeysResult) Reset()         { *m = SharedKeysResult{} }
+func (m *SharedKeysResult) String() string { return proto.CompactTextString(m) }
+func (*SharedKeysResult) ProtoMessage()    {}
+func (*SharedKeysResult) Descriptor() ([]byte, []int) {
+	return fileDescriptor_internal_367d56c3e311acf5, []int{5}
+}
+func (m *SharedKeysResult) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_SharedKeysResult.Unmarshal(m, b)
+}
+func (m *SharedKeysResult) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_SharedKeysResult.Marshal(b, m, deterministic)
+}
+func (dst *SharedKeysResult) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SharedKeysResult.Merge(dst, src)
+}
+func (m *SharedKeysResult) XXX_Size() int {
+	return xxx_messageInfo_SharedKeysResult.Size(m)
+}
+func (m *SharedKeysResult) XXX_DiscardUnknown() {
+	xxx_messageInfo_SharedKeysResult.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SharedKeysResult proto.InternalMessageInfo
+
+func (m *SharedKeysResult) GetRobotPublicKey() string {
+	if m != nil {
+		return m.RobotPublicKey
+	}
+	return ""
+}
+
+func (m *SharedKeysResult) GetRobotPrivateKey() string {
+	if m != nil {
+		return m.RobotPrivateKey
+	}
+	return ""
+}
+
+func (m *SharedKeysResult) GetEmitterKeys() []*SharedKeyPair {
+	if m != nil {
+		return m.EmitterKeys
+	}
+	return nil
+}
+
+type SharedKeyPair struct {
+	EncryptedPrivateKey  string   `protobuf:"bytes,1,opt,name=EncryptedPrivateKey,proto3" json:"EncryptedPrivateKey,omitempty"`
+	PublicKey            string   `protobuf:"bytes,2,opt,name=PublicKey,proto3" json:"PublicKey,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *SharedKeyPair) Reset()         { *m = SharedKeyPair{} }
+func (m *SharedKeyPair) String() string { return proto.CompactTextString(m) }
+func (*SharedKeyPair) ProtoMessage()    {}
+func (*SharedKeyPair) Descriptor() ([]byte, []int) {
+	return fileDescriptor_internal_367d56c3e311acf5, []int{6}
+}
+func (m *SharedKeyPair) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_SharedKeyPair.Unmarshal(m, b)
+}
+func (m *SharedKeyPair) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_SharedKeyPair.Marshal(b, m, deterministic)
+}
+func (dst *SharedKeyPair) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SharedKeyPair.Merge(dst, src)
+}
+func (m *SharedKeyPair) XXX_Size() int {
+	return xxx_messageInfo_SharedKeyPair.Size(m)
+}
+func (m *SharedKeyPair) XXX_DiscardUnknown() {
+	xxx_messageInfo_SharedKeyPair.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SharedKeyPair proto.InternalMessageInfo
+
+func (m *SharedKeyPair) GetEncryptedPrivateKey() string {
+	if m != nil {
+		return m.EncryptedPrivateKey
+	}
+	return ""
+}
+
+func (m *SharedKeyPair) GetPublicKey() string {
+	if m != nil {
+		return m.PublicKey
+	}
+	return ""
+}
+
+type AuthorizationRequest struct {
+	PublicKey            string   `protobuf:"bytes,1,opt,name=PublicKey,proto3" json:"PublicKey,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *AuthorizationRequest) Reset()         { *m = AuthorizationRequest{} }
+func (m *AuthorizationRequest) String() string { return proto.CompactTextString(m) }
+func (*AuthorizationRequest) ProtoMessage()    {}
+func (*AuthorizationRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_internal_367d56c3e311acf5, []int{7}
+}
+func (m *AuthorizationRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_AuthorizationRequest.Unmarshal(m, b)
+}
+func (m *AuthorizationRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_AuthorizationRequest.Marshal(b, m, deterministic)
+}
+func (dst *AuthorizationRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AuthorizationRequest.Merge(dst, src)
+}
+func (m *AuthorizationRequest) XXX_Size() int {
+	return xxx_messageInfo_AuthorizationRequest.Size(m)
+}
+func (m *AuthorizationRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_AuthorizationRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AuthorizationRequest proto.InternalMessageInfo
+
+func (m *AuthorizationRequest) GetPublicKey() string {
+	if m != nil {
+		return m.PublicKey
+	}
+	return ""
+}
+
 func init() {
 	proto.RegisterType((*AccountSearchRequest)(nil), "api.AccountSearchRequest")
 	proto.RegisterType((*AccountSearchResult)(nil), "api.AccountSearchResult")
 	proto.RegisterType((*KeychainCreationRequest)(nil), "api.KeychainCreationRequest")
 	proto.RegisterType((*IDCreationRequest)(nil), "api.IDCreationRequest")
 	proto.RegisterType((*CreationResult)(nil), "api.CreationResult")
+	proto.RegisterType((*SharedKeysResult)(nil), "api.SharedKeysResult")
+	proto.RegisterType((*SharedKeyPair)(nil), "api.SharedKeyPair")
+	proto.RegisterType((*AuthorizationRequest)(nil), "api.AuthorizationRequest")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -276,6 +418,8 @@ type InternalClient interface {
 	GetAccount(ctx context.Context, in *AccountSearchRequest, opts ...grpc.CallOption) (*AccountSearchResult, error)
 	CreateKeychain(ctx context.Context, in *KeychainCreationRequest, opts ...grpc.CallOption) (*CreationResult, error)
 	CreateID(ctx context.Context, in *IDCreationRequest, opts ...grpc.CallOption) (*CreationResult, error)
+	GetSharedKeys(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*SharedKeysResult, error)
+	IsEmitterAuthorized(ctx context.Context, in *AuthorizationRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
 type internalClient struct {
@@ -313,11 +457,31 @@ func (c *internalClient) CreateID(ctx context.Context, in *IDCreationRequest, op
 	return out, nil
 }
 
+func (c *internalClient) GetSharedKeys(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*SharedKeysResult, error) {
+	out := new(SharedKeysResult)
+	err := c.cc.Invoke(ctx, "/api.Internal/GetSharedKeys", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *internalClient) IsEmitterAuthorized(ctx context.Context, in *AuthorizationRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/api.Internal/IsEmitterAuthorized", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // InternalServer is the server API for Internal service.
 type InternalServer interface {
 	GetAccount(context.Context, *AccountSearchRequest) (*AccountSearchResult, error)
 	CreateKeychain(context.Context, *KeychainCreationRequest) (*CreationResult, error)
 	CreateID(context.Context, *IDCreationRequest) (*CreationResult, error)
+	GetSharedKeys(context.Context, *empty.Empty) (*SharedKeysResult, error)
+	IsEmitterAuthorized(context.Context, *AuthorizationRequest) (*empty.Empty, error)
 }
 
 func RegisterInternalServer(s *grpc.Server, srv InternalServer) {
@@ -378,6 +542,42 @@ func _Internal_CreateID_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Internal_GetSharedKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(empty.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InternalServer).GetSharedKeys(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.Internal/GetSharedKeys",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InternalServer).GetSharedKeys(ctx, req.(*empty.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Internal_IsEmitterAuthorized_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthorizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InternalServer).IsEmitterAuthorized(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.Internal/IsEmitterAuthorized",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InternalServer).IsEmitterAuthorized(ctx, req.(*AuthorizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Internal_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "api.Internal",
 	HandlerType: (*InternalServer)(nil),
@@ -394,34 +594,54 @@ var _Internal_serviceDesc = grpc.ServiceDesc{
 			MethodName: "CreateID",
 			Handler:    _Internal_CreateID_Handler,
 		},
+		{
+			MethodName: "GetSharedKeys",
+			Handler:    _Internal_GetSharedKeys_Handler,
+		},
+		{
+			MethodName: "IsEmitterAuthorized",
+			Handler:    _Internal_IsEmitterAuthorized_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "internal.proto",
 }
 
-func init() { proto.RegisterFile("internal.proto", fileDescriptor_internal_f4536b8c2a9c2411) }
+func init() { proto.RegisterFile("internal.proto", fileDescriptor_internal_367d56c3e311acf5) }
 
-var fileDescriptor_internal_f4536b8c2a9c2411 = []byte{
-	// 336 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x92, 0x41, 0x4f, 0xc2, 0x40,
-	0x10, 0x85, 0xa9, 0x18, 0x03, 0xa3, 0x41, 0x59, 0x8c, 0x56, 0xc2, 0x81, 0xec, 0x89, 0x18, 0xc3,
-	0x41, 0xe3, 0xc1, 0x9b, 0x04, 0x08, 0x36, 0xc6, 0x84, 0x80, 0x89, 0xe7, 0xb1, 0x4c, 0xa4, 0xb1,
-	0xd9, 0xd6, 0xdd, 0xed, 0x81, 0xc4, 0x7f, 0xe5, 0x2f, 0xf1, 0x1f, 0x19, 0xca, 0x56, 0xda, 0x2d,
-	0x5c, 0xbf, 0x79, 0xf3, 0xb2, 0xef, 0xed, 0x40, 0x23, 0x10, 0x9a, 0xa4, 0xc0, 0xb0, 0x1f, 0xcb,
-	0x48, 0x47, 0xac, 0x8a, 0x71, 0xc0, 0x1f, 0xe1, 0x7c, 0xe0, 0xfb, 0x51, 0x22, 0xf4, 0x9c, 0x50,
-	0xfa, 0xcb, 0x19, 0x7d, 0x25, 0xa4, 0x34, 0xeb, 0xc1, 0xe9, 0x58, 0xf8, 0x72, 0x15, 0x6b, 0x5a,
-	0x78, 0xa3, 0x27, 0x54, 0x4b, 0xd7, 0xe9, 0x3a, 0xbd, 0xfa, 0xcc, 0xc6, 0xfc, 0xc7, 0x81, 0x96,
-	0x65, 0xa1, 0x92, 0xb0, 0xe8, 0xf0, 0x86, 0x61, 0x48, 0xba, 0xe4, 0xb0, 0xc1, 0x05, 0xe5, 0x60,
-	0x3c, 0xff, 0xa4, 0x95, 0x7b, 0x60, 0x29, 0x37, 0x98, 0x5d, 0xc3, 0xd9, 0x16, 0x2d, 0x16, 0x92,
-	0x94, 0x72, 0xab, 0xa9, 0xb4, 0xc4, 0x59, 0x07, 0xea, 0xf3, 0xe0, 0x43, 0xa0, 0x4e, 0x24, 0xb9,
-	0x87, 0xa9, 0x68, 0x0b, 0xf8, 0x04, 0x2e, 0x9f, 0x69, 0xe5, 0x2f, 0x31, 0x10, 0x43, 0x49, 0xa8,
-	0x83, 0x48, 0x64, 0xd1, 0x6f, 0xa0, 0xf9, 0x6f, 0x96, 0x69, 0xcc, 0xd3, 0xcb, 0x03, 0x7e, 0x0f,
-	0x4d, 0x6f, 0x64, 0x5b, 0x74, 0xe1, 0x38, 0x57, 0x93, 0x59, 0xce, 0x23, 0xfe, 0x0d, 0x8d, 0xed,
-	0x52, 0xd6, 0xd7, 0xab, 0x44, 0xa1, 0xd0, 0x5f, 0xc3, 0x7c, 0xe3, 0x16, 0x66, 0x1c, 0x4e, 0x5e,
-	0x50, 0x69, 0x92, 0x53, 0x22, 0xe9, 0x4d, 0x4d, 0x59, 0x05, 0x56, 0x4c, 0x5f, 0xb5, 0xd2, 0xdf,
-	0xfe, 0x3a, 0x50, 0xf3, 0xcc, 0x35, 0xb0, 0x21, 0xc0, 0x84, 0xb4, 0xf9, 0x42, 0x76, 0xd5, 0xc7,
-	0x38, 0xe8, 0xef, 0xba, 0x89, 0xb6, 0xbb, 0x6b, 0xb4, 0x7e, 0x3b, 0xaf, 0xb0, 0xb1, 0xc9, 0x43,
-	0x59, 0x31, 0xac, 0x93, 0xaa, 0xf7, 0x94, 0xdc, 0x6e, 0xa5, 0xd3, 0x62, 0x05, 0xbc, 0xc2, 0x1e,
-	0xa0, 0xb6, 0xb1, 0xf1, 0x46, 0xec, 0x22, 0x95, 0x94, 0xca, 0xdd, 0xb3, 0xfa, 0x7e, 0x94, 0x5e,
-	0xf5, 0xdd, 0x5f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x42, 0xb5, 0x1b, 0xff, 0xe7, 0x02, 0x00, 0x00,
+var fileDescriptor_internal_367d56c3e311acf5 = []byte{
+	// 515 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x94, 0xcb, 0x6e, 0xd3, 0x40,
+	0x14, 0x86, 0xe3, 0x1a, 0xa1, 0xf6, 0x84, 0x86, 0x76, 0x52, 0x8a, 0x31, 0x5d, 0x44, 0xb3, 0x40,
+	0x11, 0x42, 0x2e, 0x2a, 0x65, 0xc1, 0xae, 0x51, 0x63, 0x05, 0x13, 0x21, 0x45, 0x09, 0x12, 0x4b,
+	0x34, 0x71, 0x0e, 0xf1, 0x08, 0xc7, 0x36, 0x33, 0x63, 0x24, 0x23, 0x9e, 0x84, 0xd7, 0xe0, 0x81,
+	0x78, 0x95, 0xca, 0xb7, 0xf8, 0x92, 0x64, 0xfb, 0x9d, 0xff, 0xdc, 0xfe, 0x39, 0x36, 0xf4, 0x78,
+	0xa0, 0x50, 0x04, 0xcc, 0xb7, 0x22, 0x11, 0xaa, 0x90, 0xe8, 0x2c, 0xe2, 0xe6, 0xcb, 0x75, 0x18,
+	0xae, 0x7d, 0xbc, 0xce, 0xd0, 0x32, 0xfe, 0x7e, 0x8d, 0x9b, 0x48, 0x25, 0xb9, 0x82, 0xde, 0xc1,
+	0xc5, 0xc8, 0x75, 0xc3, 0x38, 0x50, 0x0b, 0x64, 0xc2, 0xf5, 0xe6, 0xf8, 0x33, 0x46, 0xa9, 0xc8,
+	0x10, 0x9e, 0xda, 0x81, 0x2b, 0x92, 0x48, 0xe1, 0xca, 0x19, 0x7f, 0x64, 0xd2, 0x33, 0xb4, 0x81,
+	0x36, 0x3c, 0x99, 0xb7, 0x31, 0xfd, 0xa7, 0x41, 0xbf, 0x55, 0x42, 0xc6, 0x7e, 0xb3, 0xc2, 0x57,
+	0xe6, 0xfb, 0xa8, 0x76, 0x2a, 0xe4, 0xb8, 0xa1, 0x1c, 0xd9, 0x8b, 0x1f, 0x98, 0x18, 0x47, 0x2d,
+	0x65, 0x8e, 0xc9, 0x6b, 0x38, 0xab, 0xd0, 0x6a, 0x25, 0x50, 0x4a, 0x43, 0xcf, 0xa4, 0x3b, 0x9c,
+	0x5c, 0xc1, 0xc9, 0x82, 0xaf, 0x03, 0xa6, 0x62, 0x81, 0xc6, 0xa3, 0x4c, 0x54, 0x01, 0x3a, 0x81,
+	0xe7, 0x53, 0x4c, 0x5c, 0x8f, 0xf1, 0xe0, 0x5e, 0x20, 0x53, 0x3c, 0x0c, 0xca, 0xd5, 0xdf, 0xc0,
+	0xf9, 0xb6, 0x58, 0xa9, 0x29, 0x46, 0xdf, 0x0d, 0xd0, 0xf7, 0x70, 0xee, 0x8c, 0xdb, 0x25, 0x06,
+	0xd0, 0xad, 0xd9, 0x54, 0x24, 0xd7, 0x11, 0xfd, 0x03, 0xbd, 0x2a, 0xa9, 0xf4, 0xeb, 0x8b, 0x60,
+	0x81, 0x64, 0x6e, 0x0a, 0xeb, 0x8e, 0xb7, 0x30, 0xa1, 0xf0, 0xe4, 0x33, 0x93, 0x0a, 0xc5, 0x0c,
+	0x51, 0x38, 0xb3, 0xc2, 0xac, 0x06, 0x6b, 0x6e, 0xaf, 0xb7, 0xb7, 0xff, 0xab, 0xc1, 0xd9, 0xc2,
+	0x63, 0x22, 0xdb, 0x43, 0x16, 0x03, 0xbc, 0x82, 0xde, 0x3c, 0x5c, 0x86, 0x6a, 0x16, 0x2f, 0x7d,
+	0xee, 0x4e, 0x31, 0x29, 0xfa, 0xb7, 0x68, 0x3a, 0x68, 0x4e, 0x04, 0xff, 0xc5, 0x14, 0x4e, 0xab,
+	0xe7, 0x6a, 0x61, 0x72, 0x0b, 0x5d, 0x7b, 0xc3, 0x95, 0x42, 0x91, 0xb6, 0x31, 0xf4, 0x81, 0x3e,
+	0xec, 0xde, 0x10, 0x8b, 0x45, 0xdc, 0xda, 0x76, 0x9f, 0x31, 0x2e, 0xe6, 0x75, 0x19, 0xfd, 0x06,
+	0xa7, 0x8d, 0x28, 0x79, 0x0b, 0xfd, 0xad, 0x75, 0xb5, 0xa6, 0xf9, 0x74, 0xfb, 0x42, 0xe9, 0xf6,
+	0xd5, 0x16, 0xf9, 0x70, 0x15, 0xa0, 0xb7, 0x70, 0x31, 0x8a, 0x95, 0x17, 0x0a, 0xfe, 0xbb, 0xf1,
+	0x6a, 0x8d, 0x2c, 0xad, 0x95, 0x75, 0xf3, 0xff, 0x08, 0x8e, 0x9d, 0xe2, 0xf3, 0x22, 0xf7, 0x00,
+	0x13, 0x54, 0xc5, 0xd9, 0x93, 0x17, 0xd9, 0x4a, 0xfb, 0xbe, 0x23, 0xd3, 0xd8, 0x17, 0x4a, 0xed,
+	0xa6, 0x1d, 0x62, 0x17, 0x37, 0x80, 0xe5, 0x31, 0x91, 0xab, 0x4c, 0x7d, 0xe0, 0x30, 0xcd, 0x7e,
+	0x16, 0x6d, 0x9e, 0x0d, 0xed, 0x90, 0x0f, 0x70, 0x9c, 0x97, 0x71, 0xc6, 0xe4, 0x32, 0x93, 0xec,
+	0x1c, 0xe4, 0xa1, 0xd4, 0x3b, 0x38, 0x9d, 0xa0, 0xaa, 0x2e, 0x81, 0x5c, 0x5a, 0xf9, 0xcf, 0xc2,
+	0x2a, 0x7f, 0x16, 0x96, 0x9d, 0xfe, 0x2c, 0xcc, 0x67, 0xcd, 0x47, 0x93, 0xdb, 0x0a, 0x9f, 0xa0,
+	0xef, 0xc8, 0xe2, 0xf5, 0x4a, 0x53, 0x71, 0x55, 0x3a, 0xb2, 0xc7, 0x65, 0xf3, 0x40, 0x0b, 0xda,
+	0x59, 0x3e, 0xce, 0xc8, 0xbb, 0x87, 0x00, 0x00, 0x00, 0xff, 0xff, 0xe8, 0x6f, 0xeb, 0x87, 0xc6,
+	0x04, 0x00, 0x00,
 }

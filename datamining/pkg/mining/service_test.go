@@ -8,7 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
-	emLister "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
+	"github.com/uniris/uniris-core/datamining/pkg/emitter"
+	emListing "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 )
@@ -20,7 +21,7 @@ Scenario: Mine a transaction
 	Then I get a master valid and a list of validations
 */
 func TestMine(t *testing.T) {
-	emLister := emLister.NewService(mockEmDatabase{})
+	emLister := emListing.NewService(&mockEmDatabase{})
 
 	s := service{
 		aiClient: mockAIClient{},
@@ -220,8 +221,15 @@ func (r mockPoolRequester) RequestStorage(minReplicas int, sPool datamining.Pool
 
 type mockEmDatabase struct{}
 
-func (db mockEmDatabase) ListEmitterPublicKeys() ([]string, error) {
-	return []string{"key1", "key2"}, nil
+func (d *mockEmDatabase) ListSharedEmitterKeyPairs() ([]emitter.SharedKeyPair, error) {
+	return []emitter.SharedKeyPair{
+		emitter.SharedKeyPair{
+			PublicKey: "key1",
+		}, emitter.SharedKeyPair{
+			PublicKey: "key2",
+		}, emitter.SharedKeyPair{
+			PublicKey: "key3",
+		}}, nil
 }
 
 type mockAIClient struct{}
