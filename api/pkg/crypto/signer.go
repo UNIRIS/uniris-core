@@ -13,8 +13,6 @@ import (
 
 	"github.com/uniris/uniris-core/api/pkg/adding"
 	"github.com/uniris/uniris-core/api/pkg/listing"
-	"github.com/uniris/uniris-core/api/pkg/transport/rpc"
-	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 )
 
 //ErrInvalidSignature is returned when the request contains invalid signatures
@@ -26,8 +24,7 @@ type ecdsaSignature struct {
 
 //Signer define methods to handle signatures
 type Signer interface {
-	rpc.SignatureHandler
-	adding.SignatureVerifier
+	adding.Signer
 	listing.SignatureVerifier
 }
 
@@ -39,26 +36,26 @@ func NewSigner() Signer {
 	return signer{}
 }
 
-func (s signer) VerifyAccountCreationRequestSignature(data adding.AccountCreationRequest, pubKey string) error {
+func (s signer) VerifyAccountCreationRequestSignature(req *adding.AccountCreationRequest, pubKey string) error {
 	b, err := json.Marshal(adding.AccountCreationRequest{
-		EncryptedID:       data.EncryptedID,
-		EncryptedKeychain: data.EncryptedKeychain,
+		EncryptedID:       req.EncryptedID,
+		EncryptedKeychain: req.EncryptedKeychain,
 	})
 	if err != nil {
 		return err
 	}
 
-	return verifySignature(pubKey, string(b), data.Signature)
+	return verifySignature(pubKey, string(b), req.Signature)
 }
 
 func (s signer) VerifyHashSignature(hashedData string, pubKey string, sig string) error {
 	return verifySignature(pubKey, hashedData, sig)
 }
 
-func (s signer) VerifyAccountSearchResultSignature(pubKey string, res *api.AccountSearchResult) error {
-	b, err := json.Marshal(&api.AccountSearchResult{
+func (s signer) VerifyAccountResultSignature(res *listing.AccountResult, pubKey string) error {
+	b, err := json.Marshal(&listing.AccountResult{
 		EncryptedAddress: res.EncryptedAddress,
-		EncryptedAESkey:  res.EncryptedAESkey,
+		EncryptedAESKey:  res.EncryptedAESKey,
 		EncryptedWallet:  res.EncryptedWallet,
 	})
 	if err != nil {
@@ -66,8 +63,9 @@ func (s signer) VerifyAccountSearchResultSignature(pubKey string, res *api.Accou
 	}
 	return verifySignature(pubKey, string(b), res.Signature)
 }
-func (s signer) VerifyCreationResultSignature(pubKey string, res *api.CreationResult) error {
-	b, err := json.Marshal(&api.CreationResult{
+
+func (s signer) VerifyCreationTransactionResultSignature(res adding.TransactionResult, pubKey string) error {
+	b, err := json.Marshal(adding.TransactionResult{
 		MasterPeerIP:    res.MasterPeerIP,
 		TransactionHash: res.TransactionHash,
 	})
@@ -77,23 +75,6 @@ func (s signer) VerifyCreationResultSignature(pubKey string, res *api.CreationRe
 	return verifySignature(pubKey, string(b), res.Signature)
 }
 
-func (s signer) SignAccountResult(res *listing.AccountResult, pvKey string) error {
-	b, err := json.Marshal(struct {
-		EncryptedAESKey  string `json:"encrypted_aes_key"`
-		EncryptedWallet  string `json:"encrypted_wallet"`
-		EncryptedAddress string `json:"encrypted_address"`
-	}{
-		EncryptedAddress: res.EncryptedAddress,
-		EncryptedAESKey:  res.EncryptedAESKey,
-		EncryptedWallet:  res.EncryptedWallet,
-	})
-	sig, err := sign(pvKey, string(b))
-	if err != nil {
-		return err
-	}
-	res.Signature = sig
-	return nil
-}
 func (s signer) SignAccountCreationResult(res *adding.AccountCreationResult, pvKey string) error {
 	b, err := json.Marshal(adding.AccountCreationResult{
 		Transactions: adding.AccountCreationTransactionsResult{
