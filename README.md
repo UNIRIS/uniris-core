@@ -3,11 +3,10 @@ This repository concerns the UNIRIS software core for miners
 
 ## Composition
 
-It's composed from 5 micro services:
+It's composed from 4 micro services:
 - API: Handle REST endpoints for clients and SDKs
-- Autodiscovery: P2P discovery
-- Data: Ledger storage and data replication
-- Mining: Transaction mining and approvals
+- Autodiscovery: P2P discovery layer
+- DataMining: Ledger storage, data replication, Transactions mining and approvals
 - AI: Artifical Inteligence
 
 The services communicates with Advanced Message Queue Protocol.

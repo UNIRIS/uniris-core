@@ -2,7 +2,7 @@ FROM uniris:latest
 
 # Install the dependencies
 ENV GOPATH=/root/go
-WORKDIR $GOPATH/src/github.com/uniris/uniris-core/autodiscovery
+WORKDIR $GOPATH/src/github.com/uniris/uniris-core
 COPY Gopkg.toml Gopkg.lock ./
 RUN dep ensure --vendor-only
 
@@ -24,7 +24,15 @@ ENV UNIRIS_DISCOVERY_AMQP_PORT=5672
 ENV UNIRIS_DISCOVERY_AMQP_USER=guest
 ENV UNIRIS_DISCOVERY_AMQP_PWD=guest
 
+#Expose autodiscovery port
 EXPOSE $UNIRIS_DISCOVERY_PORT
+
+#Expose API port
+EXPOSE 8080
+
+#Expose DataMining Port
+EXPOSE 3547
+
 #Expose Rabitmq management console
 EXPOSE 15672
 
@@ -34,4 +42,8 @@ CMD /etc/init.d/redis-server start ; \
 rabbitmqctl add_user uniris uniris; \
 rabbitmqctl set_user_tags uniris administrator; \
 rabbitmqctl set_permissions -p / uniris ".*" ".*" ".*"; \
-go run cmd/discovery/main.go
+go run autodiscovery/cmd/discovery/main.go > /var/log/uniris/discovery.log 2>&1 ; \
+go run api/cmd/api/main.go > /var/log/uniris/api.log 2>&1 ; \
+go run datamining/cmd/datamining/main.go > /var/log/uniris/datamining.log 2>&1 ; \
+
+

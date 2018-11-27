@@ -24,3 +24,7 @@ RUN sed -i  '/NODE_IP_ADDRESS/ s/^#NODE_IP_ADDRESS/NODE_IP_ADDRESS/g' /etc/rabbi
 
 # enable management plugin on rabitmq
 RUN rabbitmq-plugins enable rabbitmq_management;
+
+# create log directory
+RUN mkdir /var/log/uniris ; chmod 755 /var/log/uniris 
+
