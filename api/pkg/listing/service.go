@@ -14,10 +14,10 @@ var ErrUnauthorized = errors.New("Unauthorized")
 type RobotClient interface {
 
 	//GetAccount asks the datamining service to get the account based on the encrypted ID hash
-	GetAccount(encHash string) (*AccountResult, error)
+	GetAccount(encHash string) (AccountResult, error)
 
 	//GetSharedKeys asks the datamining service to get the latest shared emitter keys
-	GetSharedKeys() (*SharedKeysResult, error)
+	GetSharedKeys() (SharedKeys, error)
 
 	//IsEmitterAuthorized asks the datamining service if the public key is related to an authorized emitter
 	IsEmitterAuthorized(emPubKey string) error
@@ -30,23 +30,23 @@ type SignatureVerifier interface {
 	VerifyHashSignature(hashedData string, key string, sig string) error
 
 	//VerifyAccountResultSignature checks the account result signature
-	VerifyAccountResultSignature(res *AccountResult, pubKey string) error
+	VerifyAccountResultSignature(res AccountResult, pubKey string) error
 }
 
 //Service define methods for the listing feature
 type Service interface {
 
 	//GetSafeSharedKeys gets the latest shared keys (used internally)
-	GetSafeSharedKeys() (*SharedKeysResult, error)
+	GetSafeSharedKeys() (SharedKeys, error)
 
 	//GetSharedKeys gets the latest shared keys
-	GetSharedKeys(emPubKey string, sig string) (*SharedKeysResult, error)
+	GetSharedKeys(emPubKey string, sig string) (SharedKeys, error)
 
 	//ExistAccount checks if an account is related to an encrypted ID hash
 	ExistAccount(encryptedIDHash string, sig string) error
 
 	//GetAccount gets an account related to the encrypted ID hash
-	GetAccount(encryptedIDHash string, sig string) (*AccountResult, error)
+	GetAccount(encryptedIDHash string, sig string) (AccountResult, error)
 }
 
 type service struct {
@@ -70,7 +70,7 @@ func (s service) ExistAccount(encryptedIDHash string, sig string) error {
 	return nil
 }
 
-func (s service) GetSharedKeys(emPubKey string, sig string) (*SharedKeysResult, error) {
+func (s service) GetSharedKeys(emPubKey string, sig string) (SharedKeys, error) {
 	if err := s.sig.VerifyHashSignature(emPubKey, sig, emPubKey); err != nil {
 		return nil, err
 	}
@@ -87,19 +87,16 @@ func (s service) GetSharedKeys(emPubKey string, sig string) (*SharedKeysResult, 
 	return keys, nil
 }
 
-func (s service) GetSafeSharedKeys() (*SharedKeysResult, error) {
+func (s service) GetSafeSharedKeys() (SharedKeys, error) {
 	keys, err := s.client.GetSharedKeys()
 	if err != nil {
 		return nil, err
 	}
 
-	return &SharedKeysResult{
-		EmitterKeys:    keys.EmitterKeys,
-		RobotPublicKey: keys.RobotPublicKey,
-	}, nil
+	return keys, nil
 }
 
-func (s service) GetAccount(encryptedIDHash string, sig string) (*AccountResult, error) {
+func (s service) GetAccount(encryptedIDHash string, sig string) (AccountResult, error) {
 	keys, err := s.client.GetSharedKeys()
 	if err != nil {
 		return nil, err
@@ -114,7 +111,7 @@ func (s service) GetAccount(encryptedIDHash string, sig string) (*AccountResult,
 		return nil, err
 	}
 
-	if err := s.sig.VerifyAccountResultSignature(res, keys.RobotPublicKey); err != nil {
+	if err := s.sig.VerifyAccountResultSignature(res, keys.RobotPublicKey()); err != nil {
 		return nil, err
 	}
 

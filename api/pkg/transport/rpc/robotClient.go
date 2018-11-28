@@ -52,7 +52,7 @@ func (c robotClient) IsEmitterAuthorized(emPubKey string) error {
 	return nil
 }
 
-func (c robotClient) GetSharedKeys() (*listing.SharedKeysResult, error) {
+func (c robotClient) GetSharedKeys() (listing.SharedKeys, error) {
 	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Services.Datamining.InternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
@@ -71,19 +71,13 @@ func (c robotClient) GetSharedKeys() (*listing.SharedKeysResult, error) {
 
 	emKeys := make([]listing.SharedKeyPair, 0)
 	for _, kp := range res.EmitterKeys {
-		emKeys = append(emKeys, listing.SharedKeyPair{
-			EncryptedPrivateKey: kp.EncryptedPrivateKey,
-			PublicKey:           kp.PublicKey,
-		})
+		emKeys = append(emKeys, listing.NewSharedKeyPair(kp.EncryptedPrivateKey, kp.PublicKey))
 	}
-	return &listing.SharedKeysResult{
-		RobotPublicKey:  res.RobotPublicKey,
-		RobotPrivateKey: res.RobotPrivateKey,
-		EmitterKeys:     emKeys,
-	}, nil
+
+	return listing.NewSharedKeys(res.RobotPrivateKey, res.RobotPublicKey, emKeys), nil
 }
 
-func (c robotClient) GetAccount(encHash string) (*listing.AccountResult, error) {
+func (c robotClient) GetAccount(encHash string) (listing.AccountResult, error) {
 	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Services.Datamining.InternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
@@ -105,17 +99,10 @@ func (c robotClient) GetAccount(encHash string) (*listing.AccountResult, error) 
 		return nil, errors.New(s.Message())
 	}
 
-	resAcc := &listing.AccountResult{
-		EncryptedAddress: res.EncryptedAddress,
-		EncryptedAESKey:  res.EncryptedAESkey,
-		EncryptedWallet:  res.EncryptedWallet,
-		Signature:        res.Signature,
-	}
-
-	return resAcc, nil
+	return listing.NewAccountResult(res.EncryptedAESkey, res.EncryptedWallet, res.EncryptedAddress, res.Signature), nil
 }
 
-func (c robotClient) AddAccount(req *adding.AccountCreationRequest) (*adding.AccountCreationResult, error) {
+func (c robotClient) AddAccount(req adding.AccountCreationRequest) (adding.AccountCreationResult, error) {
 	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Services.Datamining.InternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
@@ -127,7 +114,7 @@ func (c robotClient) AddAccount(req *adding.AccountCreationRequest) (*adding.Acc
 	client := api.NewInternalClient(conn)
 
 	resID, err := client.CreateID(context.Background(), &api.IDCreationRequest{
-		EncryptedID: req.EncryptedID,
+		EncryptedID: req.EncryptedID(),
 	})
 	if err != nil {
 		s, _ := status.FromError(err)
@@ -135,27 +122,16 @@ func (c robotClient) AddAccount(req *adding.AccountCreationRequest) (*adding.Acc
 	}
 
 	resKeychain, err := client.CreateKeychain(context.Background(), &api.KeychainCreationRequest{
-		EncryptedKeychain: req.EncryptedKeychain,
+		EncryptedKeychain: req.EncryptedKeychain(),
 	})
 	if err != nil {
 		s, _ := status.FromError(err)
 		return nil, errors.New(s.Message())
 	}
 
-	res := &adding.AccountCreationResult{
-		Transactions: adding.AccountCreationTransactionsResult{
-			ID: adding.TransactionResult{
-				TransactionHash: resID.TransactionHash,
-				MasterPeerIP:    resID.MasterPeerIP,
-				Signature:       resID.Signature,
-			},
-			Keychain: adding.TransactionResult{
-				TransactionHash: resKeychain.TransactionHash,
-				MasterPeerIP:    resKeychain.MasterPeerIP,
-				Signature:       resKeychain.Signature,
-			},
-		},
-	}
+	txID := adding.NewTransactionResult(resID.TransactionHash, resID.MasterPeerIP, resID.Signature)
+	txKeychain := adding.NewTransactionResult(resKeychain.TransactionHash, resKeychain.MasterPeerIP, resKeychain.Signature)
 
-	return res, nil
+	resTx := adding.NewAccountCreationTransactionResult(txID, txKeychain)
+	return adding.NewAccountCreationResult(resTx, ""), nil
 }

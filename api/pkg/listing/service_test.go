@@ -18,9 +18,9 @@ func TestGetAccount(t *testing.T) {
 
 	res, err := s.GetAccount("encrypted person pub key", "sig")
 	assert.Nil(t, err)
-	assert.Equal(t, "encrypted_aes_key", res.EncryptedAESKey)
-	assert.Equal(t, "encrypted_wallet", res.EncryptedWallet)
-	assert.Equal(t, "encrypted_address", res.EncryptedAddress)
+	assert.Equal(t, "encrypted_aes_key", res.EncryptedAESKey())
+	assert.Equal(t, "encrypted_wallet", res.EncryptedWallet())
+	assert.Equal(t, "encrypted_address", res.EncryptedAddress())
 }
 
 /*
@@ -46,8 +46,8 @@ func TestGetSharedKeys(t *testing.T) {
 	res, err := s.GetSharedKeys("em pub key", "sig")
 	assert.Nil(t, err)
 	assert.NotNil(t, res)
-	assert.Equal(t, "robot key", res.RobotPublicKey)
-	assert.Equal(t, "enc pv key", res.EmitterKeys[0].EncryptedPrivateKey)
+	assert.Equal(t, "robot pub key", res.RobotPublicKey())
+	assert.Equal(t, "enc pv key", res.EmitterKeyPairs()[0].EncryptedPrivateKey())
 }
 
 /*
@@ -76,13 +76,8 @@ func TestGetSharedKeysWithUnauthorized(t *testing.T) {
 
 type mockClient struct{}
 
-func (c mockClient) GetAccount(encIDHash string) (*AccountResult, error) {
-	return &AccountResult{
-		EncryptedAESKey:  "encrypted_aes_key",
-		EncryptedAddress: "encrypted_address",
-		EncryptedWallet:  "encrypted_wallet",
-		Signature:        "sig",
-	}, nil
+func (c mockClient) GetAccount(encIDHash string) (AccountResult, error) {
+	return NewAccountResult("encrypted_aes_key", "encrypted_wallet", "encrypted_address", "sig"), nil
 }
 
 func (c mockClient) IsEmitterAuthorized(emPubKey string) error {
@@ -92,16 +87,13 @@ func (c mockClient) IsEmitterAuthorized(emPubKey string) error {
 	return ErrUnauthorized
 }
 
-func (c mockClient) GetSharedKeys() (*SharedKeysResult, error) {
-	return &SharedKeysResult{
-		RobotPublicKey: "robot key",
-		EmitterKeys: []SharedKeyPair{
-			SharedKeyPair{
-				EncryptedPrivateKey: "enc pv key",
-				PublicKey:           "pub key",
-			},
-		},
-	}, nil
+func (c mockClient) GetSharedKeys() (SharedKeys, error) {
+	return NewSharedKeys(
+		"robot pv key",
+		"robot pub key",
+		[]SharedKeyPair{
+			NewSharedKeyPair("enc pv key", "pub key"),
+		}), nil
 }
 
 type mockSigVerifier struct {
@@ -115,7 +107,7 @@ func (v mockSigVerifier) VerifyHashSignature(data string, pubKey string, sig str
 	return nil
 }
 
-func (v mockSigVerifier) VerifyAccountResultSignature(res *AccountResult, pubKey string) error {
+func (v mockSigVerifier) VerifyAccountResultSignature(res AccountResult, pubKey string) error {
 	if v.isInvalid {
 		return errors.New("Invalid signature")
 	}
