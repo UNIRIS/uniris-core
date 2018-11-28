@@ -36,66 +36,66 @@ func NewSigner() Signer {
 	return signer{}
 }
 
-func (s signer) VerifyAccountCreationRequestSignature(req *adding.AccountCreationRequest, pubKey string) error {
-	b, err := json.Marshal(adding.AccountCreationRequest{
-		EncryptedID:       req.EncryptedID,
-		EncryptedKeychain: req.EncryptedKeychain,
+func (s signer) VerifyAccountCreationRequestSignature(req adding.AccountCreationRequest, pubKey string) error {
+	b, err := json.Marshal(accountCreationRequest{
+		EncryptedID:       req.EncryptedID(),
+		EncryptedKeychain: req.EncryptedKeychain(),
 	})
 	if err != nil {
 		return err
 	}
 
-	return verifySignature(pubKey, string(b), req.Signature)
+	return verifySignature(pubKey, string(b), req.Signature())
 }
 
 func (s signer) VerifyHashSignature(hashedData string, pubKey string, sig string) error {
 	return verifySignature(pubKey, hashedData, sig)
 }
 
-func (s signer) VerifyAccountResultSignature(res *listing.AccountResult, pubKey string) error {
-	b, err := json.Marshal(&listing.AccountResult{
-		EncryptedAddress: res.EncryptedAddress,
-		EncryptedAESKey:  res.EncryptedAESKey,
-		EncryptedWallet:  res.EncryptedWallet,
+func (s signer) VerifyAccountResultSignature(res listing.AccountResult, pubKey string) error {
+	b, err := json.Marshal(accountResult{
+		EncryptedAddress: res.EncryptedAddress(),
+		EncryptedAESKey:  res.EncryptedAESKey(),
+		EncryptedWallet:  res.EncryptedWallet(),
 	})
 	if err != nil {
 		return err
 	}
-	return verifySignature(pubKey, string(b), res.Signature)
+	return verifySignature(pubKey, string(b), res.Signature())
 }
 
 func (s signer) VerifyCreationTransactionResultSignature(res adding.TransactionResult, pubKey string) error {
-	b, err := json.Marshal(adding.TransactionResult{
-		MasterPeerIP:    res.MasterPeerIP,
-		TransactionHash: res.TransactionHash,
+	b, err := json.Marshal(transactionResult{
+		MasterPeerIP:    res.MasterPeerIP(),
+		TransactionHash: res.TransactionHash(),
 	})
 	if err != nil {
 		return err
 	}
-	return verifySignature(pubKey, string(b), res.Signature)
+	return verifySignature(pubKey, string(b), res.Signature())
 }
 
-func (s signer) SignAccountCreationResult(res *adding.AccountCreationResult, pvKey string) error {
-	b, err := json.Marshal(adding.AccountCreationResult{
-		Transactions: adding.AccountCreationTransactionsResult{
-			ID: adding.TransactionResult{
-				MasterPeerIP:    res.Transactions.ID.MasterPeerIP,
-				Signature:       res.Transactions.ID.Signature,
-				TransactionHash: res.Transactions.ID.TransactionHash,
+func (s signer) SignAccountCreationResult(res adding.AccountCreationResult, pvKey string) (adding.AccountCreationResult, error) {
+	b, err := json.Marshal(accountCreationResult{
+		Transactions: accountCreationTransactionsResult{
+			ID: transactionResult{
+				MasterPeerIP:    res.ResultTransactions().ID().MasterPeerIP(),
+				Signature:       res.ResultTransactions().ID().Signature(),
+				TransactionHash: res.ResultTransactions().ID().TransactionHash(),
 			},
-			Keychain: adding.TransactionResult{
-				MasterPeerIP:    res.Transactions.Keychain.MasterPeerIP,
-				TransactionHash: res.Transactions.Keychain.TransactionHash,
-				Signature:       res.Transactions.Keychain.Signature,
+			Keychain: transactionResult{
+				MasterPeerIP:    res.ResultTransactions().Keychain().MasterPeerIP(),
+				TransactionHash: res.ResultTransactions().Keychain().TransactionHash(),
+				Signature:       res.ResultTransactions().Keychain().Signature(),
 			},
 		},
 	})
 	sig, err := sign(pvKey, string(b))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	res.Signature = sig
-	return nil
+
+	return adding.NewAccountCreationResult(res.ResultTransactions(), sig), nil
 }
 
 func sign(privk string, data string) (string, error) {

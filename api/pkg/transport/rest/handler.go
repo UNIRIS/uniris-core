@@ -32,7 +32,13 @@ func Handler(r *gin.Engine, l listing.Service, a adding.Service) {
 func createAccount(a adding.Service) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
-		var req *adding.AccountCreationRequest
+		type accReq struct {
+			EncryptedID       string `json:"encrypted_id"`
+			EncryptedKeychain string `json:"encrypted_keychain"`
+			Signature         string `json:"signature"`
+		}
+
+		var req *accReq
 
 		if err := c.ShouldBindJSON(&req); err != nil {
 			e := createError(http.StatusBadRequest, err)
@@ -40,7 +46,7 @@ func createAccount(a adding.Service) func(c *gin.Context) {
 			return
 		}
 
-		res, err := a.AddAccount(req)
+		res, err := a.AddAccount(adding.NewAccountCreationRequest(req.EncryptedID, req.EncryptedKeychain, req.Signature))
 		if err != nil {
 			if err == crypto.ErrInvalidSignature {
 				e := createError(http.StatusBadRequest, err)
@@ -125,7 +131,26 @@ func getSharedKeys(l listing.Service) func(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusOK, keys)
+		type sharedEmitterKeys struct {
+			PublicKey           string `json:"public_key"`
+			EncryptedPrivateKey string `json:"encrypted_private_key"`
+		}
+
+		sharedEms := make([]sharedEmitterKeys, 0)
+		for _, kp := range keys.EmitterKeyPairs() {
+			sharedEms = append(sharedEms, sharedEmitterKeys{
+				PublicKey:           kp.PublicKey(),
+				EncryptedPrivateKey: kp.EncryptedPrivateKey(),
+			})
+		}
+
+		c.JSON(http.StatusOK, struct {
+			SharedRobotPublicKey string              `json:"shared_robot_pubkey"`
+			SharedEmitterKeys    []sharedEmitterKeys `json:"shared_emitter_keys"`
+		}{
+			SharedEmitterKeys:    sharedEms,
+			SharedRobotPublicKey: keys.RobotPublicKey(),
+		})
 	}
 }
 
