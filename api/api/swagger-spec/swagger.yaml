@@ -26,7 +26,7 @@ paths:
     tags:
       - shared
     summary: Get the latest shared keys
-    description: Retrieve the last shared keys shared between the robots
+    description: Retrieve the last shared keys
     operationId: getSharedKeys
     parameters:
       - name: publicKey
@@ -209,7 +209,7 @@ definitions:
         description: IP of the master peer which lead the transaction processing
       signature:
         type: string
-        description: Signature of the person
+        description: Signature of the welcome node
 
   SharedKeysResponse:
     required:
@@ -218,7 +218,7 @@ definitions:
     properties:
       shared_robot_pubkey:
         type: string
-        description: Shared robot public key
+        description: Robot shared public key
       shared_emitter_keys:
         description: List of the shared keys for the emitters
         type: array
@@ -230,7 +230,7 @@ definitions:
           properties:
             public_key:
               type: string
-              description: Shared emitter key public key
+              description: Emitter shared public key
             encrypted_private_key:
               type: string
               description: Encrypted shared emitter private key
