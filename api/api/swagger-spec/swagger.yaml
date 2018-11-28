@@ -19,34 +19,37 @@ produces:
 tags:
   - name: Account
     description: Manage and query accounts
+  - name: Shared
+    description: About shared information
 
 paths:
 
   /sharedkeys/{publicKey}:
-    tags:
-      - shared
-    summary: Get the latest shared keys
-    description: Retrieve the last shared keys
-    operationId: getSharedKeys
-    parameters:
-      - name: publicKey
-        in: path
-        required: true
-        description: Emitter public key
-      - name: signature
-        in: query
-        required: false
-        type: string
-        description: Signature of the public key
-    responses:
-      200:
-        description: Shared keys
-        schema:
-          $ref: "#/definitions/SharedKeysResponse"
-      default:
-        description: Error
-        schema:
-          $ref: "#/definitions/Error"
+    get:
+      tags:
+        - Shared
+      summary: Get the latest shared keys
+      description: Retrieve the last shared keys
+      operationId: getSharedKeys
+      parameters:
+        - name: publicKey
+          in: path
+          required: true
+          description: Emitter public key
+        - name: signature
+          in: query
+          required: false
+          type: string
+          description: Signature of the public key
+      responses:
+        "200":
+          description: Shared keys
+          schema:
+            $ref: "#/definitions/SharedKeysResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/Error"
 
   /account:
     post:
