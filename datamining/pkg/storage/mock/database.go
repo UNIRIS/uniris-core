@@ -6,6 +6,8 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	account_adding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
 	account_listing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
+	"github.com/uniris/uniris-core/datamining/pkg/emitter"
+	em_adding "github.com/uniris/uniris-core/datamining/pkg/emitter/adding"
 	em_listing "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 )
@@ -15,6 +17,7 @@ type Database interface {
 	account_adding.Repository
 	account_listing.Repository
 	em_listing.Repository
+	em_adding.Repository
 	lock.Repository
 }
 
@@ -29,6 +32,7 @@ type mockDatabase struct {
 	Keychains   []account.EndorsedKeychain
 	KOKeychains []account.EndorsedKeychain
 	Locks       []lock.TransactionLock
+	SharedEmKP  []emitter.SharedKeyPair
 }
 
 func (d mockDatabase) FindID(hash string) (account.EndorsedID, error) {
@@ -55,8 +59,13 @@ func (d mockDatabase) FindLastKeychain(addr string) (account.EndorsedKeychain, e
 	return nil, nil
 }
 
-func (d mockDatabase) ListEmitterPublicKeys() ([]string, error) {
-	return []string{"key1", "key2", "key3"}, nil
+func (d *mockDatabase) StoreSharedEmitterKeyPair(kp emitter.SharedKeyPair) error {
+	d.SharedEmKP = append(d.SharedEmKP, kp)
+	return nil
+}
+
+func (d *mockDatabase) ListSharedEmitterKeyPairs() ([]emitter.SharedKeyPair, error) {
+	return d.SharedEmKP, nil
 }
 
 func (d *mockDatabase) StoreKeychain(k account.EndorsedKeychain) error {

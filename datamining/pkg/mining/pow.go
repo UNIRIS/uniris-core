@@ -19,7 +19,7 @@ type pow struct {
 }
 
 func (p pow) execute() (MasterValidation, error) {
-	emKeys, err := p.emLister.ListEmitterPublicKeys()
+	sharedEmKP, err := p.emLister.ListSharedEmitterKeyPairs()
 	if err != nil {
 		return nil, err
 	}
@@ -27,10 +27,10 @@ func (p pow) execute() (MasterValidation, error) {
 	//Find the public key which matches the transaction signature
 	status := ValidationKO
 	var matchedKey string
-	for _, k := range emKeys {
-		err := p.signer.VerifyTransactionDataSignature(p.txType, k, p.txData, p.txEmSig)
+	for _, kp := range sharedEmKP {
+		err := p.signer.VerifyTransactionDataSignature(p.txType, kp.PublicKey, p.txData, p.txEmSig)
 		if err == nil {
-			matchedKey = k
+			matchedKey = kp.PublicKey
 			status = ValidationOK
 			break
 		}

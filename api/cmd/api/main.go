@@ -37,9 +37,9 @@ func main() {
 	r.StaticFile("/swagger.yaml", swaggerFile)
 
 	signer := crypto.NewSigner()
-	client := rpc.NewRobotClient(config, signer)
-	lister := listing.NewService(config, client, signer)
-	adder := adding.NewService(config, client, signer)
+	client := rpc.NewRobotClient(config)
+	lister := listing.NewService(client, signer)
+	adder := adding.NewService(lister, client, signer)
 
 	rest.Handler(r, lister, adder)
 

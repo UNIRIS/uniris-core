@@ -43,7 +43,7 @@ message IDLeadRequest {
     string TransactionHash = 1;
     repeated string ValidatorPeerIPs = 2;
     string EncryptedID = 3;
-    string SignatureRequest = 5;
+    string SignatureRequest = 4;
 }
 
 message KeychainValidationRequest {
@@ -81,9 +81,9 @@ message Keychain {
 	string EncryptedAddrByRobot = 1;
 	string EncryptedWallet = 2;
 	string IDPublicKey = 3;
-    Proposal Proposal = 6;
-    string IDSignature = 4;
-    string EmitterSignature = 5;
+    Proposal Proposal = 4;
+    string IDSignature = 5;
+    string EmitterSignature = 6;
 }
 
 message ID {
@@ -92,9 +92,9 @@ message ID {
     string EncryptedAddrByID = 3;
 	string EncryptedAESKey = 4;
 	string PublicKey = 5;
-    Proposal Proposal = 8;
-    string IDSignature = 6;
-    string EmitterSignature = 7;
+    Proposal Proposal = 6;
+    string IDSignature = 7;
+    string EmitterSignature = 8;
 }
 
 message Endorsement {

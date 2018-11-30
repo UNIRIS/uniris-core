@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/uniris/uniris-core/api/pkg/system"
+	"github.com/uniris/uniris-core/api/pkg/listing"
 )
 
 /*
@@ -15,31 +15,17 @@ Scenario: Enroll an user
 	Then I can get the encrypted data from the roboto
 */
 func TestAddAccount(t *testing.T) {
-	s := service{
-		client:   mockClient{},
-		sigVerif: mockGoodSignatureVerifer{},
-		conf: system.UnirisConfig{
-			SharedKeys: system.SharedKeys{
-				Emitter: []system.KeyPair{
-					system.KeyPair{
-						PublicKey: "my key",
-					},
-				},
-			},
-		},
-	}
-
-	req := AccountCreationRequest{
-		EncryptedID:       "encrypted ID",
-		EncryptedKeychain: "encrypted keychain",
-		Signature:         "signature request",
-	}
+	c := mockClient{}
+	sig := mockSigVerifier{}
+	l := listing.NewService(c, sig)
+	s := NewService(l, c, sig)
+	req := NewAccountCreationRequest("encrypted ID", "encrypted keychain", "sig")
 
 	res, err := s.AddAccount(req)
 	assert.Nil(t, err)
-	assert.Equal(t, "transaction hash", res.Transactions.ID.TransactionHash)
-	assert.Equal(t, "transaction hash", res.Transactions.Keychain.TransactionHash)
-	assert.Equal(t, "signature of the response", res.Signature)
+	assert.Equal(t, "transaction hash", res.ResultTransactions().ID().TransactionHash())
+	assert.Equal(t, "transaction hash", res.ResultTransactions().Keychain().TransactionHash())
+	assert.Equal(t, "sig", res.Signature())
 }
 
 /*
@@ -49,25 +35,12 @@ Scenario: Catch invalid signature when get account's details from the robot
 	Then I get an error
 */
 func TestAddAccountInvalidSig(t *testing.T) {
-	s := service{
-		client:   mockClient{},
-		sigVerif: mockBadSignatureVerifer{},
-		conf: system.UnirisConfig{
-			SharedKeys: system.SharedKeys{
-				Emitter: []system.KeyPair{
-					system.KeyPair{
-						PublicKey: "my key",
-					},
-				},
-			},
-		},
-	}
+	c := mockClient{}
+	sig := mockSigVerifier{isInvalid: true}
+	l := listing.NewService(c, sig)
+	s := NewService(l, c, sig)
 
-	req := AccountCreationRequest{
-		EncryptedID:       "encrypted bio data",
-		EncryptedKeychain: "encrypted wallet data",
-		Signature:         "signature",
-	}
+	req := NewAccountCreationRequest("encrypted ID", "encrypted keychain", "sig")
 
 	_, err := s.AddAccount(req)
 	assert.Equal(t, err, errors.New("Invalid signature"))
@@ -75,28 +48,78 @@ func TestAddAccountInvalidSig(t *testing.T) {
 
 type mockClient struct{}
 
-func (c mockClient) AddAccount(AccountCreationRequest) (*AccountCreationResult, error) {
-	return &AccountCreationResult{
-		Transactions: AccountCreationTransactionsResult{
-			ID: TransactionResult{
-				TransactionHash: "transaction hash",
-			},
-			Keychain: TransactionResult{
-				TransactionHash: "transaction hash",
-			},
-		},
-		Signature: "signature of the response",
-	}, nil
+func (c mockClient) AddAccount(AccountCreationRequest) (AccountCreationResult, error) {
+	txID := NewTransactionResult("transaction hash", "", "")
+	txKeychain := NewTransactionResult("transaction hash", "", "")
+
+	res := NewAccountCreationTransactionResult(txID, txKeychain)
+	return NewAccountCreationResult(res, "sig"), nil
 }
 
-type mockGoodSignatureVerifer struct{}
+func (c mockClient) GetAccount(encIDHash string) (listing.AccountResult, error) {
+	return listing.NewAccountResult("encrypted_aes_key", "encrypted_wallet", "encrypted_address", "sig"), nil
+}
 
-func (v mockGoodSignatureVerifer) VerifyAccountCreationRequestSignature(data AccountCreationRequest, pubKey string) error {
+func (c mockClient) IsEmitterAuthorized(emPubKey string) error {
+	if emPubKey == "em pub key" {
+		return nil
+	}
+	return listing.ErrUnauthorized
+}
+
+func (c mockClient) GetSharedKeys() (listing.SharedKeys, error) {
+	return listing.NewSharedKeys(
+		"robot pv key",
+		"robot pub key",
+		[]listing.SharedKeyPair{
+			listing.NewSharedKeyPair("enc pv key", "pub key"),
+		}), nil
+}
+
+type mockSigVerifier struct {
+	isInvalid bool
+}
+
+func (v mockSigVerifier) VerifyAccountCreationRequestSignature(req AccountCreationRequest, pubKey string) error {
+	if v.isInvalid {
+		return errors.New("Invalid signature")
+	}
 	return nil
 }
 
-type mockBadSignatureVerifer struct{}
+func (v mockSigVerifier) VerifyAccountCreationResultSignature(req AccountCreationResult, pubKey string) error {
+	if v.isInvalid {
+		return errors.New("Invalid signature")
+	}
+	return nil
+}
 
-func (v mockBadSignatureVerifer) VerifyAccountCreationRequestSignature(data AccountCreationRequest, pubKey string) error {
-	return errors.New("Invalid signature")
+func (v mockSigVerifier) VerifyAccountResultSignature(res listing.AccountResult, pubKey string) error {
+	if v.isInvalid {
+		return errors.New("Invalid signature")
+	}
+	return nil
+}
+
+func (v mockSigVerifier) SignAccountCreationResult(res AccountCreationResult, pvKey string) (AccountCreationResult, error) {
+	return NewAccountCreationResult(
+		NewAccountCreationTransactionResult(
+			NewTransactionResult("transaction hash", "ip", "sig"),
+			NewTransactionResult("transaction hash", "ip", "sig"),
+		), "sig",
+	), nil
+}
+
+func (v mockSigVerifier) VerifyHashSignature(data string, pubKey string, sig string) error {
+	if v.isInvalid {
+		return errors.New("Invalid signature")
+	}
+	return nil
+}
+
+func (v mockSigVerifier) VerifyCreationTransactionResultSignature(res TransactionResult, pubKey string) error {
+	if v.isInvalid {
+		return errors.New("Invalid signature")
+	}
+	return nil
 }

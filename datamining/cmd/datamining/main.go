@@ -7,6 +7,8 @@ import (
 	"net"
 	"path/filepath"
 
+	"github.com/uniris/uniris-core/datamining/pkg/emitter"
+
 	accountAdding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
 	accountListing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
 	accountMining "github.com/uniris/uniris-core/datamining/pkg/account/mining"
@@ -39,7 +41,10 @@ func main() {
 	db := mem.NewDatabase()
 
 	for _, kp := range config.SharedKeys.EmKeys {
-		db.StoreEmitterSharedKey(kp.PublicKey)
+		db.StoreSharedEmitterKeyPair(emitter.SharedKeyPair{
+			EncryptedPrivateKey: kp.PrivateKey,
+			PublicKey:           kp.PublicKey,
+		})
 	}
 
 	poolFinder := mocktransport.NewPoolFinder()
@@ -78,7 +83,7 @@ func main() {
 	log.Print("DataMining Service starting...")
 
 	go func() {
-		internalHandler := rpc.NewInternalServerHandler(poolRequester, aiClient, rpcCrypto, *config)
+		internalHandler := rpc.NewInternalServerHandler(emLister, poolRequester, aiClient, rpcCrypto, *config)
 
 		//Starts Internal grpc server
 		if err := startInternalServer(internalHandler, config.Services.Datamining.InternalPort); err != nil {

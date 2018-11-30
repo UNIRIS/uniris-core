@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/emitter"
 	emlisting "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
 )
 
@@ -78,8 +79,15 @@ func TestExecutePOW_KO(t *testing.T) {
 type mockDatabase struct {
 }
 
-func (d *mockDatabase) ListEmitterPublicKeys() ([]string, error) {
-	return []string{"key1", "key2", "key3"}, nil
+func (d *mockDatabase) ListSharedEmitterKeyPairs() ([]emitter.SharedKeyPair, error) {
+	return []emitter.SharedKeyPair{
+		emitter.SharedKeyPair{
+			PublicKey: "key1",
+		}, emitter.SharedKeyPair{
+			PublicKey: "key2",
+		}, emitter.SharedKeyPair{
+			PublicKey: "key3",
+		}}, nil
 }
 
 type mockPowSigner struct{}

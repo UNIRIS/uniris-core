@@ -3,11 +3,15 @@ package rpc
 import (
 	"errors"
 
+	"github.com/golang/protobuf/ptypes/empty"
+
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 	"golang.org/x/net/context"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
+
+	emListing "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
 )
 
 type internalSrvHandler struct {
@@ -15,11 +19,13 @@ type internalSrvHandler struct {
 	aiClient AIClient
 	crypto   Crypto
 	conf     system.UnirisConfig
+	emLister emListing.Service
 }
 
 //NewInternalServerHandler create a new GRPC server handler for account
-func NewInternalServerHandler(pR PoolRequester, aiClient AIClient, crypto Crypto, conf system.UnirisConfig) api.InternalServer {
+func NewInternalServerHandler(emLister emListing.Service, pR PoolRequester, aiClient AIClient, crypto Crypto, conf system.UnirisConfig) api.InternalServer {
 	return internalSrvHandler{
+		emLister: emLister,
 		pR:       pR,
 		aiClient: aiClient,
 		crypto:   crypto,
@@ -143,4 +149,29 @@ func (s internalSrvHandler) CreateID(ctx context.Context, req *api.IDCreationReq
 	}
 
 	return res, nil
+}
+
+func (s internalSrvHandler) IsEmitterAuthorized(ctx context.Context, req *api.AuthorizationRequest) (*empty.Empty, error) {
+	return nil, s.emLister.IsEmitterAuthorized(req.PublicKey)
+}
+
+func (s internalSrvHandler) GetSharedKeys(ctx context.Context, req *empty.Empty) (*api.SharedKeysResult, error) {
+	kps, err := s.emLister.ListSharedEmitterKeyPairs()
+	if err != nil {
+		return nil, err
+	}
+
+	emiterKeys := make([]*api.SharedKeyPair, 0)
+	for _, kp := range kps {
+		emiterKeys = append(emiterKeys, &api.SharedKeyPair{
+			EncryptedPrivateKey: kp.EncryptedPrivateKey,
+			PublicKey:           kp.PublicKey,
+		})
+	}
+
+	return &api.SharedKeysResult{
+		EmitterKeys:     emiterKeys,
+		RobotPublicKey:  s.conf.SharedKeys.Robot.PublicKey,
+		RobotPrivateKey: s.conf.SharedKeys.Robot.PrivateKey,
+	}, nil
 }
