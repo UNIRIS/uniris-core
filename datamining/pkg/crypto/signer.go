@@ -488,9 +488,9 @@ func (s signer) SignStorageAck(ack *api.StorageAck, pvKey string) error {
 }
 
 func (s signer) SignAccountSearchResult(res *api.AccountSearchResult, pvKey string) error {
-	b, err := json.Marshal(&api.AccountSearchResult{
+	b, err := json.Marshal(accountSearchResult{
 		EncryptedAddress: res.EncryptedAddress,
-		EncryptedAESkey:  res.EncryptedAESkey,
+		EncryptedAESKey:  res.EncryptedAESkey,
 		EncryptedWallet:  res.EncryptedWallet,
 	})
 	if err != nil {
@@ -505,7 +505,7 @@ func (s signer) SignAccountSearchResult(res *api.AccountSearchResult, pvKey stri
 }
 
 func (s signer) SignCreationResult(res *api.CreationResult, pvKey string) error {
-	b, err := json.Marshal(&api.CreationResult{
+	b, err := json.Marshal(transactionResult{
 		MasterPeerIP:    res.MasterPeerIP,
 		TransactionHash: res.TransactionHash,
 	})

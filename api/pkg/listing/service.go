@@ -63,6 +63,7 @@ func NewService(client RobotClient, sig SignatureVerifier) Service {
 }
 
 func (s service) ExistAccount(encryptedIDHash string, sig string) error {
+
 	_, err := s.GetAccount(encryptedIDHash, sig)
 	if err != nil {
 		return err
@@ -71,12 +72,12 @@ func (s service) ExistAccount(encryptedIDHash string, sig string) error {
 }
 
 func (s service) GetSharedKeys(emPubKey string, sig string) (SharedKeys, error) {
-	if err := s.sig.VerifyHashSignature(emPubKey, sig, emPubKey); err != nil {
+	if err := s.sig.VerifyHashSignature(emPubKey, emPubKey, sig); err != nil {
 		return nil, err
 	}
 
 	if err := s.client.IsEmitterAuthorized(emPubKey); err != nil {
-		return nil, ErrUnauthorized
+		return nil, err
 	}
 
 	keys, err := s.client.GetSharedKeys()
