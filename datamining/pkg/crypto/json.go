@@ -103,3 +103,14 @@ type proposalKeypair struct {
 	EncryptedPrivateKey string `json:"encrypted_private_key"`
 	PublicKey           string `json:"public_key"`
 }
+
+type transactionResult struct {
+	TransactionHash string `json:"transaction_hash"`
+	MasterPeerIP    string `json:"master_peer_ip"`
+}
+
+type accountSearchResult struct {
+	EncryptedAESKey  string `json:"encrypted_aes_key"`
+	EncryptedWallet  string `json:"encrypted_wallet"`
+	EncryptedAddress string `json:"encrypted_address"`
+}

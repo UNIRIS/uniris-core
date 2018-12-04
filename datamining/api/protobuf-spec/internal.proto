@@ -9,7 +9,7 @@ service Internal {
     rpc CreateKeychain(KeychainCreationRequest) returns (CreationResult) {}
     rpc CreateID(IDCreationRequest) returns (CreationResult) {}
     rpc GetSharedKeys(google.protobuf.Empty) returns(SharedKeysResult) {}
-    rpc IsEmitterAuthorized(AuthorizationRequest) returns (google.protobuf.Empty) {}
+    rpc IsEmitterAuthorized(AuthorizationRequest) returns (AuthorizationResponse) {}
 }
 
 message AccountSearchRequest {
@@ -50,4 +50,8 @@ message SharedKeyPair {
 
 message AuthorizationRequest {
     string PublicKey = 1;
+}
+
+message AuthorizationResponse {
+    bool Status = 1; 
 }

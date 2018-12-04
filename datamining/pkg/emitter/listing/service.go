@@ -1,6 +1,12 @@
 package listing
 
-import "github.com/uniris/uniris-core/datamining/pkg/emitter"
+import (
+	"errors"
+
+	"github.com/uniris/uniris-core/datamining/pkg/emitter"
+)
+
+var ErrUnauthorizedEmitter = errors.New("Unauthorized emitter")
 
 //Repository defines methods to handle emitters sotrage
 type Repository interface {

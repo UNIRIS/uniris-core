@@ -43,10 +43,14 @@ func (c robotClient) IsEmitterAuthorized(emPubKey string) error {
 
 	client := api.NewInternalClient(conn)
 
-	_, err = client.IsEmitterAuthorized(context.Background(), &api.AuthorizationRequest{PublicKey: emPubKey})
+	res, err := client.IsEmitterAuthorized(context.Background(), &api.AuthorizationRequest{PublicKey: emPubKey})
 	if err != nil {
 		s, _ := status.FromError(err)
 		return errors.New(s.Message())
+	}
+
+	if res.Status == false {
+		return listing.ErrUnauthorized
 	}
 
 	return nil

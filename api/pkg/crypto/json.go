@@ -14,17 +14,17 @@ type accountResult struct {
 }
 
 type accountCreationResult struct {
-	Transactions accountCreationTransactionsResult `json:"transactions" binding:"required"`
-	Signature    string                            `json:"signature,omitempty" binding:"required"`
+	Transactions accountCreationTransactionsResult `json:"transactions"`
+	Signature    string                            `json:"signature,omitempty"`
 }
 
 type accountCreationTransactionsResult struct {
-	ID       transactionResult `json:"id" binding:"required"`
-	Keychain transactionResult `json:"keychain" binding:"required"`
+	ID       transactionResult `json:"id"`
+	Keychain transactionResult `json:"keychain"`
 }
 
 type transactionResult struct {
-	TransactionHash string `json:"transaction_hash" binding:"required"`
-	MasterPeerIP    string `json:"master_peer_ip" binding:"required"`
-	Signature       string `json:"signature" binding:"required"`
+	TransactionHash string `json:"transaction_hash"`
+	MasterPeerIP    string `json:"master_peer_ip"`
+	Signature       string `json:"signature,omitempty"`
 }

@@ -74,6 +74,7 @@ func (s internalSrvHandler) GetAccount(ctx context.Context, req *api.AccountSear
 		EncryptedWallet:  keychain.EncryptedWallet(),
 		EncryptedAddress: id.EncryptedAddrByID(),
 	}
+
 	if err := s.crypto.signer.SignAccountSearchResult(res, s.conf.SharedKeys.Robot.PrivateKey); err != nil {
 		return nil, err
 	}
@@ -151,8 +152,18 @@ func (s internalSrvHandler) CreateID(ctx context.Context, req *api.IDCreationReq
 	return res, nil
 }
 
-func (s internalSrvHandler) IsEmitterAuthorized(ctx context.Context, req *api.AuthorizationRequest) (*empty.Empty, error) {
-	return nil, s.emLister.IsEmitterAuthorized(req.PublicKey)
+func (s internalSrvHandler) IsEmitterAuthorized(ctx context.Context, req *api.AuthorizationRequest) (*api.AuthorizationResponse, error) {
+	if err := s.emLister.IsEmitterAuthorized(req.PublicKey); err != nil {
+		if err == emListing.ErrUnauthorizedEmitter {
+			return &api.AuthorizationResponse{
+				Status: false,
+			}, nil
+		}
+	}
+
+	return &api.AuthorizationResponse{
+		Status: true,
+	}, nil
 }
 
 func (s internalSrvHandler) GetSharedKeys(ctx context.Context, req *empty.Empty) (*api.SharedKeysResult, error) {
