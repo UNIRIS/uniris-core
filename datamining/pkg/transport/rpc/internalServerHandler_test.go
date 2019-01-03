@@ -57,7 +57,8 @@ func TestGetAccount(t *testing.T) {
 	poolR := mocktransport.NewPoolRequester(cli)
 
 	emLister := emlisting.NewService(db)
-	srvHandler := NewInternalServerHandler(emLister, poolR, mocktransport.NewAIClient(), crypto, conf)
+	extCli := mocktransport.NewExternalClient(db)
+	srvHandler := NewInternalServerHandler(emLister, poolR, mocktransport.NewAIClient(), extCli, crypto, conf)
 
 	res, err := srvHandler.GetAccount(context.TODO(), &api.AccountSearchRequest{
 		EncryptedIDHash: "enc id hash",
@@ -83,11 +84,11 @@ func TestCreateKeychain(t *testing.T) {
 		hasher:    mockcrypto.NewHasher(),
 	}
 	db := mockstorage.NewDatabase()
-	cli := mocktransport.NewExternalClient(db)
-	poolR := mocktransport.NewPoolRequester(cli)
+	extCli := mocktransport.NewExternalClient(db)
+	poolR := mocktransport.NewPoolRequester(extCli)
 	aiCli := mocktransport.NewAIClient()
 	emLister := emlisting.NewService(db)
-	srvHandler := NewInternalServerHandler(emLister, poolR, aiCli, crypto, conf)
+	srvHandler := NewInternalServerHandler(emLister, poolR, aiCli, extCli, crypto, conf)
 
 	res, err := srvHandler.CreateKeychain(context.TODO(), &api.KeychainCreationRequest{
 		EncryptedKeychain: "cipher data",
@@ -113,12 +114,12 @@ func TestCreateID(t *testing.T) {
 		hasher:    mockcrypto.NewHasher(),
 	}
 	db := mockstorage.NewDatabase()
-	cli := mocktransport.NewExternalClient(db)
-	poolR := mocktransport.NewPoolRequester(cli)
+	extCli := mocktransport.NewExternalClient(db)
+	poolR := mocktransport.NewPoolRequester(extCli)
 	aiCli := mocktransport.NewAIClient()
 
 	emLister := emlisting.NewService(db)
-	srvHandler := NewInternalServerHandler(emLister, poolR, aiCli, crypto, conf)
+	srvHandler := NewInternalServerHandler(emLister, poolR, aiCli, extCli, crypto, conf)
 
 	res, err := srvHandler.CreateID(context.TODO(), &api.IDCreationRequest{
 		EncryptedID: "cipher data",
@@ -146,11 +147,11 @@ func TestIsAuthorized(t *testing.T) {
 
 	db := mockstorage.NewDatabase()
 	emLister := emlisting.NewService(db)
-	cli := mocktransport.NewExternalClient(db)
-	poolR := mocktransport.NewPoolRequester(cli)
+	extCli := mocktransport.NewExternalClient(db)
+	poolR := mocktransport.NewPoolRequester(extCli)
 	aiCli := mocktransport.NewAIClient()
 
-	srvHandler := NewInternalServerHandler(emLister, poolR, aiCli, crypto, conf)
+	srvHandler := NewInternalServerHandler(emLister, poolR, aiCli, extCli, crypto, conf)
 
 	_, err := srvHandler.IsEmitterAuthorized(context.TODO(), &api.AuthorizationRequest{
 		PublicKey: "pubkey",
@@ -184,8 +185,8 @@ func TestGetSharedKeys(t *testing.T) {
 
 	db := mockstorage.NewDatabase()
 	emLister := emlisting.NewService(db)
-	cli := mocktransport.NewExternalClient(db)
-	poolR := mocktransport.NewPoolRequester(cli)
+	extCli := mocktransport.NewExternalClient(db)
+	poolR := mocktransport.NewPoolRequester(extCli)
 	aiCli := mocktransport.NewAIClient()
 
 	db.StoreSharedEmitterKeyPair(emitter.SharedKeyPair{
@@ -193,7 +194,7 @@ func TestGetSharedKeys(t *testing.T) {
 		EncryptedPrivateKey: "enc pv key",
 	})
 
-	srvHandler := NewInternalServerHandler(emLister, poolR, aiCli, crypto, conf)
+	srvHandler := NewInternalServerHandler(emLister, poolR, aiCli, extCli, crypto, conf)
 
 	res, err := srvHandler.GetSharedKeys(context.TODO(), &empty.Empty{})
 	assert.Nil(t, err)

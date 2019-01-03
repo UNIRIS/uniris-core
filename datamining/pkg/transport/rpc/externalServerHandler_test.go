@@ -142,6 +142,8 @@ func TestLeadKeychainMining(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
+	time.Sleep(1 * time.Second)
+
 	keychain, _ := db.FindLastKeychain("address")
 	assert.NotNil(t, keychain)
 }
@@ -189,6 +191,8 @@ func TestLeadIDMining(t *testing.T) {
 		ValidatorPeerIPs: []string{"127.0.0.1"},
 	})
 	assert.Nil(t, err)
+
+	time.Sleep(1 * time.Second)
 
 	id, _ := db.FindID("hash")
 	assert.NotNil(t, id)

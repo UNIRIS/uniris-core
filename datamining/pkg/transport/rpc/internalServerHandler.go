@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"errors"
+	"log"
 
 	"github.com/golang/protobuf/ptypes/empty"
 
@@ -17,17 +18,19 @@ import (
 type internalSrvHandler struct {
 	pR       account.PoolRequester
 	aiClient AIClient
+	extCli   ExternalClient
 	crypto   Crypto
 	conf     system.UnirisConfig
 	emLister emListing.Service
 }
 
 //NewInternalServerHandler create a new GRPC server handler for account
-func NewInternalServerHandler(emLister emListing.Service, pR PoolRequester, aiClient AIClient, crypto Crypto, conf system.UnirisConfig) api.InternalServer {
+func NewInternalServerHandler(emLister emListing.Service, pR PoolRequester, aiClient AIClient, extCli ExternalClient, crypto Crypto, conf system.UnirisConfig) api.InternalServer {
 	return internalSrvHandler{
 		emLister: emLister,
 		pR:       pR,
 		aiClient: aiClient,
+		extCli:   extCli,
 		crypto:   crypto,
 		conf:     conf,
 	}
@@ -102,8 +105,10 @@ func (s internalSrvHandler) CreateKeychain(ctx context.Context, req *api.Keychai
 		return nil, err
 	}
 
-	extCli := NewExternalClient(s.crypto, s.conf)
-	go extCli.LeadKeychainMining(master.IP.String(), txHash, req.EncryptedKeychain, validPool.Peers().IPs())
+	if err := s.extCli.LeadKeychainMining(master.IP.String(), txHash, req.EncryptedKeychain, validPool.Peers().IPs()); err != nil {
+		log.Print(err.Error())
+		return nil, err
+	}
 
 	res := &api.CreationResult{
 		TransactionHash: txHash,
@@ -137,8 +142,9 @@ func (s internalSrvHandler) CreateID(ctx context.Context, req *api.IDCreationReq
 		return nil, err
 	}
 
-	extCli := NewExternalClient(s.crypto, s.conf)
-	go extCli.LeadIDMining(master.IP.String(), txHash, req.EncryptedID, validPool.Peers().IPs())
+	if err := s.extCli.LeadIDMining(master.IP.String(), txHash, req.EncryptedID, validPool.Peers().IPs()); err != nil {
+		return nil, err
+	}
 
 	res := &api.CreationResult{
 		TransactionHash: txHash,
