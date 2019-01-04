@@ -56,8 +56,8 @@ func main() {
 
 	rpcCrypto := rpc.NewCrypto(decrypter, signer, hasher)
 
-	grpcClient := rpc.NewExternalClient(rpcCrypto, *config)
-	poolRequester := rpc.NewPoolRequester(grpcClient, *config, rpcCrypto)
+	externalClient := rpc.NewExternalClient(rpcCrypto, *config)
+	poolRequester := rpc.NewPoolRequester(externalClient, *config, rpcCrypto)
 
 	emLister := emlisting.NewService(db)
 	lockSrv := lock.NewService(db)
@@ -83,7 +83,7 @@ func main() {
 	log.Print("DataMining Service starting...")
 
 	go func() {
-		internalHandler := rpc.NewInternalServerHandler(emLister, poolRequester, aiClient, rpcCrypto, *config)
+		internalHandler := rpc.NewInternalServerHandler(emLister, poolRequester, aiClient, externalClient, rpcCrypto, *config)
 
 		//Starts Internal grpc server
 		if err := startInternalServer(internalHandler, config.Services.Datamining.InternalPort); err != nil {

@@ -2,6 +2,7 @@ package mining
 
 import (
 	"errors"
+	"log"
 	"time"
 
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
@@ -60,7 +61,7 @@ type Service interface {
 	// - Unlocks the transaction
 	//
 	//It also in charge of notify the transaction status during this workflow
-	LeadMining(txHash string, addr string, data interface{}, vPool datamining.Pool, txType TransactionType, biodSig string) error
+	LeadMining(txHash string, addr string, data interface{}, vPool datamining.Pool, txType TransactionType, emSig string) error
 
 	//Validate performs checks like a peer in a validation pool and create a validation (successed or not)
 	Validate(txHash string, data interface{}, txType TransactionType) (Validation, error)
@@ -82,7 +83,8 @@ func NewService(aiCli AIClient, n Notifier, pF PoolFinder, pR PoolRequester, sig
 	return service{aiCli, n, pF, pR, signer, emLister, config, txMiners}
 }
 
-func (s service) LeadMining(txHash string, addr string, data interface{}, vPool datamining.Pool, txType TransactionType, biodSig string) error {
+func (s service) LeadMining(txHash string, addr string, data interface{}, vPool datamining.Pool, txType TransactionType, emSig string) error {
+
 	if s.txMiners[txType] == nil {
 		return s.notif.NotifyTransactionStatus(txHash, TxInvalid)
 	}
@@ -100,13 +102,21 @@ func (s service) LeadMining(txHash string, addr string, data interface{}, vPool 
 		return err
 	}
 
-	endorsement, err := s.mine(txHash, data, addr, biodSig, lastVPool, vPool, txType)
+	//Process asynchrounously the transaction mining, the validation, the storage and the unlocking
+	go func() {
+		if err := s.processMining(txHash, data, addr, emSig, lastVPool, vPool, sPool, txType); err != nil {
+			log.Printf("Mining error: %s", err.Error())
+		}
+	}()
+
+	return nil
+}
+
+func (s service) processMining(txHash string, data interface{}, addr string, emSig string, lastVPool, vPool, sPool datamining.Pool, txType TransactionType) error {
+	endorsement, err := s.mine(txHash, data, addr, emSig, lastVPool, vPool, txType)
 	if err != nil {
 		if err == ErrInvalidTransaction {
-			if err := s.notif.NotifyTransactionStatus(txHash, TxInvalid); err != nil {
-				return err
-			}
-			return nil
+			return s.notif.NotifyTransactionStatus(txHash, TxInvalid)
 		}
 		return err
 	}

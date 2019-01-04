@@ -113,7 +113,7 @@ func TestValidateTx(t *testing.T) {
 	assert.Equal(t, ValidationOK, valid.Status())
 	assert.Equal(t, "sig", valid.Signature())
 	assert.Equal(t, "pub key", valid.PublicKey())
-	assert.NotEqual(t, time.Now(), valid.Timestamp())
+	assert.Equal(t, time.Now().Unix(), valid.Timestamp().Unix())
 }
 
 /*
@@ -144,7 +144,7 @@ func TestValidateInvalidTx(t *testing.T) {
 	assert.Equal(t, ValidationKO, valid.Status())
 	assert.Equal(t, "sig", valid.Signature())
 	assert.Equal(t, "pub key", valid.PublicKey())
-	assert.NotEqual(t, time.Now(), valid.Timestamp())
+	assert.Equal(t, time.Now().Unix(), valid.Timestamp().Unix())
 }
 
 type mockSrvSigner struct{}
