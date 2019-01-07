@@ -1,7 +1,6 @@
 package mem
 
 import (
-	"log"
 	"sort"
 
 	"github.com/uniris/uniris-core/datamining/pkg/account"
@@ -67,11 +66,7 @@ func (d *database) FindIDByTransaction(txHash string) (account.EndorsedID, error
 }
 
 func (d *database) FindKeychain(addr string, txHash string) (account.EndorsedKeychain, error) {
-	log.Print(addr)
-	log.Print(txHash)
 	for _, kc := range d.Keychains {
-		log.Print(kc.Address())
-		log.Print(kc.Endorsement().TransactionHash())
 		if kc.Address() == addr && kc.Endorsement().TransactionHash() == txHash {
 			return kc, nil
 		}
