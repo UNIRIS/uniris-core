@@ -76,6 +76,10 @@ func (c mockClient) GetSharedKeys() (listing.SharedKeys, error) {
 		}), nil
 }
 
+func (c mockClient) GetTransactionStatus(addr string, txHash string) (string, error) {
+	return "Success", nil
+}
+
 type mockSigVerifier struct {
 	isInvalid bool
 }

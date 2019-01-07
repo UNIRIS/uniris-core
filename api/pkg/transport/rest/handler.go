@@ -22,6 +22,7 @@ func Handler(r *gin.Engine, l listing.Service, a adding.Service) {
 
 	api := r.Group("/api")
 	{
+		api.GET("/transaction/:addr/status/:hash", getTransactionStatus(l))
 		api.POST("/account", createAccount(a))
 		api.HEAD("/account/:hash", checkAccount(l))
 		api.GET("/account/:hash", getAccount(l))
@@ -155,6 +156,26 @@ func getSharedKeys(l listing.Service) func(c *gin.Context) {
 		c.JSON(http.StatusOK, sharedKeys{
 			SharedEmitterKeys:    sharedEms,
 			SharedRobotPublicKey: keys.RobotPublicKey(),
+		})
+	}
+}
+
+func getTransactionStatus(l listing.Service) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		addr := c.Param("addr")
+		txHash := c.Param("hash")
+
+		res, err := l.GetTransactionStatus(addr, txHash)
+		if err != nil {
+			e := createError(http.StatusInternalServerError, err)
+			c.JSON(e.Code, e)
+			return
+		}
+
+		c.JSON(http.StatusOK, struct {
+			Status string `json:"status"`
+		}{
+			Status: res,
 		})
 	}
 }
