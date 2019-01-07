@@ -108,8 +108,6 @@ func (s service) LeadMining(txHash string, addr string, data interface{}, vPool 
 
 	log.Printf("Transaction %s is pending\n", txHash)
 
-	// TODO: store the transaction on the pending database
-
 	lastVPool, sPool, err := s.findPools(addr)
 	if err != nil {
 		return err
@@ -128,8 +126,6 @@ func (s service) LeadMining(txHash string, addr string, data interface{}, vPool 
 		}
 
 		log.Printf("Transaction %s is unlocked\n", txHash)
-
-		//TODO: Remove from the pending database
 	}()
 
 	return nil
