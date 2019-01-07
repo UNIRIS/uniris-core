@@ -5,7 +5,7 @@ import (
 )
 
 //ErrAccountNotExist is returned when the requested account not exist
-var ErrAccountNotExist = errors.New("Account doest not exist")
+var ErrAccountNotExist = errors.New("Account does not exist")
 
 //ErrUnauthorized is returned when the emitter is not authorized
 var ErrUnauthorized = errors.New("Unauthorized")

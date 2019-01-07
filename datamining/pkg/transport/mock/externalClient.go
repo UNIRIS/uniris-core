@@ -66,5 +66,5 @@ func (c mockExtClient) RequestStorage(ip string, txType mining.TransactionType, 
 }
 
 func (c mockExtClient) GetTransactionStatus(ip string, addr string, txHash string) (string, error) {
-	return "Ok", nil
+	return "Success", nil
 }
