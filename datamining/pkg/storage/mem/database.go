@@ -1,6 +1,7 @@
 package mem
 
 import (
+	"log"
 	"sort"
 
 	"github.com/uniris/uniris-core/datamining/pkg/account"
@@ -39,6 +40,46 @@ func (d *database) FindID(hash string) (account.EndorsedID, error) {
 	for _, id := range d.IDs {
 		if id.Hash() == hash {
 			return id, nil
+		}
+	}
+
+	for _, id := range d.KOIDs {
+		if id.Hash() == hash {
+			return id, nil
+		}
+	}
+	return nil, nil
+}
+
+func (d *database) FindIDByTransaction(txHash string) (account.EndorsedID, error) {
+	for _, id := range d.IDs {
+		if id.Endorsement().TransactionHash() == txHash {
+			return id, nil
+		}
+	}
+
+	for _, id := range d.KOIDs {
+		if id.Endorsement().TransactionHash() == txHash {
+			return id, nil
+		}
+	}
+	return nil, nil
+}
+
+func (d *database) FindKeychain(addr string, txHash string) (account.EndorsedKeychain, error) {
+	log.Print(addr)
+	log.Print(txHash)
+	for _, kc := range d.Keychains {
+		log.Print(kc.Address())
+		log.Print(kc.Endorsement().TransactionHash())
+		if kc.Address() == addr && kc.Endorsement().TransactionHash() == txHash {
+			return kc, nil
+		}
+	}
+
+	for _, kc := range d.KOKeychains {
+		if kc.Address() == addr && kc.Endorsement().TransactionHash() == txHash {
+			return kc, nil
 		}
 	}
 	return nil, nil

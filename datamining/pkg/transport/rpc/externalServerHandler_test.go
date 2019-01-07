@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"log"
 	"net"
 	"testing"
 	"time"
@@ -107,7 +106,6 @@ Scenario: Lead mining of keychain transaction
 func TestLeadKeychainMining(t *testing.T) {
 	db := mockstorage.NewDatabase()
 	lockSrv := lock.NewService(db)
-	notifier := mockNotifier{}
 	poolF := mockPoolFinder{}
 	cli := mocktransport.NewExternalClient(db)
 	poolR := mocktransport.NewPoolRequester(cli)
@@ -123,7 +121,7 @@ func TestLeadKeychainMining(t *testing.T) {
 		PublicKey: "robotkey",
 	}
 
-	mineSrv := mining.NewService(aiClient, notifier, poolF, poolR, mockcrypto.NewSigner(), emLister, conf, txMiners)
+	mineSrv := mining.NewService(aiClient, poolF, poolR, mockcrypto.NewSigner(), emLister, conf, txMiners)
 
 	accAdder := accountadding.NewService(aiClient, db, accLister, mockcrypto.NewSigner(), mockcrypto.NewHasher())
 
@@ -157,7 +155,6 @@ Scenario: Lead mining of ID transaction
 func TestLeadIDMining(t *testing.T) {
 	db := mockstorage.NewDatabase()
 	lockSrv := lock.NewService(db)
-	notifier := mockNotifier{}
 	poolF := mockPoolFinder{}
 	cli := mocktransport.NewExternalClient(db)
 	poolR := mocktransport.NewPoolRequester(cli)
@@ -172,7 +169,7 @@ func TestLeadIDMining(t *testing.T) {
 		mining.IDTransaction: accountMining.NewIDMiner(mockcrypto.NewSigner(), mockcrypto.NewHasher()),
 	}
 
-	mineSrv := mining.NewService(aiClient, notifier, poolF, poolR, mockcrypto.NewSigner(), emLister, conf, txMiners)
+	mineSrv := mining.NewService(aiClient, poolF, poolR, mockcrypto.NewSigner(), emLister, conf, txMiners)
 
 	accLister := accountListing.NewService(db)
 	accAdder := accountadding.NewService(aiClient, db, accLister, mockcrypto.NewSigner(), mockcrypto.NewHasher())
@@ -301,7 +298,7 @@ func TestValidateKeychain(t *testing.T) {
 		PublicKey: "robotkey",
 	}
 
-	mineSrv := mining.NewService(nil, nil, nil, nil, mockcrypto.NewSigner(), nil, conf, txMiners)
+	mineSrv := mining.NewService(nil, nil, nil, mockcrypto.NewSigner(), nil, conf, txMiners)
 
 	services := Services{mining: mineSrv}
 	crypto := Crypto{
@@ -349,7 +346,7 @@ func TestValidateID(t *testing.T) {
 		PublicKey: "robotkey",
 	}
 
-	mineSrv := mining.NewService(nil, nil, nil, nil, mockcrypto.NewSigner(), nil, conf, txMiners)
+	mineSrv := mining.NewService(nil, nil, nil, mockcrypto.NewSigner(), nil, conf, txMiners)
 
 	services := Services{mining: mineSrv}
 	crypto := Crypto{
@@ -525,6 +522,108 @@ func TestStoreID(t *testing.T) {
 	assert.Equal(t, mining.ValidationOK, id.Endorsement().MasterValidation().ProofOfWorkValidation().Status())
 }
 
+/*
+Scenario: Retrieve the keychain transaction status
+	Given a keychain transaction
+	When I want to get the its status
+	Then I got OK
+*/
+func TestGetKeychainTransactionStatus(t *testing.T) {
+
+	db := mockstorage.NewDatabase()
+	accLister := accountListing.NewService(db)
+
+	kc := account.NewKeychain("addr", "wallet", "idpub", datamining.NewProposal(datamining.NewProposedKeyPair("enc pv", "pubk")), "id sig", "emsig")
+	end := mining.NewEndorsement("", "txHash", mining.NewMasterValidation(
+		[]string{}, "powkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "sig"),
+	), []mining.Validation{
+		mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "sig"),
+	})
+
+	db.StoreKeychain(account.NewEndorsedKeychain("hash", kc, end))
+
+	srv := Services{accLister: accLister}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+	}
+	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{
+		PublicKey: "robotkey",
+	})
+
+	res, err := h.GetTransactionStatus(context.TODO(), &api.TransactionStatusRequest{
+		Address: "addr",
+		Hash:    "txHash",
+	})
+	assert.Nil(t, err)
+	assert.Equal(t, "Success", res.Status)
+
+}
+
+/*
+Scenario: Retrieve the ID transaction status
+	Given a ID transaction
+	When I want to get the its status
+	Then I got OK
+*/
+func TestGetIDTransactionStatus(t *testing.T) {
+
+	db := mockstorage.NewDatabase()
+	accLister := accountListing.NewService(db)
+
+	id := account.NewID("hash", "addr", "addr", "aes key", "pubk", datamining.NewProposal(datamining.NewProposedKeyPair("enc", "pub")), "id sig", "em sig")
+	end := mining.NewEndorsement("", "txHash", mining.NewMasterValidation(
+		[]string{}, "powkey", mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "sig"),
+	), []mining.Validation{
+		mining.NewValidation(mining.ValidationOK, time.Now(), "pubkey", "sig"),
+	})
+
+	db.StoreID(account.NewEndorsedID(id, end))
+
+	srv := Services{accLister: accLister}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+	}
+	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{
+		PublicKey: "robotkey",
+	})
+
+	res, err := h.GetTransactionStatus(context.TODO(), &api.TransactionStatusRequest{
+		Address: "addr",
+		Hash:    "txHash",
+	})
+	assert.Nil(t, err)
+	assert.Equal(t, "Success", res.Status)
+
+}
+
+/*
+Scenario: Retrieve the not stored transaction status
+	Given a fake transaction
+	When I want to get the its status
+	Then I got Invalid
+*/
+func TestGetNotStoredTransactionStatus(t *testing.T) {
+	db := mockstorage.NewDatabase()
+	accLister := accountListing.NewService(db)
+	srv := Services{accLister: accLister}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+	}
+	h := NewExternalServerHandler(srv, crypto, system.UnirisConfig{
+		PublicKey: "robotkey",
+	})
+
+	res, err := h.GetTransactionStatus(context.TODO(), &api.TransactionStatusRequest{
+		Address: "fake addr",
+		Hash:    "fake txHash",
+	})
+	assert.Nil(t, err)
+	assert.Equal(t, "Unknown", res.Status)
+}
+
 type mockPoolFinder struct{}
 
 func (p mockPoolFinder) FindLastValidationPool(addr string) (datamining.Pool, error) {
@@ -546,11 +645,4 @@ func (p mockPoolFinder) FindStoragePool(addr string) (datamining.Pool, error) {
 		IP:        net.ParseIP("127.0.0.1"),
 		PublicKey: "key",
 	}), nil
-}
-
-type mockNotifier struct{}
-
-func (n mockNotifier) NotifyTransactionStatus(tx string, status mining.TransactionStatus) error {
-	log.Printf("Transaction %s with status %s", tx, status.String())
-	return nil
 }

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uniris/uniris-core/datamining/pkg"
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 
 	"github.com/stretchr/testify/assert"
 
@@ -420,6 +420,43 @@ func (d *databasemock) FindID(hash string) (account.EndorsedID, error) {
 			return id, nil
 		}
 	}
+	for _, id := range d.idsKO {
+		if id.Hash() == hash {
+			return id, nil
+		}
+	}
+	return nil, nil
+}
+
+func (d *databasemock) FindIDByTransaction(txHash string) (account.EndorsedID, error) {
+	for _, id := range d.ids {
+		if id.Endorsement().TransactionHash() == txHash {
+			return id, nil
+		}
+	}
+
+	for _, id := range d.idsKO {
+		if id.Endorsement().TransactionHash() == txHash {
+			return id, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func (d *databasemock) FindKeychain(addr string, txHash string) (account.EndorsedKeychain, error) {
+	for _, kc := range d.keychains {
+		if kc.Address() == addr && kc.Endorsement().TransactionHash() == txHash {
+			return kc, nil
+		}
+	}
+
+	for _, kc := range d.keychainsKO {
+		if kc.Address() == addr && kc.Endorsement().TransactionHash() == txHash {
+			return kc, nil
+		}
+	}
+
 	return nil, nil
 }
 

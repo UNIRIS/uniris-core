@@ -71,7 +71,6 @@ func main() {
 
 	miningSrv := mining.NewService(
 		aiClient,
-		mocktransport.NewNotifier(),
 		poolFinder,
 		poolRequester,
 		signer,
@@ -83,7 +82,7 @@ func main() {
 	log.Print("DataMining Service starting...")
 
 	go func() {
-		internalHandler := rpc.NewInternalServerHandler(emLister, poolRequester, aiClient, externalClient, rpcCrypto, *config)
+		internalHandler := rpc.NewInternalServerHandler(emLister, poolRequester, poolFinder, aiClient, externalClient, rpcCrypto, *config)
 
 		//Starts Internal grpc server
 		if err := startInternalServer(internalHandler, config.Services.Datamining.InternalPort); err != nil {

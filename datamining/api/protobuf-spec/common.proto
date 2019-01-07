@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package api;
+
+message TransactionStatusRequest {
+    string Address = 2;
+    string Hash = 3;
+}
+
+message TransactionStatusResponse {
+    string Status = 1;
+}
