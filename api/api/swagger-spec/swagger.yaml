@@ -31,18 +31,18 @@ paths:
       tags:
         - Transaction
       summary: Get the transaction status
-      description: Retrieve the status of a transaction hash
+      description: Retrieve the status of a transaction
       operationId: getTransactionStatus
       parameters:
         - name: addr
           in: path
           required: true
-          description: data address (account, smart contract)
+          description: Encrypted address (account, smart contract)
           type: string
         - name: hash
           in: path
           required: true
-          description: transaction hash
+          description: Transaction hash
           type: string
       responses:
         "200":
