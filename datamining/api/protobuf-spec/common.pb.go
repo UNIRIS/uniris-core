@@ -18,9 +18,38 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+type TransactionStatusResponse_TransactionStatus int32
+
+const (
+	TransactionStatusResponse_Pending TransactionStatusResponse_TransactionStatus = 0
+	TransactionStatusResponse_Success TransactionStatusResponse_TransactionStatus = 1
+	TransactionStatusResponse_Failure TransactionStatusResponse_TransactionStatus = 2
+	TransactionStatusResponse_Unknown TransactionStatusResponse_TransactionStatus = 3
+)
+
+var TransactionStatusResponse_TransactionStatus_name = map[int32]string{
+	0: "Pending",
+	1: "Success",
+	2: "Failure",
+	3: "Unknown",
+}
+var TransactionStatusResponse_TransactionStatus_value = map[string]int32{
+	"Pending": 0,
+	"Success": 1,
+	"Failure": 2,
+	"Unknown": 3,
+}
+
+func (x TransactionStatusResponse_TransactionStatus) String() string {
+	return proto.EnumName(TransactionStatusResponse_TransactionStatus_name, int32(x))
+}
+func (TransactionStatusResponse_TransactionStatus) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_common_503c6ddff5f6ceb0, []int{1, 0}
+}
+
 type TransactionStatusRequest struct {
-	Address              string   `protobuf:"bytes,2,opt,name=Address,proto3" json:"Address,omitempty"`
-	Hash                 string   `protobuf:"bytes,3,opt,name=Hash,proto3" json:"Hash,omitempty"`
+	Address              string   `protobuf:"bytes,1,opt,name=Address,proto3" json:"Address,omitempty"`
+	Hash                 string   `protobuf:"bytes,2,opt,name=Hash,proto3" json:"Hash,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -30,7 +59,7 @@ func (m *TransactionStatusRequest) Reset()         { *m = TransactionStatusReque
 func (m *TransactionStatusRequest) String() string { return proto.CompactTextString(m) }
 func (*TransactionStatusRequest) ProtoMessage()    {}
 func (*TransactionStatusRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_common_27013d785a6ee568, []int{0}
+	return fileDescriptor_common_503c6ddff5f6ceb0, []int{0}
 }
 func (m *TransactionStatusRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TransactionStatusRequest.Unmarshal(m, b)
@@ -65,17 +94,17 @@ func (m *TransactionStatusRequest) GetHash() string {
 }
 
 type TransactionStatusResponse struct {
-	Status               string   `protobuf:"bytes,1,opt,name=Status,proto3" json:"Status,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Status               TransactionStatusResponse_TransactionStatus `protobuf:"varint,1,opt,name=Status,proto3,enum=api.TransactionStatusResponse_TransactionStatus" json:"Status,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                                    `json:"-"`
+	XXX_unrecognized     []byte                                      `json:"-"`
+	XXX_sizecache        int32                                       `json:"-"`
 }
 
 func (m *TransactionStatusResponse) Reset()         { *m = TransactionStatusResponse{} }
 func (m *TransactionStatusResponse) String() string { return proto.CompactTextString(m) }
 func (*TransactionStatusResponse) ProtoMessage()    {}
 func (*TransactionStatusResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_common_27013d785a6ee568, []int{1}
+	return fileDescriptor_common_503c6ddff5f6ceb0, []int{1}
 }
 func (m *TransactionStatusResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TransactionStatusResponse.Unmarshal(m, b)
@@ -95,29 +124,34 @@ func (m *TransactionStatusResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_TransactionStatusResponse proto.InternalMessageInfo
 
-func (m *TransactionStatusResponse) GetStatus() string {
+func (m *TransactionStatusResponse) GetStatus() TransactionStatusResponse_TransactionStatus {
 	if m != nil {
 		return m.Status
 	}
-	return ""
+	return TransactionStatusResponse_Pending
 }
 
 func init() {
 	proto.RegisterType((*TransactionStatusRequest)(nil), "api.TransactionStatusRequest")
 	proto.RegisterType((*TransactionStatusResponse)(nil), "api.TransactionStatusResponse")
+	proto.RegisterEnum("api.TransactionStatusResponse_TransactionStatus", TransactionStatusResponse_TransactionStatus_name, TransactionStatusResponse_TransactionStatus_value)
 }
 
-func init() { proto.RegisterFile("common.proto", fileDescriptor_common_27013d785a6ee568) }
+func init() { proto.RegisterFile("common.proto", fileDescriptor_common_503c6ddff5f6ceb0) }
 
-var fileDescriptor_common_27013d785a6ee568 = []byte{
-	// 134 bytes of a gzipped FileDescriptorProto
+var fileDescriptor_common_503c6ddff5f6ceb0 = []byte{
+	// 197 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x49, 0xce, 0xcf, 0xcd,
 	0xcd, 0xcf, 0xd3, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x4e, 0x2c, 0xc8, 0x54, 0xf2, 0xe0,
 	0x92, 0x08, 0x29, 0x4a, 0xcc, 0x2b, 0x4e, 0x4c, 0x2e, 0xc9, 0xcc, 0xcf, 0x0b, 0x2e, 0x49, 0x2c,
 	0x29, 0x2d, 0x0e, 0x4a, 0x2d, 0x2c, 0x4d, 0x2d, 0x2e, 0x11, 0x92, 0xe0, 0x62, 0x77, 0x4c, 0x49,
-	0x29, 0x4a, 0x2d, 0x2e, 0x96, 0x60, 0x52, 0x60, 0xd4, 0xe0, 0x0c, 0x82, 0x71, 0x85, 0x84, 0xb8,
-	0x58, 0x3c, 0x12, 0x8b, 0x33, 0x24, 0x98, 0xc1, 0xc2, 0x60, 0xb6, 0x92, 0x31, 0x97, 0x24, 0x16,
-	0x93, 0x8a, 0x0b, 0xf2, 0xf3, 0x8a, 0x53, 0x85, 0xc4, 0xb8, 0xd8, 0x20, 0x22, 0x12, 0x8c, 0x60,
-	0x2d, 0x50, 0x5e, 0x12, 0x1b, 0xd8, 0x29, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xa0, 0x9f,
-	0xf7, 0x58, 0x9a, 0x00, 0x00, 0x00,
+	0x29, 0x4a, 0x2d, 0x2e, 0x96, 0x60, 0x54, 0x60, 0xd4, 0xe0, 0x0c, 0x82, 0x71, 0x85, 0x84, 0xb8,
+	0x58, 0x3c, 0x12, 0x8b, 0x33, 0x24, 0x98, 0xc0, 0xc2, 0x60, 0xb6, 0xd2, 0x3a, 0x46, 0x2e, 0x49,
+	0x2c, 0x46, 0x15, 0x17, 0xe4, 0xe7, 0x15, 0xa7, 0x0a, 0x79, 0x70, 0xb1, 0x41, 0x44, 0xc0, 0x46,
+	0xf1, 0x19, 0x19, 0xe8, 0x25, 0x16, 0x64, 0xea, 0xe1, 0x54, 0x8f, 0x45, 0x06, 0xaa, 0x5f, 0xc9,
+	0x9d, 0x4b, 0x10, 0x43, 0x52, 0x88, 0x9b, 0x8b, 0x3d, 0x20, 0x35, 0x2f, 0x25, 0x33, 0x2f, 0x5d,
+	0x80, 0x01, 0xc4, 0x09, 0x2e, 0x4d, 0x4e, 0x4e, 0x2d, 0x2e, 0x16, 0x60, 0x04, 0x71, 0xdc, 0x12,
+	0x33, 0x73, 0x4a, 0x8b, 0x52, 0x05, 0x98, 0x40, 0x9c, 0xd0, 0xbc, 0xec, 0xbc, 0xfc, 0xf2, 0x3c,
+	0x01, 0xe6, 0x24, 0x36, 0x70, 0x30, 0x18, 0x03, 0x02, 0x00, 0x00, 0xff, 0xff, 0xe4, 0xd1, 0x62,
+	0xf8, 0x16, 0x01, 0x00, 0x00,
 }

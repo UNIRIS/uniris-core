@@ -3,10 +3,17 @@ syntax = "proto3";
 package api;
 
 message TransactionStatusRequest {
-    string Address = 2;
-    string Hash = 3;
+    string Address = 1;
+    string Hash = 2;
 }
 
 message TransactionStatusResponse {
-    string Status = 1;
+    TransactionStatus Status = 1;
+
+    enum TransactionStatus {
+        Pending = 0;
+        Success = 1;
+        Failure = 2;
+        Unknown = 3;
+    }
 }

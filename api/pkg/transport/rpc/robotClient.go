@@ -140,13 +140,13 @@ func (c robotClient) AddAccount(req adding.AccountCreationRequest) (adding.Accou
 	return adding.NewAccountCreationResult(resTx, ""), nil
 }
 
-func (c robotClient) GetTransactionStatus(addr string, txHash string) (string, error) {
+func (c robotClient) GetTransactionStatus(addr string, txHash string) (listing.TransactionStatus, error) {
 	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Services.Datamining.InternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
 	if err != nil {
-		return "", err
+		return listing.TransactionFailure, err
 	}
 
 	client := api.NewInternalClient(conn)
@@ -156,8 +156,8 @@ func (c robotClient) GetTransactionStatus(addr string, txHash string) (string, e
 	})
 	if err != nil {
 		s, _ := status.FromError(err)
-		return "", errors.New(s.Message())
+		return listing.TransactionFailure, errors.New(s.Message())
 	}
 
-	return res.Status, nil
+	return listing.TransactionStatus(res.Status), nil
 }

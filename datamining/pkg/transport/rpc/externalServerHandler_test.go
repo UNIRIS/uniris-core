@@ -556,7 +556,7 @@ func TestGetKeychainTransactionStatus(t *testing.T) {
 		Hash:    "txHash",
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, "Success", res.Status)
+	assert.Equal(t, api.TransactionStatusResponse_Success, res.Status)
 
 }
 
@@ -594,7 +594,7 @@ func TestGetIDTransactionStatus(t *testing.T) {
 		Hash:    "txHash",
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, "Success", res.Status)
+	assert.Equal(t, api.TransactionStatusResponse_Success, res.Status)
 
 }
 
@@ -621,7 +621,7 @@ func TestGetNotStoredTransactionStatus(t *testing.T) {
 		Hash:    "fake txHash",
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, "Unknown", res.Status)
+	assert.Equal(t, api.TransactionStatusResponse_Unknown, res.Status)
 }
 
 type mockPoolFinder struct{}

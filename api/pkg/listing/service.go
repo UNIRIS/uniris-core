@@ -23,7 +23,7 @@ type RobotClient interface {
 	IsEmitterAuthorized(emPubKey string) error
 
 	//GetTransactionStatus asks the datamining service to get the transaction status
-	GetTransactionStatus(addr string, txHash string) (string, error)
+	GetTransactionStatus(addr string, txHash string) (TransactionStatus, error)
 }
 
 //SignatureVerifier defines methods to handle signature verification
@@ -52,7 +52,7 @@ type Service interface {
 	GetAccount(encryptedIDHash string, sig string) (AccountResult, error)
 
 	//GetTransactionStatus gets the transaction status
-	GetTransactionStatus(addr, txHash string) (string, error)
+	GetTransactionStatus(addr, txHash string) (TransactionStatus, error)
 }
 
 type service struct {
@@ -125,6 +125,6 @@ func (s service) GetAccount(encryptedIDHash string, sig string) (AccountResult, 
 	return res, nil
 }
 
-func (s service) GetTransactionStatus(addr string, txHash string) (string, error) {
+func (s service) GetTransactionStatus(addr string, txHash string) (TransactionStatus, error) {
 	return s.client.GetTransactionStatus(addr, txHash)
 }

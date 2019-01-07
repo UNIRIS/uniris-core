@@ -96,8 +96,8 @@ func (c mockClient) GetSharedKeys() (SharedKeys, error) {
 		}), nil
 }
 
-func (c mockClient) GetTransactionStatus(addr string, txHash string) (string, error) {
-	return "Success", nil
+func (c mockClient) GetTransactionStatus(addr string, txHash string) (TransactionStatus, error) {
+	return TransactionSuccess, nil
 }
 
 type mockSigVerifier struct {

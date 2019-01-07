@@ -15,7 +15,7 @@ type Endorsement interface {
 	Validations() []Validation
 
 	//GetStatus compute the endorsement status
-	GetStatus() string
+	GetStatus() TransactionStatus
 }
 
 type endorsement struct {
@@ -51,7 +51,7 @@ func (e endorsement) Validations() []Validation {
 	return e.validations
 }
 
-func (e endorsement) GetStatus() string {
+func (e endorsement) GetStatus() TransactionStatus {
 	okValids := 0
 	for _, v := range e.Validations() {
 		if v.Status() == ValidationOK {
@@ -60,7 +60,7 @@ func (e endorsement) GetStatus() string {
 	}
 
 	if e.MasterValidation().ProofOfWorkValidation().Status() == ValidationOK && okValids == len(e.Validations()) {
-		return "Success"
+		return TransactionSuccess
 	}
-	return "Failure"
+	return TransactionFailure
 }

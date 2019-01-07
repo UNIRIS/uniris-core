@@ -5,12 +5,11 @@ import (
 	"testing"
 	"time"
 
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/uniris/uniris-core/datamining/pkg"
 
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	mockcrypto "github.com/uniris/uniris-core/datamining/pkg/crypto/mock"

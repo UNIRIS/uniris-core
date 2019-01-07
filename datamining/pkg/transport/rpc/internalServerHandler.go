@@ -207,7 +207,7 @@ func (s internalSrvHandler) GetTransactionStatus(ctx context.Context, req *api.T
 		return nil, err
 	}
 
-	statuses := make([]string, 0)
+	statuses := make([]mining.TransactionStatus, 0)
 	for _, p := range storagePool.Peers().IPs() {
 		status, err := s.extCli.GetTransactionStatus(p, req.Address, req.Hash)
 		if err != nil {
@@ -219,7 +219,7 @@ func (s internalSrvHandler) GetTransactionStatus(ctx context.Context, req *api.T
 	if len(statuses) > 0 {
 		//TODO: Provide consensus of the data retrieval
 		return &api.TransactionStatusResponse{
-			Status: statuses[0],
+			Status: api.TransactionStatusResponse_TransactionStatus(statuses[0]),
 		}, nil
 	}
 

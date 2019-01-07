@@ -358,7 +358,7 @@ func (h externalSrvHandler) GetTransactionStatus(ctx context.Context, req *api.T
 	}
 	if kc != nil {
 		return &api.TransactionStatusResponse{
-			Status: kc.Endorsement().GetStatus(),
+			Status: api.TransactionStatusResponse_TransactionStatus(kc.Endorsement().GetStatus()),
 		}, nil
 	}
 
@@ -369,7 +369,7 @@ func (h externalSrvHandler) GetTransactionStatus(ctx context.Context, req *api.T
 	}
 	if id != nil {
 		return &api.TransactionStatusResponse{
-			Status: id.Endorsement().GetStatus(),
+			Status: api.TransactionStatusResponse_TransactionStatus(id.Endorsement().GetStatus()),
 		}, nil
 	}
 
@@ -378,6 +378,6 @@ func (h externalSrvHandler) GetTransactionStatus(ctx context.Context, req *api.T
 	//TODO: //Search if the transaction is a smartcontract and is stored
 
 	return &api.TransactionStatusResponse{
-		Status: "Unknown",
+		Status: api.TransactionStatusResponse_Unknown,
 	}, nil
 }

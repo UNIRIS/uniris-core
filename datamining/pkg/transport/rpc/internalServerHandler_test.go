@@ -233,5 +233,5 @@ func TestGetTransactionStatus(t *testing.T) {
 		Hash:    "txHash",
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, "Success", res.Status)
+	assert.Equal(t, api.TransactionStatusResponse_Success, res.Status)
 }

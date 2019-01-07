@@ -165,7 +165,7 @@ func getTransactionStatus(l listing.Service) func(c *gin.Context) {
 		addr := c.Param("addr")
 		txHash := c.Param("hash")
 
-		res, err := l.GetTransactionStatus(addr, txHash)
+		status, err := l.GetTransactionStatus(addr, txHash)
 		if err != nil {
 			e := createError(http.StatusInternalServerError, err)
 			c.JSON(e.Code, e)
@@ -175,7 +175,7 @@ func getTransactionStatus(l listing.Service) func(c *gin.Context) {
 		c.JSON(http.StatusOK, struct {
 			Status string `json:"status"`
 		}{
-			Status: res,
+			Status: status.String(),
 		})
 	}
 }
