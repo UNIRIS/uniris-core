@@ -341,3 +341,43 @@ func (h externalSrvHandler) StoreID(ctx context.Context, req *api.IDStorageReque
 	}
 	return ack, nil
 }
+
+func (h externalSrvHandler) GetTransactionStatus(ctx context.Context, req *api.TransactionStatusRequest) (*api.TransactionStatusResponse, error) {
+
+	addr, err := h.crypto.decrypter.DecryptHash(req.Address, h.conf.SharedKeys.Robot.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	//TODO: search in the pending database
+
+	//Search if the transaction is a keychain and is stored
+	kc, err := h.services.accLister.GetKeychain(addr, req.Hash)
+	if err != nil {
+		return nil, err
+	}
+	if kc != nil {
+		return &api.TransactionStatusResponse{
+			Status: api.TransactionStatusResponse_TransactionStatus(kc.Endorsement().GetStatus()),
+		}, nil
+	}
+
+	//Search if the transaction is a ID and is stored
+	id, err := h.services.accLister.GetIDByTransaction(req.Hash)
+	if err != nil {
+		return nil, err
+	}
+	if id != nil {
+		return &api.TransactionStatusResponse{
+			Status: api.TransactionStatusResponse_TransactionStatus(id.Endorsement().GetStatus()),
+		}, nil
+	}
+
+	//TODO: //Search if the transaction is an IRIS exchange and is stored
+
+	//TODO: //Search if the transaction is a smartcontract and is stored
+
+	return &api.TransactionStatusResponse{
+		Status: api.TransactionStatusResponse_Unknown,
+	}, nil
+}

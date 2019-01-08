@@ -12,6 +12,24 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 )
 
+//TransactionStatus represents the status for the transaction endorsement
+type TransactionStatus int
+
+const (
+
+	//TransactionPending represents a pending status for the transaction
+	TransactionPending TransactionStatus = 0
+
+	//TransactionSuccess represents a success status for the transaction
+	TransactionSuccess TransactionStatus = 1
+
+	//TransactionFailure represents a failure status for the transaction
+	TransactionFailure TransactionStatus = 2
+
+	//TransactionUnknown represents a unknown status for the transaction
+	TransactionUnknown TransactionStatus = 2
+)
+
 //ErrUnsupportedTransaction when the transaction does not have transaction miners associated
 var ErrUnsupportedTransaction = errors.New("Unsupported transaction")
 
@@ -69,7 +87,6 @@ type Service interface {
 
 type service struct {
 	aiClient AIClient
-	notif    Notifier
 	poolF    PoolFinder
 	poolR    PoolRequester
 	signer   signer
@@ -79,19 +96,17 @@ type service struct {
 }
 
 //NewService creates a new global mining service
-func NewService(aiCli AIClient, n Notifier, pF PoolFinder, pR PoolRequester, signer signer, emLister emlisting.Service, config system.UnirisConfig, txMiners map[TransactionType]TransactionMiner) Service {
-	return service{aiCli, n, pF, pR, signer, emLister, config, txMiners}
+func NewService(aiCli AIClient, pF PoolFinder, pR PoolRequester, signer signer, emLister emlisting.Service, config system.UnirisConfig, txMiners map[TransactionType]TransactionMiner) Service {
+	return service{aiCli, pF, pR, signer, emLister, config, txMiners}
 }
 
 func (s service) LeadMining(txHash string, addr string, data interface{}, vPool datamining.Pool, txType TransactionType, emSig string) error {
 
 	if s.txMiners[txType] == nil {
-		return s.notif.NotifyTransactionStatus(txHash, TxInvalid)
+		return ErrUnsupportedTransaction
 	}
 
-	if err := s.notif.NotifyTransactionStatus(txHash, TxPending); err != nil {
-		return err
-	}
+	log.Printf("Transaction %s is pending\n", txHash)
 
 	lastVPool, sPool, err := s.findPools(addr)
 	if err != nil {
@@ -102,11 +117,15 @@ func (s service) LeadMining(txHash string, addr string, data interface{}, vPool 
 		return err
 	}
 
+	log.Printf("Transaction %s is locked\n", txHash)
+
 	//Process asynchrounously the transaction mining, the validation, the storage and the unlocking
 	go func() {
 		if err := s.processMining(txHash, data, addr, emSig, lastVPool, vPool, sPool, txType); err != nil {
 			log.Printf("Mining error: %s", err.Error())
 		}
+
+		log.Printf("Transaction %s is unlocked\n", txHash)
 	}()
 
 	return nil
@@ -115,29 +134,20 @@ func (s service) LeadMining(txHash string, addr string, data interface{}, vPool 
 func (s service) processMining(txHash string, data interface{}, addr string, emSig string, lastVPool, vPool, sPool datamining.Pool, txType TransactionType) error {
 	endorsement, err := s.mine(txHash, data, addr, emSig, lastVPool, vPool, txType)
 	if err != nil {
-		if err == ErrInvalidTransaction {
-			return s.notif.NotifyTransactionStatus(txHash, TxInvalid)
-		}
 		return err
 	}
 
-	if err := s.notif.NotifyTransactionStatus(txHash, TxApproved); err != nil {
-		return err
-	}
+	log.Printf("Transaction %s is validated \n", txHash)
 
 	minReplicas, err := s.aiClient.GetMininumReplications(txHash)
 	if err != nil {
 		return err
 	}
 	if err := s.poolR.RequestStorage(minReplicas, sPool, data, endorsement, txType); err != nil {
-		if err := s.notif.NotifyTransactionStatus(txHash, TxInvalid); err != nil {
-			return err
-		}
 		return err
 	}
-	if err := s.notif.NotifyTransactionStatus(txHash, TxReplicated); err != nil {
-		return err
-	}
+
+	log.Printf("Transaction %s is stored\n", txHash)
 
 	return s.requestUnlock(txHash, addr, lastVPool)
 }
@@ -167,9 +177,6 @@ func (s service) requestLock(txHash string, addr string, lastVPool datamining.Po
 	if err := s.poolR.RequestLock(lastVPool, lock); err != nil {
 		return err
 	}
-	if err := s.notif.NotifyTransactionStatus(txHash, TxLocked); err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -182,9 +189,6 @@ func (s service) requestUnlock(txHash string, addr string, lastVPool datamining.
 		Address:        addr,
 	}
 	if err := s.poolR.RequestUnlock(lastVPool, lock); err != nil {
-		return err
-	}
-	if err := s.notif.NotifyTransactionStatus(txHash, TxUnlocked); err != nil {
 		return err
 	}
 

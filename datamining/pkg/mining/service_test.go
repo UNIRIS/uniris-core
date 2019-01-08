@@ -1,7 +1,6 @@
 package mining
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -25,7 +24,6 @@ func TestMine(t *testing.T) {
 
 	s := service{
 		aiClient: mockAIClient{},
-		notif:    &mockNotifier{},
 		signer:   mockSrvSigner{},
 		poolR:    mockPoolRequester{},
 		txMiners: map[TransactionType]TransactionMiner{
@@ -54,16 +52,13 @@ Scenario: Lock a transaction
 	Then the transaction is locked
 ¨*/
 func TestLock(t *testing.T) {
-	notif := &mockNotifier{}
 	s := service{
-		notif:  notif,
 		signer: mockSrvSigner{},
 		poolR:  mockPoolRequester{},
 	}
 
 	err := s.requestLock("txHash", "addr", datamining.NewPool(datamining.Peer{}))
 	assert.Nil(t, err)
-	assert.Equal(t, "Transaction txHash with status Locked", notif.lastNotif)
 }
 
 /*
@@ -73,16 +68,13 @@ Scenario: TestUnlock a transaction
 	Then the transaction is unlocked
 ¨*/
 func TestUnlock(t *testing.T) {
-	notif := &mockNotifier{}
 	s := service{
-		notif:  notif,
 		signer: mockSrvSigner{},
 		poolR:  mockPoolRequester{},
 	}
 
 	err := s.requestUnlock("txHash", "addr", datamining.NewPool(datamining.Peer{}))
 	assert.Nil(t, err)
-	assert.Equal(t, "Transaction txHash with status Unlocked", notif.lastNotif)
 }
 
 /*
@@ -183,15 +175,6 @@ func (c mockBadMiner) CheckAsSlave(txHash string, data interface{}) error {
 
 func (c mockBadMiner) GetLastTransactionHash(addr string) (string, error) {
 	return "", nil
-}
-
-type mockNotifier struct {
-	lastNotif string
-}
-
-func (n *mockNotifier) NotifyTransactionStatus(tx string, status TransactionStatus) error {
-	n.lastNotif = fmt.Sprintf("Transaction %s with status %s", tx, status.String())
-	return nil
 }
 
 type mockPoolRequester struct {

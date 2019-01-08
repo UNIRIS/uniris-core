@@ -2,6 +2,9 @@ syntax = "proto3";
 
 import "google/protobuf/empty.proto";
 
+import "common.proto";
+
+
 package api;
 
 service External {
@@ -20,6 +23,8 @@ service External {
 
     rpc StoreKeychain(KeychainStorageRequest) returns (StorageAck) {}
     rpc StoreID(IDStorageRequest) returns (StorageAck) {}
+
+    rpc GetTransactionStatus(TransactionStatusRequest) returns (TransactionStatusResponse) {}
 }
 
 message LockAck {

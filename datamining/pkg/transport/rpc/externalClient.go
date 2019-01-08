@@ -41,6 +41,9 @@ type ExternalClient interface {
 
 	//RequestStorage requests a peer to store the transaction
 	RequestStorage(ip string, txType mining.TransactionType, data interface{}, end mining.Endorsement) error
+
+	//GetTransactionStatus requests a peer to retrieve transaction status
+	GetTransactionStatus(ip string, addr string, txHash string) (mining.TransactionStatus, error)
 }
 
 type externalClient struct {
@@ -393,4 +396,30 @@ func (c externalClient) storeID(client api.ExternalClient, id *api.ID, end *api.
 	//TODO: Verify res.StorageHash
 
 	return nil
+}
+
+func (c externalClient) GetTransactionStatus(ip string, addr string, txHash string) (mining.TransactionStatus, error) {
+
+	req := &api.TransactionStatusRequest{
+		Address: addr,
+		Hash:    txHash,
+	}
+
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
+	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	defer conn.Close()
+
+	if err != nil {
+		return mining.TransactionFailure, err
+	}
+
+	client := api.NewExternalClient(conn)
+
+	res, err := client.GetTransactionStatus(context.Background(), req)
+	if err != nil {
+		s, _ := status.FromError(err)
+		return -1, errors.New(s.Message())
+	}
+
+	return mining.TransactionStatus(res.Status), nil
 }

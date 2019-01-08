@@ -58,7 +58,7 @@ func TestGetAccount(t *testing.T) {
 
 	emLister := emlisting.NewService(db)
 	extCli := mocktransport.NewExternalClient(db)
-	srvHandler := NewInternalServerHandler(emLister, poolR, mocktransport.NewAIClient(), extCli, crypto, conf)
+	srvHandler := NewInternalServerHandler(emLister, poolR, nil, mocktransport.NewAIClient(), extCli, crypto, conf)
 
 	res, err := srvHandler.GetAccount(context.TODO(), &api.AccountSearchRequest{
 		EncryptedIDHash: "enc id hash",
@@ -88,7 +88,7 @@ func TestCreateKeychain(t *testing.T) {
 	poolR := mocktransport.NewPoolRequester(extCli)
 	aiCli := mocktransport.NewAIClient()
 	emLister := emlisting.NewService(db)
-	srvHandler := NewInternalServerHandler(emLister, poolR, aiCli, extCli, crypto, conf)
+	srvHandler := NewInternalServerHandler(emLister, poolR, nil, aiCli, extCli, crypto, conf)
 
 	res, err := srvHandler.CreateKeychain(context.TODO(), &api.KeychainCreationRequest{
 		EncryptedKeychain: "cipher data",
@@ -119,7 +119,7 @@ func TestCreateID(t *testing.T) {
 	aiCli := mocktransport.NewAIClient()
 
 	emLister := emlisting.NewService(db)
-	srvHandler := NewInternalServerHandler(emLister, poolR, aiCli, extCli, crypto, conf)
+	srvHandler := NewInternalServerHandler(emLister, poolR, nil, aiCli, extCli, crypto, conf)
 
 	res, err := srvHandler.CreateID(context.TODO(), &api.IDCreationRequest{
 		EncryptedID: "cipher data",
@@ -151,7 +151,7 @@ func TestIsAuthorized(t *testing.T) {
 	poolR := mocktransport.NewPoolRequester(extCli)
 	aiCli := mocktransport.NewAIClient()
 
-	srvHandler := NewInternalServerHandler(emLister, poolR, aiCli, extCli, crypto, conf)
+	srvHandler := NewInternalServerHandler(emLister, poolR, nil, aiCli, extCli, crypto, conf)
 
 	_, err := srvHandler.IsEmitterAuthorized(context.TODO(), &api.AuthorizationRequest{
 		PublicKey: "pubkey",
@@ -194,7 +194,7 @@ func TestGetSharedKeys(t *testing.T) {
 		EncryptedPrivateKey: "enc pv key",
 	})
 
-	srvHandler := NewInternalServerHandler(emLister, poolR, aiCli, extCli, crypto, conf)
+	srvHandler := NewInternalServerHandler(emLister, poolR, nil, aiCli, extCli, crypto, conf)
 
 	res, err := srvHandler.GetSharedKeys(context.TODO(), &empty.Empty{})
 	assert.Nil(t, err)
@@ -203,4 +203,35 @@ func TestGetSharedKeys(t *testing.T) {
 	assert.Equal(t, "pub key", res.RobotPublicKey)
 	assert.Equal(t, "enc pv key", res.EmitterKeys[0].EncryptedPrivateKey)
 	assert.Equal(t, "pub key", res.EmitterKeys[0].PublicKey)
+}
+
+/*
+Scenario: Get transaction status from a keychain transaction
+	Given a keychain transaction
+	When I want to retrieve its status
+	Then I get response from the storage pool
+*/
+func TestGetTransactionStatus(t *testing.T) {
+
+	conf := system.UnirisConfig{}
+	crypto := Crypto{
+		decrypter: mockcrypto.NewDecrypter(),
+		signer:    mockcrypto.NewSigner(),
+		hasher:    mockcrypto.NewHasher(),
+	}
+
+	db := mockstorage.NewDatabase()
+
+	extCli := mocktransport.NewExternalClient(db)
+	poolR := mocktransport.NewPoolRequester(extCli)
+	poolF := mocktransport.NewPoolFinder()
+	aiCli := mocktransport.NewAIClient()
+
+	srvHandler := NewInternalServerHandler(nil, poolR, poolF, aiCli, extCli, crypto, conf)
+	res, err := srvHandler.GetTransactionStatus(context.TODO(), &api.TransactionStatusRequest{
+		Address: "addr",
+		Hash:    "txHash",
+	})
+	assert.Nil(t, err)
+	assert.Equal(t, api.TransactionStatusResponse_Success, res.Status)
 }

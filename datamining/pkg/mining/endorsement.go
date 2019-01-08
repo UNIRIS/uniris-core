@@ -13,6 +13,9 @@ type Endorsement interface {
 
 	//Validations returns the endorsment's validations
 	Validations() []Validation
+
+	//GetStatus compute the endorsement status
+	GetStatus() TransactionStatus
 }
 
 type endorsement struct {
@@ -46,4 +49,18 @@ func (e endorsement) MasterValidation() MasterValidation {
 
 func (e endorsement) Validations() []Validation {
 	return e.validations
+}
+
+func (e endorsement) GetStatus() TransactionStatus {
+	okValids := 0
+	for _, v := range e.Validations() {
+		if v.Status() == ValidationOK {
+			okValids++
+		}
+	}
+
+	if e.MasterValidation().ProofOfWorkValidation().Status() == ValidationOK && okValids == len(e.Validations()) {
+		return TransactionSuccess
+	}
+	return TransactionFailure
 }

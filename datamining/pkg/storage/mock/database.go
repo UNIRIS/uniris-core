@@ -41,6 +41,42 @@ func (d mockDatabase) FindID(hash string) (account.EndorsedID, error) {
 			return id, nil
 		}
 	}
+
+	for _, id := range d.KOIDs {
+		if id.Hash() == hash {
+			return id, nil
+		}
+	}
+	return nil, nil
+}
+
+func (d mockDatabase) FindIDByTransaction(txHash string) (account.EndorsedID, error) {
+	for _, id := range d.IDs {
+		if id.Endorsement().TransactionHash() == txHash {
+			return id, nil
+		}
+	}
+
+	for _, id := range d.KOIDs {
+		if id.Endorsement().TransactionHash() == txHash {
+			return id, nil
+		}
+	}
+	return nil, nil
+}
+
+func (d mockDatabase) FindKeychain(addr string, txHash string) (account.EndorsedKeychain, error) {
+	for _, kc := range d.Keychains {
+		if kc.Address() == addr && kc.Endorsement().TransactionHash() == txHash {
+			return kc, nil
+		}
+	}
+
+	for _, kc := range d.KOKeychains {
+		if kc.Address() == addr && kc.Endorsement().TransactionHash() == txHash {
+			return kc, nil
+		}
+	}
 	return nil, nil
 }
 
@@ -51,9 +87,9 @@ func (d mockDatabase) FindLastKeychain(addr string) (account.EndorsedKeychain, e
 		return iTimestamp > jTimestamp
 	})
 
-	for _, b := range d.Keychains {
-		if b.Address() == addr {
-			return b, nil
+	for _, kc := range d.Keychains {
+		if kc.Address() == addr {
+			return kc, nil
 		}
 	}
 	return nil, nil

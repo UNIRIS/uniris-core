@@ -5,7 +5,7 @@ import (
 )
 
 //ErrAccountNotExist is returned when the requested account not exist
-var ErrAccountNotExist = errors.New("Account doest not exist")
+var ErrAccountNotExist = errors.New("Account does not exist")
 
 //ErrUnauthorized is returned when the emitter is not authorized
 var ErrUnauthorized = errors.New("Unauthorized")
@@ -21,6 +21,9 @@ type RobotClient interface {
 
 	//IsEmitterAuthorized asks the datamining service if the public key is related to an authorized emitter
 	IsEmitterAuthorized(emPubKey string) error
+
+	//GetTransactionStatus asks the datamining service to get the transaction status
+	GetTransactionStatus(addr string, txHash string) (TransactionStatus, error)
 }
 
 //SignatureVerifier defines methods to handle signature verification
@@ -47,6 +50,9 @@ type Service interface {
 
 	//GetAccount gets an account related to the encrypted ID hash
 	GetAccount(encryptedIDHash string, sig string) (AccountResult, error)
+
+	//GetTransactionStatus gets the transaction status
+	GetTransactionStatus(addr, txHash string) (TransactionStatus, error)
 }
 
 type service struct {
@@ -117,4 +123,8 @@ func (s service) GetAccount(encryptedIDHash string, sig string) (AccountResult, 
 	}
 
 	return res, nil
+}
+
+func (s service) GetTransactionStatus(addr string, txHash string) (TransactionStatus, error) {
+	return s.client.GetTransactionStatus(addr, txHash)
 }

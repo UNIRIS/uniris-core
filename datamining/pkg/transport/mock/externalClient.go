@@ -64,3 +64,7 @@ func (c mockExtClient) RequestStorage(ip string, txType mining.TransactionType, 
 
 	return errors.New("Unsupported storage")
 }
+
+func (c mockExtClient) GetTransactionStatus(ip string, addr string, txHash string) (mining.TransactionStatus, error) {
+	return mining.TransactionSuccess, nil
+}

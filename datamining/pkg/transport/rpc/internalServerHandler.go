@@ -7,6 +7,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 
 	"github.com/uniris/uniris-core/datamining/pkg/account"
+	"github.com/uniris/uniris-core/datamining/pkg/mining"
 	"github.com/uniris/uniris-core/datamining/pkg/system"
 	"golang.org/x/net/context"
 
@@ -22,13 +23,15 @@ type internalSrvHandler struct {
 	crypto   Crypto
 	conf     system.UnirisConfig
 	emLister emListing.Service
+	poolF    mining.PoolFinder
 }
 
 //NewInternalServerHandler create a new GRPC server handler for account
-func NewInternalServerHandler(emLister emListing.Service, pR PoolRequester, aiClient AIClient, extCli ExternalClient, crypto Crypto, conf system.UnirisConfig) api.InternalServer {
+func NewInternalServerHandler(emLister emListing.Service, pR PoolRequester, pF mining.PoolFinder, aiClient AIClient, extCli ExternalClient, crypto Crypto, conf system.UnirisConfig) api.InternalServer {
 	return internalSrvHandler{
 		emLister: emLister,
 		pR:       pR,
+		poolF:    pF,
 		aiClient: aiClient,
 		extCli:   extCli,
 		crypto:   crypto,
@@ -191,4 +194,35 @@ func (s internalSrvHandler) GetSharedKeys(ctx context.Context, req *empty.Empty)
 		RobotPublicKey:  s.conf.SharedKeys.Robot.PublicKey,
 		RobotPrivateKey: s.conf.SharedKeys.Robot.PrivateKey,
 	}, nil
+}
+
+func (s internalSrvHandler) GetTransactionStatus(ctx context.Context, req *api.TransactionStatusRequest) (*api.TransactionStatusResponse, error) {
+	addr, err := s.crypto.decrypter.DecryptHash(req.Address, s.conf.SharedKeys.Robot.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	storagePool, err := s.poolF.FindStoragePool(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	statuses := make([]mining.TransactionStatus, 0)
+	for _, p := range storagePool.Peers().IPs() {
+		status, err := s.extCli.GetTransactionStatus(p, req.Address, req.Hash)
+		if err != nil {
+			log.Print(err.Error())
+		}
+		statuses = append(statuses, status)
+	}
+
+	if len(statuses) > 0 {
+		//TODO: Provide consensus of the data retrieval
+		return &api.TransactionStatusResponse{
+			Status: api.TransactionStatusResponse_TransactionStatus(statuses[0]),
+		}, nil
+	}
+
+	return nil, nil
+
 }

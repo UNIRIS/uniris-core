@@ -21,8 +21,38 @@ tags:
     description: Manage and query accounts
   - name: Shared
     description: About shared information
+  - name: Transaction
+    description: Transaction information
 
 paths:
+
+  /transaction/{addr}/status/{hash}:
+    get:
+      tags:
+        - Transaction
+      summary: Get the transaction status
+      description: Retrieve the status of a transaction
+      operationId: getTransactionStatus
+      parameters:
+        - name: addr
+          in: path
+          required: true
+          description: Encrypted address (account, smart contract)
+          type: string
+        - name: hash
+          in: path
+          required: true
+          description: Transaction hash
+          type: string
+      responses:
+        "200":
+          description: Transaction status
+          schema:
+            $ref: "#/definitions/TransactionStatus"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/Error"
 
   /sharedkeys/{publicKey}:
     get:
@@ -240,3 +270,16 @@ definitions:
               description: Encrypted shared emitter private key
 
   
+
+  TransactionStatus:
+    required:
+      - status
+    properties:
+      status:
+        description: Status of the transaction
+        type: string
+        enum:
+          - Pending
+          - Success
+          - Failure
+          - Unknown
