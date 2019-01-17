@@ -536,6 +536,21 @@ func (s signer) SignContractMessageLeadRequest(req *api.ContractMessageLeadReque
 	return nil
 }
 
+func (s signer) SignContractState(res *api.ContractStateResponse, pvKey string) error {
+	b, err := json.Marshal(&api.ContractStateResponse{
+		Data: res.Data,
+	})
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	res.Signature = sig
+	return nil
+}
+
 func (s signer) VerifyContractLeadRequestSignature(pubKey string, req *api.ContractLeadRequest) error {
 	b, err := json.Marshal(&api.ContractLeadRequest{
 		Contract:         req.Contract,
@@ -629,10 +644,17 @@ func (s signer) VerifyContractMessageSignature(msg contract.Message) error {
 	if err != nil {
 		return err
 	}
-	if err := checkSignature(msg.PublicKey(), string(b), msg.Signature()); err != nil {
+	return checkSignature(msg.PublicKey(), string(b), msg.Signature())
+}
+
+func (s signer) VerifyContractStateSignature(pubKey string, res *api.ContractStateResponse) error {
+	b, err := json.Marshal(&api.ContractStateResponse{
+		Data: res.Data,
+	})
+	if err != nil {
 		return err
 	}
-	return nil
+	return checkSignature(pubKey, string(b), res.Signature)
 }
 
 func sign(privk string, data string) (string, error) {

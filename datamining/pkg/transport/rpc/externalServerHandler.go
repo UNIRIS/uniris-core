@@ -21,25 +21,28 @@ import (
 	accListing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
 
 	contractAdding "github.com/uniris/uniris-core/datamining/pkg/contract/adding"
+	contractListing "github.com/uniris/uniris-core/datamining/pkg/contract/listing"
 )
 
 //Services define the required services
 type Services struct {
-	lock        lock.Service
-	mining      mining.Service
-	accAdd      accAdding.Service
-	accLister   accListing.Service
-	contractAdd contractAdding.Service
+	lock           lock.Service
+	mining         mining.Service
+	accAdd         accAdding.Service
+	accLister      accListing.Service
+	contractAdd    contractAdding.Service
+	contractLister contractListing.Service
 }
 
 //NewExternalServices creates a new container of required services
-func NewExternalServices(lock lock.Service, mine mining.Service, accountAdder accAdding.Service, accountLister accListing.Service, contractAdder contractAdding.Service) Services {
+func NewExternalServices(lock lock.Service, mine mining.Service, accountAdder accAdding.Service, accountLister accListing.Service, contractAdder contractAdding.Service, contractLister contractListing.Service) Services {
 	return Services{
-		lock:        lock,
-		mining:      mine,
-		accAdd:      accountAdder,
-		accLister:   accountLister,
-		contractAdd: contractAdder,
+		lock:           lock,
+		mining:         mine,
+		accAdd:         accountAdder,
+		accLister:      accountLister,
+		contractAdd:    contractAdder,
+		contractLister: contractLister,
 	}
 }
 
@@ -535,4 +538,20 @@ func (h externalSrvHandler) StoreContractMessage(ctx context.Context, req *api.C
 		return nil, err
 	}
 	return ack, nil
+}
+
+func (h externalSrvHandler) GetContractState(ctx context.Context, req *api.ContractStateRequest) (*api.ContractStateResponse, error) {
+	state, err := h.services.contractLister.GetContractState(req.ContractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &api.ContractStateResponse{
+		Data: state,
+	}
+	if err := h.crypto.signer.SignContractState(res, h.conf.SharedKeys.Robot.PrivateKey); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }

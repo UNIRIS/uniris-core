@@ -203,3 +203,20 @@ func (d database) FindLastContractMessage(addr string) (contract.EndorsedMessage
 	}
 	return nil, nil
 }
+
+func (d database) FindMessagesByContract(addr string) ([]contract.EndorsedMessage, error) {
+	messages := make([]contract.EndorsedMessage, 0)
+	for _, msg := range d.ContractMessages {
+		if msg.ContractAddress() == addr {
+			messages = append(messages, msg)
+		}
+	}
+
+	sort.Slice(messages, func(i, j int) bool {
+		iTimestamp := messages[i].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()
+		jTimestamp := messages[j].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()
+		return iTimestamp > jTimestamp
+	})
+
+	return messages, nil
+}

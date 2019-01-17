@@ -205,3 +205,24 @@ func (c robotClient) AddContractMessage(req adding.ContractMessageCreationReques
 
 	return api.NewTransactionResult(res.TransactionHash, res.MasterPeerIP, res.Signature), nil
 }
+
+func (c robotClient) GetContractState(addr string) (listing.ContractState, error) {
+	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Services.Datamining.InternalPort)
+	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	defer conn.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	client := proto.NewInternalClient(conn)
+	res, err := client.GetContractState(context.Background(), &proto.ContractStateRequest{
+		ContractAddress: addr,
+	})
+	if err != nil {
+		s, _ := status.FromError(err)
+		return nil, errors.New(s.Message())
+	}
+
+	return listing.NewContractState(res.Data, res.Signature), nil
+}

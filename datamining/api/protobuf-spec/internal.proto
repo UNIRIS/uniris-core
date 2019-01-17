@@ -14,6 +14,7 @@ service Internal {
     rpc GetTransactionStatus(TransactionStatusRequest) returns(TransactionStatusResponse) {}
     rpc CreateContract(ContractCreationRequest) returns (CreationResult){}
     rpc CreateContractMessage(ContractMessageCreationRequest) returns (CreationResult) {}
+    rpc GetContractState(ContractStateRequest) returns (ContractStateResponse){}
 }
 
 message AccountSearchRequest {

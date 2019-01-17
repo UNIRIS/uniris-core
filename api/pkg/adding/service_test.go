@@ -89,6 +89,10 @@ func (c mockClient) GetTransactionStatus(addr string, txHash string) (listing.Tr
 	return listing.TransactionSuccess, nil
 }
 
+func (c mockClient) GetContractState(addr string) (listing.ContractState, error) {
+	return listing.NewContractState("", "sig"), nil
+}
+
 type mockSigVerifier struct {
 	isInvalid bool
 }
@@ -111,6 +115,10 @@ func (v mockSigVerifier) VerifyAccountResultSignature(res listing.AccountResult,
 	if v.isInvalid {
 		return errors.New("Invalid signature")
 	}
+	return nil
+}
+
+func (v mockSigVerifier) VerifyContractStateSignature(state listing.ContractState, pubKey string) error {
 	return nil
 }
 

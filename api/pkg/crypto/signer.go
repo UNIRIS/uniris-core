@@ -90,6 +90,16 @@ func (s signer) VerifyContractMessageCreationRequestSignature(req adding.Contrac
 	return verifySignature(pubKey, string(b), req.Signature())
 }
 
+func (s signer) VerifyContractStateSignature(state listing.ContractState, pubKey string) error {
+	b, err := json.Marshal(contractState{
+		Data: state.Data(),
+	})
+	if err != nil {
+		return err
+	}
+	return verifySignature(pubKey, string(b), state.Signature())
+}
+
 func (s signer) SignAccountCreationResult(res adding.AccountCreationResult, pvKey string) (adding.AccountCreationResult, error) {
 	b, err := json.Marshal(accountCreationResult{
 		Transactions: accountCreationTransactionsResult{

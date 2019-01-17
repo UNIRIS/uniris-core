@@ -158,6 +158,11 @@ func (s mockSigner) SignContractMessageLeadRequest(req *api.ContractMessageLeadR
 	return nil
 }
 
+func (s mockSigner) SignContractState(req *api.ContractStateResponse, pvKey string) error {
+	req.Signature = "sig"
+	return nil
+}
+
 func (s mockSigner) VerifyContractLeadRequestSignature(pubKey string, req *api.ContractLeadRequest) error {
 	return nil
 }
@@ -177,5 +182,9 @@ func (s mockSigner) VerifyContractMessageStorageRequestSignature(pubKey string, 
 	return nil
 }
 func (s mockSigner) VerifyContractMessageValidationRequestSignature(pubKey string, req *api.ContractMessageValidationRequest) error {
+	return nil
+}
+
+func (s mockSigner) VerifyContractStateSignature(pubKey string, res *api.ContractStateResponse) error {
 	return nil
 }

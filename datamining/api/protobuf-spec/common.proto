@@ -18,3 +18,13 @@ message TransactionStatusResponse {
     }
 }
 
+
+
+message ContractStateRequest {
+    string ContractAddress = 1;
+}
+
+message ContractStateResponse {
+    string Data = 1;
+    string Signature = 2;
+}

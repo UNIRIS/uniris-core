@@ -312,3 +312,28 @@ func (s internalSrvHandler) CreateContractMessage(ctx context.Context, req *api.
 
 	return res, nil
 }
+
+func (s internalSrvHandler) GetContractState(ctx context.Context, req *api.ContractStateRequest) (*api.ContractStateResponse, error) {
+
+	storagePool, err := s.poolF.FindStoragePool(req.ContractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	states := make([]*api.ContractStateResponse, 0)
+	for _, p := range storagePool.Peers().IPs() {
+		state, err := s.extCli.GetContractState(p, req.ContractAddress)
+		if err != nil {
+			log.Print(err.Error())
+		}
+		states = append(states, state)
+	}
+
+	if len(states) > 0 {
+		//TODO: Provide consensus of the data retrieval
+		return states[0], nil
+	}
+
+	return nil, nil
+
+}

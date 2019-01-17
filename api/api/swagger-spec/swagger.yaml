@@ -32,10 +32,13 @@ paths:
     post:
       tags:
         - Smart contracts
+      summary: Creation smart contract
+      description: Create a smart contract transaction including code and event
       parameters:
-        - name: form
+        - name: contract
           in: body
           required: true
+          description: Encrypted smart contract creation
           schema:
             $ref: "#/definitions/SmartContractCreationForm"
       responses:
@@ -52,14 +55,18 @@ paths:
     post:
       tags:
         - Smart contracts
+      summary: Creation smart contract's message
+      description: Create a smart contract's message transaction including smart contract method and parameters
       parameters:
         - name: address
           in: path
           type: string
           required: true
+          description: Smart contract address
         - name: message
           in: body
           required: true
+          description: Encrypted smart contract message creation
           schema:
             $ref: "#/definitions/SmartContractMessageCreationForm"
       responses:
@@ -71,6 +78,30 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/Error"
+
+  /contract/{addr}/state:
+    get:
+      tags:
+        - Smart contracts
+      summary: Get the smart contract state
+      description: Compute smart contract messages to get the state
+      parameters:
+        - name: address
+          in: path
+          type: string
+          required: true
+          description: Smart contract address
+      responses:
+        "200":
+          description: State
+          schema:
+            $ref: "#/definitions/SmartContractStateResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/Error"
+
+
 
   /transaction/{addr}/status/{hash}:
     get:
@@ -347,6 +378,16 @@ definitions:
       - signature
     properties:
       encrypted_message:
+        type: string
+      signature:
+        type: string
+
+  SmartContractStateResponse:
+    required:
+      - data
+      - signature
+    properties:
+      data:
         type: string
       signature:
         type: string

@@ -48,3 +48,8 @@ type contractMessageRequest struct {
 	EncryptedMessage string `json:"encrypted_message"`
 	Signature        string `json:"signature"`
 }
+
+type contractState struct {
+	Data      string `json:"data"`
+	Signature string `json:"signature"`
+}

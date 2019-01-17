@@ -38,3 +38,7 @@ type contractMessageCreationRequest struct {
 	EncryptedContract string `json:"encrypted_message"`
 	Signature         string `json:"signature,omitempty"`
 }
+
+type contractState struct {
+	Data string `json:"data"`
+}

@@ -112,6 +112,7 @@ type signatureVerifier interface {
 	VerifyContractMessageLeadRequestSignature(pubKey string, req *api.ContractMessageLeadRequest) error
 	VerifyContractMessageStorageRequestSignature(pubKey string, req *api.ContractMessageStorageRequest) error
 	VerifyContractMessageValidationRequestSignature(pubKey string, req *api.ContractMessageValidationRequest) error
+	VerifyContractStateSignature(pubKey string, res *api.ContractStateResponse) error
 }
 
 type signatureBuilder interface {
@@ -169,4 +170,5 @@ type signatureBuilder interface {
 
 	SignContractLeadRequest(req *api.ContractLeadRequest, pvKey string) error
 	SignContractMessageLeadRequest(req *api.ContractMessageLeadRequest, pvKey string) error
+	SignContractState(req *api.ContractStateResponse, pvKey string) error
 }

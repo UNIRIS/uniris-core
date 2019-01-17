@@ -98,7 +98,7 @@ func main() {
 	}()
 
 	//Starts Internal grpc server
-	rpcServices := rpc.NewExternalServices(lockSrv, miningSrv, accountAdder, accountLister, contractAdder)
+	rpcServices := rpc.NewExternalServices(lockSrv, miningSrv, accountAdder, accountLister, contractAdder, contractLister)
 	externalHandler := rpc.NewExternalServerHandler(rpcServices, rpcCrypto, *config)
 	if err := startExternalServer(externalHandler, config.Services.Datamining.ExternalPort); err != nil {
 		log.Fatal(err)

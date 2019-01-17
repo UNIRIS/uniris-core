@@ -24,6 +24,8 @@ type RobotClient interface {
 
 	//GetTransactionStatus asks the datamining service to get the transaction status
 	GetTransactionStatus(addr string, txHash string) (TransactionStatus, error)
+
+	GetContractState(addr string) (ContractState, error)
 }
 
 //SignatureVerifier defines methods to handle signature verification
@@ -34,6 +36,8 @@ type SignatureVerifier interface {
 
 	//VerifyAccountResultSignature checks the account result signature
 	VerifyAccountResultSignature(res AccountResult, pubKey string) error
+
+	VerifyContractStateSignature(state ContractState, pubKey string) error
 }
 
 //Service define methods for the listing feature
@@ -53,6 +57,8 @@ type Service interface {
 
 	//GetTransactionStatus gets the transaction status
 	GetTransactionStatus(addr, txHash string) (TransactionStatus, error)
+
+	GetContractState(contractAddress string) (ContractState, error)
 }
 
 type service struct {
@@ -127,4 +133,21 @@ func (s service) GetAccount(encryptedIDHash string, sig string) (AccountResult, 
 
 func (s service) GetTransactionStatus(addr string, txHash string) (TransactionStatus, error) {
 	return s.client.GetTransactionStatus(addr, txHash)
+}
+
+func (s service) GetContractState(contractAddress string) (ContractState, error) {
+	keys, err := s.client.GetSharedKeys()
+	if err != nil {
+		return nil, err
+	}
+
+	state, err := s.client.GetContractState(contractAddress)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.sig.VerifyContractStateSignature(state, keys.RequestPublicKey()); err != nil {
+		return nil, err
+	}
+
+	return state, nil
 }

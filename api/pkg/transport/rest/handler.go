@@ -30,6 +30,7 @@ func Handler(r *gin.Engine, l listing.Service, a adding.Service) {
 
 		api.POST("/contract", createContract(a))
 		api.POST("/contract/:addr/message", createContractMessage(a))
+		api.GET("/contract/:addr/call/:method", getContractState(l))
 	}
 }
 
@@ -242,6 +243,30 @@ func createContractMessage(a adding.Service) func(c *gin.Context) {
 			TransactionHash: res.TransactionHash(),
 			MasterPeerIP:    res.MasterPeerIP(),
 			Signature:       res.Signature(),
+		})
+	}
+}
+
+func getContractState(l listing.Service) func(c *gin.Context) {
+	return func(c *gin.Context) {
+
+		address := c.Param("addr")
+
+		state, err := l.GetContractState(address)
+		if err != nil {
+			if err == crypto.ErrInvalidSignature {
+				e := createError(http.StatusBadRequest, err)
+				c.JSON(e.Code, e)
+				return
+			}
+			e := createError(http.StatusInternalServerError, err)
+			c.JSON(e.Code, e)
+			return
+		}
+
+		c.JSON(http.StatusOK, contractState{
+			Data:      state.Data(),
+			Signature: state.Signature(),
 		})
 	}
 }

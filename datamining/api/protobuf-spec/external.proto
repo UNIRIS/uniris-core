@@ -27,12 +27,12 @@ service External {
     rpc GetTransactionStatus(TransactionStatusRequest) returns (TransactionStatusResponse) {}
 
     rpc LeadContractMining(ContractLeadRequest) returns (google.protobuf.Empty){}
-    rpc ValidateContract(ContractValidationRequest) returns (ValidationResponse) {}
-    rpc StoreContract(ContractStorageRequest) returns (StorageAck) {}
-
     rpc LeadContractMessageMining(ContractMessageLeadRequest) returns (google.protobuf.Empty){}
+    rpc ValidateContract(ContractValidationRequest) returns (ValidationResponse) {}
     rpc ValidateContractMessage(ContractMessageValidationRequest) returns (ValidationResponse) {}
+    rpc StoreContract(ContractStorageRequest) returns (StorageAck) {}
     rpc StoreContractMessage(ContractMessageStorageRequest) returns (StorageAck) {}
+    rpc GetContractState(ContractStateRequest) returns (ContractStateResponse){}
 }
 
 message LockAck {
