@@ -116,14 +116,14 @@ type accountSearchResult struct {
 }
 
 type contractWithoutSig struct {
-	Address   string `json:"address"`
+	Address   string `json:"addr"`
 	Code      string `json:"code"`
 	Event     string `json:"event"`
-	PublicKey string `json":public_key"`
+	PublicKey string `json:"public_key"`
 }
 
 type contractJSON struct {
-	Address          string `json:"address"`
+	Address          string `json:"addr"`
 	Code             string `json:"code"`
 	Event            string `json:"event"`
 	PublicKey        string `json:"public_key"`
@@ -132,7 +132,7 @@ type contractJSON struct {
 }
 
 type endorsedContractJSON struct {
-	Address          string      `json:"address"`
+	Address          string      `json:"addr"`
 	Code             string      `json:"code"`
 	Event            string      `json:"event"`
 	PublicKey        string      `json:"public_key"`
@@ -142,7 +142,7 @@ type endorsedContractJSON struct {
 }
 
 type contractMessage struct {
-	ContractAddress  string   `json:"contract_address"`
+	Address          string   `json:"addr"`
 	Method           string   `json:"method"`
 	Parameters       []string `json:"parameters"`
 	PublicKey        string   `json:"public_key"`
@@ -150,14 +150,15 @@ type contractMessage struct {
 	EmitterSignature string   `json:"emitter_signature"`
 }
 
-type contractMessageWithSig struct {
+type contractMessageWithoutSig struct {
+	Address    string   `json:"addr"`
 	Method     string   `json:"method"`
 	Parameters []string `json:"parameters"`
 	PublicKey  string   `json:"public_key"`
 }
 
 type endorsedContractMessage struct {
-	ContractAddress  string      `json:"contract_address"`
+	Address          string      `json:"addr"`
 	Method           string      `json:"method"`
 	Parameters       []string    `json:"parameters"`
 	PublicKey        string      `json:"public_key"`

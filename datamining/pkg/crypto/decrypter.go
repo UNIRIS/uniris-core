@@ -110,7 +110,7 @@ func (d decrypter) DecryptContractMessage(data string, pvKey string) (contract.M
 		return nil, err
 	}
 
-	return contract.NewMessage(c.ContractAddress, c.Method, c.Parameters, c.PublicKey, c.Signature, c.EmitterSignature), nil
+	return contract.NewMessage(c.Address, c.Method, c.Parameters, c.PublicKey, c.Signature, c.EmitterSignature), nil
 }
 
 func decrypt(privk string, data string) (string, error) {

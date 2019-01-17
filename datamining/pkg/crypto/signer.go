@@ -636,7 +636,8 @@ func (s signer) VerifyContractMessageValidationRequestSignature(pubKey string, r
 }
 
 func (s signer) VerifyContractMessageSignature(msg contract.Message) error {
-	b, err := json.Marshal(contractMessageWithSig{
+	b, err := json.Marshal(contractMessageWithoutSig{
+		Address:    msg.ContractAddress(),
 		Method:     msg.Method(),
 		Parameters: msg.Parameters(),
 		PublicKey:  msg.PublicKey(),

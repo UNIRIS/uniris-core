@@ -223,7 +223,7 @@ func (h hasher) HashEndorsedContract(c contract.EndorsedContract) (string, error
 
 func (h hasher) HashContractMessage(msg contract.Message) (string, error) {
 	b, err := json.Marshal(contractMessage{
-		ContractAddress:  msg.ContractAddress(),
+		Address:          msg.ContractAddress(),
 		Method:           msg.Method(),
 		Parameters:       msg.Parameters(),
 		PublicKey:        msg.PublicKey(),
@@ -249,7 +249,7 @@ func (h hasher) HashEndorsedContractMessage(msg contract.EndorsedMessage) (strin
 	}
 
 	b, err := json.Marshal(endorsedContractMessage{
-		ContractAddress:  msg.ContractAddress(),
+		Address:          msg.ContractAddress(),
 		Method:           msg.Method(),
 		Parameters:       msg.Parameters(),
 		PublicKey:        msg.PublicKey(),
