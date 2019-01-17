@@ -7,13 +7,14 @@ import (
 	"net"
 	"path/filepath"
 
-	"github.com/uniris/uniris-core/datamining/pkg/contract"
-
 	"github.com/uniris/uniris-core/datamining/pkg/emitter"
 
 	accountAdding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
 	accountListing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
 	accountMining "github.com/uniris/uniris-core/datamining/pkg/account/mining"
+	contractAdding "github.com/uniris/uniris-core/datamining/pkg/contract/adding"
+	contractListing "github.com/uniris/uniris-core/datamining/pkg/contract/listing"
+	contractMining "github.com/uniris/uniris-core/datamining/pkg/contract/mining"
 	emlisting "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
@@ -65,13 +66,14 @@ func main() {
 	lockSrv := lock.NewService(db)
 	accountLister := accountListing.NewService(db)
 	accountAdder := accountAdding.NewService(aiClient, db, accountLister, signer, hasher)
-	contractAdder := contract.NewAddingService(db)
-	contractLister := contract.NewListingService(db)
+	contractAdder := contractAdding.NewService(db)
+	contractLister := contractListing.NewService(db)
 
 	txMiners := map[mining.TransactionType]mining.TransactionMiner{
-		mining.KeychainTransaction: accountMining.NewKeychainMiner(signer, hasher, accountLister),
-		mining.IDTransaction:       accountMining.NewIDMiner(signer, hasher),
-		mining.ContractTransaction: contract.NewMiner(signer, hasher, contractLister),
+		mining.KeychainTransaction:        accountMining.NewKeychainMiner(signer, hasher, accountLister),
+		mining.IDTransaction:              accountMining.NewIDMiner(signer, hasher),
+		mining.ContractTransaction:        contractMining.NewContractMiner(signer, hasher, contractLister),
+		mining.ContractMessageTransaction: contractMining.NewContractMessageMiner(signer, hasher, contractLister),
 	}
 
 	miningSrv := mining.NewService(

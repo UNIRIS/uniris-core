@@ -99,6 +99,20 @@ func (d decrypter) DecryptContract(data string, pvKey string) (contract.Contract
 	return contract.New(c.Address, c.Code, c.Event, c.PublicKey, c.Signature, c.EmitterSignature), nil
 }
 
+func (d decrypter) DecryptContractMessage(data string, pvKey string) (contract.Message, error) {
+	clear, err := decrypt(pvKey, data)
+	if err != nil {
+		return nil, err
+	}
+	var c contractMessageWithoutAddress
+	err = json.Unmarshal([]byte(clear), &c)
+	if err != nil {
+		return nil, err
+	}
+
+	return contract.NewMessage("", c.Method, c.Parameters, c.PublicKey, c.Signature, c.EmitterSignature), nil
+}
+
 func decrypt(privk string, data string) (string, error) {
 	decodeKey, err := hex.DecodeString(privk)
 	if err != nil {

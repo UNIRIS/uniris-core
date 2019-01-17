@@ -30,6 +30,11 @@ type transactionResult struct {
 }
 
 type contractCreationRequest struct {
-	EncryptedContract string `json:"address"`
-	Signature         string `json:"code"`
+	EncryptedContract string `json:"encrypted_contract"`
+	Signature         string `json:"signature,omitempty"`
+}
+
+type contractMessageCreationRequest struct {
+	EncryptedContract string `json:"encrypted_message"`
+	Signature         string `json:"signature,omitempty"`
 }

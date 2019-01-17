@@ -1,16 +1,18 @@
 package contract
 
 import (
+	"github.com/uniris/uniris-core/datamining/pkg/contract"
+	contractListing "github.com/uniris/uniris-core/datamining/pkg/contract/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 )
 
 type contractMiner struct {
-	sigVerifier SignatureVerifier
-	hasher      Hasher
-	listService ListingService
+	sigVerifier contract.SignatureVerifier
+	hasher      contract.Hasher
+	listService contractListing.Service
 }
 
-func NewMiner(sigVerif SignatureVerifier, hash Hasher, lister ListingService) mining.TransactionMiner {
+func NewContractMiner(sigVerif contract.SignatureVerifier, hash contract.Hasher, lister contractListing.Service) mining.TransactionMiner {
 	return contractMiner{
 		sigVerifier: sigVerif,
 		hasher:      hash,
@@ -30,7 +32,7 @@ func (m contractMiner) GetLastTransactionHash(addr string) (string, error) {
 }
 
 func (m contractMiner) CheckAsMaster(txHash string, data interface{}) error {
-	contract := data.(Contract)
+	contract := data.(contract.Contract)
 	if err := m.checkDataIntegrity(txHash, contract); err != nil {
 		return err
 	}
@@ -41,7 +43,7 @@ func (m contractMiner) CheckAsMaster(txHash string, data interface{}) error {
 	return nil
 }
 func (m contractMiner) CheckAsSlave(txHash string, data interface{}) error {
-	contract := data.(Contract)
+	contract := data.(contract.Contract)
 	if err := m.checkDataIntegrity(txHash, contract); err != nil {
 		return err
 	}
@@ -52,7 +54,7 @@ func (m contractMiner) CheckAsSlave(txHash string, data interface{}) error {
 	return nil
 }
 
-func (m contractMiner) checkDataIntegrity(txHash string, c Contract) error {
+func (m contractMiner) checkDataIntegrity(txHash string, c contract.Contract) error {
 	hash, err := m.hasher.HashContract(c)
 
 	if err != nil {

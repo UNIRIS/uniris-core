@@ -32,3 +32,7 @@ func (d mockDecrypter) DecryptID(data string, pvKey string) (account.ID, error) 
 func (d mockDecrypter) DecryptContract(data string, pvKey string) (contract.Contract, error) {
 	return contract.New("addr", "", "", "", "", ""), nil
 }
+
+func (d mockDecrypter) DecryptContractMessage(data string, pvKey string) (contract.Message, error) {
+	return contract.NewMessage("addr", "", []string{""}, "", "", ""), nil
+}

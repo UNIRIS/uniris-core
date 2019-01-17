@@ -29,6 +29,7 @@ func Handler(r *gin.Engine, l listing.Service, a adding.Service) {
 		api.GET("/sharedkeys/:publicKey", getSharedKeys(l))
 
 		api.POST("/contract", createContract(a))
+		api.POST("/contract/:addr/message", createContractMessage(a))
 	}
 }
 
@@ -193,6 +194,39 @@ func createContract(a adding.Service) func(c *gin.Context) {
 		}
 
 		res, err := a.AddContract(adding.NewContractCreationRequest(req.EncryptedContract, req.Signature))
+		if err != nil {
+			if err == crypto.ErrInvalidSignature {
+				e := createError(http.StatusBadRequest, err)
+				c.JSON(e.Code, e)
+				return
+			}
+			e := createError(http.StatusInternalServerError, err)
+			c.JSON(e.Code, e)
+			return
+		}
+
+		c.JSON(http.StatusCreated, transactionResult{
+			TransactionHash: res.TransactionHash(),
+			MasterPeerIP:    res.MasterPeerIP(),
+			Signature:       res.Signature(),
+		})
+	}
+}
+
+func createContractMessage(a adding.Service) func(c *gin.Context) {
+	return func(c *gin.Context) {
+
+		address := c.Param("addr")
+
+		var req contractMessageRequest
+
+		if err := c.ShouldBindJSON(&req); err != nil {
+			e := createError(http.StatusBadRequest, err)
+			c.JSON(e.Code, e)
+			return
+		}
+
+		res, err := a.AddContractMessage(adding.NewContractMessageCreationRequest(address, req.EncryptedMessage, req.Signature))
 		if err != nil {
 			if err == crypto.ErrInvalidSignature {
 				e := createError(http.StatusBadRequest, err)

@@ -23,6 +23,8 @@ tags:
     description: About shared information
   - name: Transaction
     description: Transaction information
+  - name: Smart contracts
+    description: Handle smart contracts
 
 paths:
 
@@ -46,10 +48,10 @@ paths:
           schema:
             $ref: "#/definitions/Error"
 
-  /contract/{addr}/messages:
+  /contract/{addr}/message:
     post:
       tags:
-        - Smart contract
+        - Smart contracts
       parameters:
         - name: address
           in: path
@@ -339,3 +341,12 @@ definitions:
       signature:
         type: string
       
+  SmartContractMessageCreationForm:
+    required:
+      - encrypted_message
+      - signature
+    properties:
+      encrypted_message:
+        type: string
+      signature:
+        type: string

@@ -43,3 +43,8 @@ type contractCreationRequest struct {
 	EncryptedContract string `json:"encrypted_contract"`
 	Signature         string `json:"signature"`
 }
+
+type contractMessageRequest struct {
+	EncryptedMessage string `json:"encrypted_message"`
+	Signature        string `json:"signature"`
+}

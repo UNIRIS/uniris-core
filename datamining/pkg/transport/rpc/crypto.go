@@ -41,6 +41,7 @@ type Decrypter interface {
 	DecryptID(data string, pvKey string) (account.ID, error)
 
 	DecryptContract(data string, pvKey string) (contract.Contract, error)
+	DecryptContractMessage(data string, pvKey string) (contract.Message, error)
 }
 
 //Hasher define methods to hash incoming data
@@ -105,10 +106,12 @@ type signatureVerifier interface {
 	VerifyIDResponseSignature(pubKey string, res *api.IDResponse) error
 
 	VerifyContractLeadRequestSignature(pubKey string, req *api.ContractLeadRequest) error
-
 	VerifyContractStorageRequestSignature(pubKey string, req *api.ContractStorageRequest) error
-
 	VerifyContractValidationRequestSignature(pubKey string, req *api.ContractValidationRequest) error
+
+	VerifyContractMessageLeadRequestSignature(pubKey string, req *api.ContractMessageLeadRequest) error
+	VerifyContractMessageStorageRequestSignature(pubKey string, req *api.ContractMessageStorageRequest) error
+	VerifyContractMessageValidationRequestSignature(pubKey string, req *api.ContractMessageValidationRequest) error
 }
 
 type signatureBuilder interface {
@@ -165,4 +168,5 @@ type signatureBuilder interface {
 	SignAccountSearchResult(res *api.AccountSearchResult, pvKey string) error
 
 	SignContractLeadRequest(req *api.ContractLeadRequest, pvKey string) error
+	SignContractMessageLeadRequest(req *api.ContractMessageLeadRequest, pvKey string) error
 }

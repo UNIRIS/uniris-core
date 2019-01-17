@@ -523,6 +523,19 @@ func (s signer) SignContractLeadRequest(req *api.ContractLeadRequest, pvKey stri
 	return nil
 }
 
+func (s signer) SignContractMessageLeadRequest(req *api.ContractMessageLeadRequest, pvKey string) error {
+	b, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	req.SignatureRequest = sig
+	return nil
+}
+
 func (s signer) VerifyContractLeadRequestSignature(pubKey string, req *api.ContractLeadRequest) error {
 	b, err := json.Marshal(&api.ContractLeadRequest{
 		Contract:         req.Contract,
@@ -568,6 +581,55 @@ func (s signer) VerifyContractSignature(c contract.Contract) error {
 		return err
 	}
 	if err := checkSignature(c.PublicKey(), string(b), c.Signature()); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s signer) VerifyContractMessageLeadRequestSignature(pubKey string, req *api.ContractMessageLeadRequest) error {
+	b, err := json.Marshal(&api.ContractMessageLeadRequest{
+		ContractMessage:  req.ContractMessage,
+		TransactionHash:  req.TransactionHash,
+		ValidatorPeerIPs: req.ValidatorPeerIPs,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), req.SignatureRequest)
+}
+
+func (s signer) VerifyContractMessageStorageRequestSignature(pubKey string, req *api.ContractMessageStorageRequest) error {
+	b, err := json.Marshal(&api.ContractMessageStorageRequest{
+		ContractMessage: req.ContractMessage,
+		Endorsement:     req.Endorsement,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), req.Signature)
+}
+
+func (s signer) VerifyContractMessageValidationRequestSignature(pubKey string, req *api.ContractMessageValidationRequest) error {
+	b, err := json.Marshal(&api.ContractMessageValidationRequest{
+		ContractMessage: req.ContractMessage,
+		TransactionHash: req.TransactionHash,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), req.Signature)
+}
+
+func (s signer) VerifyContractMessageSignature(msg contract.Message) error {
+	b, err := json.Marshal(contractMessageWithSig{
+		Method:     msg.Method(),
+		Parameters: msg.Parameters(),
+		PublicKey:  msg.PublicKey(),
+	})
+	if err != nil {
+		return err
+	}
+	if err := checkSignature(msg.PublicKey(), string(b), msg.Signature()); err != nil {
 		return err
 	}
 	return nil

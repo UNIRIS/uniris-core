@@ -38,3 +38,11 @@ func (h mockHasher) HashEndorsedContract(contract.EndorsedContract) (string, err
 func (h mockHasher) HashContract(contract.Contract) (string, error) {
 	return "hash", nil
 }
+
+func (h mockHasher) HashEndorsedContractMessage(contract.EndorsedMessage) (string, error) {
+	return "hash", nil
+}
+
+func (h mockHasher) HashContractMessage(contract.Message) (string, error) {
+	return "hash", nil
+}

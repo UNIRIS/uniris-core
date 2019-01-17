@@ -73,3 +73,7 @@ func (c mockExtClient) GetTransactionStatus(ip string, addr string, txHash strin
 func (c mockExtClient) LeadContractMining(ip string, txHash string, contract *api.Contract, validators []string) error {
 	return nil
 }
+
+func (c mockExtClient) LeadContractMessageMining(ip string, txHash string, msg *api.ContractMessage, validators []string) error {
+	return nil
+}

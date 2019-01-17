@@ -269,3 +269,46 @@ func (s internalSrvHandler) CreateContract(ctx context.Context, req *api.Contrac
 
 	return res, nil
 }
+
+func (s internalSrvHandler) CreateContractMessage(ctx context.Context, req *api.ContractMessageCreationRequest) (*api.CreationResult, error) {
+	message, err := s.crypto.decrypter.DecryptContractMessage(req.EncryptedMessage, s.conf.SharedKeys.Robot.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	txHash, err := s.crypto.hasher.HashContractMessage(message)
+	if err != nil {
+		return nil, err
+	}
+
+	master, err := s.aiClient.GetMasterPeer(txHash)
+	if err != nil {
+		return nil, err
+	}
+	validPool, err := s.aiClient.GetValidationPool(txHash)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.extCli.LeadContractMessageMining(master.IP.String(), txHash, &api.ContractMessage{
+		ContractAddress:  req.ContractAddress,
+		Method:           message.Method(),
+		Parameters:       message.Parameters(),
+		PublicKey:        message.PublicKey(),
+		Signature:        message.Signature(),
+		EmitterSignature: message.EmitterSignature(),
+	}, validPool.Peers().IPs()); err != nil {
+		return nil, err
+	}
+
+	res := &api.CreationResult{
+		TransactionHash: txHash,
+		MasterPeerIP:    master.IP.String(),
+	}
+
+	if err := s.crypto.signer.SignCreationResult(res, s.conf.SharedKeys.Robot.PrivateKey); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}

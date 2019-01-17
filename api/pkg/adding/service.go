@@ -9,12 +9,14 @@ import (
 type Service interface {
 	AddAccount(AccountCreationRequest) (AccountCreationResult, error)
 	AddContract(ContractCreationRequest) (api.TransactionResult, error)
+	AddContractMessage(ContractMessageCreationRequest) (api.TransactionResult, error)
 }
 
 //RobotClient define methods to interfact with the robot
 type RobotClient interface {
 	AddAccount(AccountCreationRequest) (AccountCreationResult, error)
 	AddSmartContract(ContractCreationRequest) (api.TransactionResult, error)
+	AddContractMessage(ContractMessageCreationRequest) (api.TransactionResult, error)
 }
 
 //Signer defines methods to handle signature
@@ -32,6 +34,8 @@ type signatureVerifier interface {
 	VerifyCreationTransactionResultSignature(res api.TransactionResult, pubKey string) error
 
 	VerifyContractCreationRequestSignature(req ContractCreationRequest, key string) error
+
+	VerifyContractMessageCreationRequestSignature(req ContractMessageCreationRequest, key string) error
 }
 
 type signatureBuilder interface {
@@ -90,6 +94,27 @@ func (s service) AddContract(req ContractCreationRequest) (api.TransactionResult
 	}
 
 	res, err := s.client.AddSmartContract(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.sig.VerifyCreationTransactionResultSignature(res, keys.RobotPublicKey()); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (s service) AddContractMessage(req ContractMessageCreationRequest) (api.TransactionResult, error) {
+	keys, err := s.lister.GetSafeSharedKeys()
+	if err != nil {
+		return nil, err
+	}
+	if err := s.sig.VerifyContractMessageCreationRequestSignature(req, keys.RequestPublicKey()); err != nil {
+		return nil, err
+	}
+
+	res, err := s.client.AddContractMessage(req)
 	if err != nil {
 		return nil, err
 	}

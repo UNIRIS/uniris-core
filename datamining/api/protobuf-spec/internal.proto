@@ -13,6 +13,7 @@ service Internal {
     rpc IsEmitterAuthorized(AuthorizationRequest) returns (AuthorizationResponse) {}
     rpc GetTransactionStatus(TransactionStatusRequest) returns(TransactionStatusResponse) {}
     rpc CreateContract(ContractCreationRequest) returns (CreationResult){}
+    rpc CreateContractMessage(ContractMessageCreationRequest) returns (CreationResult) {}
 }
 
 message AccountSearchRequest {
@@ -59,7 +60,11 @@ message AuthorizationResponse {
     bool Status = 1; 
 }
 
-
 message ContractCreationRequest {
     string EncryptedContract = 1;
+}
+
+message ContractMessageCreationRequest {
+    string EncryptedMessage = 1;
+    string ContractAddress = 2;
 }

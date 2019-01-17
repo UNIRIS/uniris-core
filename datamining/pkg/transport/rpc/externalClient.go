@@ -46,6 +46,7 @@ type ExternalClient interface {
 	GetTransactionStatus(ip string, addr string, txHash string) (mining.TransactionStatus, error)
 
 	LeadContractMining(ip string, txHash string, contract *api.Contract, validators []string) error
+	LeadContractMessageMining(ip string, txHash string, message *api.ContractMessage, validators []string) error
 }
 
 type externalClient struct {
@@ -446,6 +447,33 @@ func (c externalClient) LeadContractMining(ip string, txHash string, contract *a
 		return err
 	}
 	_, err = client.LeadContractMining(context.Background(), req)
+	if err != nil {
+		s, _ := status.FromError(err)
+		return errors.New(s.Message())
+	}
+	return nil
+}
+
+func (c externalClient) LeadContractMessageMining(ip string, txHash string, message *api.ContractMessage, validators []string) error {
+	serverAddr := fmt.Sprintf("%s:%d", ip, c.conf.Services.Datamining.ExternalPort)
+	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	defer conn.Close()
+
+	if err != nil {
+		return err
+	}
+
+	client := api.NewExternalClient(conn)
+
+	req := &api.ContractMessageLeadRequest{
+		ContractMessage:  message,
+		TransactionHash:  txHash,
+		ValidatorPeerIPs: validators,
+	}
+	if err := c.crypto.signer.SignContractMessageLeadRequest(req, c.conf.SharedKeys.Robot.PrivateKey); err != nil {
+		return err
+	}
+	_, err = client.LeadContractMessageMining(context.Background(), req)
 	if err != nil {
 		s, _ := status.FromError(err)
 		return errors.New(s.Message())

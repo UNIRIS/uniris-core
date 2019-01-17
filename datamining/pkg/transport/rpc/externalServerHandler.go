@@ -19,6 +19,8 @@ import (
 
 	accAdding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
 	accListing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
+
+	contractAdding "github.com/uniris/uniris-core/datamining/pkg/contract/adding"
 )
 
 //Services define the required services
@@ -27,11 +29,11 @@ type Services struct {
 	mining      mining.Service
 	accAdd      accAdding.Service
 	accLister   accListing.Service
-	contractAdd contract.AddingService
+	contractAdd contractAdding.Service
 }
 
 //NewExternalServices creates a new container of required services
-func NewExternalServices(lock lock.Service, mine mining.Service, accountAdder accAdding.Service, accountLister accListing.Service, contractAdder contract.AddingService) Services {
+func NewExternalServices(lock lock.Service, mine mining.Service, accountAdder accAdding.Service, accountLister accListing.Service, contractAdder contractAdding.Service) Services {
 	return Services{
 		lock:        lock,
 		mining:      mine,
@@ -447,6 +449,81 @@ func (h externalSrvHandler) StoreContract(ctx context.Context, req *api.Contract
 	}
 
 	hash, err := h.crypto.hasher.HashEndorsedContract(contract)
+	if err != nil {
+		return nil, err
+	}
+
+	ack := &api.StorageAck{
+		StorageHash: hash,
+	}
+	if err := h.crypto.signer.SignStorageAck(ack, h.conf.SharedKeys.Robot.PrivateKey); err != nil {
+		return nil, err
+	}
+	return ack, nil
+}
+
+func (h externalSrvHandler) LeadContractMessageMining(ctx context.Context, req *api.ContractMessageLeadRequest) (*empty.Empty, error) {
+	if err := h.crypto.signer.VerifyContractMessageLeadRequestSignature(h.conf.SharedKeys.Robot.PublicKey, req); err != nil {
+		return nil, ErrInvalidSignature
+	}
+
+	msg := contract.NewMessage(req.ContractMessage.ContractAddress, req.ContractMessage.Method, req.ContractMessage.Parameters, req.ContractMessage.PublicKey, req.ContractMessage.Signature, req.ContractMessage.EmitterSignature)
+
+	pp := make([]datamining.Peer, 0)
+	for _, p := range req.ValidatorPeerIPs {
+		pp = append(pp, datamining.Peer{IP: net.ParseIP(p)})
+	}
+	vPool := datamining.NewPool(pp...)
+	if err := h.services.mining.LeadMining(req.TransactionHash, req.ContractMessage.ContractAddress, msg, vPool, mining.ContractMessageTransaction, req.ContractMessage.EmitterSignature); err != nil {
+		return nil, err
+	}
+
+	return &empty.Empty{}, nil
+}
+
+func (h externalSrvHandler) ValidateContractMessage(ctx context.Context, req *api.ContractMessageValidationRequest) (*api.ValidationResponse, error) {
+	if err := h.crypto.signer.VerifyContractMessageValidationRequestSignature(h.conf.SharedKeys.Robot.PublicKey, req); err != nil {
+		return nil, err
+	}
+
+	msg := contract.NewMessage(req.ContractMessage.ContractAddress, req.ContractMessage.Method, req.ContractMessage.Parameters, req.ContractMessage.PublicKey, req.ContractMessage.Signature, req.ContractMessage.EmitterSignature)
+
+	valid, err := h.services.mining.Validate(req.TransactionHash, msg, mining.ContractMessageTransaction)
+	if err != nil {
+		return nil, err
+	}
+
+	vRes := &api.Validation{
+		PublicKey: valid.PublicKey(),
+		Signature: valid.Signature(),
+		Status:    api.Validation_ValidationStatus(valid.Status()),
+		Timestamp: valid.Timestamp().Unix(),
+	}
+
+	res := &api.ValidationResponse{
+		Validation: vRes,
+	}
+	if err := h.crypto.signer.SignValidationResponse(res, h.conf.SharedKeys.Robot.PrivateKey); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (h externalSrvHandler) StoreContractMessage(ctx context.Context, req *api.ContractMessageStorageRequest) (*api.StorageAck, error) {
+	if err := h.crypto.signer.VerifyContractMessageStorageRequestSignature(h.conf.SharedKeys.Robot.PublicKey, req); err != nil {
+		return nil, err
+	}
+
+	msg := contract.NewEndorsedContractMessage(
+		contract.NewMessage(req.ContractMessage.ContractAddress, req.ContractMessage.Method, req.ContractMessage.Parameters, req.ContractMessage.PublicKey, req.ContractMessage.Signature, req.ContractMessage.EmitterSignature),
+		h.data.buildEndorsement(req.Endorsement))
+
+	if err := h.services.contractAdd.StoreEndorsedMessage(msg); err != nil {
+		return nil, err
+	}
+
+	hash, err := h.crypto.hasher.HashEndorsedContractMessage(msg)
 	if err != nil {
 		return nil, err
 	}

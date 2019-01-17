@@ -183,3 +183,25 @@ func (c robotClient) AddSmartContract(req adding.ContractCreationRequest) (api.T
 
 	return api.NewTransactionResult(res.TransactionHash, res.MasterPeerIP, res.Signature), nil
 }
+
+func (c robotClient) AddContractMessage(req adding.ContractMessageCreationRequest) (api.TransactionResult, error) {
+	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Services.Datamining.InternalPort)
+	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	defer conn.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	client := proto.NewInternalClient(conn)
+	res, err := client.CreateContractMessage(context.Background(), &proto.ContractMessageCreationRequest{
+		EncryptedMessage: req.EncryptedMessage(),
+		ContractAddress:  req.ContractAddress(),
+	})
+	if err != nil {
+		s, _ := status.FromError(err)
+		return nil, errors.New(s.Message())
+	}
+
+	return api.NewTransactionResult(res.TransactionHash, res.MasterPeerIP, res.Signature), nil
+}

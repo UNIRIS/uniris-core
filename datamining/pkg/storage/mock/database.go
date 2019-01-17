@@ -11,6 +11,9 @@ import (
 	em_adding "github.com/uniris/uniris-core/datamining/pkg/emitter/adding"
 	em_listing "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
+
+	contract_adding "github.com/uniris/uniris-core/datamining/pkg/contract/adding"
+	contract_listing "github.com/uniris/uniris-core/datamining/pkg/contract/listing"
 )
 
 //Database mock the entire database
@@ -20,8 +23,8 @@ type Database interface {
 	em_listing.Repository
 	em_adding.Repository
 	lock.Repository
-	contract.AddingRepository
-	contract.ListingRepository
+	contract_adding.Repository
+	contract_listing.Repository
 }
 
 //NewDatabase create new mocked database
@@ -30,13 +33,14 @@ func NewDatabase() Database {
 }
 
 type mockDatabase struct {
-	IDs         []account.EndorsedID
-	KOIDs       []account.EndorsedID
-	Keychains   []account.EndorsedKeychain
-	KOKeychains []account.EndorsedKeychain
-	Locks       []lock.TransactionLock
-	SharedEmKP  []emitter.SharedKeyPair
-	Contracts   []contract.EndorsedContract
+	IDs              []account.EndorsedID
+	KOIDs            []account.EndorsedID
+	Keychains        []account.EndorsedKeychain
+	KOKeychains      []account.EndorsedKeychain
+	Locks            []lock.TransactionLock
+	SharedEmKP       []emitter.SharedKeyPair
+	Contracts        []contract.EndorsedContract
+	ContractMessages []contract.EndorsedMessage
 }
 
 func (d mockDatabase) FindID(hash string) (account.EndorsedID, error) {
@@ -174,6 +178,26 @@ func (d mockDatabase) FindLastContract(addr string) (contract.EndorsedContract, 
 	for _, c := range d.Contracts {
 		if c.Address() == addr {
 			return c, nil
+		}
+	}
+	return nil, nil
+}
+
+func (d *mockDatabase) StoreEndorsedMessage(msg contract.EndorsedMessage) error {
+	d.ContractMessages = append(d.ContractMessages, msg)
+	return nil
+}
+
+func (d mockDatabase) FindLastContractMessage(addr string) (contract.EndorsedMessage, error) {
+	sort.Slice(d.ContractMessages, func(i, j int) bool {
+		iTimestamp := d.Contracts[i].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()
+		jTimestamp := d.Contracts[j].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()
+		return iTimestamp > jTimestamp
+	})
+
+	for _, msg := range d.ContractMessages {
+		if msg.ContractAddress() == addr {
+			return msg, nil
 		}
 	}
 	return nil, nil

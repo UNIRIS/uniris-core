@@ -72,6 +72,10 @@ func (c mockClient) AddSmartContract(ContractCreationRequest) (api.TransactionRe
 	return api.NewTransactionResult("transaction hash", "", ""), nil
 }
 
+func (c mockClient) AddContractMessage(ContractMessageCreationRequest) (api.TransactionResult, error) {
+	return api.NewTransactionResult("transctionhash", "", ""), nil
+}
+
 func (c mockClient) GetSharedKeys() (listing.SharedKeys, error) {
 	return listing.NewSharedKeys(
 		"robot pv key",
@@ -134,5 +138,9 @@ func (v mockSigVerifier) VerifyCreationTransactionResultSignature(res api.Transa
 }
 
 func (v mockSigVerifier) VerifyContractCreationRequestSignature(req ContractCreationRequest, key string) error {
+	return nil
+}
+
+func (v mockSigVerifier) VerifyContractMessageCreationRequestSignature(req ContractMessageCreationRequest, key string) error {
 	return nil
 }

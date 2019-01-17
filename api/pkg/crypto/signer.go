@@ -80,6 +80,16 @@ func (s signer) VerifyContractCreationRequestSignature(req adding.ContractCreati
 	return verifySignature(pubKey, string(b), req.Signature())
 }
 
+func (s signer) VerifyContractMessageCreationRequestSignature(req adding.ContractMessageCreationRequest, pubKey string) error {
+	b, err := json.Marshal(contractMessageCreationRequest{
+		EncryptedContract: req.EncryptedMessage(),
+	})
+	if err != nil {
+		return err
+	}
+	return verifySignature(pubKey, string(b), req.Signature())
+}
+
 func (s signer) SignAccountCreationResult(res adding.AccountCreationResult, pvKey string) (adding.AccountCreationResult, error) {
 	b, err := json.Marshal(accountCreationResult{
 		Transactions: accountCreationTransactionsResult{

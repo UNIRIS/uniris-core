@@ -29,6 +29,10 @@ service External {
     rpc LeadContractMining(ContractLeadRequest) returns (google.protobuf.Empty){}
     rpc ValidateContract(ContractValidationRequest) returns (ValidationResponse) {}
     rpc StoreContract(ContractStorageRequest) returns (StorageAck) {}
+
+    rpc LeadContractMessageMining(ContractMessageLeadRequest) returns (google.protobuf.Empty){}
+    rpc ValidateContractMessage(ContractMessageValidationRequest) returns (ValidationResponse) {}
+    rpc StoreContractMessage(ContractMessageStorageRequest) returns (StorageAck) {}
 }
 
 message LockAck {
@@ -194,4 +198,32 @@ message Contract {
     string PublicKey = 4;
     string Signature = 5;
     string EmitterSignature = 6;
+}
+
+message ContractMessage {
+    string ContractAddress = 1;
+    string Method = 2;
+    repeated string Parameters = 3;
+    string PublicKey = 4;
+    string Signature = 5;
+    string EmitterSignature = 6;
+}
+
+message ContractMessageLeadRequest {
+    string TransactionHash = 1;
+    repeated string ValidatorPeerIPs = 2;
+    ContractMessage ContractMessage = 3;
+    string SignatureRequest = 4;
+}
+
+message ContractMessageValidationRequest {
+    string TransactionHash = 1;
+    ContractMessage ContractMessage = 2;
+    string Signature = 3;
+}
+
+message ContractMessageStorageRequest {
+    ContractMessage ContractMessage = 1;
+    Endorsement Endorsement = 2;
+    string Signature = 3;
 }

@@ -221,6 +221,62 @@ func (h hasher) HashEndorsedContract(c contract.EndorsedContract) (string, error
 	return hashBytes(b), nil
 }
 
+func (h hasher) HashContractMessage(msg contract.Message) (string, error) {
+	b, err := json.Marshal(contractMessage{
+		ContractAddress:  msg.ContractAddress(),
+		Method:           msg.Method(),
+		Parameters:       msg.Parameters(),
+		PublicKey:        msg.PublicKey(),
+		Signature:        msg.Signature(),
+		EmitterSignature: msg.EmitterSignature(),
+	})
+	if err != nil {
+		return "", nil
+	}
+	return hashBytes(b), nil
+}
+
+func (h hasher) HashEndorsedContractMessage(msg contract.EndorsedMessage) (string, error) {
+
+	valids := make([]validation, 0)
+	for _, v := range msg.Endorsement().Validations() {
+		valids = append(valids, validation{
+			Pubk:      v.PublicKey(),
+			Sig:       v.Signature(),
+			Status:    v.Status(),
+			Timestamp: v.Timestamp().Unix(),
+		})
+	}
+
+	b, err := json.Marshal(endorsedContractMessage{
+		ContractAddress:  msg.ContractAddress(),
+		Method:           msg.Method(),
+		Parameters:       msg.Parameters(),
+		PublicKey:        msg.PublicKey(),
+		Signature:        msg.Signature(),
+		EmitterSignature: msg.EmitterSignature(),
+		Endorsement: endorsement{
+			LastTxHash: msg.Endorsement().LastTransactionHash(),
+			TxHash:     msg.Endorsement().TransactionHash(),
+			MasterValidation: masterValidation{
+				LastTxRvk: msg.Endorsement().MasterValidation().LastTransactionMiners(),
+				PowKey:    msg.Endorsement().MasterValidation().ProofOfWorkKey(),
+				PowValid: validation{
+					Pubk:      msg.Endorsement().MasterValidation().ProofOfWorkValidation().PublicKey(),
+					Sig:       msg.Endorsement().MasterValidation().ProofOfWorkValidation().Signature(),
+					Status:    msg.Endorsement().MasterValidation().ProofOfWorkValidation().Status(),
+					Timestamp: msg.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix(),
+				},
+			},
+			Validations: valids,
+		},
+	})
+	if err != nil {
+		return "", nil
+	}
+	return hashBytes(b), nil
+}
+
 func hashString(data string) string {
 	return hashBytes([]byte(data))
 }
