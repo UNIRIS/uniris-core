@@ -220,3 +220,21 @@ func (d database) FindMessagesByContract(addr string) ([]contract.EndorsedMessag
 
 	return messages, nil
 }
+
+func (d database) FindContractByAddressAndTransactionHash(addr string, hash string) (contract.EndorsedContract, error) {
+	for _, c := range d.Contracts {
+		if c.Address() == addr && c.Endorsement().TransactionHash() == hash {
+			return c, nil
+		}
+	}
+	return nil, nil
+}
+
+func (d database) FindMessageByAddressAndTransactionHash(addr string, hash string) (contract.EndorsedMessage, error) {
+	for _, c := range d.ContractMessages {
+		if c.ContractAddress() == addr && c.Endorsement().TransactionHash() == hash {
+			return c, nil
+		}
+	}
+	return nil, nil
+}

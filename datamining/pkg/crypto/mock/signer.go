@@ -188,3 +188,22 @@ func (s mockSigner) VerifyContractMessageValidationRequestSignature(pubKey strin
 func (s mockSigner) VerifyContractStateSignature(pubKey string, res *api.ContractStateResponse) error {
 	return nil
 }
+
+func (s mockSigner) SignContractValidationRequestSignature(req *api.ContractValidationRequest, pvKey string) error {
+	req.Signature = "sig"
+	return nil
+}
+
+func (s mockSigner) SignContractMessageValidationRequestSignature(req *api.ContractMessageValidationRequest, pvKey string) error {
+	req.Signature = "sig"
+	return nil
+}
+
+func (s mockSigner) SignContractStorageRequestSignature(req *api.ContractStorageRequest, pvKey string) error {
+	req.Signature = "sig"
+	return nil
+}
+func (s mockSigner) SignContractMessageStorageRequestSignature(req *api.ContractMessageStorageRequest, pvKey string) error {
+	req.Signature = "sig"
+	return nil
+}

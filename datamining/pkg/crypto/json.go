@@ -128,7 +128,7 @@ type contractJSON struct {
 	Event            string `json:"event"`
 	PublicKey        string `json:"public_key"`
 	Signature        string `json:"signature"`
-	EmitterSignature string `json:"emitter_signature"`
+	EmitterSignature string `json:"em_sig"`
 }
 
 type endorsedContractJSON struct {
@@ -137,7 +137,7 @@ type endorsedContractJSON struct {
 	Event            string      `json:"event"`
 	PublicKey        string      `json:"public_key"`
 	Signature        string      `json:"signature"`
-	EmitterSignature string      `json:"emitter_signature"`
+	EmitterSignature string      `json:"em_sig"`
 	Endorsement      endorsement `json:"endorsement"`
 }
 
@@ -147,7 +147,7 @@ type contractMessage struct {
 	Parameters       []string `json:"parameters"`
 	PublicKey        string   `json:"public_key"`
 	Signature        string   `json:"signature"`
-	EmitterSignature string   `json:"emitter_signature"`
+	EmitterSignature string   `json:"em_sig"`
 }
 
 type contractMessageWithoutSig struct {
@@ -163,6 +163,6 @@ type endorsedContractMessage struct {
 	Parameters       []string    `json:"parameters"`
 	PublicKey        string      `json:"public_key"`
 	Signature        string      `json:"signature"`
-	EmitterSignature string      `json:"emitter_signature"`
+	EmitterSignature string      `json:"em_sig"`
 	Endorsement      endorsement `json:"endorsement"`
 }

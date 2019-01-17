@@ -171,4 +171,9 @@ type signatureBuilder interface {
 	SignContractLeadRequest(req *api.ContractLeadRequest, pvKey string) error
 	SignContractMessageLeadRequest(req *api.ContractMessageLeadRequest, pvKey string) error
 	SignContractState(req *api.ContractStateResponse, pvKey string) error
+
+	SignContractValidationRequestSignature(req *api.ContractValidationRequest, pvKey string) error
+	SignContractMessageValidationRequestSignature(req *api.ContractMessageValidationRequest, pvKey string) error
+	SignContractStorageRequestSignature(req *api.ContractStorageRequest, pvKey string) error
+	SignContractMessageStorageRequestSignature(req *api.ContractMessageStorageRequest, pvKey string) error
 }

@@ -384,6 +384,25 @@ func (h externalSrvHandler) GetTransactionStatus(ctx context.Context, req *api.T
 	//TODO: //Search if the transaction is an IRIS exchange and is stored
 
 	//TODO: //Search if the transaction is a smartcontract and is stored
+	contract, err := h.services.contractLister.GetContractByAddressAndTransaction(addr, req.Hash)
+	if err != nil {
+		return nil, err
+	}
+	if contract != nil {
+		return &api.TransactionStatusResponse{
+			Status: api.TransactionStatusResponse_TransactionStatus(contract.Endorsement().GetStatus()),
+		}, nil
+	}
+
+	contractMsg, err := h.services.contractLister.GetContractMessageByContractAndTransaction(addr, req.Hash)
+	if err != nil {
+		return nil, err
+	}
+	if contractMsg != nil {
+		return &api.TransactionStatusResponse{
+			Status: api.TransactionStatusResponse_TransactionStatus(contractMsg.Endorsement().GetStatus()),
+		}, nil
+	}
 
 	return &api.TransactionStatusResponse{
 		Status: api.TransactionStatusResponse_Unknown,

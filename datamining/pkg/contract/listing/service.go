@@ -11,13 +11,17 @@ import (
 type Repository interface {
 	FindLastContract(addr string) (contract.EndorsedContract, error)
 	FindLastContractMessage(addr string) (contract.EndorsedMessage, error)
+	FindContractByAddressAndTransactionHash(addr string, hash string) (contract.EndorsedContract, error)
 	FindMessagesByContract(addr string) ([]contract.EndorsedMessage, error)
+	FindMessageByAddressAndTransactionHash(addr string, hash string) (contract.EndorsedMessage, error)
 }
 
 type Service interface {
 	GetLastContract(addr string) (contract.EndorsedContract, error)
 	GetLastContractMessage(addr string) (contract.EndorsedMessage, error)
 	GetContractState(addr string) (string, error)
+	GetContractByAddressAndTransaction(addr string, hash string) (contract.EndorsedContract, error)
+	GetContractMessageByContractAndTransaction(addr string, hash string) (contract.EndorsedMessage, error)
 }
 
 type listService struct {
@@ -69,4 +73,12 @@ func (s listService) GetContractState(addr string) (string, error) {
 	}
 
 	return res, nil
+}
+
+func (s listService) GetContractByAddressAndTransaction(addr string, hash string) (contract.EndorsedContract, error) {
+	return s.repo.FindContractByAddressAndTransactionHash(addr, hash)
+}
+
+func (s listService) GetContractMessageByContractAndTransaction(addr string, hash string) (contract.EndorsedMessage, error) {
+	return s.repo.FindMessageByAddressAndTransactionHash(addr, hash)
 }

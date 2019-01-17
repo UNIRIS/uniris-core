@@ -65,6 +65,30 @@ func (s signer) VerifyTransactionDataSignature(txType mining.TransactionType, pu
 			return err
 		}
 		return checkSignature(pubKey, string(b), sig)
+	case mining.ContractTransaction:
+		contract := data.(contract.Contract)
+		b, err := json.Marshal(contractWithoutSig{
+			Address:   contract.Address(),
+			Code:      contract.Code(),
+			Event:     contract.Event(),
+			PublicKey: contract.PublicKey(),
+		})
+		if err != nil {
+			return err
+		}
+		return checkSignature(pubKey, string(b), sig)
+	case mining.ContractMessageTransaction:
+		contractMsg := data.(contract.Message)
+		b, err := json.Marshal(contractMessageWithoutSig{
+			Address:    contractMsg.ContractAddress(),
+			Method:     contractMsg.Method(),
+			Parameters: contractMsg.Parameters(),
+			PublicKey:  contractMsg.PublicKey(),
+		})
+		if err != nil {
+			return err
+		}
+		return checkSignature(pubKey, string(b), sig)
 	}
 
 	return mining.ErrUnsupportedTransaction
@@ -548,6 +572,57 @@ func (s signer) SignContractState(res *api.ContractStateResponse, pvKey string) 
 		return err
 	}
 	res.Signature = sig
+	return nil
+}
+
+func (s signer) SignContractValidationRequestSignature(req *api.ContractValidationRequest, pvKey string) error {
+	b, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	req.Signature = sig
+	return nil
+}
+
+func (s signer) SignContractMessageValidationRequestSignature(req *api.ContractMessageValidationRequest, pvKey string) error {
+	b, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	req.Signature = sig
+	return nil
+}
+
+func (s signer) SignContractStorageRequestSignature(req *api.ContractStorageRequest, pvKey string) error {
+	b, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	req.Signature = sig
+	return nil
+}
+func (s signer) SignContractMessageStorageRequestSignature(req *api.ContractMessageStorageRequest, pvKey string) error {
+	b, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	req.Signature = sig
 	return nil
 }
 

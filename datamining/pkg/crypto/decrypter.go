@@ -90,6 +90,7 @@ func (d decrypter) DecryptContract(data string, pvKey string) (contract.Contract
 	if err != nil {
 		return nil, err
 	}
+
 	var c contractJSON
 	err = json.Unmarshal([]byte(clear), &c)
 	if err != nil {
