@@ -13,7 +13,7 @@ type contractMessageMiner struct {
 }
 
 func NewContractMessageMiner(sigVerif contract.SignatureVerifier, hash contract.Hasher, lister contractListing.Service) mining.TransactionMiner {
-	return contractMiner{
+	return contractMessageMiner{
 		sigVerifier: sigVerif,
 		hasher:      hash,
 		listService: lister,
