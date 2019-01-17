@@ -9,7 +9,8 @@ import (
 
 	"google.golang.org/grpc/status"
 
-	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
+	api "github.com/uniris/uniris-core/api/pkg"
+	proto "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 
 	adding "github.com/uniris/uniris-core/api/pkg/adding"
 	listing "github.com/uniris/uniris-core/api/pkg/listing"
@@ -41,9 +42,9 @@ func (c robotClient) IsEmitterAuthorized(emPubKey string) error {
 		return err
 	}
 
-	client := api.NewInternalClient(conn)
+	client := proto.NewInternalClient(conn)
 
-	res, err := client.IsEmitterAuthorized(context.Background(), &api.AuthorizationRequest{PublicKey: emPubKey})
+	res, err := client.IsEmitterAuthorized(context.Background(), &proto.AuthorizationRequest{PublicKey: emPubKey})
 	if err != nil {
 		s, _ := status.FromError(err)
 		return errors.New(s.Message())
@@ -65,7 +66,7 @@ func (c robotClient) GetSharedKeys() (listing.SharedKeys, error) {
 		return nil, err
 	}
 
-	client := api.NewInternalClient(conn)
+	client := proto.NewInternalClient(conn)
 
 	res, err := client.GetSharedKeys(context.Background(), &empty.Empty{})
 	if err != nil {
@@ -90,9 +91,9 @@ func (c robotClient) GetAccount(encHash string) (listing.AccountResult, error) {
 		return nil, err
 	}
 
-	client := api.NewInternalClient(conn)
+	client := proto.NewInternalClient(conn)
 
-	res, err := client.GetAccount(context.Background(), &api.AccountSearchRequest{
+	res, err := client.GetAccount(context.Background(), &proto.AccountSearchRequest{
 		EncryptedIDHash: encHash,
 	})
 	if err != nil {
@@ -115,9 +116,9 @@ func (c robotClient) AddAccount(req adding.AccountCreationRequest) (adding.Accou
 		return nil, err
 	}
 
-	client := api.NewInternalClient(conn)
+	client := proto.NewInternalClient(conn)
 
-	resID, err := client.CreateID(context.Background(), &api.IDCreationRequest{
+	resID, err := client.CreateID(context.Background(), &proto.IDCreationRequest{
 		EncryptedID: req.EncryptedID(),
 	})
 	if err != nil {
@@ -125,7 +126,7 @@ func (c robotClient) AddAccount(req adding.AccountCreationRequest) (adding.Accou
 		return nil, errors.New(s.Message())
 	}
 
-	resKeychain, err := client.CreateKeychain(context.Background(), &api.KeychainCreationRequest{
+	resKeychain, err := client.CreateKeychain(context.Background(), &proto.KeychainCreationRequest{
 		EncryptedKeychain: req.EncryptedKeychain(),
 	})
 	if err != nil {
@@ -133,8 +134,8 @@ func (c robotClient) AddAccount(req adding.AccountCreationRequest) (adding.Accou
 		return nil, errors.New(s.Message())
 	}
 
-	txID := adding.NewTransactionResult(resID.TransactionHash, resID.MasterPeerIP, resID.Signature)
-	txKeychain := adding.NewTransactionResult(resKeychain.TransactionHash, resKeychain.MasterPeerIP, resKeychain.Signature)
+	txID := api.NewTransactionResult(resID.TransactionHash, resID.MasterPeerIP, resID.Signature)
+	txKeychain := api.NewTransactionResult(resKeychain.TransactionHash, resKeychain.MasterPeerIP, resKeychain.Signature)
 
 	resTx := adding.NewAccountCreationTransactionResult(txID, txKeychain)
 	return adding.NewAccountCreationResult(resTx, ""), nil
@@ -149,8 +150,8 @@ func (c robotClient) GetTransactionStatus(addr string, txHash string) (listing.T
 		return listing.TransactionFailure, err
 	}
 
-	client := api.NewInternalClient(conn)
-	res, err := client.GetTransactionStatus(context.Background(), &api.TransactionStatusRequest{
+	client := proto.NewInternalClient(conn)
+	res, err := client.GetTransactionStatus(context.Background(), &proto.TransactionStatusRequest{
 		Address: addr,
 		Hash:    txHash,
 	})
@@ -162,7 +163,7 @@ func (c robotClient) GetTransactionStatus(addr string, txHash string) (listing.T
 	return listing.TransactionStatus(res.Status), nil
 }
 
-func (c robotClient) AddSmartContract(req adding.ContractCreationRequest) (adding.ContractCreationResponse, error) {
+func (c robotClient) AddSmartContract(req adding.ContractCreationRequest) (api.TransactionResult, error) {
 	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Services.Datamining.InternalPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
@@ -171,9 +172,10 @@ func (c robotClient) AddSmartContract(req adding.ContractCreationRequest) (addin
 		return nil, err
 	}
 
-	client := api.NewInternalClient(conn)
-	res, err := client.CreateContract(context.Background(), &api.ContractCreationRequest{
-		Contract: &api.Contract{
+	client := proto.NewInternalClient(conn)
+	res, err := client.CreateContract(context.Background(), &proto.ContractCreationRequest{
+		Contract: &proto.Contract{
+			Address:          req.Address(),
 			Code:             req.Code(),
 			Event:            req.Event(),
 			PublicKey:        req.PublicKey(),
@@ -186,5 +188,5 @@ func (c robotClient) AddSmartContract(req adding.ContractCreationRequest) (addin
 		return nil, errors.New(s.Message())
 	}
 
-	return adding.NewContractCreationResponse(res.TransactionHash, res.Address, res.MasterPeerIP, res.Signature), nil
+	return api.NewTransactionResult(res.TransactionHash, res.MasterPeerIP, res.Signature), nil
 }

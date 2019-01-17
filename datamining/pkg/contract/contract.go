@@ -5,6 +5,7 @@ import (
 )
 
 type Contract interface {
+	Address() string
 	Code() string
 	Event() string
 	PublicKey() string
@@ -12,16 +13,21 @@ type Contract interface {
 	EmitterSignature() string
 }
 
-func New(code, event, pubK, sig, emSig string) Contract {
-	return contract{code, event, pubK, sig, emSig}
+func New(addr, code, event, pubK, sig, emSig string) Contract {
+	return contract{addr, code, event, pubK, sig, emSig}
 }
 
 type contract struct {
+	address     string
 	code        string
 	event       string
 	publicKey   string
 	signature   string
 	emSignature string
+}
+
+func (c contract) Address() string {
+	return c.address
 }
 
 func (c contract) Code() string {
@@ -45,23 +51,21 @@ func (c contract) EmitterSignature() string {
 }
 
 type EndorsedContract interface {
-	Address() string
 	Contract
 	Endorsement() mining.Endorsement
 }
 
 type endorsedContract struct {
-	address     string
 	c           Contract
 	endorsement mining.Endorsement
 }
 
-func NewEndorsedContract(address string, c Contract, end mining.Endorsement) EndorsedContract {
-	return endorsedContract{address, c, end}
+func NewEndorsedContract(c Contract, end mining.Endorsement) EndorsedContract {
+	return endorsedContract{c, end}
 }
 
 func (ec endorsedContract) Address() string {
-	return ec.address
+	return ec.c.Address()
 }
 
 func (ec endorsedContract) Code() string {

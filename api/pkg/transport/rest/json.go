@@ -40,17 +40,11 @@ type sharedKeys struct {
 }
 
 type contractCreationRequest struct {
+	Address      string `json:"address"`
 	Code         string `json:"code"`
 	Event        string `json:"event"`
 	PublicKey    string `json:"public_key"`
 	Signature    string `json:"signature"`
 	EmSig        string `json:"em_signature"`
 	ReqSignature string `json:"request_signature"`
-}
-
-type contractCreationResponse struct {
-	TransactionHash string `json:"transaction_hash"`
-	Address         string `json:"address"`
-	MasterPeerIP    string `json:"master_peer_ip"`
-	Signature       string `json:"signature"`
 }

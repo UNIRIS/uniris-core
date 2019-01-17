@@ -176,6 +176,7 @@ func (h hasher) HashAPIContract(c *api.Contract) (string, error) {
 
 func (h hasher) HashContract(c contract.Contract) (string, error) {
 	b, err := json.Marshal(contractJSON{
+		Address:          c.Address(),
 		Code:             c.Code(),
 		Event:            c.Event(),
 		PublicKey:        c.PublicKey(),

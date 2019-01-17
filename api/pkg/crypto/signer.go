@@ -11,6 +11,7 @@ import (
 	"errors"
 	"math/big"
 
+	api "github.com/uniris/uniris-core/api/pkg"
 	"github.com/uniris/uniris-core/api/pkg/adding"
 	"github.com/uniris/uniris-core/api/pkg/listing"
 )
@@ -22,17 +23,11 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-//Signer define methods to handle signatures
-type Signer interface {
-	adding.Signer
-	listing.SignatureVerifier
-}
-
 type signer struct {
 }
 
 //NewSigner create a new signer
-func NewSigner() Signer {
+func NewSigner() signer {
 	return signer{}
 }
 
@@ -64,7 +59,7 @@ func (s signer) VerifyAccountResultSignature(res listing.AccountResult, pubKey s
 	return verifySignature(pubKey, string(b), res.Signature())
 }
 
-func (s signer) VerifyCreationTransactionResultSignature(res adding.TransactionResult, pubKey string) error {
+func (s signer) VerifyCreationTransactionResultSignature(res api.TransactionResult, pubKey string) error {
 	b, err := json.Marshal(transactionResult{
 		MasterPeerIP:    res.MasterPeerIP(),
 		TransactionHash: res.TransactionHash(),
@@ -87,18 +82,6 @@ func (s signer) VerifyContractCreationRequestSignature(req adding.ContractCreati
 		return err
 	}
 	return verifySignature(pubKey, string(b), req.RequestSignature())
-}
-
-func (s signer) VerifyContractCreationResultSignature(res adding.ContractCreationResponse, pubKey string) error {
-	b, err := json.Marshal(contractCreationResponse{
-		TransactionHash: res.TransactionHash(),
-		Address:         res.Address(),
-		MasterPeerIP:    res.MasterPeerIP(),
-	})
-	if err != nil {
-		return err
-	}
-	return verifySignature(pubKey, string(b), res.Signature())
 }
 
 func (s signer) SignAccountCreationResult(res adding.AccountCreationResult, pvKey string) (adding.AccountCreationResult, error) {

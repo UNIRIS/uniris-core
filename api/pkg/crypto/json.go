@@ -30,17 +30,11 @@ type transactionResult struct {
 }
 
 type contractCreationRequest struct {
+	Address      string `json:"address"`
 	Code         string `json:"code"`
 	Event        string `json:"event"`
 	PublicKey    string `json:"public_key"`
 	Signature    string `json:"signature"`
 	EmSig        string `json:"em_signature"`
 	ReqSignature string `json:"request_signature,omitempty"`
-}
-
-type contractCreationResponse struct {
-	Address         string `json:"address"`
-	TransactionHash string `json:"transaction_hash"`
-	MasterPeerIP    string `json:"master_peer_ip"`
-	Signature       string `json:"signature,omitempty"`
 }

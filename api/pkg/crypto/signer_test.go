@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	api "github.com/uniris/uniris-core/api/pkg"
 	"github.com/uniris/uniris-core/api/pkg/adding"
 	"github.com/uniris/uniris-core/api/pkg/listing"
 )
@@ -27,8 +28,8 @@ func TestSignAccountCreationResult(t *testing.T) {
 	pvKey, _ := x509.MarshalECPrivateKey(key)
 	pubKey, _ := x509.MarshalPKIXPublicKey(key.Public())
 
-	txID := adding.NewTransactionResult("hash", "ip", "sig")
-	txKeychain := adding.NewTransactionResult("hash", "ip", "sig")
+	txID := api.NewTransactionResult("hash", "ip", "sig")
+	txKeychain := api.NewTransactionResult("hash", "ip", "sig")
 	txRes := adding.NewAccountCreationTransactionResult(txID, txKeychain)
 	res := adding.NewAccountCreationResult(txRes, "")
 	res, err := NewSigner().SignAccountCreationResult(res, hex.EncodeToString(pvKey))
@@ -96,7 +97,7 @@ func TestVerifyCreationResultSignature(t *testing.T) {
 		TransactionHash: "hash",
 	})
 	sig, _ := sign(hex.EncodeToString(pvKey), string(b))
-	res := adding.NewTransactionResult("hash", "ip", sig)
+	res := api.NewTransactionResult("hash", "ip", sig)
 
 	assert.Nil(t, NewSigner().VerifyCreationTransactionResultSignature(res, hex.EncodeToString(pubKey)))
 }

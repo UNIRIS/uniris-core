@@ -116,12 +116,14 @@ type accountSearchResult struct {
 }
 
 type contractWithoutSig struct {
+	Address   string `json:"address"`
 	Code      string `json:"code"`
 	Event     string `json:"event"`
 	PublicKey string `json":public_key"`
 }
 
 type contractJSON struct {
+	Address          string `json:"address"`
 	Code             string `json:"code"`
 	Event            string `json:"event"`
 	PublicKey        string `json:"public_key"`

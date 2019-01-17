@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	api "github.com/uniris/uniris-core/api/pkg"
 	"github.com/uniris/uniris-core/api/pkg/listing"
 )
 
@@ -49,8 +50,8 @@ func TestAddAccountInvalidSig(t *testing.T) {
 type mockClient struct{}
 
 func (c mockClient) AddAccount(AccountCreationRequest) (AccountCreationResult, error) {
-	txID := NewTransactionResult("transaction hash", "", "")
-	txKeychain := NewTransactionResult("transaction hash", "", "")
+	txID := api.NewTransactionResult("transaction hash", "", "")
+	txKeychain := api.NewTransactionResult("transaction hash", "", "")
 
 	res := NewAccountCreationTransactionResult(txID, txKeychain)
 	return NewAccountCreationResult(res, "sig"), nil
@@ -65,6 +66,10 @@ func (c mockClient) IsEmitterAuthorized(emPubKey string) error {
 		return nil
 	}
 	return listing.ErrUnauthorized
+}
+
+func (c mockClient) AddSmartContract(ContractCreationRequest) (api.TransactionResult, error) {
+	return api.NewTransactionResult("transaction hash", "", ""), nil
 }
 
 func (c mockClient) GetSharedKeys() (listing.SharedKeys, error) {
@@ -108,8 +113,8 @@ func (v mockSigVerifier) VerifyAccountResultSignature(res listing.AccountResult,
 func (v mockSigVerifier) SignAccountCreationResult(res AccountCreationResult, pvKey string) (AccountCreationResult, error) {
 	return NewAccountCreationResult(
 		NewAccountCreationTransactionResult(
-			NewTransactionResult("transaction hash", "ip", "sig"),
-			NewTransactionResult("transaction hash", "ip", "sig"),
+			api.NewTransactionResult("transaction hash", "ip", "sig"),
+			api.NewTransactionResult("transaction hash", "ip", "sig"),
 		), "sig",
 	), nil
 }
@@ -121,9 +126,13 @@ func (v mockSigVerifier) VerifyHashSignature(data string, pubKey string, sig str
 	return nil
 }
 
-func (v mockSigVerifier) VerifyCreationTransactionResultSignature(res TransactionResult, pubKey string) error {
+func (v mockSigVerifier) VerifyCreationTransactionResultSignature(res api.TransactionResult, pubKey string) error {
 	if v.isInvalid {
 		return errors.New("Invalid signature")
 	}
+	return nil
+}
+
+func (v mockSigVerifier) VerifyContractCreationRequestSignature(req ContractCreationRequest, key string) error {
 	return nil
 }

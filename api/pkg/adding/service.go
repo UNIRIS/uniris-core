@@ -1,19 +1,20 @@
 package adding
 
 import (
+	api "github.com/uniris/uniris-core/api/pkg"
 	"github.com/uniris/uniris-core/api/pkg/listing"
 )
 
 //Service defines methods to adding to the blockchain
 type Service interface {
 	AddAccount(AccountCreationRequest) (AccountCreationResult, error)
-	AddContract(ContractCreationRequest) (ContractCreationResponse, error)
+	AddContract(ContractCreationRequest) (api.TransactionResult, error)
 }
 
 //RobotClient define methods to interfact with the robot
 type RobotClient interface {
 	AddAccount(AccountCreationRequest) (AccountCreationResult, error)
-	AddSmartContract(ContractCreationRequest) (ContractCreationResponse, error)
+	AddSmartContract(ContractCreationRequest) (api.TransactionResult, error)
 }
 
 //Signer defines methods to handle signature
@@ -28,11 +29,9 @@ type signatureVerifier interface {
 	VerifyAccountCreationRequestSignature(req AccountCreationRequest, key string) error
 
 	//VerifyCreationTransactionResultSignature checks the signature of a creation transaction result
-	VerifyCreationTransactionResultSignature(res TransactionResult, pubKey string) error
+	VerifyCreationTransactionResultSignature(res api.TransactionResult, pubKey string) error
 
 	VerifyContractCreationRequestSignature(req ContractCreationRequest, key string) error
-
-	VerifyContractCreationResultSignature(res ContractCreationResponse, key string) error
 }
 
 type signatureBuilder interface {
@@ -81,7 +80,7 @@ func (s service) AddAccount(req AccountCreationRequest) (AccountCreationResult, 
 	return res, nil
 }
 
-func (s service) AddContract(req ContractCreationRequest) (ContractCreationResponse, error) {
+func (s service) AddContract(req ContractCreationRequest) (api.TransactionResult, error) {
 	keys, err := s.lister.GetSafeSharedKeys()
 	if err != nil {
 		return nil, err
@@ -95,7 +94,7 @@ func (s service) AddContract(req ContractCreationRequest) (ContractCreationRespo
 		return nil, err
 	}
 
-	if err := s.sig.VerifyContractCreationResultSignature(res, keys.RobotPublicKey()); err != nil {
+	if err := s.sig.VerifyCreationTransactionResultSignature(res, keys.RobotPublicKey()); err != nil {
 		return nil, err
 	}
 

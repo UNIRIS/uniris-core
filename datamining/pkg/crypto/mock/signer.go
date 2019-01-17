@@ -148,11 +148,6 @@ func (s mockSigner) SignCreationResult(res *api.CreationResult, pvKey string) er
 	return nil
 }
 
-func (s mockSigner) SignContractCreationResult(res *api.ContractCreationResponse, pvKey string) error {
-	res.Signature = "sig"
-	return nil
-}
-
 func (s mockSigner) SignContractLeadRequest(req *api.ContractLeadRequest, pvKey string) error {
 	req.SignatureRequest = "sig"
 	return nil

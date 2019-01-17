@@ -48,7 +48,6 @@ type Hasher interface {
 	lock.Hasher
 
 	HashAPIContract(*api.Contract) (string, error)
-	HashPublicKey(pubKey string) string
 	contract.Hasher
 }
 
@@ -164,8 +163,6 @@ type signatureBuilder interface {
 
 	//SignAccountResult create a signature of a account search using the shared robot private key
 	SignAccountSearchResult(res *api.AccountSearchResult, pvKey string) error
-
-	SignContractCreationResult(res *api.ContractCreationResponse, pvKey string) error
 
 	SignContractLeadRequest(req *api.ContractLeadRequest, pvKey string) error
 }

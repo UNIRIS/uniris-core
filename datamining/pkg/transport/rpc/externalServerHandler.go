@@ -390,7 +390,7 @@ func (h externalSrvHandler) LeadContractMining(ctx context.Context, req *api.Con
 		return nil, ErrInvalidSignature
 	}
 
-	contract := contract.New(req.Contract.Code, req.Contract.Event, req.Contract.PublicKey, req.Contract.Signature, req.Contract.EmitterSignature)
+	contract := contract.New(req.Contract.Address, req.Contract.Code, req.Contract.Event, req.Contract.PublicKey, req.Contract.Signature, req.Contract.EmitterSignature)
 
 	pp := make([]datamining.Peer, 0)
 	for _, p := range req.ValidatorPeerIPs {
@@ -409,7 +409,7 @@ func (h externalSrvHandler) ValidateContract(ctx context.Context, req *api.Contr
 		return nil, err
 	}
 
-	contract := contract.New(req.Contract.Code, req.Contract.Event, req.Contract.PublicKey, req.Contract.Signature, req.Contract.EmitterSignature)
+	contract := contract.New(req.Contract.Address, req.Contract.Code, req.Contract.Event, req.Contract.PublicKey, req.Contract.Signature, req.Contract.EmitterSignature)
 
 	valid, err := h.services.mining.Validate(req.TransactionHash, contract, mining.ContractTransaction)
 	if err != nil {
@@ -438,8 +438,8 @@ func (h externalSrvHandler) StoreContract(ctx context.Context, req *api.Contract
 		return nil, err
 	}
 
-	contract := contract.NewEndorsedContract(req.Contract.Address,
-		contract.New(req.Contract.Code, req.Contract.Event, req.Contract.PublicKey, req.Contract.Signature, req.Contract.EmitterSignature),
+	contract := contract.NewEndorsedContract(
+		contract.New(req.Contract.Address, req.Contract.Code, req.Contract.Event, req.Contract.PublicKey, req.Contract.Signature, req.Contract.EmitterSignature),
 		h.data.buildEndorsement(req.Endorsement))
 
 	if err := h.services.contractAdd.StoreEndorsedContract(contract); err != nil {

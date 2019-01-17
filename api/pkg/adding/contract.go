@@ -1,6 +1,7 @@
 package adding
 
 type ContractCreationRequest interface {
+	Address() string
 	Code() string
 	Event() string
 	PublicKey() string
@@ -9,11 +10,12 @@ type ContractCreationRequest interface {
 	RequestSignature() string
 }
 
-func NewContractCreationRequest(code, event, pubK, sig, emSig, reqSig string) ContractCreationRequest {
-	return contractCreationReq{code, event, pubK, sig, emSig, reqSig}
+func NewContractCreationRequest(addr, code, event, pubK, sig, emSig, reqSig string) ContractCreationRequest {
+	return contractCreationReq{addr, code, event, pubK, sig, emSig, reqSig}
 }
 
 type contractCreationReq struct {
+	address      string
 	code         string
 	event        string
 	publicKey    string
@@ -22,8 +24,8 @@ type contractCreationReq struct {
 	reqSignature string
 }
 
-func NewContractCreationResponse(txHash, addr, masterPeer, sig string) ContractCreationResponse {
-	return contractCreateRes{txHash, addr, masterPeer, sig}
+func (c contractCreationReq) Address() string {
+	return c.address
 }
 
 func (c contractCreationReq) Code() string {
@@ -48,32 +50,4 @@ func (c contractCreationReq) EmitterSignature() string {
 
 func (c contractCreationReq) RequestSignature() string {
 	return c.reqSignature
-}
-
-type ContractCreationResponse interface {
-	Address() string
-	TransactionResult
-}
-
-type contractCreateRes struct {
-	txHash       string
-	address      string
-	masterPeerIP string
-	signature    string
-}
-
-func (c contractCreateRes) Address() string {
-	return c.address
-}
-
-func (c contractCreateRes) TransactionHash() string {
-	return c.txHash
-}
-
-func (c contractCreateRes) MasterPeerIP() string {
-	return c.masterPeerIP
-}
-
-func (c contractCreateRes) Signature() string {
-	return c.signature
 }

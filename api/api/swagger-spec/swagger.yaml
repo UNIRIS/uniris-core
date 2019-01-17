@@ -306,12 +306,15 @@ definitions:
 
   SmartContractCreationForm:
     required:
+      - address
       - code
       - public_key
       - signature
       - em_signature
       - request_signature
     properties:
+      address:
+        type: string
       code:
         type: string
       event:
