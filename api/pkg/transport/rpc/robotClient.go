@@ -174,14 +174,7 @@ func (c robotClient) AddSmartContract(req adding.ContractCreationRequest) (api.T
 
 	client := proto.NewInternalClient(conn)
 	res, err := client.CreateContract(context.Background(), &proto.ContractCreationRequest{
-		Contract: &proto.Contract{
-			Address:          req.Address(),
-			Code:             req.Code(),
-			Event:            req.Event(),
-			PublicKey:        req.PublicKey(),
-			Signature:        req.Signature(),
-			EmitterSignature: req.Signature(),
-		},
+		EncryptedContract: req.EncryptedContract(),
 	})
 	if err != nil {
 		s, _ := status.FromError(err)

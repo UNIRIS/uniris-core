@@ -192,7 +192,7 @@ func createContract(a adding.Service) func(c *gin.Context) {
 			return
 		}
 
-		res, err := a.AddContract(adding.NewContractCreationRequest(req.Address, req.Code, req.Event, req.PublicKey, req.Signature, req.EmSig, req.ReqSignature))
+		res, err := a.AddContract(adding.NewContractCreationRequest(req.EncryptedContract, req.Signature))
 		if err != nil {
 			if err == crypto.ErrInvalidSignature {
 				e := createError(http.StatusBadRequest, err)

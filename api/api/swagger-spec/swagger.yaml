@@ -40,7 +40,31 @@ paths:
         "201":
           description: Success
           schema:
-            $ref: "#/definitions/SmartContractCreationResult"
+            $ref: "#/definitions/TransactionResult"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/Error"
+
+  /contract/{addr}/messages:
+    post:
+      tags:
+        - Smart contract
+      parameters:
+        - name: address
+          in: path
+          type: string
+          required: true
+        - name: message
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/SmartContractMessageCreationForm"
+      responses:
+        "201":
+          description: Success
+          schema:
+            $ref: "#/definitions/TransactionResult"
         default:
           description: Error
           schema:
@@ -254,6 +278,7 @@ definitions:
     required:
       - transaction_hash
       - master_peer_ip
+      - signature
     properties:
       transaction_hash:
         type: string
@@ -306,31 +331,11 @@ definitions:
 
   SmartContractCreationForm:
     required:
-      - address
-      - code
-      - public_key
+      - encrypted_contract
       - signature
-      - em_signature
-      - request_signature
     properties:
-      address:
-        type: string
-      code:
-        type: string
-      event:
-        type: string
-      public_key:
+      encrypted_contract:
         type: string
       signature:
         type: string
-      em_signature:
-        type: string
-      request_signature:
-        type: string
-
-  SmartContractCreationResult:
-    required:
-      - address
-    properties:
-      address:
-        type: string
+      

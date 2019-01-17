@@ -186,3 +186,12 @@ message ContractStorageRequest {
     Endorsement Endorsement = 2;
     string Signature = 3;
 }
+
+message Contract {
+    string Address = 1;
+    string Code = 2;
+    string Event = 3;
+    string PublicKey = 4;
+    string Signature = 5;
+    string EmitterSignature = 6;
+}

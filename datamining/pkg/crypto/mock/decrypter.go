@@ -1,8 +1,9 @@
 package mock
 
 import (
-	"github.com/uniris/uniris-core/datamining/pkg"
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
+	"github.com/uniris/uniris-core/datamining/pkg/contract"
 )
 
 type mockDecrypter struct{}
@@ -26,4 +27,8 @@ func (d mockDecrypter) DecryptID(data string, pvKey string) (account.ID, error) 
 	return account.NewID("hash", "", "", "", "", datamining.NewProposal(
 		datamining.NewProposedKeyPair("enc pv key", "pub key"),
 	), "id sig", "em sig"), nil
+}
+
+func (d mockDecrypter) DecryptContract(data string, pvKey string) (contract.Contract, error) {
+	return contract.New("addr", "", "", "", "", ""), nil
 }

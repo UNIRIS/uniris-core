@@ -228,7 +228,12 @@ func (s internalSrvHandler) GetTransactionStatus(ctx context.Context, req *api.T
 }
 
 func (s internalSrvHandler) CreateContract(ctx context.Context, req *api.ContractCreationRequest) (*api.CreationResult, error) {
-	txHash, err := s.crypto.hasher.HashAPIContract(req.Contract)
+	contract, err := s.crypto.decrypter.DecryptContract(req.EncryptedContract, s.conf.SharedKeys.Robot.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	txHash, err := s.crypto.hasher.HashContract(contract)
 	if err != nil {
 		return nil, err
 	}
@@ -242,8 +247,14 @@ func (s internalSrvHandler) CreateContract(ctx context.Context, req *api.Contrac
 		return nil, err
 	}
 
-	if err := s.extCli.LeadContractMining(master.IP.String(), txHash, req.Contract, validPool.Peers().IPs()); err != nil {
-		log.Print(err.Error())
+	if err := s.extCli.LeadContractMining(master.IP.String(), txHash, &api.Contract{
+		Address:          contract.Address(),
+		Code:             contract.Code(),
+		Event:            contract.Event(),
+		PublicKey:        contract.PublicKey(),
+		Signature:        contract.Signature(),
+		EmitterSignature: contract.EmitterSignature(),
+	}, validPool.Peers().IPs()); err != nil {
 		return nil, err
 	}
 

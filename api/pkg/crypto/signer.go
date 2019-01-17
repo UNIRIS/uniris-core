@@ -72,16 +72,12 @@ func (s signer) VerifyCreationTransactionResultSignature(res api.TransactionResu
 
 func (s signer) VerifyContractCreationRequestSignature(req adding.ContractCreationRequest, pubKey string) error {
 	b, err := json.Marshal(contractCreationRequest{
-		Code:      req.Code(),
-		Event:     req.Event(),
-		PublicKey: req.PublicKey(),
-		Signature: req.Signature(),
-		EmSig:     req.EmitterSignature(),
+		EncryptedContract: req.EncryptedContract(),
 	})
 	if err != nil {
 		return err
 	}
-	return verifySignature(pubKey, string(b), req.RequestSignature())
+	return verifySignature(pubKey, string(b), req.Signature())
 }
 
 func (s signer) SignAccountCreationResult(res adding.AccountCreationResult, pvKey string) (adding.AccountCreationResult, error) {

@@ -39,6 +39,8 @@ type Decrypter interface {
 
 	//DecryptID decrypt the account's ID using the shared robot private key
 	DecryptID(data string, pvKey string) (account.ID, error)
+
+	DecryptContract(data string, pvKey string) (contract.Contract, error)
 }
 
 //Hasher define methods to hash incoming data
@@ -46,8 +48,6 @@ type Hasher interface {
 	account.KeychainHasher
 	account.IDHasher
 	lock.Hasher
-
-	HashAPIContract(*api.Contract) (string, error)
 	contract.Hasher
 }
 

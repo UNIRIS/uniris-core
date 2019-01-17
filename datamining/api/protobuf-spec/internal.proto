@@ -61,5 +61,5 @@ message AuthorizationResponse {
 
 
 message ContractCreationRequest {
-    Contract Contract = 1;
+    string EncryptedContract = 1;
 }

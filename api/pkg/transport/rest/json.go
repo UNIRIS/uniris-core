@@ -40,11 +40,6 @@ type sharedKeys struct {
 }
 
 type contractCreationRequest struct {
-	Address      string `json:"address"`
-	Code         string `json:"code"`
-	Event        string `json:"event"`
-	PublicKey    string `json:"public_key"`
-	Signature    string `json:"signature"`
-	EmSig        string `json:"em_signature"`
-	ReqSignature string `json:"request_signature"`
+	EncryptedContract string `json:"encrypted_contract"`
+	Signature         string `json:"signature"`
 }

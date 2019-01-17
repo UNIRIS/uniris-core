@@ -5,12 +5,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"github.com/uniris/uniris-core/datamining/pkg"
+	"github.com/uniris/uniris-core/datamining/pkg/contract"
+
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 
-	"github.com/uniris/ecies/pkg"
+	ecies "github.com/uniris/ecies/pkg"
 )
 
 //Decrypter defines methods to handle decryption
@@ -81,6 +83,20 @@ func (d decrypter) DecryptKeychain(data string, pvKey string) (account.Keychain,
 		prop,
 		kc.IDSignature,
 		kc.EmitterSignature), nil
+}
+
+func (d decrypter) DecryptContract(data string, pvKey string) (contract.Contract, error) {
+	clear, err := decrypt(pvKey, data)
+	if err != nil {
+		return nil, err
+	}
+	var c contractJSON
+	err = json.Unmarshal([]byte(clear), &c)
+	if err != nil {
+		return nil, err
+	}
+
+	return contract.New(c.Address, c.Code, c.Event, c.PublicKey, c.Signature, c.EmitterSignature), nil
 }
 
 func decrypt(privk string, data string) (string, error) {

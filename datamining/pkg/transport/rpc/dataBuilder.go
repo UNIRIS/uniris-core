@@ -3,7 +3,7 @@ package rpc
 import (
 	"time"
 
-	"github.com/uniris/uniris-core/datamining/pkg"
+	datamining "github.com/uniris/uniris-core/datamining/pkg"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg/account"

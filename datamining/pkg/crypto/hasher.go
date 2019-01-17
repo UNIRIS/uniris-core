@@ -7,7 +7,6 @@ import (
 
 	"github.com/uniris/uniris-core/datamining/pkg/contract"
 
-	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 
 	"github.com/uniris/uniris-core/datamining/pkg/account"
@@ -166,14 +165,6 @@ func (h hasher) HashKeychain(kc account.Keychain) (string, error) {
 	return hashBytes(b), nil
 }
 
-func (h hasher) HashAPIContract(c *api.Contract) (string, error) {
-	b, err := json.Marshal(c)
-	if err != nil {
-		return "", err
-	}
-	return hashBytes(b), nil
-}
-
 func (h hasher) HashContract(c contract.Contract) (string, error) {
 	b, err := json.Marshal(contractJSON{
 		Address:          c.Address(),
@@ -228,10 +219,6 @@ func (h hasher) HashEndorsedContract(c contract.EndorsedContract) (string, error
 		return "", nil
 	}
 	return hashBytes(b), nil
-}
-
-func (h hasher) HashPublicKey(pubKey string) string {
-	return hashString(pubKey)
 }
 
 func hashString(data string) string {

@@ -18,11 +18,3 @@ message TransactionStatusResponse {
     }
 }
 
-message Contract {
-    string Address = 1;
-    string Code = 2;
-    string Event = 3;
-    string PublicKey = 4;
-    string Signature = 5;
-    string EmitterSignature = 6;
-}
