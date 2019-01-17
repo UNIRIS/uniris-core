@@ -3,6 +3,8 @@ package rpc
 import (
 	"errors"
 
+	"github.com/uniris/uniris-core/datamining/pkg/contract"
+
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
@@ -44,6 +46,10 @@ type Hasher interface {
 	account.KeychainHasher
 	account.IDHasher
 	lock.Hasher
+
+	HashAPIContract(*api.Contract) (string, error)
+	HashPublicKey(pubKey string) string
+	contract.Hasher
 }
 
 //Signer define methods to handle signatures
@@ -98,6 +104,12 @@ type signatureVerifier interface {
 
 	//VerifyIDResponseSignature checks the signature of a ID response using the shared robot public key
 	VerifyIDResponseSignature(pubKey string, res *api.IDResponse) error
+
+	VerifyContractLeadRequestSignature(pubKey string, req *api.ContractLeadRequest) error
+
+	VerifyContractStorageRequestSignature(pubKey string, req *api.ContractStorageRequest) error
+
+	VerifyContractValidationRequestSignature(pubKey string, req *api.ContractValidationRequest) error
 }
 
 type signatureBuilder interface {
@@ -152,4 +164,8 @@ type signatureBuilder interface {
 
 	//SignAccountResult create a signature of a account search using the shared robot private key
 	SignAccountSearchResult(res *api.AccountSearchResult, pvKey string) error
+
+	SignContractCreationResult(res *api.ContractCreationResponse, pvKey string) error
+
+	SignContractLeadRequest(req *api.ContractLeadRequest, pvKey string) error
 }

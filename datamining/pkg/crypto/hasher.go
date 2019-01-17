@@ -5,22 +5,18 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
+	"github.com/uniris/uniris-core/datamining/pkg/contract"
+
+	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 )
 
-//Hasher defines methods for hashing
-type Hasher interface {
-	account.KeychainHasher
-	account.IDHasher
-	lock.Hasher
-}
-
 type hasher struct{}
 
 //NewHasher creates new hasher
-func NewHasher() Hasher {
+func NewHasher() hasher {
 	return hasher{}
 }
 
@@ -168,6 +164,73 @@ func (h hasher) HashKeychain(kc account.Keychain) (string, error) {
 		return "", err
 	}
 	return hashBytes(b), nil
+}
+
+func (h hasher) HashAPIContract(c *api.Contract) (string, error) {
+	b, err := json.Marshal(c)
+	if err != nil {
+		return "", err
+	}
+	return hashBytes(b), nil
+}
+
+func (h hasher) HashContract(c contract.Contract) (string, error) {
+	b, err := json.Marshal(contractJSON{
+		Code:             c.Code(),
+		Event:            c.Event(),
+		PublicKey:        c.PublicKey(),
+		Signature:        c.Signature(),
+		EmitterSignature: c.EmitterSignature(),
+	})
+	if err != nil {
+		return "", nil
+	}
+	return hashBytes(b), nil
+}
+
+func (h hasher) HashEndorsedContract(c contract.EndorsedContract) (string, error) {
+
+	valids := make([]validation, 0)
+	for _, v := range c.Endorsement().Validations() {
+		valids = append(valids, validation{
+			Pubk:      v.PublicKey(),
+			Sig:       v.Signature(),
+			Status:    v.Status(),
+			Timestamp: v.Timestamp().Unix(),
+		})
+	}
+
+	b, err := json.Marshal(endorsedContractJSON{
+		Address:          c.Address(),
+		Code:             c.Code(),
+		Event:            c.Event(),
+		PublicKey:        c.PublicKey(),
+		Signature:        c.Signature(),
+		EmitterSignature: c.EmitterSignature(),
+		Endorsement: endorsement{
+			LastTxHash: c.Endorsement().LastTransactionHash(),
+			TxHash:     c.Endorsement().TransactionHash(),
+			MasterValidation: masterValidation{
+				LastTxRvk: c.Endorsement().MasterValidation().LastTransactionMiners(),
+				PowKey:    c.Endorsement().MasterValidation().ProofOfWorkKey(),
+				PowValid: validation{
+					Pubk:      c.Endorsement().MasterValidation().ProofOfWorkValidation().PublicKey(),
+					Sig:       c.Endorsement().MasterValidation().ProofOfWorkValidation().Signature(),
+					Status:    c.Endorsement().MasterValidation().ProofOfWorkValidation().Status(),
+					Timestamp: c.Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix(),
+				},
+			},
+			Validations: valids,
+		},
+	})
+	if err != nil {
+		return "", nil
+	}
+	return hashBytes(b), nil
+}
+
+func (h hasher) HashPublicKey(pubKey string) string {
+	return hashString(pubKey)
 }
 
 func hashString(data string) string {

@@ -6,6 +6,7 @@ import (
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	account_adding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
 	account_listing "github.com/uniris/uniris-core/datamining/pkg/account/listing"
+	"github.com/uniris/uniris-core/datamining/pkg/contract"
 	"github.com/uniris/uniris-core/datamining/pkg/emitter"
 	em_adding "github.com/uniris/uniris-core/datamining/pkg/emitter/adding"
 	em_listing "github.com/uniris/uniris-core/datamining/pkg/emitter/listing"
@@ -19,6 +20,8 @@ type Database interface {
 	em_listing.Repository
 	em_adding.Repository
 	lock.Repository
+	contract.AddingRepository
+	contract.ListingRepository
 }
 
 //NewDatabase create new mocked database
@@ -33,6 +36,7 @@ type mockDatabase struct {
 	KOKeychains []account.EndorsedKeychain
 	Locks       []lock.TransactionLock
 	SharedEmKP  []emitter.SharedKeyPair
+	Contracts   []contract.EndorsedContract
 }
 
 func (d mockDatabase) FindID(hash string) (account.EndorsedID, error) {
@@ -153,4 +157,24 @@ func (d mockDatabase) findLockPosition(txLock lock.TransactionLock) int {
 		}
 	}
 	return -1
+}
+
+func (d *mockDatabase) StoreEndorsedContract(c contract.EndorsedContract) error {
+	d.Contracts = append(d.Contracts, c)
+	return nil
+}
+
+func (d mockDatabase) FindLastContract(addr string) (contract.EndorsedContract, error) {
+	sort.Slice(d.Contracts, func(i, j int) bool {
+		iTimestamp := d.Contracts[i].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()
+		jTimestamp := d.Contracts[j].Endorsement().MasterValidation().ProofOfWorkValidation().Timestamp().Unix()
+		return iTimestamp > jTimestamp
+	})
+
+	for _, c := range d.Contracts {
+		if c.Address() == addr {
+			return c, nil
+		}
+	}
+	return nil, nil
 }

@@ -1,7 +1,9 @@
 package mock
 
 import (
+	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
+	"github.com/uniris/uniris-core/datamining/pkg/contract"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 )
 
@@ -28,4 +30,20 @@ func (h mockHasher) HashEndorsedID(account.EndorsedID) (string, error) {
 
 func (h mockHasher) HashLock(lock.TransactionLock) (string, error) {
 	return "hash", nil
+}
+
+func (h mockHasher) HashAPIContract(*api.Contract) (string, error) {
+	return "hash", nil
+}
+
+func (h mockHasher) HashEndorsedContract(contract.EndorsedContract) (string, error) {
+	return "hash", nil
+}
+
+func (h mockHasher) HashContract(contract.Contract) (string, error) {
+	return "hash", nil
+}
+
+func (h mockHasher) HashPublicKey(key string) string {
+	return "hash"
 }

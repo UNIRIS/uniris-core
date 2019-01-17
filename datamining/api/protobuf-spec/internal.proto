@@ -12,6 +12,7 @@ service Internal {
     rpc GetSharedKeys(google.protobuf.Empty) returns(SharedKeysResult) {}
     rpc IsEmitterAuthorized(AuthorizationRequest) returns (AuthorizationResponse) {}
     rpc GetTransactionStatus(TransactionStatusRequest) returns(TransactionStatusResponse) {}
+    rpc CreateContract(ContractCreationRequest) returns (ContractCreationResponse){}
 }
 
 message AccountSearchRequest {
@@ -56,4 +57,16 @@ message AuthorizationRequest {
 
 message AuthorizationResponse {
     bool Status = 1; 
+}
+
+
+message ContractCreationRequest {
+    Contract Contract = 1;
+}
+
+message ContractCreationResponse {
+    string TransactionHash = 1;
+    string Address = 2;
+    string MasterPeerIP = 3;
+    string Signature = 4;
 }

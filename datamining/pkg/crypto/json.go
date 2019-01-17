@@ -114,3 +114,27 @@ type accountSearchResult struct {
 	EncryptedWallet  string `json:"encrypted_wallet"`
 	EncryptedAddress string `json:"encrypted_address"`
 }
+
+type contractWithoutSig struct {
+	Code      string `json:"code"`
+	Event     string `json:"event"`
+	PublicKey string `json":public_key"`
+}
+
+type contractJSON struct {
+	Code             string `json:"code"`
+	Event            string `json:"event"`
+	PublicKey        string `json:"public_key"`
+	Signature        string `json:"signature"`
+	EmitterSignature string `json:"emitter_signature"`
+}
+
+type endorsedContractJSON struct {
+	Address          string      `json:"address"`
+	Code             string      `json:"code"`
+	Event            string      `json:"event"`
+	PublicKey        string      `json:"public_key"`
+	Signature        string      `json:"signature"`
+	EmitterSignature string      `json:"emitter_signature"`
+	Endorsement      endorsement `json:"endorsement"`
+}

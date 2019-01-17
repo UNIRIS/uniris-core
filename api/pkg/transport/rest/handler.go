@@ -27,6 +27,8 @@ func Handler(r *gin.Engine, l listing.Service, a adding.Service) {
 		api.HEAD("/account/:hash", checkAccount(l))
 		api.GET("/account/:hash", getAccount(l))
 		api.GET("/sharedkeys/:publicKey", getSharedKeys(l))
+
+		api.POST("/contract", createContract(a))
 	}
 }
 
@@ -176,6 +178,37 @@ func getTransactionStatus(l listing.Service) func(c *gin.Context) {
 			Status string `json:"status"`
 		}{
 			Status: status.String(),
+		})
+	}
+}
+
+func createContract(a adding.Service) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		var req contractCreationRequest
+
+		if err := c.ShouldBindJSON(&req); err != nil {
+			e := createError(http.StatusBadRequest, err)
+			c.JSON(e.Code, e)
+			return
+		}
+
+		res, err := a.AddContract(adding.NewContractCreationRequest(req.Code, req.Event, req.PublicKey, req.Signature, req.EmSig, req.ReqSignature))
+		if err != nil {
+			if err == crypto.ErrInvalidSignature {
+				e := createError(http.StatusBadRequest, err)
+				c.JSON(e.Code, e)
+				return
+			}
+			e := createError(http.StatusInternalServerError, err)
+			c.JSON(e.Code, e)
+			return
+		}
+
+		c.JSON(http.StatusCreated, contractCreationResponse{
+			TransactionHash: res.TransactionHash(),
+			Address:         res.Address(),
+			MasterPeerIP:    res.MasterPeerIP(),
+			Signature:       res.Signature(),
 		})
 	}
 }

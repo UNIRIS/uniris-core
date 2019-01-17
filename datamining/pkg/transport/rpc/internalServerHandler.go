@@ -226,3 +226,39 @@ func (s internalSrvHandler) GetTransactionStatus(ctx context.Context, req *api.T
 	return nil, nil
 
 }
+
+func (s internalSrvHandler) CreateContract(ctx context.Context, req *api.ContractCreationRequest) (*api.ContractCreationResponse, error) {
+	txHash, err := s.crypto.hasher.HashAPIContract(req.Contract)
+	if err != nil {
+		return nil, err
+	}
+
+	address := s.crypto.hasher.HashPublicKey(req.Contract.PublicKey)
+
+	master, err := s.aiClient.GetMasterPeer(txHash)
+	if err != nil {
+		return nil, err
+	}
+	validPool, err := s.aiClient.GetValidationPool(txHash)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Contract.Address = address
+	if err := s.extCli.LeadContractMining(master.IP.String(), txHash, req.Contract, validPool.Peers().IPs()); err != nil {
+		log.Print(err.Error())
+		return nil, err
+	}
+
+	res := &api.ContractCreationResponse{
+		Address:         address,
+		TransactionHash: txHash,
+		MasterPeerIP:    master.IP.String(),
+	}
+
+	if err := s.crypto.signer.SignContractCreationResult(res, s.conf.SharedKeys.Robot.PrivateKey); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}

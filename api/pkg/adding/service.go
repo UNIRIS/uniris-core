@@ -7,11 +7,13 @@ import (
 //Service defines methods to adding to the blockchain
 type Service interface {
 	AddAccount(AccountCreationRequest) (AccountCreationResult, error)
+	AddContract(ContractCreationRequest) (ContractCreationResponse, error)
 }
 
 //RobotClient define methods to interfact with the robot
 type RobotClient interface {
 	AddAccount(AccountCreationRequest) (AccountCreationResult, error)
+	AddSmartContract(ContractCreationRequest) (ContractCreationResponse, error)
 }
 
 //Signer defines methods to handle signature
@@ -27,6 +29,10 @@ type signatureVerifier interface {
 
 	//VerifyCreationTransactionResultSignature checks the signature of a creation transaction result
 	VerifyCreationTransactionResultSignature(res TransactionResult, pubKey string) error
+
+	VerifyContractCreationRequestSignature(req ContractCreationRequest, key string) error
+
+	VerifyContractCreationResultSignature(res ContractCreationResponse, key string) error
 }
 
 type signatureBuilder interface {
@@ -72,5 +78,26 @@ func (s service) AddAccount(req AccountCreationRequest) (AccountCreationResult, 
 	if err != nil {
 		return nil, err
 	}
+	return res, nil
+}
+
+func (s service) AddContract(req ContractCreationRequest) (ContractCreationResponse, error) {
+	keys, err := s.lister.GetSafeSharedKeys()
+	if err != nil {
+		return nil, err
+	}
+	if err := s.sig.VerifyContractCreationRequestSignature(req, keys.RequestPublicKey()); err != nil {
+		return nil, err
+	}
+
+	res, err := s.client.AddSmartContract(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.sig.VerifyContractCreationResultSignature(res, keys.RobotPublicKey()); err != nil {
+		return nil, err
+	}
+
 	return res, nil
 }

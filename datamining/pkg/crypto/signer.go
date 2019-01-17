@@ -12,28 +12,18 @@ import (
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
+	"github.com/uniris/uniris-core/datamining/pkg/contract"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
-	"github.com/uniris/uniris-core/datamining/pkg/transport/rpc"
 )
 
 type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-//Signer defines methods to handle signatures
-type Signer interface {
-	mining.PowSigVerifier
-	mining.ValidationVerifier
-	mining.ValidationSigner
-	account.KeychainSignatureVerifier
-	account.IDSignatureVerifier
-	rpc.Signer
-}
-
 type signer struct{}
 
 //NewSigner creates a new signer
-func NewSigner() Signer {
+func NewSigner() signer {
 	return signer{}
 }
 
@@ -517,6 +507,81 @@ func (s signer) SignCreationResult(res *api.CreationResult, pvKey string) error 
 		return err
 	}
 	res.Signature = sig
+	return nil
+}
+
+func (s signer) SignContractCreationResult(res *api.ContractCreationResponse, pvKey string) error {
+	b, err := json.Marshal(res)
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	res.Signature = sig
+	return nil
+}
+
+func (s signer) SignContractLeadRequest(req *api.ContractLeadRequest, pvKey string) error {
+	b, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	sig, err := sign(pvKey, string(b))
+	if err != nil {
+		return err
+	}
+	req.SignatureRequest = sig
+	return nil
+}
+
+func (s signer) VerifyContractLeadRequestSignature(pubKey string, req *api.ContractLeadRequest) error {
+	b, err := json.Marshal(&api.ContractLeadRequest{
+		Contract:         req.Contract,
+		TransactionHash:  req.TransactionHash,
+		ValidatorPeerIPs: req.ValidatorPeerIPs,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), req.SignatureRequest)
+}
+
+func (s signer) VerifyContractStorageRequestSignature(pubKey string, req *api.ContractStorageRequest) error {
+	b, err := json.Marshal(&api.ContractStorageRequest{
+		Contract:    req.Contract,
+		Endorsement: req.Endorsement,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), req.Signature)
+}
+
+func (s signer) VerifyContractValidationRequestSignature(pubKey string, req *api.ContractValidationRequest) error {
+	b, err := json.Marshal(&api.ContractValidationRequest{
+		Contract:        req.Contract,
+		TransactionHash: req.TransactionHash,
+	})
+	if err != nil {
+		return err
+	}
+	return checkSignature(pubKey, string(b), req.Signature)
+}
+
+func (s signer) VerifyContractSignature(c contract.Contract) error {
+	b, err := json.Marshal(contractWithoutSig{
+		Code:      c.Code(),
+		Event:     c.Event(),
+		PublicKey: c.PublicKey(),
+	})
+	if err != nil {
+		return err
+	}
+	if err := checkSignature(c.PublicKey(), string(b), c.Signature()); err != nil {
+		return err
+	}
 	return nil
 }
 

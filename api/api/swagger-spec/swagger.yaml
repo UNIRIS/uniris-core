@@ -26,6 +26,26 @@ tags:
 
 paths:
 
+  /contract:
+    post:
+      tags:
+        - Smart contracts
+      parameters:
+        - name: form
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/SmartContractCreationForm"
+      responses:
+        "201":
+          description: Success
+          schema:
+            $ref: "#/definitions/SmartContractCreationResult"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/Error"
+
   /transaction/{addr}/status/{hash}:
     get:
       tags:
@@ -283,3 +303,31 @@ definitions:
           - Success
           - Failure
           - Unknown
+
+  SmartContractCreationForm:
+    required:
+      - code
+      - public_key
+      - signature
+      - em_signature
+      - request_signature
+    properties:
+      code:
+        type: string
+      event:
+        type: string
+      public_key:
+        type: string
+      signature:
+        type: string
+      em_signature:
+        type: string
+      request_signature:
+        type: string
+
+  SmartContractCreationResult:
+    required:
+      - address
+    properties:
+      address:
+        type: string

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
@@ -67,4 +68,8 @@ func (c mockExtClient) RequestStorage(ip string, txType mining.TransactionType, 
 
 func (c mockExtClient) GetTransactionStatus(ip string, addr string, txHash string) (mining.TransactionStatus, error) {
 	return mining.TransactionSuccess, nil
+}
+
+func (c mockExtClient) LeadContractMining(ip string, txHash string, contract *api.Contract, validators []string) error {
+	return nil
 }

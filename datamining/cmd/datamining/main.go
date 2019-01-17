@@ -7,6 +7,8 @@ import (
 	"net"
 	"path/filepath"
 
+	"github.com/uniris/uniris-core/datamining/pkg/contract"
+
 	"github.com/uniris/uniris-core/datamining/pkg/emitter"
 
 	accountAdding "github.com/uniris/uniris-core/datamining/pkg/account/adding"
@@ -63,10 +65,13 @@ func main() {
 	lockSrv := lock.NewService(db)
 	accountLister := accountListing.NewService(db)
 	accountAdder := accountAdding.NewService(aiClient, db, accountLister, signer, hasher)
+	contractAdder := contract.NewAddingService(db)
+	contractLister := contract.NewListingService(db)
 
 	txMiners := map[mining.TransactionType]mining.TransactionMiner{
 		mining.KeychainTransaction: accountMining.NewKeychainMiner(signer, hasher, accountLister),
 		mining.IDTransaction:       accountMining.NewIDMiner(signer, hasher),
+		mining.ContractTransaction: contract.NewMiner(signer, hasher, contractLister),
 	}
 
 	miningSrv := mining.NewService(
@@ -91,7 +96,7 @@ func main() {
 	}()
 
 	//Starts Internal grpc server
-	rpcServices := rpc.NewExternalServices(lockSrv, miningSrv, accountAdder, accountLister)
+	rpcServices := rpc.NewExternalServices(lockSrv, miningSrv, accountAdder, accountLister, contractAdder)
 	externalHandler := rpc.NewExternalServerHandler(rpcServices, rpcCrypto, *config)
 	if err := startExternalServer(externalHandler, config.Services.Datamining.ExternalPort); err != nil {
 		log.Fatal(err)

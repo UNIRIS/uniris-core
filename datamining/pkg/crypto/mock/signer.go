@@ -147,3 +147,25 @@ func (s mockSigner) SignCreationResult(res *api.CreationResult, pvKey string) er
 	res.Signature = "sig"
 	return nil
 }
+
+func (s mockSigner) SignContractCreationResult(res *api.ContractCreationResponse, pvKey string) error {
+	res.Signature = "sig"
+	return nil
+}
+
+func (s mockSigner) SignContractLeadRequest(req *api.ContractLeadRequest, pvKey string) error {
+	req.SignatureRequest = "sig"
+	return nil
+}
+
+func (s mockSigner) VerifyContractLeadRequestSignature(pubKey string, req *api.ContractLeadRequest) error {
+	return nil
+}
+
+func (s mockSigner) VerifyContractStorageRequestSignature(pubKey string, req *api.ContractStorageRequest) error {
+	return nil
+}
+
+func (s mockSigner) VerifyContractValidationRequestSignature(pubKey string, req *api.ContractValidationRequest) error {
+	return nil
+}

@@ -8,6 +8,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	datamining "github.com/uniris/uniris-core/datamining/pkg"
 	"github.com/uniris/uniris-core/datamining/pkg/account"
+	"github.com/uniris/uniris-core/datamining/pkg/contract"
 	"github.com/uniris/uniris-core/datamining/pkg/mining"
 
 	"github.com/uniris/uniris-core/datamining/pkg/lock"
@@ -22,19 +23,21 @@ import (
 
 //Services define the required services
 type Services struct {
-	lock      lock.Service
-	mining    mining.Service
-	accAdd    accAdding.Service
-	accLister accListing.Service
+	lock        lock.Service
+	mining      mining.Service
+	accAdd      accAdding.Service
+	accLister   accListing.Service
+	contractAdd contract.AddingService
 }
 
 //NewExternalServices creates a new container of required services
-func NewExternalServices(lock lock.Service, mine mining.Service, accountAdder accAdding.Service, accountLister accListing.Service) Services {
+func NewExternalServices(lock lock.Service, mine mining.Service, accountAdder accAdding.Service, accountLister accListing.Service, contractAdder contract.AddingService) Services {
 	return Services{
-		lock:      lock,
-		mining:    mine,
-		accAdd:    accountAdder,
-		accLister: accountLister,
+		lock:        lock,
+		mining:      mine,
+		accAdd:      accountAdder,
+		accLister:   accountLister,
+		contractAdd: contractAdder,
 	}
 }
 
@@ -380,4 +383,79 @@ func (h externalSrvHandler) GetTransactionStatus(ctx context.Context, req *api.T
 	return &api.TransactionStatusResponse{
 		Status: api.TransactionStatusResponse_Unknown,
 	}, nil
+}
+
+func (h externalSrvHandler) LeadContractMining(ctx context.Context, req *api.ContractLeadRequest) (*empty.Empty, error) {
+	if err := h.crypto.signer.VerifyContractLeadRequestSignature(h.conf.SharedKeys.Robot.PublicKey, req); err != nil {
+		return nil, ErrInvalidSignature
+	}
+
+	contract := contract.New(req.Contract.Code, req.Contract.Event, req.Contract.PublicKey, req.Contract.Signature, req.Contract.EmitterSignature)
+
+	pp := make([]datamining.Peer, 0)
+	for _, p := range req.ValidatorPeerIPs {
+		pp = append(pp, datamining.Peer{IP: net.ParseIP(p)})
+	}
+	vPool := datamining.NewPool(pp...)
+	if err := h.services.mining.LeadMining(req.TransactionHash, req.Contract.Address, contract, vPool, mining.ContractTransaction, req.Contract.EmitterSignature); err != nil {
+		return nil, err
+	}
+
+	return &empty.Empty{}, nil
+}
+
+func (h externalSrvHandler) ValidateContract(ctx context.Context, req *api.ContractValidationRequest) (*api.ValidationResponse, error) {
+	if err := h.crypto.signer.VerifyContractValidationRequestSignature(h.conf.SharedKeys.Robot.PublicKey, req); err != nil {
+		return nil, err
+	}
+
+	contract := contract.New(req.Contract.Code, req.Contract.Event, req.Contract.PublicKey, req.Contract.Signature, req.Contract.EmitterSignature)
+
+	valid, err := h.services.mining.Validate(req.TransactionHash, contract, mining.ContractTransaction)
+	if err != nil {
+		return nil, err
+	}
+
+	vRes := &api.Validation{
+		PublicKey: valid.PublicKey(),
+		Signature: valid.Signature(),
+		Status:    api.Validation_ValidationStatus(valid.Status()),
+		Timestamp: valid.Timestamp().Unix(),
+	}
+
+	res := &api.ValidationResponse{
+		Validation: vRes,
+	}
+	if err := h.crypto.signer.SignValidationResponse(res, h.conf.SharedKeys.Robot.PrivateKey); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (h externalSrvHandler) StoreContract(ctx context.Context, req *api.ContractStorageRequest) (*api.StorageAck, error) {
+	if err := h.crypto.signer.VerifyContractStorageRequestSignature(h.conf.SharedKeys.Robot.PublicKey, req); err != nil {
+		return nil, err
+	}
+
+	contract := contract.NewEndorsedContract(req.Contract.Address,
+		contract.New(req.Contract.Code, req.Contract.Event, req.Contract.PublicKey, req.Contract.Signature, req.Contract.EmitterSignature),
+		h.data.buildEndorsement(req.Endorsement))
+
+	if err := h.services.contractAdd.StoreEndorsedContract(contract); err != nil {
+		return nil, err
+	}
+
+	hash, err := h.crypto.hasher.HashEndorsedContract(contract)
+	if err != nil {
+		return nil, err
+	}
+
+	ack := &api.StorageAck{
+		StorageHash: hash,
+	}
+	if err := h.crypto.signer.SignStorageAck(ack, h.conf.SharedKeys.Robot.PrivateKey); err != nil {
+		return nil, err
+	}
+	return ack, nil
 }

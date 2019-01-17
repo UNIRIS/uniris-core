@@ -45,6 +45,8 @@ const (
 
 	//IDTransaction represents transaction related to ID data
 	IDTransaction TransactionType = 1
+
+	ContractTransaction TransactionType = 2
 )
 
 //TransactionMiner define methods a transaction miner must define

@@ -161,3 +161,30 @@ func (c robotClient) GetTransactionStatus(addr string, txHash string) (listing.T
 
 	return listing.TransactionStatus(res.Status), nil
 }
+
+func (c robotClient) AddSmartContract(req adding.ContractCreationRequest) (adding.ContractCreationResponse, error) {
+	serverAddr := fmt.Sprintf("localhost:%d", c.conf.Services.Datamining.InternalPort)
+	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+	defer conn.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	client := api.NewInternalClient(conn)
+	res, err := client.CreateContract(context.Background(), &api.ContractCreationRequest{
+		Contract: &api.Contract{
+			Code:             req.Code(),
+			Event:            req.Event(),
+			PublicKey:        req.PublicKey(),
+			Signature:        req.Signature(),
+			EmitterSignature: req.Signature(),
+		},
+	})
+	if err != nil {
+		s, _ := status.FromError(err)
+		return nil, errors.New(s.Message())
+	}
+
+	return adding.NewContractCreationResponse(res.TransactionHash, res.Address, res.MasterPeerIP, res.Signature), nil
+}

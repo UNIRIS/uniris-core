@@ -25,6 +25,10 @@ service External {
     rpc StoreID(IDStorageRequest) returns (StorageAck) {}
 
     rpc GetTransactionStatus(TransactionStatusRequest) returns (TransactionStatusResponse) {}
+
+    rpc LeadContractMining(ContractLeadRequest) returns (google.protobuf.Empty){}
+    rpc ValidateContract(ContractValidationRequest) returns (ValidationResponse) {}
+    rpc StoreContract(ContractStorageRequest) returns (StorageAck) {}
 }
 
 message LockAck {
@@ -161,4 +165,24 @@ message Proposal {
 message KeyPairProposal {
     string EncryptedPrivateKey = 1;
     string PublicKey = 2;
+}
+
+
+message ContractLeadRequest {
+    string TransactionHash = 1;
+    repeated string ValidatorPeerIPs = 2;
+    Contract Contract = 3;
+    string SignatureRequest = 4;
+}
+
+message ContractValidationRequest {
+    string TransactionHash = 1;
+    Contract Contract = 2;
+    string Signature = 3;
+}
+
+message ContractStorageRequest {
+    Contract Contract = 1;
+    Endorsement Endorsement = 2;
+    string Signature = 3;
 }
