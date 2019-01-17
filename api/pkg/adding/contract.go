@@ -23,23 +23,17 @@ func (c contractCreationReq) Signature() string {
 }
 
 type ContractMessageCreationRequest interface {
-	ContractAddress() string
 	EncryptedMessage() string
 	Signature() string
 }
 
 type contractMsg struct {
-	contractAddress string
-	msg             string
-	sig             string
+	msg string
+	sig string
 }
 
-func NewContractMessageCreationRequest(contractAddress, msg, sig string) ContractMessageCreationRequest {
-	return contractMsg{contractAddress, msg, sig}
-}
-
-func (m contractMsg) ContractAddress() string {
-	return m.contractAddress
+func NewContractMessageCreationRequest(msg, sig string) ContractMessageCreationRequest {
+	return contractMsg{msg, sig}
 }
 
 func (m contractMsg) EncryptedMessage() string {

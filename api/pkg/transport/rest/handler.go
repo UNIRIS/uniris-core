@@ -29,8 +29,8 @@ func Handler(r *gin.Engine, l listing.Service, a adding.Service) {
 		api.GET("/sharedkeys/:publicKey", getSharedKeys(l))
 
 		api.POST("/contract", createContract(a))
-		api.POST("/contract/:addr/message", createContractMessage(a))
-		api.GET("/contract/:addr/call/:method", getContractState(l))
+		api.POST("/contract/message", createContractMessage(a))
+		api.GET("/contract/:addr/state", getContractState(l))
 	}
 }
 
@@ -217,8 +217,6 @@ func createContract(a adding.Service) func(c *gin.Context) {
 func createContractMessage(a adding.Service) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
-		address := c.Param("addr")
-
 		var req contractMessageRequest
 
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -227,7 +225,7 @@ func createContractMessage(a adding.Service) func(c *gin.Context) {
 			return
 		}
 
-		res, err := a.AddContractMessage(adding.NewContractMessageCreationRequest(address, req.EncryptedMessage, req.Signature))
+		res, err := a.AddContractMessage(adding.NewContractMessageCreationRequest(req.EncryptedMessage, req.Signature))
 		if err != nil {
 			if err == crypto.ErrInvalidSignature {
 				e := createError(http.StatusBadRequest, err)

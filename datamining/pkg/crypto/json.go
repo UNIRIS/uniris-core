@@ -150,14 +150,6 @@ type contractMessage struct {
 	EmitterSignature string   `json:"emitter_signature"`
 }
 
-type contractMessageWithoutAddress struct {
-	Method           string   `json:"method"`
-	Parameters       []string `json:"parameters"`
-	PublicKey        string   `json:"public_key"`
-	Signature        string   `json:"signature"`
-	EmitterSignature string   `json:"emitter_signature"`
-}
-
 type contractMessageWithSig struct {
 	Method     string   `json:"method"`
 	Parameters []string `json:"parameters"`

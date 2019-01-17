@@ -67,5 +67,4 @@ message ContractCreationRequest {
 
 message ContractMessageCreationRequest {
     string EncryptedMessage = 1;
-    string ContractAddress = 2;
 }

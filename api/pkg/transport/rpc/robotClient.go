@@ -196,7 +196,6 @@ func (c robotClient) AddContractMessage(req adding.ContractMessageCreationReques
 	client := proto.NewInternalClient(conn)
 	res, err := client.CreateContractMessage(context.Background(), &proto.ContractMessageCreationRequest{
 		EncryptedMessage: req.EncryptedMessage(),
-		ContractAddress:  req.ContractAddress(),
 	})
 	if err != nil {
 		s, _ := status.FromError(err)

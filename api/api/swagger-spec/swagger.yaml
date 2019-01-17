@@ -51,18 +51,13 @@ paths:
           schema:
             $ref: "#/definitions/Error"
 
-  /contract/{addr}/message:
+  /contract/message:
     post:
       tags:
         - Smart contracts
       summary: Creation smart contract's message
       description: Create a smart contract's message transaction including smart contract method and parameters
       parameters:
-        - name: address
-          in: path
-          type: string
-          required: true
-          description: Smart contract address
         - name: message
           in: body
           required: true

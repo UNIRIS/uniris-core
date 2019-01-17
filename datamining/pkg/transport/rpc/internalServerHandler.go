@@ -291,7 +291,7 @@ func (s internalSrvHandler) CreateContractMessage(ctx context.Context, req *api.
 	}
 
 	if err := s.extCli.LeadContractMessageMining(master.IP.String(), txHash, &api.ContractMessage{
-		ContractAddress:  req.ContractAddress,
+		ContractAddress:  message.ContractAddress(),
 		Method:           message.Method(),
 		Parameters:       message.Parameters(),
 		PublicKey:        message.PublicKey(),

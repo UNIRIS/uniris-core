@@ -104,13 +104,13 @@ func (d decrypter) DecryptContractMessage(data string, pvKey string) (contract.M
 	if err != nil {
 		return nil, err
 	}
-	var c contractMessageWithoutAddress
+	var c contractMessage
 	err = json.Unmarshal([]byte(clear), &c)
 	if err != nil {
 		return nil, err
 	}
 
-	return contract.NewMessage("", c.Method, c.Parameters, c.PublicKey, c.Signature, c.EmitterSignature), nil
+	return contract.NewMessage(c.ContractAddress, c.Method, c.Parameters, c.PublicKey, c.Signature, c.EmitterSignature), nil
 }
 
 func decrypt(privk string, data string) (string, error) {
