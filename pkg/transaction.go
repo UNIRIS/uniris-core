@@ -5,89 +5,191 @@ import (
 	"time"
 )
 
-//TransactionVerifier defines methods to verify transaction signatures
+//TransactionVerifier defines methods to verify Transaction signatures
 type TransactionVerifier interface {
-	VerifyTransactionSignature(tx Transaction, pubKey string, sig string) (bool, error)
+	VerifyTransactionSignature(mv Transaction, pubKey string, sig string) (bool, error)
 	VerifyValidationSignature(v MinerValidation) (bool, error)
 }
 
-//TransactionHasher defines methods to hash transaction
+//TransactionHasher defines methods to hash Transaction
 type TransactionHasher interface {
-	HashTransaction(tx Transaction) (string, error)
+	HashTransaction(mv Transaction) (string, error)
 }
+
+//TransactionStatus represents the status for the transaction
+type TransactionStatus int
+
+const (
+	//UnknownTransaction define a transaction as unknown (the transaction hash is invalid)
+	UnknownTransaction TransactionStatus = 0
+
+	//PendingTransaction define a transaction in pending. (mining has not been finished)
+	PendingTransaction TransactionStatus = 2
+
+	//SuccessTransaction define a transaction in success (mining and storage succeed)
+	SuccessTransaction TransactionStatus = 1
+
+	//FailureTransaction define a transaction in failure (mining failed due to an invalid transaction/signatures)
+	FailureTransaction TransactionStatus = 3
+)
 
 //TransactionType represents the Transaction type
 type TransactionType int
 
 const (
-	//KeychainTransactionType represents Transaction related to keychain
+	//KeychainTransactionType represents a Transaction related to keychain
 	KeychainTransactionType TransactionType = 0
 
-	//IDTransactionType represents Transaction related to ID data
+	//IDTransactionType represents a Transaction related to ID data
 	IDTransactionType TransactionType = 1
+
+	//ContractTransactionType represents a Transaction related to a smart contract
+	ContractTransactionType TransactionType = 2
+
+	//ContractMessageTransactionType represents a Transaction related to a smart contract message
+	ContractMessageTransactionType TransactionType = 3
 )
 
-//Transaction describe a transaction
+//Transaction describe a root Transaction
 type Transaction struct {
-	idPubKey            string
-	idSig               string
-	emSig               string
-	prop                Proposal
-	txHash              string
-	previousTransaction *Transaction
-	mining              TransactionMining
+	address       string
+	txType        TransactionType
+	data          string
+	timestamp     time.Time
+	pubKey        string
+	sig           string
+	emSig         string
+	prop          Proposal
+	txHash        string
+	prevTx        *Transaction
+	masterV       MasterValidation
+	confirmValids []MinerValidation
 }
 
-//IDPublicKey returns transaction's ID public key
-func (t Transaction) IDPublicKey() string {
-	return t.idPubKey
+//NewTransactionBase creates a basic transaction
+func NewTransactionBase(addr string, txType TransactionType, data string, timestamp time.Time, pubK string, sig string, emSig string, prop Proposal, txHash string) Transaction {
+	return Transaction{
+		address:   addr,
+		txType:    txType,
+		data:      data,
+		timestamp: timestamp,
+		pubKey:    pubK,
+		sig:       sig,
+		emSig:     emSig,
+		prop:      prop,
+		txHash:    txHash,
+	}
 }
 
-//IDSignature returns transaction's ID signature
-func (t Transaction) IDSignature() string {
-	return t.idSig
+//NewChainedTransaction creates a transaction chained to another
+func NewChainedTransaction(tx Transaction, prevTx Transaction) Transaction {
+	return Transaction{
+		address:   tx.address,
+		txType:    tx.txType,
+		data:      tx.data,
+		timestamp: tx.timestamp,
+		pubKey:    tx.pubKey,
+		sig:       tx.sig,
+		emSig:     tx.emSig,
+		prop:      tx.prop,
+		txHash:    tx.txHash,
+		prevTx:    &prevTx,
+	}
 }
 
-//Proposal returns transaction's proposal
-func (t Transaction) Proposal() Proposal {
-	return t.prop
+//NewMinedTransaction creates a mined transaction
+func NewMinedTransaction(tx Transaction, masterV MasterValidation, confirms []MinerValidation) Transaction {
+	return Transaction{
+		address:       tx.address,
+		txType:        tx.txType,
+		data:          tx.data,
+		timestamp:     tx.timestamp,
+		pubKey:        tx.pubKey,
+		sig:           tx.sig,
+		emSig:         tx.emSig,
+		prop:          tx.prop,
+		txHash:        tx.txHash,
+		prevTx:        tx.prevTx,
+		masterV:       masterV,
+		confirmValids: confirms,
+	}
 }
 
-//EmitterSignature returns transaction's emitter signature (use to perform POW)
+//Address returns the Transaction's address (use for the sharding and identify the owner of the Transaction)
+func (t Transaction) Address() string {
+	return t.address
+}
+
+//Type returns the type of the Transaction
+func (t Transaction) Type() TransactionType {
+	return t.txType
+}
+
+//Data returns Transaction's data
+func (t Transaction) Data() string {
+	return t.data
+}
+
+//Timestamp returns the Transaction sending timestamp
+func (t Transaction) Timestamp() time.Time {
+	return t.timestamp
+}
+
+//PublicKey returns Transaction's public key
+func (t Transaction) PublicKey() string {
+	return t.pubKey
+}
+
+//Signature returns Transaction's signature
+func (t Transaction) Signature() string {
+	return t.sig
+}
+
+//EmitterSignature returns Transaction's client signature (use to perform POW)
 func (t Transaction) EmitterSignature() string {
 	return t.emSig
 }
 
-//TransactionHash returns the transaction's hash
+//Proposal returns Transaction's proposal
+func (t Transaction) Proposal() Proposal {
+	return t.prop
+}
+
+//TransactionHash returns the Transaction's hash
 func (t Transaction) TransactionHash() string {
 	return t.txHash
 }
 
-//PreviousTransaction returns the previous (chained) transaction
+//PreviousTransaction returns the previous (chained) Transaction
 func (t Transaction) PreviousTransaction() *Transaction {
-	if t.previousTransaction != nil {
-		return t.previousTransaction
+	if t.prevTx != nil {
+		return t.prevTx
 	}
 	return nil
 }
 
-//Mining returns the mining of the Transaction
-func (t Transaction) Mining() TransactionMining {
-	return t.mining
+//MasterValidation returns the Transaction validation performed by the master peer (including the Proof of Work)
+func (t Transaction) MasterValidation() MasterValidation {
+	return t.masterV
 }
 
-//CheckChainTransactionIntegrity insure the transaction chain integrity
-func (t Transaction) CheckChainTransactionIntegrity(h TransactionHasher, tv TransactionVerifier) error {
-	if t.PreviousTransaction() != nil {
-		if t.PreviousTransaction().TransactionHash() == "" {
+//ConfirmationsValidations returns the Transaction confirmation validations performed by the validation pool
+func (t Transaction) ConfirmationsValidations() []MinerValidation {
+	return t.confirmValids
+}
+
+//CheckChainTransactionIntegrity insure the Transaction chain integrity
+func (t *Transaction) CheckChainTransactionIntegrity(h TransactionHasher, tv TransactionVerifier) error {
+	if t.prevTx != nil {
+		if t.prevTx.TransactionHash() == "" {
 			return errors.New("Transaction integrity violated")
 		}
-		return t.previousTransaction.CheckChainTransactionIntegrity(h, tv)
+		return t.prevTx.CheckChainTransactionIntegrity(h, tv)
 	}
 	return t.CheckTransactionIntegrity(h, tv)
 }
 
-//CheckTransactionIntegrity insure the transaction integrity
+//CheckTransactionIntegrity insure the Transaction integrity
 func (t Transaction) CheckTransactionIntegrity(h TransactionHasher, tv TransactionVerifier) error {
 	hash, err := h.HashTransaction(t)
 	if err != nil {
@@ -97,7 +199,7 @@ func (t Transaction) CheckTransactionIntegrity(h TransactionHasher, tv Transacti
 		return errors.New("Transaction integrity violated")
 	}
 
-	ok, err := tv.VerifyTransactionSignature(t, t.IDPublicKey(), t.IDSignature())
+	ok, err := tv.VerifyTransactionSignature(t, t.PublicKey(), t.Signature())
 	if err != nil {
 		return err
 	}
@@ -110,7 +212,11 @@ func (t Transaction) CheckTransactionIntegrity(h TransactionHasher, tv Transacti
 
 //CheckProofOfWork ensures the proof of work is valid
 func (t Transaction) CheckProofOfWork(tv TransactionVerifier) error {
-	ok, err := tv.VerifyTransactionSignature(t, t.mining.pow, t.emSig)
+	if t.MasterValidation().ProofOfWork() == "" || t.MasterValidation().Validation() == (MinerValidation{}) {
+		return errors.New("Missing master validation")
+	}
+
+	ok, err := tv.VerifyTransactionSignature(t, t.MasterValidation().ProofOfWork(), t.emSig)
 	if err != nil {
 		return err
 	}
@@ -120,12 +226,12 @@ func (t Transaction) CheckProofOfWork(tv TransactionVerifier) error {
 	return nil
 }
 
-//IsKO determinates is the transaction is KO (plan to be in the KO storage)
+//IsKO determinates is the Transaction is KO (plan to be in the KO storage)
 func (t Transaction) IsKO() bool {
-	if t.mining.masterValidation.status == ValidationKO {
+	if t.masterV.Validation().Status() == ValidationKO {
 		return true
 	}
-	for _, v := range t.mining.validations {
+	for _, v := range t.confirmValids {
 		if v.Status() == ValidationKO {
 			return true
 		}
@@ -133,50 +239,38 @@ func (t Transaction) IsKO() bool {
 	return false
 }
 
-//AddMining include the transaction mining
-func (t *Transaction) AddMining(mining TransactionMining) {
-	t.mining = mining
+//MasterValidation describe the master Transaction validation
+type MasterValidation struct {
+	prevMiners []string
+	pow        string
+	validation MinerValidation
 }
 
-//TransactionMining describe the mining of a Transaction
-type TransactionMining struct {
-	prevMiners       []string
-	pow              string
-	masterValidation MinerValidation
-	validations      []MinerValidation
-}
-
-//NewTransactionMining creates a new Transaction mining
-func NewTransactionMining(prevMiners []string, pow string, masterV MinerValidation, valids []MinerValidation) TransactionMining {
-	return TransactionMining{
-		prevMiners:       prevMiners,
-		pow:              pow,
-		masterValidation: masterV,
-		validations:      valids,
+//NewMasterValidation creates a new master Transaction validation
+func NewMasterValidation(prevMiners []string, pow string, valid MinerValidation) MasterValidation {
+	return MasterValidation{
+		prevMiners: prevMiners,
+		pow:        pow,
+		validation: valid,
 	}
 }
 
-//PreviousTransactionMiners returns the miners for the previous transaction
-func (tx TransactionMining) PreviousTransactionMiners() []string {
-	return tx.prevMiners
+//PreviousTransactionMiners returns the miners for the previous Transaction
+func (mv MasterValidation) PreviousTransactionMiners() []string {
+	return mv.prevMiners
 }
 
-//ProofOfWork returns the transaction proof of work (emitter public key) validated the emitter signature
-func (tx TransactionMining) ProofOfWork() string {
-	return tx.pow
+//ProofOfWork returns the Transaction proof of work (emitter public key) validated the emitter signature
+func (mv MasterValidation) ProofOfWork() string {
+	return mv.pow
 }
 
-//MasterValidation returns the validation performed by the master peer
-func (tx TransactionMining) MasterValidation() MinerValidation {
-	return tx.masterValidation
+//Validation returns the mining performed by the master peer
+func (mv MasterValidation) Validation() MinerValidation {
+	return mv.Validation()
 }
 
-//Validations returns the validations performed by the validation pool
-func (tx TransactionMining) Validations() []MinerValidation {
-	return tx.validations
-}
-
-//MinerValidation represents a transaction validation made by a miner
+//MinerValidation represents a Transaction validation made by a miner
 type MinerValidation struct {
 	status    ValidationStatus
 	timestamp time.Time

@@ -17,7 +17,7 @@ type PoolRequester interface {
 	RequestTransactionUnlock(pool Pool, txHash string, address string) error
 
 	//RequestTransactionValidations asks a pool to validation a transaction
-	RequestTransactionValidations(pool Pool, tx uniris.Transaction, validChan chan<- uniris.MinerValidation)
+	RequestTransactionValidations(pool Pool, tx uniris.Transaction, validChan chan<- uniris.MinerValidation, replyChan chan<- bool)
 
 	//RequestTransactionStorage asks a pool to store a transaction
 	RequestTransactionStorage(pool Pool, tx uniris.Transaction, ackChan chan<- bool)

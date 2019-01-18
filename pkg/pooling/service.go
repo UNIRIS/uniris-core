@@ -40,7 +40,7 @@ func (s Service) FindLastValidationPool(address string) (p Pool, err error) {
 	lastPool := Pool{
 		peers: make([]string, 0),
 	}
-	for _, miner := range tx.Mining().PreviousTransactionMiners() {
+	for _, miner := range tx.MasterValidation().PreviousTransactionMiners() {
 		lastPool.peers = append(lastPool.peers, miner)
 	}
 

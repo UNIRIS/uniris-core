@@ -11,14 +11,12 @@ import (
 //Repository define methods to handle storage
 type Repository interface {
 
-	//StoreKeychain persists the keychain
-	StoreKeychain(uniris.Keychain) error
-
-	//StoreID persists theID
-	StoreID(uniris.ID) error
-
 	//StoreSharedEmitterKeyPair stores a shared emitter keypair
 	StoreSharedEmitterKeyPair(kp uniris.SharedKeys) error
+
+	StoreKeychain(kc uniris.Keychain) error
+	StoreID(id uniris.ID) error
+	StoreKO(tx uniris.Transaction) error
 }
 
 //Service handle data storing
@@ -34,44 +32,27 @@ func (s Service) StoreSharedEmitterKeyPair(kp uniris.SharedKeys) error {
 	return s.repo.StoreSharedEmitterKeyPair(kp)
 }
 
-//StoreKeychain handles keychain transaction storage
-func (s Service) StoreKeychain(kc uniris.Keychain) error {
-	if err := s.checkTransactionBeforeStorage(kc.Transaction); err != nil {
+//StoreTransaction handles the transaction storage
+//
+//It ensures the miner has the authorized to store the transaction
+//It checks the transaction validations (master and confirmations)
+//It's building the transaction chain and verify its integrity
+//Then finally store in the right database
+func (s Service) StoreTransaction(tx uniris.Transaction) error {
+	if err := s.checkTransactionBeforeStorage(tx); err != nil {
 		return err
 	}
 
 	//Check integrity of the keychain
-	prevKc, err := s.lister.GetLastKeychain(kc.Address())
+	chainedTx, err := s.getChainedTransaction(tx)
 	if err != nil {
 		return err
 	}
-	kc.Chain(prevKc)
-	if err := kc.CheckChainTransactionIntegrity(s.txHasher, s.txVerif); err != nil {
+	if err := chainedTx.CheckChainTransactionIntegrity(s.txHasher, s.txVerif); err != nil {
 		return err
 	}
 
-	if kc.Transaction.IsKO() {
-		//TODO: store on the ko database
-	}
-
-	return s.repo.StoreKeychain(kc)
-}
-
-//StoreID handles ID transaction storage
-func (s Service) StoreID(id uniris.ID) error {
-	if err := s.checkTransactionBeforeStorage(id.Transaction); err != nil {
-		return err
-	}
-
-	if err := id.CheckTransactionIntegrity(s.txHasher, s.txVerif); err != nil {
-		return err
-	}
-
-	if id.Transaction.IsKO() {
-		//TODO: store on the ko database
-	}
-
-	return s.repo.StoreID(id)
+	return s.storeTransaction(tx)
 }
 
 func (s Service) checkTransactionBeforeStorage(tx uniris.Transaction) error {
@@ -80,7 +61,7 @@ func (s Service) checkTransactionBeforeStorage(tx uniris.Transaction) error {
 	}
 
 	minValid := inspecting.GetMinimumTransactionValidation(tx.TransactionHash())
-	if len(tx.Mining().Validations()) < minValid {
+	if len(tx.ConfirmationsValidations()) < minValid {
 		return errors.New("Invalid number of validations")
 	}
 
@@ -88,13 +69,57 @@ func (s Service) checkTransactionBeforeStorage(tx uniris.Transaction) error {
 		return err
 	}
 
-	if err := tx.Mining().MasterValidation().CheckValidation(s.txVerif); err != nil {
+	if err := tx.MasterValidation().Validation().CheckValidation(s.txVerif); err != nil {
 		return err
 	}
 
-	for _, v := range tx.Mining().Validations() {
+	for _, v := range tx.ConfirmationsValidations() {
 		if err := v.CheckValidation(s.txVerif); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func (s Service) getChainedTransaction(tx uniris.Transaction) (chainedTx uniris.Transaction, err error) {
+	prev, err := s.lister.GetPreviousTransaction(tx.Address(), tx.Type())
+	if err != nil {
+		return
+	}
+	if prev == nil {
+		return tx, nil
+	}
+
+	prevTx, err := s.getChainedTransaction(*prev)
+	if err != nil {
+		return chainedTx, err
+	}
+
+	return uniris.NewChainedTransaction(tx, prevTx), nil
+}
+
+func (s Service) storeTransaction(tx uniris.Transaction) error {
+	if tx.IsKO() {
+		return s.repo.StoreKO(tx)
+	}
+
+	switch tx.Type() {
+	case uniris.KeychainTransactionType:
+		{
+			kc, err := uniris.NewKeychain(tx)
+			if err != nil {
+				return err
+			}
+			return s.repo.StoreKeychain(kc)
+		}
+	case uniris.IDTransactionType:
+		{
+			id, err := uniris.NewID(tx)
+			if err != nil {
+				return err
+			}
+			return s.repo.StoreID(id)
 		}
 	}
 
