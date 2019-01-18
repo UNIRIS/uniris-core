@@ -31,7 +31,7 @@ func NewService(repo Repository) Service {
 //LockTransaction performs a lock on a transaction
 //
 //If a lock exist, ErrLockExisting error is returned
-func (s Service) LockTransaction(txHash string, addr string) error {
+func (s Service) LockTransaction(txHash string, addr string, masterPeer string) error {
 	exist, err := s.ContainsTransactionLock(txHash, addr)
 	if err != nil {
 		return err
