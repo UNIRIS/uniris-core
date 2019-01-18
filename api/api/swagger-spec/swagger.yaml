@@ -81,7 +81,7 @@ paths:
       summary: Get the smart contract state
       description: Compute smart contract messages to get the state
       parameters:
-        - name: address
+        - name: addr
           in: path
           type: string
           required: true

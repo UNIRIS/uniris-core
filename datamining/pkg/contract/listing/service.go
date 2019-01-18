@@ -1,6 +1,7 @@
 package contract
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -50,6 +51,10 @@ func (s listService) GetContractState(addr string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if contract == nil {
+		return "", errors.New("Unknown contract")
+	}
+
 	messages, err := s.repo.FindMessagesByContract(addr)
 	if err != nil {
 		return "", err
