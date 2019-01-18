@@ -145,7 +145,7 @@ func (s service) GetContractState(contractAddress string) (ContractState, error)
 	if err != nil {
 		return nil, err
 	}
-	if err := s.sig.VerifyContractStateSignature(state, keys.RequestPublicKey()); err != nil {
+	if err := s.sig.VerifyContractStateSignature(state, keys.RobotPublicKey()); err != nil {
 		return nil, err
 	}
 

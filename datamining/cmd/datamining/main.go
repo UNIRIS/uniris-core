@@ -66,8 +66,8 @@ func main() {
 	lockSrv := lock.NewService(db)
 	accountLister := accountListing.NewService(db)
 	accountAdder := accountAdding.NewService(aiClient, db, accountLister, signer, hasher)
-	contractAdder := contractAdding.NewService(db)
 	contractLister := contractListing.NewService(db)
+	contractAdder := contractAdding.NewService(db, contractLister)
 
 	txMiners := map[mining.TransactionType]mining.TransactionMiner{
 		mining.KeychainTransaction:        accountMining.NewKeychainMiner(signer, hasher, accountLister),

@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"log"
 	"math/big"
 
 	api "github.com/uniris/uniris-core/datamining/api/protobuf-spec"
@@ -727,6 +728,7 @@ func (s signer) VerifyContractStateSignature(pubKey string, res *api.ContractSta
 	b, err := json.Marshal(&api.ContractStateResponse{
 		Data: res.Data,
 	})
+	log.Print(string(b))
 	if err != nil {
 		return err
 	}

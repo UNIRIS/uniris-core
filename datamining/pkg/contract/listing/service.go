@@ -22,6 +22,7 @@ type Service interface {
 	GetContractState(addr string) (string, error)
 	GetContractByAddressAndTransaction(addr string, hash string) (contract.EndorsedContract, error)
 	GetContractMessageByContractAndTransaction(addr string, hash string) (contract.EndorsedMessage, error)
+	GetContractMessages(addr string) ([]contract.EndorsedMessage, error)
 }
 
 type listService struct {
@@ -38,6 +39,10 @@ func (s listService) GetLastContract(addr string) (contract.EndorsedContract, er
 
 func (s listService) GetLastContractMessage(addr string) (contract.EndorsedMessage, error) {
 	return s.repo.FindLastContractMessage(addr)
+}
+
+func (s listService) GetContractMessages(addr string) ([]contract.EndorsedMessage, error) {
+	return s.repo.FindMessagesByContract(addr)
 }
 
 func (s listService) GetContractState(addr string) (string, error) {
@@ -58,8 +63,6 @@ func (s listService) GetContractState(addr string) (string, error) {
 	}
 
 	for _, m := range messages {
-		env.Set("messagePublicKey", m.PublicKey())
-
 		params := strings.Join(m.Parameters(), ",")
 		_, err := uniris.Interpret(fmt.Sprintf("%v(%v)", m.Method(), params), env)
 		if err != nil {

@@ -40,5 +40,5 @@ type contractMessageCreationRequest struct {
 }
 
 type contractState struct {
-	Data string `json:"data"`
+	Data string `json:"Data"`
 }
