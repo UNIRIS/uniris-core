@@ -9,3 +9,7 @@ func IsAuthorizedToStoreTx(txHash string) bool {
 func GetMinimumTransactionValidation(txHash string) int {
 	return 1
 }
+
+func FindTransactionMasterPeer(txHash string) string {
+	return "127.0.0.1"
+}

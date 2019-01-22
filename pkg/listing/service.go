@@ -20,6 +20,9 @@ type Repository interface {
 
 	FindIDByHash(txHash string) (*uniris.ID, error)
 	FindIDByAddress(addr string) (*uniris.ID, error)
+
+	//ContainsLocks determines if a lock exists or not
+	ContainsLock(uniris.Lock) (bool, error)
 }
 
 //Service handles data retreiving
@@ -30,6 +33,25 @@ type Service struct {
 //NewService creates a new service to retrieve data
 func NewService(repo Repository) Service {
 	return Service{repo}
+}
+
+//ContainsTransactionLock determines if a transaction lock exists
+func (s Service) ContainsTransactionLock(l uniris.Lock) (bool, error) {
+	ok, err := s.repo.ContainsLock(l)
+	if err != nil {
+		return false, err
+	}
+	return ok, nil
+}
+
+//GetID gets an ID from its address
+func (s Service) GetID(addr string) (*uniris.ID, error) {
+	return s.repo.FindIDByAddress(addr)
+}
+
+//GetKeychain gets a keychain based on its address
+func (s Service) GetKeychain(addr string) (*uniris.Keychain, error) {
+	return s.repo.FindKeychainByAddress(addr)
 }
 
 //ListSharedEmitterKeyPairs get the shared emitter key pairs
@@ -45,7 +67,6 @@ func (s Service) IsEmitterAuthorized(emPubKey string) (bool, error) {
 
 //GetPreviousTransaction retrieve the previous keychain from a given account's address
 func (s Service) GetPreviousTransaction(addr string, txType uniris.TransactionType) (tx *uniris.Transaction, err error) {
-
 	return nil, nil
 }
 

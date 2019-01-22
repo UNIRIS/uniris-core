@@ -17,6 +17,12 @@ type Repository interface {
 	StoreKeychain(kc uniris.Keychain) error
 	StoreID(id uniris.ID) error
 	StoreKO(tx uniris.Transaction) error
+
+	//StoreLock stores a lock
+	StoreLock(l uniris.Lock) error
+
+	//RemoveLock remove an existing lock
+	RemoveLock(l uniris.Lock) error
 }
 
 //Service handle data storing
@@ -25,6 +31,43 @@ type Service struct {
 	lister   listing.Service
 	txVerif  uniris.TransactionVerifier
 	txHasher uniris.TransactionHasher
+}
+
+//NewService creates a new data storage service
+func NewService(r Repository, l listing.Service, txV uniris.TransactionVerifier, txH uniris.TransactionHasher) Service {
+	return Service{
+		repo:     r,
+		lister:   l,
+		txHasher: txH,
+		txVerif:  txV,
+	}
+}
+
+//StoreLock performs a lock on a transaction
+//
+//If a lock exist, ErrLockExisting error is returned
+func (s Service) StoreLock(l uniris.Lock) error {
+	exist, err := s.lister.ContainsTransactionLock(l)
+	if err != nil {
+		return err
+	}
+	if exist {
+		return errors.New("A lock already exist for this transaction")
+	}
+	s.repo.StoreLock(l)
+	return nil
+}
+
+//RemoveLock performs a unlock on a transaction
+func (s Service) RemoveLock(l uniris.Lock) error {
+	exist, err := s.lister.ContainsTransactionLock(l)
+	if err != nil {
+		return err
+	}
+	if exist {
+		return s.repo.RemoveLock(l)
+	}
+	return nil
 }
 
 //StoreSharedEmitterKeyPair handles emitter shared key storage

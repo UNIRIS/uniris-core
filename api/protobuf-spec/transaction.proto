@@ -39,17 +39,16 @@ message LockRequest {
 
 message LockResponse {
     int64 timestamp = 1;
-    string lock_hash = 2;
-    string signature_response = 3;
+    string signature_response = 2;
+}
+
+enum TransactionType {
+    KEYCHAIN = 0;
+    ID = 1;
+    CONTRACT_CREATION = 2;
 }
 
 message Transaction {
-    enum TransactionType {
-        KEYCHAIN = 0;
-        ID = 1;
-        CONTRACT_CREATION = 2;
-    }
-
     string address = 1;
     TransactionType type = 2;
     string data = 3;
@@ -79,8 +78,7 @@ message PreValidationRequest {
 
 message PreValidationResponse {
     int64 timestamp = 1;
-    string pre_validation_hash = 2;
-    string signature_response = 3;
+    string signature_response = 2;
 }
 
 message ConfirmValidationRequest {
@@ -128,6 +126,5 @@ message StoreRequest {
 
 message StoreResponse {
     int64 timestamp = 1;
-    string mined_transaction_hash = 2;
-    string signature_response = 3;
+    string signature_response = 2;
 }

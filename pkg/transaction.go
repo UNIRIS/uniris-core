@@ -7,13 +7,13 @@ import (
 
 //TransactionVerifier defines methods to verify Transaction signatures
 type TransactionVerifier interface {
-	VerifyTransactionSignature(mv Transaction, pubKey string, sig string) (bool, error)
+	VerifyTransactionSignature(tx Transaction, pubKey string, sig string) (bool, error)
 	VerifyValidationSignature(v MinerValidation) (bool, error)
 }
 
 //TransactionHasher defines methods to hash Transaction
 type TransactionHasher interface {
-	HashTransaction(mv Transaction) (string, error)
+	HashTransaction(tx Transaction) (string, error)
 }
 
 //TransactionStatus represents the status for the transaction

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	uniris "github.com/uniris/uniris-core/pkg"
-	"github.com/uniris/uniris-core/pkg/locking"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/adding"
@@ -15,96 +14,128 @@ import (
 )
 
 type transactionSrv struct {
-	adder  adding.Service
-	lister listing.Service
-	miner  mining.Service
-	locker locking.Service
+	adder        adding.Service
+	lister       listing.Service
+	miner        mining.Service
+	sigHandler   SignatureHandler
+	sharedPubKey string
+	sharedPvKey  string
 }
 
 //NewTransactionServer creates a new GRPC transaction server
-func NewTransactionServer() api.TransactionServiceServer {
-	return transactionSrv{}
+func NewTransactionServer(a adding.Service, l listing.Service, m mining.Service, sigHandler SignatureHandler, sharedPubk, sharedPvk string) api.TransactionServiceServer {
+	return transactionSrv{
+		adder:        a,
+		lister:       l,
+		miner:        m,
+		sigHandler:   sigHandler,
+		sharedPubKey: sharedPubk,
+		sharedPvKey:  sharedPvk,
+	}
 }
 
 func (s transactionSrv) GetTransactionStatus(ctx context.Context, req *api.TransactionStatusRequest) (*api.TransactionStatusResponse, error) {
 	fmt.Printf("GET TRANSACTION STATUS REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	//TODO: verify signature request
+	if err := s.sigHandler.VerifyTransactionStatusRequestSignature(req, s.sharedPubKey); err != nil {
+		return nil, err
+	}
 
 	status, err := s.lister.GetTransactionStatus(req.TransactionHash)
 	if err != nil {
 		return nil, err
 	}
 
-	return &api.TransactionStatusResponse{
-		Status:            api.TransactionStatusResponse_TransactionStatus(status),
-		Timestamp:         time.Now().Unix(),
-		SignatureResponse: "", //TODO
-	}, nil
+	res := &api.TransactionStatusResponse{
+		Status:    api.TransactionStatusResponse_TransactionStatus(status),
+		Timestamp: time.Now().Unix(),
+	}
+	if err := s.sigHandler.SignTransactionStatusResponse(res, s.sharedPvKey); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (s transactionSrv) LockTransaction(ctx context.Context, req *api.LockRequest) (*api.LockResponse, error) {
 	fmt.Printf("LOCK TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	//TODO: verify signature request
-
-	if err := s.locker.LockTransaction(req.TransactionHash, req.Address, req.MasterPeerIp); err != nil {
+	if err := s.sigHandler.VerifyLockRequestSignature(req, s.sharedPubKey); err != nil {
 		return nil, err
 	}
 
-	return &api.LockResponse{
-		LockHash:          "", //TODO
-		Timestamp:         time.Now().Unix(),
-		SignatureResponse: "", //TODO
-	}, nil
+	if err := s.adder.StoreLock(uniris.NewLock(req.TransactionHash, req.Address, req.MasterPeerIp)); err != nil {
+		return nil, err
+	}
+
+	res := &api.LockResponse{
+		Timestamp: time.Now().Unix(),
+	}
+	if err := s.sigHandler.SignLockResponse(res, s.sharedPvKey); err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func (s transactionSrv) PreValidateTransaction(ctx context.Context, req *api.PreValidationRequest) (*api.PreValidationResponse, error) {
 	fmt.Printf("PRE VALIDATE TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	//TODO: verify signature request
+	if err := s.sigHandler.VerifyPreValidateRequestSignature(req, s.sharedPubKey); err != nil {
+		return nil, err
+	}
 
 	s.miner.LeadTransactionValidation(formatTransaction(req.Transaction), int(req.MinimumValidations))
 
-	return &api.PreValidationResponse{
-		PreValidationHash: "", //TODO
-		Timestamp:         time.Now().Unix(),
-		SignatureResponse: "", //TODO
-	}, nil
+	res := &api.PreValidationResponse{
+		Timestamp: time.Now().Unix(),
+	}
+	if err := s.sigHandler.SignPreValidationResponse(res, s.sharedPvKey); err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func (s transactionSrv) ConfirmTransactionValidation(ctx context.Context, req *api.ConfirmValidationRequest) (*api.ConfirmValidationResponse, error) {
 	fmt.Printf("CONFIRM VALIDATION TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	//TODO: verify signature request
+	if err := s.sigHandler.VerifyConfirmValidationRequestSignature(req, s.sharedPubKey); err != nil {
+		return nil, err
+	}
 
 	valid, err := s.miner.ConfirmTransactionValidation(formatMinedTransaction(req.Transaction, req.MasterValidation, nil))
 	if err != nil {
 		return nil, err
 	}
 
-	return &api.ConfirmValidationResponse{
-		Validation:        formatAPIValidation(valid),
-		Timestamp:         time.Now().Unix(),
-		SignatureResponse: "", //TODO
-	}, nil
+	res := &api.ConfirmValidationResponse{
+		Validation: formatAPIValidation(valid),
+		Timestamp:  time.Now().Unix(),
+	}
+	if err := s.sigHandler.SignConfirmValidationResponse(res, s.sharedPvKey); err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func (s transactionSrv) StoreTransaction(ctx context.Context, req *api.StoreRequest) (*api.StoreResponse, error) {
 	fmt.Printf("STORE TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	//TODO: verify signature request
+	if err := s.sigHandler.VerifyStoreRequest(req, s.sharedPubKey); err != nil {
+		return nil, err
+	}
 
 	tx := formatMinedTransaction(req.MinedTransaction.Transaction, req.MinedTransaction.MasterValidation, req.MinedTransaction.ConfirmValidations)
 	if err := s.adder.StoreTransaction(tx); err != nil {
 		return nil, err
 	}
 
-	return &api.StoreResponse{
-		MinedTransactionHash: "", //TODO
-		SignatureResponse:    "", //TODO
-		Timestamp:            time.Now().Unix(),
-	}, nil
+	res := &api.StoreResponse{
+		Timestamp: time.Now().Unix(),
+	}
+	if err := s.sigHandler.SignStoreResponse(res, s.sharedPvKey); err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func formatTransaction(tx *api.Transaction) uniris.Transaction {

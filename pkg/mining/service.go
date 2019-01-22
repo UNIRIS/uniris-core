@@ -30,6 +30,19 @@ type Service struct {
 	hasher      uniris.TransactionHasher
 }
 
+//NewService creates a new mining service
+func NewService(pool pooling.Service, pR pooling.PoolRequester, l listing.Service, sig Signer, txV uniris.TransactionVerifier, txH uniris.TransactionHasher, minerPubK string) Service {
+	return Service{
+		pooler:      pool,
+		poolR:       pR,
+		lister:      l,
+		signer:      sig,
+		txVerifier:  txV,
+		hasher:      txH,
+		minerPubKey: minerPubK,
+	}
+}
+
 //LeadTransactionValidation validate the transaction as a master peer and lead the mining workflow
 //
 //The workflow includes:

@@ -1,8 +1,6 @@
 package adding
 
-import (
-	"github.com/uniris/uniris-core/api/pkg/listing"
-)
+import "github.com/uniris/uniris-core/old/api/pkg/listing"
 
 //Service defines methods to adding to the blockchain
 type Service interface {

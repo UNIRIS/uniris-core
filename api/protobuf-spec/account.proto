@@ -3,19 +3,32 @@ syntax = "proto3";
 package api;
 
 service AccountService {
-    rpc GetAccount(GetAccountRequest) returns (GetAccountResponse);
+    rpc GetKeychain(KeychainRequest) returns (KeychainResponse);
+    rpc GetID(IDRequest) returns (IDResponse);
 }
 
-message GetAccountRequest {
-    string encrypted_id_address = 1;
+message KeychainRequest {
+    string encrypted_address = 1;
     int64 timestamp = 2;
     string signature_request = 3;
 }
 
-message GetAccountResponse {
+message KeychainResponse {
     string encrypted_wallet = 1;
-    string encrypted_aes_key = 2;
-    string account_hash = 3;
-    int64 timestamp = 4;
-    string signature_response = 5;
+    int64 timestamp = 2;
+    string signature_response = 3;
 }
+
+message IDRequest {
+    string encrypted_address = 1;
+    int64 timestamp = 2;
+    string signature_request = 3;
+}
+
+message IDResponse {
+    string encrypted_aes_key = 1;
+    string encrypted_keychain_address = 2;
+    int64 timestamp = 3;
+    string signature_response = 4;
+}
+

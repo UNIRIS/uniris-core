@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+import "transaction.proto";
+
+package api;
+
+service InternalService {
+    rpc HandleTransaction(IncomingTransaction) returns(TransactionResult);
+    rpc GetTransactionStatus(TransactionStatusRequest) returns (TransactionStatusResponse);
+    rpc GetAccount(GetAccountRequest) returns (GetAccountResponse);
+}
+
+message IncomingTransaction {
+    string encrypted_transaction = 1;
+    int64 timestamp = 2;
+    TransactionType type = 3;
+}
+
+message TransactionResult {
+    string transaction_hash = 1;
+    string master_peer_ip = 2;
+    int64 timestamp = 3;
+    string signature = 4;
+}
+
+message GetAccountRequest {
+    string encrypted_id_address = 1;
+    int64 timestamp = 2;
+    string signature_request = 3;
+}
+
+message GetAccountResponse {
+    string encrypted_wallet = 1;
+    string encrypted_aes_key = 2;
+    int64 timestamp = 3;
+    string signature_response = 4;
+}

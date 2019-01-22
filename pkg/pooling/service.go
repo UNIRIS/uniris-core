@@ -15,6 +15,10 @@ func (p Pool) Peers() []string {
 	return p.peers
 }
 
+func NewService(req PoolRequester) Service {
+	return Service{req}
+}
+
 //FindStoragePool searches a storage pool for the given address
 func (s Service) FindStoragePool(address string) (Pool, error) {
 	//TODO: Implements AI lookups to identify the right storage pool
