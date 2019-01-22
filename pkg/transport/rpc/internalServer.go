@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/inspecting"
 	"github.com/uniris/uniris-core/pkg/pooling"
 	"google.golang.org/grpc"
@@ -18,19 +19,16 @@ import (
 type internalSrv struct {
 	lister          listing.Service
 	pooler          pooling.Service
-	decrypt         Decrypter
-	hasher          Hasher
-	sigHandler      SignatureHandler
 	sharedRobotPubK string
 	sharedRobotPvk  string
 }
 
 //NewInternalServer creates a new GRPC internal server
-func NewInternalServer(l listing.Service, p pooling.Service, d Decrypter) api.InternalServiceServer {
+func NewInternalServer(l listing.Service, p pooling.Service) api.InternalServiceServer {
 	return internalSrv{
-		lister:  l,
-		decrypt: d,
+		lister: l,
 	}
+
 }
 
 func (s internalSrv) GetTransactionStatus(ctx context.Context, req *api.TransactionStatusRequest) (*api.TransactionStatusResponse, error) {
@@ -54,7 +52,15 @@ func (s internalSrv) GetTransactionStatus(ctx context.Context, req *api.Transact
 	}
 
 	fmt.Printf("GET TRANSACTION STATUS RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
-	if err := s.sigHandler.VerifyTransactionStatusResponseSignature(res, s.sharedRobotPubK); err != nil {
+	resBytes, err := json.Marshal(&api.TransactionStatusResponse{
+		Status:    res.Status,
+		Timestamp: res.Timestamp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := crypto.VerifySignature(string(resBytes), s.sharedRobotPubK, res.SignatureResponse); err != nil {
 		return nil, err
 	}
 
@@ -66,17 +72,17 @@ func (s internalSrv) HandleTransaction(ctx context.Context, req *api.IncomingTra
 
 	//TODO: check emitter is authorized
 
-	txJSON, err := s.decrypt.DecryptString(req.EncryptedTransaction, s.sharedRobotPvk)
+	txJSON, err := crypto.Decrypt(req.EncryptedTransaction, s.sharedRobotPvk)
 	if err != nil {
 		return nil, err
 	}
+	txHash := crypto.HashString(txJSON)
 
 	var txRaw transaction
 	if err := json.Unmarshal([]byte(txJSON), &txRaw); err != nil {
 		return nil, err
 	}
 
-	txHash := s.hasher.HashString(txJSON)
 	masterPeerIP := inspecting.FindTransactionMasterPeer(txHash)
 	minValidations := inspecting.GetMinimumTransactionValidation(txHash)
 	preValidReq := formatPreValidationRequest(txRaw, int(req.Type), txHash, minValidations)
@@ -99,20 +105,32 @@ func (s internalSrv) HandleTransaction(ctx context.Context, req *api.IncomingTra
 		Timestamp:       time.Now().Unix(),
 		TransactionHash: txHash,
 	}
-	if err := s.sigHandler.SignTransactionResult(txRes, s.sharedRobotPvk); err != nil {
+	txResBytes, err := json.Marshal(txRes)
+	if err != nil {
 		return nil, err
 	}
+	sig, err := crypto.Sign(string(txResBytes), s.sharedRobotPvk)
+	if err != nil {
+		return nil, err
+	}
+
+	txRes.Signature = sig
 	return txRes, nil
 }
 
 func (s internalSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest) (*api.GetAccountResponse, error) {
 	fmt.Printf("GET ACCOUNT REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	if err := s.sigHandler.VerifyAccountRequestSignature(req, s.sharedRobotPubK); err != nil {
+	reqBytes, err := json.Marshal(&api.GetAccountRequest{
+		EncryptedIdAddress: req.EncryptedIdAddress,
+		Timestamp:          req.Timestamp,
+	})
+	if err != nil {
 		return nil, err
 	}
-
-	//TODO: check emitter is authorized
+	if err := crypto.VerifySignature(string(reqBytes), s.sharedRobotPubK, req.SignatureRequest); err != nil {
+		return nil, err
+	}
 
 	id, err := s.getID(req.EncryptedIdAddress)
 	if err != nil {
@@ -129,15 +147,21 @@ func (s internalSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest)
 		EncryptedWallet: keychain.EncryptedWallet,
 		Timestamp:       time.Now().Unix(),
 	}
-	if err := s.sigHandler.SignAccountResponse(res, s.sharedRobotPvk); err != nil {
+	resBytes, err := json.Marshal(res)
+	if err != nil {
 		return nil, err
 	}
 
+	sig, err := crypto.Sign(string(resBytes), s.sharedRobotPvk)
+	if err != nil {
+		return nil, err
+	}
+	res.SignatureResponse = sig
 	return res, nil
 }
 
 func (s internalSrv) getID(idAddress string) (*api.IDResponse, error) {
-	address, err := s.decrypt.DecryptString(idAddress, s.sharedRobotPvk)
+	address, err := crypto.Decrypt(idAddress, s.sharedRobotPvk)
 	if err != nil {
 		return nil, err
 	}
@@ -160,21 +184,37 @@ func (s internalSrv) getID(idAddress string) (*api.IDResponse, error) {
 		EncryptedAddress: idAddress,
 		Timestamp:        time.Now().Unix(),
 	}
-	if err := s.sigHandler.SignIDRequest(req, s.sharedRobotPvk); err != nil {
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
 		return nil, err
 	}
-	id, err := cli.GetID(context.Background(), req)
+	sig, err := crypto.Sign(string(reqBytes), s.sharedRobotPvk)
+	if err != nil {
+		return nil, err
+	}
+	req.SignatureRequest = sig
+	res, err := cli.GetID(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Printf("GET ID RESPONSE - %s\n", time.Unix(id.Timestamp, 0).String())
+	resBytes, err := json.Marshal(&api.IDResponse{
+		EncryptedAesKey: res.EncryptedAesKey,
+		Timestamp:       res.Timestamp,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := crypto.VerifySignature(string(resBytes), s.sharedRobotPubK, res.SignatureResponse); err != nil {
+		return nil, err
+	}
 
-	return id, nil
+	fmt.Printf("GET ID RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+	return res, nil
 }
 
 func (s internalSrv) getKeychain(keychainAddr string) (*api.KeychainResponse, error) {
-	keychainAddress, err := s.decrypt.DecryptString(keychainAddr, s.sharedRobotPvk)
+	keychainAddress, err := crypto.Decrypt(keychainAddr, s.sharedRobotPvk)
 	if err != nil {
 		return nil, err
 	}
@@ -196,17 +236,34 @@ func (s internalSrv) getKeychain(keychainAddr string) (*api.KeychainResponse, er
 		EncryptedAddress: keychainAddr,
 		Timestamp:        time.Now().Unix(),
 	}
-	if err := s.sigHandler.SignKeychainRequest(req, s.sharedRobotPvk); err != nil {
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
 		return nil, err
 	}
-	keychain, err := cli.GetKeychain(context.Background(), req)
+	sig, err := crypto.Sign(string(reqBytes), s.sharedRobotPvk)
+	if err != nil {
+		return nil, err
+	}
+	req.SignatureRequest = sig
+	res, err := cli.GetKeychain(context.Background(), req)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Printf("GET KEYCHAIN RESPONSE - %s\n", time.Unix(keychain.Timestamp, 0).String())
+	resBytes, err := json.Marshal(&api.KeychainResponse{
+		EncryptedWallet: res.EncryptedWallet,
+		Timestamp:       res.Timestamp,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := crypto.VerifySignature(string(resBytes), s.sharedRobotPubK, res.SignatureResponse); err != nil {
+		return nil, err
+	}
 
-	return keychain, nil
+	fmt.Printf("GET KEYCHAIN RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+
+	return res, nil
 }
 
 type transaction struct {

@@ -27,19 +27,15 @@ type Repository interface {
 
 //Service handle data storing
 type Service struct {
-	repo     Repository
-	lister   listing.Service
-	txVerif  uniris.TransactionVerifier
-	txHasher uniris.TransactionHasher
+	repo   Repository
+	lister listing.Service
 }
 
 //NewService creates a new data storage service
-func NewService(r Repository, l listing.Service, txV uniris.TransactionVerifier, txH uniris.TransactionHasher) Service {
+func NewService(r Repository, l listing.Service) Service {
 	return Service{
-		repo:     r,
-		lister:   l,
-		txHasher: txH,
-		txVerif:  txV,
+		repo:   r,
+		lister: l,
 	}
 }
 
@@ -91,7 +87,7 @@ func (s Service) StoreTransaction(tx uniris.Transaction) error {
 	if err != nil {
 		return err
 	}
-	if err := chainedTx.CheckChainTransactionIntegrity(s.txHasher, s.txVerif); err != nil {
+	if err := chainedTx.CheckChainTransactionIntegrity(); err != nil {
 		return err
 	}
 
@@ -108,16 +104,16 @@ func (s Service) checkTransactionBeforeStorage(tx uniris.Transaction) error {
 		return errors.New("Invalid number of validations")
 	}
 
-	if err := tx.CheckProofOfWork(s.txVerif); err != nil {
+	if err := tx.CheckProofOfWork(); err != nil {
 		return err
 	}
 
-	if err := tx.MasterValidation().Validation().CheckValidation(s.txVerif); err != nil {
+	if err := tx.MasterValidation().Validation().CheckValidation(); err != nil {
 		return err
 	}
 
 	for _, v := range tx.ConfirmationsValidations() {
-		if err := v.CheckValidation(s.txVerif); err != nil {
+		if err := v.CheckValidation(); err != nil {
 			return err
 		}
 	}

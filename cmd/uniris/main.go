@@ -36,17 +36,16 @@ func startAPI() {
 func startDatamining() {
 	db := mem.NewDatabase()
 
-	//TODO: implement crypto interfaces
 	//TODO: implement pool requester
 
 	lister := listing.NewService(db)
-	adder := adding.NewService(db, lister, nil, nil)
+	adder := adding.NewService(db, lister)
 	pooler := pooling.NewService(nil)
-	miner := mining.NewService(pooler, nil, lister, nil, nil, nil, "")
+	miner := mining.NewService(pooler, nil, lister, "", "")
 
-	intSrv := rpc.NewInternalServer(lister, pooler, nil)
-	txSrv := rpc.NewTransactionServer(adder, lister, miner, nil, "", "")
-	accSrv := rpc.NewAccountServer(lister, nil, nil)
+	intSrv := rpc.NewInternalServer(lister, pooler)
+	txSrv := rpc.NewTransactionServer(adder, lister, miner, "", "")
+	accSrv := rpc.NewAccountServer(lister)
 
 	go func() {
 		lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", 1717))

@@ -1,12 +1,14 @@
 package mining
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"sync"
 	"time"
 
 	uniris "github.com/uniris/uniris-core/pkg"
+	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/listing"
 	"github.com/uniris/uniris-core/pkg/pooling"
 )
@@ -21,25 +23,21 @@ var ErrInvalidTransaction = errors.New("Invalid transaction")
 
 //Service handle transaction mining
 type Service struct {
-	pooler      pooling.Service
-	poolR       pooling.PoolRequester
-	lister      listing.Service
-	minerPubKey string
-	signer      Signer
-	txVerifier  uniris.TransactionVerifier
-	hasher      uniris.TransactionHasher
+	pooler       pooling.Service
+	poolR        pooling.PoolRequester
+	lister       listing.Service
+	minerPubKey  string
+	minerPrivKey string
 }
 
 //NewService creates a new mining service
-func NewService(pool pooling.Service, pR pooling.PoolRequester, l listing.Service, sig Signer, txV uniris.TransactionVerifier, txH uniris.TransactionHasher, minerPubK string) Service {
+func NewService(pool pooling.Service, pR pooling.PoolRequester, l listing.Service, minerPubK string, minerPvKey string) Service {
 	return Service{
-		pooler:      pool,
-		poolR:       pR,
-		lister:      l,
-		signer:      sig,
-		txVerifier:  txV,
-		hasher:      txH,
-		minerPubKey: minerPubK,
+		pooler:       pool,
+		poolR:        pR,
+		lister:       l,
+		minerPubKey:  minerPubK,
+		minerPrivKey: minerPvKey,
 	}
 }
 
@@ -71,14 +69,14 @@ func (s Service) LeadTransactionValidation(tx uniris.Transaction, minValids int)
 // - Check the mining (by the master peer) is valid (signatures checks)
 // - Check the transaction integrity
 func (s Service) ConfirmTransactionValidation(tx uniris.Transaction) (v uniris.MinerValidation, err error) {
-	if err = tx.CheckProofOfWork(s.txVerifier); err != nil {
+	if err = tx.CheckProofOfWork(); err != nil {
 		return
 	}
-	if err = tx.MasterValidation().Validation().CheckValidation(s.txVerifier); err != nil {
+	if err = tx.MasterValidation().Validation().CheckValidation(); err != nil {
 		return
 	}
 
-	if err = tx.CheckTransactionIntegrity(s.hasher, s.txVerifier); err != nil {
+	if err = tx.CheckTransactionIntegrity(); err != nil {
 		return s.buildMinerValidation(uniris.ValidationKO, time.Now(), s.minerPubKey)
 	}
 	return s.buildMinerValidation(uniris.ValidationOK, time.Now(), s.minerPubKey)
@@ -132,7 +130,7 @@ func (s Service) findPools(tx uniris.Transaction) (lastValidationPool, validatio
 }
 
 func (s Service) mineTransaction(tx uniris.Transaction, vPool, lastVPool pooling.Pool, minValids int) (mv uniris.MasterValidation, confirms []uniris.MinerValidation, err error) {
-	if err = tx.CheckTransactionIntegrity(s.hasher, s.txVerifier); err != nil {
+	if err = tx.CheckTransactionIntegrity(); err != nil {
 		return
 	}
 
@@ -207,7 +205,7 @@ func (s Service) requestConfirmations(tx uniris.Transaction, vPool pooling.Pool,
 
 func (s Service) requestTransactionStorage(tx uniris.Transaction, sP, lastP pooling.Pool) error {
 	//Get minimum replicas of the transaction hash
-	minReplicas := 1 //TODO: contact AI service
+	minReplicas := 1 //TODO:
 
 	storageAck := make(chan bool, 0)
 	var wg sync.WaitGroup
@@ -251,12 +249,14 @@ func (s Service) performPow(tx uniris.Transaction) (pow string, err error) {
 		return
 	}
 
+	txBytes, err := json.Marshal(tx)
+	if err != nil {
+		return "", err
+	}
+
 	for _, kp := range emKeys {
-		ok, err := s.txVerifier.VerifyTransactionSignature(tx, kp.PublicKey(), tx.EmitterSignature())
-		if err != nil {
-			return "", err
-		}
-		if ok {
+		err := crypto.VerifySignature(string(txBytes), kp.PublicKey(), tx.EmitterSignature())
+		if err == nil {
 			return kp.PublicKey(), nil
 		}
 	}
@@ -265,7 +265,12 @@ func (s Service) performPow(tx uniris.Transaction) (pow string, err error) {
 }
 
 func (s Service) buildMinerValidation(status uniris.ValidationStatus, ts time.Time, pubK string) (v uniris.MinerValidation, err error) {
-	signature, err := s.signer.SignMinerValidation(status, ts, pubK)
+	vBytes, err := json.Marshal(uniris.NewMinerValidation(status, ts, s.minerPubKey, ""))
+	if err != nil {
+		return
+	}
+
+	signature, err := crypto.Sign(string(vBytes), s.minerPrivKey)
 	if err != nil {
 		return
 	}

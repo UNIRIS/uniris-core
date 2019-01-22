@@ -1,20 +1,12 @@
 package uniris
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
+
+	"github.com/uniris/uniris-core/pkg/crypto"
 )
-
-//TransactionVerifier defines methods to verify Transaction signatures
-type TransactionVerifier interface {
-	VerifyTransactionSignature(tx Transaction, pubKey string, sig string) (bool, error)
-	VerifyValidationSignature(v MinerValidation) (bool, error)
-}
-
-//TransactionHasher defines methods to hash Transaction
-type TransactionHasher interface {
-	HashTransaction(tx Transaction) (string, error)
-}
 
 //TransactionStatus represents the status for the transaction
 type TransactionStatus int
@@ -59,7 +51,7 @@ type Transaction struct {
 	pubKey        string
 	sig           string
 	emSig         string
-	prop          Proposal
+	prop          TransactionProposal
 	txHash        string
 	prevTx        *Transaction
 	masterV       MasterValidation
@@ -67,7 +59,7 @@ type Transaction struct {
 }
 
 //NewTransactionBase creates a basic transaction
-func NewTransactionBase(addr string, txType TransactionType, data string, timestamp time.Time, pubK string, sig string, emSig string, prop Proposal, txHash string) Transaction {
+func NewTransactionBase(addr string, txType TransactionType, data string, timestamp time.Time, pubK string, sig string, emSig string, prop TransactionProposal, txHash string) Transaction {
 	return Transaction{
 		address:   addr,
 		txType:    txType,
@@ -151,7 +143,7 @@ func (t Transaction) EmitterSignature() string {
 }
 
 //Proposal returns Transaction's proposal
-func (t Transaction) Proposal() Proposal {
+func (t Transaction) Proposal() TransactionProposal {
 	return t.prop
 }
 
@@ -179,51 +171,50 @@ func (t Transaction) ConfirmationsValidations() []MinerValidation {
 }
 
 //CheckChainTransactionIntegrity insure the Transaction chain integrity
-func (t *Transaction) CheckChainTransactionIntegrity(h TransactionHasher, tv TransactionVerifier) error {
+func (t *Transaction) CheckChainTransactionIntegrity() error {
 	if t.prevTx != nil {
 		if t.prevTx.TransactionHash() == "" {
 			return errors.New("Transaction integrity violated")
 		}
-		return t.prevTx.CheckChainTransactionIntegrity(h, tv)
+		return t.prevTx.CheckChainTransactionIntegrity()
 	}
-	return t.CheckTransactionIntegrity(h, tv)
+	return t.CheckTransactionIntegrity()
 }
 
 //CheckTransactionIntegrity insure the Transaction integrity
-func (t Transaction) CheckTransactionIntegrity(h TransactionHasher, tv TransactionVerifier) error {
-	hash, err := h.HashTransaction(t)
+func (t Transaction) CheckTransactionIntegrity() error {
+	txBytes, err := json.Marshal(t)
 	if err != nil {
 		return err
 	}
-	if hash != t.TransactionHash() {
+	txHash := crypto.HashBytes(txBytes)
+	if txHash != t.TransactionHash() {
 		return errors.New("Transaction integrity violated")
 	}
 
-	ok, err := tv.VerifyTransactionSignature(t, t.PublicKey(), t.Signature())
-	if err != nil {
-		return err
-	}
-	if !ok {
+	err = crypto.VerifySignature(string(txBytes), t.PublicKey(), t.Signature())
+	if err == crypto.ErrInvalidSignature {
 		return errors.New("Transaction signature invalid")
 	}
-
-	return nil
+	return err
 }
 
 //CheckProofOfWork ensures the proof of work is valid
-func (t Transaction) CheckProofOfWork(tv TransactionVerifier) error {
+func (t Transaction) CheckProofOfWork() error {
 	if t.MasterValidation().ProofOfWork() == "" || t.MasterValidation().Validation() == (MinerValidation{}) {
 		return errors.New("Missing master validation")
 	}
 
-	ok, err := tv.VerifyTransactionSignature(t, t.MasterValidation().ProofOfWork(), t.emSig)
+	txBytes, err := json.Marshal(t)
 	if err != nil {
 		return err
 	}
-	if !ok {
+
+	err = crypto.VerifySignature(string(txBytes), t.MasterValidation().ProofOfWork(), t.EmitterSignature())
+	if err == crypto.ErrInvalidSignature {
 		return errors.New("Invalid Proof of work")
 	}
-	return nil
+	return err
 }
 
 //IsKO determinates is the Transaction is KO (plan to be in the KO storage)
@@ -239,117 +230,18 @@ func (t Transaction) IsKO() bool {
 	return false
 }
 
-//MasterValidation describe the master Transaction validation
-type MasterValidation struct {
-	prevMiners []string
-	pow        string
-	validation MinerValidation
-}
-
-//NewMasterValidation creates a new master Transaction validation
-func NewMasterValidation(prevMiners []string, pow string, valid MinerValidation) MasterValidation {
-	return MasterValidation{
-		prevMiners: prevMiners,
-		pow:        pow,
-		validation: valid,
-	}
-}
-
-//PreviousTransactionMiners returns the miners for the previous Transaction
-func (mv MasterValidation) PreviousTransactionMiners() []string {
-	return mv.prevMiners
-}
-
-//ProofOfWork returns the Transaction proof of work (emitter public key) validated the emitter signature
-func (mv MasterValidation) ProofOfWork() string {
-	return mv.pow
-}
-
-//Validation returns the mining performed by the master peer
-func (mv MasterValidation) Validation() MinerValidation {
-	return mv.Validation()
-}
-
-//MinerValidation represents a Transaction validation made by a miner
-type MinerValidation struct {
-	status    ValidationStatus
-	timestamp time.Time
-	minerPubk string
-	minerSig  string
-}
-
-//NewMinerValidation creates a new miner validation
-func NewMinerValidation(status ValidationStatus, t time.Time, minerPubk string, minerSig string) MinerValidation {
-	return MinerValidation{
-		status:    status,
-		timestamp: t,
-		minerPubk: minerPubk,
-		minerSig:  minerSig,
-	}
-}
-
-//Status return the validation status
-func (v MinerValidation) Status() ValidationStatus {
-	return v.status
-}
-
-//Timestamp return the validation timestamp
-func (v MinerValidation) Timestamp() time.Time {
-	return v.timestamp
-}
-
-//MinerPublicKey return the miner's public key performed this validation
-func (v MinerValidation) MinerPublicKey() string {
-	return v.minerPubk
-}
-
-//MinerSignature returne the miner's signature which performed this validation
-func (v MinerValidation) MinerSignature() string {
-	return v.minerSig
-}
-
-//CheckValidation insures the validation signature is correct
-func (v MinerValidation) CheckValidation(tv TransactionVerifier) error {
-	ok, err := tv.VerifyValidationSignature(v)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return errors.New("Invalid validation signature")
-	}
-	return nil
-}
-
-//ValidationStatus defines a validation status
-type ValidationStatus int
-
-const (
-
-	//ValidationOK defines when a validation successed
-	ValidationOK ValidationStatus = iota
-
-	//ValidationKO defines when a validation failed
-	ValidationKO ValidationStatus = 1
-)
-
-//Proposal describe a proposal for a Transaction
-type Proposal interface {
-
-	//SharedEmitterKeyPair returns the keypair proposed for the shared emitter keys
-	SharedEmitterKeyPair() SharedKeys
-}
-
-type prop struct {
-	sharedEmitterKP SharedKeys
-}
-
-//NewProposal create a new proposal for a Transaction
-func NewProposal(shdEmitterKP SharedKeys) Proposal {
-	return prop{
-		sharedEmitterKP: shdEmitterKP,
-	}
-}
-
-func (p prop) SharedEmitterKeyPair() SharedKeys {
-	return p.sharedEmitterKP
+func (t Transaction) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Address   string
+		Data      string
+		Type      TransactionType
+		PublicKey string
+		Proposal  TransactionProposal
+	}{
+		Address:   t.Address(),
+		Data:      t.Data(),
+		Type:      t.Type(),
+		PublicKey: t.PublicKey(),
+		Proposal:  t.Proposal(),
+	})
 }
