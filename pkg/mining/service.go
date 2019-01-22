@@ -28,16 +28,18 @@ type Service struct {
 	lister       listing.Service
 	minerPubKey  string
 	minerPrivKey string
+	currentIP    string
 }
 
 //NewService creates a new mining service
-func NewService(pool pooling.Service, pR pooling.PoolRequester, l listing.Service, minerPubK string, minerPvKey string) Service {
+func NewService(pool pooling.Service, pR pooling.PoolRequester, l listing.Service, minerPubK string, minerPvKey string, currentIP string) Service {
 	return Service{
 		pooler:       pool,
 		poolR:        pR,
 		lister:       l,
 		minerPubKey:  minerPubK,
 		minerPrivKey: minerPvKey,
+		currentIP:    currentIP,
 	}
 }
 
@@ -89,7 +91,7 @@ func (s Service) leadMining(tx uniris.Transaction, minValids int, errChan chan e
 		return
 	}
 
-	if err := s.poolR.RequestTransactionLock(lastValidationPool, tx.TransactionHash(), tx.Address()); err != nil {
+	if err := s.poolR.RequestTransactionLock(lastValidationPool, tx.TransactionHash(), tx.Address(), s.currentIP); err != nil {
 		errChan <- err
 		return
 	}
@@ -129,7 +131,7 @@ func (s Service) findPools(tx uniris.Transaction) (lastValidationPool, validatio
 	return lastValidationPool, validationPool, storagePool, err
 }
 
-func (s Service) mineTransaction(tx uniris.Transaction, vPool, lastVPool pooling.Pool, minValids int) (mv uniris.MasterValidation, confirms []uniris.MinerValidation, err error) {
+func (s Service) mineTransaction(tx uniris.Transaction, vPool, lastVPool pooling.Pool, minValids int) (masterValid uniris.MasterValidation, confirms []uniris.MinerValidation, err error) {
 	if err = tx.CheckTransactionIntegrity(); err != nil {
 		return
 	}
@@ -139,7 +141,9 @@ func (s Service) mineTransaction(tx uniris.Transaction, vPool, lastVPool pooling
 		return
 	}
 
-	confirmations, err := s.requestConfirmations(tx, vPool, minValids)
+	masterValid = uniris.NewMasterValidation(lastVPool.Peers(), pow, preValidation)
+
+	confirmations, err := s.requestConfirmations(tx, masterValid, vPool, minValids)
 	if err != nil {
 		return
 	}
@@ -163,10 +167,10 @@ func (s Service) mineTransaction(tx uniris.Transaction, vPool, lastVPool pooling
 		return
 	}
 
-	return uniris.NewMasterValidation(lastVPool.Peers(), pow, preValidation), confirms, nil
+	return masterValid, confirms, nil
 }
 
-func (s Service) requestConfirmations(tx uniris.Transaction, vPool pooling.Pool, minValids int) ([]uniris.MinerValidation, error) {
+func (s Service) requestConfirmations(tx uniris.Transaction, masterValid uniris.MasterValidation, vPool pooling.Pool, minValids int) ([]uniris.MinerValidation, error) {
 	validChan := make(chan uniris.MinerValidation)
 	replyChan := make(chan bool)
 	validations := make([]uniris.MinerValidation, 0)
@@ -196,7 +200,7 @@ func (s Service) requestConfirmations(tx uniris.Transaction, vPool pooling.Pool,
 			}
 		}
 	}()
-	go s.poolR.RequestTransactionValidations(vPool, tx, validChan, replyChan)
+	go s.poolR.RequestTransactionValidations(vPool, tx, masterValid, validChan, replyChan)
 	wg.Wait()
 
 	return validations, nil

@@ -36,12 +36,12 @@ func startAPI() {
 func startDatamining() {
 	db := mem.NewDatabase()
 
-	//TODO: implement pool requester
+	poolReq := rpc.NewPoolRequester("", "")
 
 	lister := listing.NewService(db)
 	adder := adding.NewService(db, lister)
 	pooler := pooling.NewService(nil)
-	miner := mining.NewService(pooler, nil, lister, "", "")
+	miner := mining.NewService(pooler, poolReq, lister, "", "", "127.0.0.1") //TODO: get the current IP
 
 	intSrv := rpc.NewInternalServer(lister, pooler)
 	txSrv := rpc.NewTransactionServer(adder, lister, miner, "", "")
