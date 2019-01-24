@@ -1,0 +1,93 @@
+package memstorage
+
+import (
+	uniris "github.com/uniris/uniris-core/pkg"
+	"github.com/uniris/uniris-core/pkg/gossip"
+)
+
+type discoveryDb struct {
+	knownPeers       []uniris.Peer
+	seedPeers        []uniris.Seed
+	unreachablePeers []string
+}
+
+//NewDiscoveryDatabase creates a new memory database
+func NewDiscoveryDatabase() gossip.Repository {
+	return &discoveryDb{}
+}
+
+func (db discoveryDb) CountKnownPeers() (int, error) {
+	return len(db.knownPeers), nil
+}
+
+func (db discoveryDb) ListSeedPeers() ([]uniris.Seed, error) {
+	return db.seedPeers, nil
+}
+
+func (db discoveryDb) ListKnownPeers() ([]uniris.Peer, error) {
+	return db.knownPeers, nil
+}
+
+func (db *discoveryDb) StoreKnownPeer(peer uniris.Peer) error {
+	for i, p := range db.knownPeers {
+		if p.Identity().PublicKey() == peer.Identity().PublicKey() {
+			db.knownPeers[i] = peer
+			return nil
+		}
+	}
+	db.knownPeers = append(db.knownPeers, peer)
+	return nil
+}
+
+func (db discoveryDb) ListReachablePeers() ([]uniris.Peer, error) {
+	pp := make([]uniris.Peer, 0)
+	for i := 0; i < len(db.knownPeers); i++ {
+		if !db.ContainsUnreachablePeer(db.knownPeers[i].Identity().PublicKey()) {
+			pp = append(pp, db.knownPeers[i])
+		}
+	}
+	return pp, nil
+}
+
+//ListunreachablePeers returns all unreachable peers
+func (db discoveryDb) ListUnreachablePeers() ([]uniris.Peer, error) {
+	pp := make([]uniris.Peer, 0)
+	for i := 0; i < len(db.knownPeers); i++ {
+		if db.ContainsUnreachablePeer(db.knownPeers[i].Identity().PublicKey()) {
+			pp = append(pp, db.knownPeers[i])
+		}
+	}
+	return pp, nil
+}
+
+func (db *discoveryDb) StoreSeedPeer(s uniris.Seed) error {
+	db.seedPeers = append(db.seedPeers, s)
+	return nil
+}
+
+func (db *discoveryDb) StoreUnreachablePeer(pk string) error {
+	if !db.ContainsUnreachablePeer(pk) {
+		db.unreachablePeers = append(db.unreachablePeers, pk)
+	}
+	return nil
+}
+
+func (db *discoveryDb) RemoveUnreachablePeer(pk string) error {
+	if db.ContainsUnreachablePeer(pk) {
+		for i := 0; i < len(db.unreachablePeers); i++ {
+			if db.unreachablePeers[i] == pk {
+				db.unreachablePeers = db.unreachablePeers[:i+copy(db.unreachablePeers[i:], db.unreachablePeers[i+1:])]
+			}
+		}
+	}
+	return nil
+}
+
+func (db discoveryDb) ContainsUnreachablePeer(peerPubK string) bool {
+	for _, up := range db.unreachablePeers {
+		if up == peerPubK {
+			return true
+		}
+	}
+	return false
+}

@@ -6,38 +6,28 @@ import (
 	uniris "github.com/uniris/uniris-core/pkg"
 )
 
-//Repository defines methods to handle listing storage
-type Repository interface {
-
-	//ListSharedEmitterKeyPairs gets the shared emitter keypair
-	ListSharedEmitterKeyPairs() ([]uniris.SharedKeys, error)
-
-	FindPendingTransaction(txHash string) (*uniris.Transaction, error)
-	FindKOTransaction(txHash string) (*uniris.Transaction, error)
-
-	FindKeychainByHash(txHash string) (*uniris.Keychain, error)
-	FindKeychainByAddress(addr string) (*uniris.Keychain, error)
-
-	FindIDByHash(txHash string) (*uniris.ID, error)
-	FindIDByAddress(addr string) (*uniris.ID, error)
-
-	//ContainsLocks determines if a lock exists or not
-	ContainsLock(uniris.Lock) (bool, error)
-}
+//ErrNotFoundOnUnreachableList is returned when the unreachable list does not include the searchable peer
+var ErrNotFoundOnUnreachableList = errors.New("cannot found the peer in the unreachableKeys list")
 
 //Service handles data retreiving
 type Service struct {
-	repo Repository
+	txRepo     TransactionRepository
+	lockRepo   LockRepository
+	sharedRepo SharedRepository
 }
 
 //NewService creates a new service to retrieve data
-func NewService(repo Repository) Service {
-	return Service{repo}
+func NewService(tR TransactionRepository, lR LockRepository, sR SharedRepository) Service {
+	return Service{
+		txRepo:     tR,
+		lockRepo:   lR,
+		sharedRepo: sR,
+	}
 }
 
 //ContainsTransactionLock determines if a transaction lock exists
 func (s Service) ContainsTransactionLock(l uniris.Lock) (bool, error) {
-	ok, err := s.repo.ContainsLock(l)
+	ok, err := s.lockRepo.ContainsLock(l)
 	if err != nil {
 		return false, err
 	}
@@ -46,17 +36,17 @@ func (s Service) ContainsTransactionLock(l uniris.Lock) (bool, error) {
 
 //GetID gets an ID from its address
 func (s Service) GetID(addr string) (*uniris.ID, error) {
-	return s.repo.FindIDByAddress(addr)
+	return s.txRepo.FindIDByAddress(addr)
 }
 
 //GetKeychain gets a keychain based on its address
 func (s Service) GetKeychain(addr string) (*uniris.Keychain, error) {
-	return s.repo.FindKeychainByAddress(addr)
+	return s.txRepo.FindKeychainByAddress(addr)
 }
 
 //ListSharedEmitterKeyPairs get the shared emitter key pairs
 func (s Service) ListSharedEmitterKeyPairs() ([]uniris.SharedKeys, error) {
-	return s.repo.ListSharedEmitterKeyPairs()
+	return s.sharedRepo.ListSharedEmitterKeyPairs()
 }
 
 //IsEmitterAuthorized checks if the emitter public key is authorized
@@ -74,7 +64,7 @@ func (s Service) GetPreviousTransaction(addr string, txType uniris.TransactionTy
 //
 //It lookups on Pending DB, KO DB, Keychain, ID, Smart contracts
 func (s Service) GetTransactionStatus(txHash string) (uniris.TransactionStatus, error) {
-	tx, err := s.repo.FindPendingTransaction(txHash)
+	tx, err := s.txRepo.FindPendingTransaction(txHash)
 	if err != nil {
 		return uniris.UnknownTransaction, err
 	}
@@ -82,7 +72,7 @@ func (s Service) GetTransactionStatus(txHash string) (uniris.TransactionStatus, 
 		return uniris.PendingTransaction, nil
 	}
 
-	tx, err = s.repo.FindKOTransaction(txHash)
+	tx, err = s.txRepo.FindKOTransaction(txHash)
 	if err != nil {
 		return uniris.UnknownTransaction, err
 	}
@@ -106,7 +96,7 @@ func (s Service) GetTransactionStatus(txHash string) (uniris.TransactionStatus, 
 }
 
 func (s Service) getTransactionByHash(txHash string) (*uniris.Transaction, error) {
-	keychainTx, err := s.repo.FindKeychainByHash(txHash)
+	keychainTx, err := s.txRepo.FindKeychainByHash(txHash)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +108,7 @@ func (s Service) getTransactionByHash(txHash string) (*uniris.Transaction, error
 		return &tx, nil
 	}
 
-	idTx, err := s.repo.FindIDByHash(txHash)
+	idTx, err := s.txRepo.FindIDByHash(txHash)
 	if err != nil {
 		return nil, err
 	}

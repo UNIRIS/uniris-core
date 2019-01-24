@@ -3,77 +3,65 @@ package main
 import (
 	"fmt"
 	"log"
-	"net"
+	"os"
+	"time"
 
-	"github.com/gin-gonic/gin"
-	api "github.com/uniris/uniris-core/api/protobuf-spec"
+	"github.com/urfave/cli"
 
-	"github.com/uniris/uniris-core/pkg/adding"
-	"github.com/uniris/uniris-core/pkg/listing"
-	"github.com/uniris/uniris-core/pkg/mining"
-	"github.com/uniris/uniris-core/pkg/pooling"
-	"github.com/uniris/uniris-core/pkg/storage/mem"
-	"github.com/uniris/uniris-core/pkg/transport/http"
-	"github.com/uniris/uniris-core/pkg/transport/rpc"
-	"google.golang.org/grpc"
+	"github.com/uniris/uniris-core/pkg/crypto"
+	"github.com/uniris/uniris-core/pkg/system"
 )
 
 func main() {
-	go startDiscovery()
-	go startDatamining()
-	startAPI()
-}
 
-func startAPI() {
-	r := gin.Default()
+	conf := system.UnirisConfig{}
 
-	http.NewAccountHandler(r)
-	http.NewTransactionHandler(r)
+	app := cli.NewApp()
+	app.Name = "uniris-miner"
+	app.Usage = "UNIRIS miner"
+	app.Version = "0.0.1"
+	app.Flags = getCliFlags(&conf)
+	app.Action = func(c *cli.Context) error {
+		if c.String("private-key") == "" {
+			fmt.Printf("Error: missing private key\n\n")
+			return cli.ShowAppHelp(c)
+		}
 
-	r.Run(fmt.Sprintf(":%d", 8080))
-}
+		if c.String("discovery-seeds") == "" {
+			fmt.Printf("Error: missing seeds\n\n")
+			return cli.ShowAppHelp(c)
+		}
 
-func startDatamining() {
-	db := mem.NewDatabase()
+		conf.Version = app.Version
 
-	poolReq := rpc.NewPoolRequester("", "")
-
-	lister := listing.NewService(db)
-	adder := adding.NewService(db, lister)
-	pooler := pooling.NewService(nil)
-	miner := mining.NewService(pooler, poolReq, lister, "", "", "127.0.0.1") //TODO: get the current IP
-
-	intSrv := rpc.NewInternalServer(lister, pooler)
-	txSrv := rpc.NewTransactionServer(adder, lister, miner, "", "")
-	accSrv := rpc.NewAccountServer(lister)
-
-	go func() {
-		lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", 1717))
+		pub, err := crypto.GetPublicKey(conf.PrivateKey)
 		if err != nil {
 			panic(err)
 		}
-		grpcServer := grpc.NewServer()
-		api.RegisterInternalServiceServer(grpcServer, intSrv)
-		log.Printf("Internal GRPC Server listening on 127.0.0.1:%d", 1717)
-		if err := grpcServer.Serve(lis); err != nil {
-			panic(err)
-		}
-	}()
+		conf.PublicKey = pub
 
-	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", 3535))
-	if err != nil {
-		panic(err)
+		fmt.Println("----------")
+		fmt.Println("UNIRIS MINER")
+		fmt.Println("----------")
+		fmt.Printf("Version: %s\n", conf.Version)
+		fmt.Printf("Public key: %s\n", pub)
+		fmt.Printf("Network: %s\n", conf.Network.Type)
+		fmt.Printf("Network interface: %s\n", conf.Network.Interface)
+
+		go startAPI(conf)
+		go startDatamining(conf)
+
+		time.Sleep(2 * time.Second)
+
+		startDiscovery(conf)
+
+		return nil
 	}
-	grpcServer := grpc.NewServer()
-	api.RegisterTransactionServiceServer(grpcServer, txSrv)
-	api.RegisterAccountServiceServer(grpcServer, accSrv)
-
-	log.Printf("Transaction and Account GRPC Server listening on 127.0.0.1:%d", 3535)
-	if err := grpcServer.Serve(lis); err != nil {
-		panic(err)
+	if err := app.Run(os.Args); err != nil {
+		log.Fatal(err)
 	}
-}
 
-func startDiscovery() {
-
+	// startDiscovery(conf)
+	// go startDatamining(*conf)
+	// startAPI(*conf)
 }

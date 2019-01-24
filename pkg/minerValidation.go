@@ -81,13 +81,13 @@ const (
 
 //MasterValidation describe the master Transaction validation
 type MasterValidation struct {
-	prevMiners []string
+	prevMiners []PeerIdentity
 	pow        string
 	validation MinerValidation
 }
 
 //NewMasterValidation creates a new master Transaction validation
-func NewMasterValidation(prevMiners []string, pow string, valid MinerValidation) MasterValidation {
+func NewMasterValidation(prevMiners []PeerIdentity, pow string, valid MinerValidation) MasterValidation {
 	return MasterValidation{
 		prevMiners: prevMiners,
 		pow:        pow,
@@ -96,7 +96,7 @@ func NewMasterValidation(prevMiners []string, pow string, valid MinerValidation)
 }
 
 //PreviousTransactionMiners returns the miners for the previous Transaction
-func (mv MasterValidation) PreviousTransactionMiners() []string {
+func (mv MasterValidation) PreviousTransactionMiners() []PeerIdentity {
 	return mv.prevMiners
 }
 

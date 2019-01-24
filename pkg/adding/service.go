@@ -4,38 +4,25 @@ import (
 	"errors"
 
 	uniris "github.com/uniris/uniris-core/pkg"
-	"github.com/uniris/uniris-core/pkg/inspecting"
 	"github.com/uniris/uniris-core/pkg/listing"
+	"github.com/uniris/uniris-core/pkg/mining"
 )
-
-//Repository define methods to handle storage
-type Repository interface {
-
-	//StoreSharedEmitterKeyPair stores a shared emitter keypair
-	StoreSharedEmitterKeyPair(kp uniris.SharedKeys) error
-
-	StoreKeychain(kc uniris.Keychain) error
-	StoreID(id uniris.ID) error
-	StoreKO(tx uniris.Transaction) error
-
-	//StoreLock stores a lock
-	StoreLock(l uniris.Lock) error
-
-	//RemoveLock remove an existing lock
-	RemoveLock(l uniris.Lock) error
-}
 
 //Service handle data storing
 type Service struct {
-	repo   Repository
-	lister listing.Service
+	txRepo     TransactionRepository
+	lockRepo   LockRepository
+	sharedRepo SharedRepository
+	lister     listing.Service
 }
 
 //NewService creates a new data storage service
-func NewService(r Repository, l listing.Service) Service {
+func NewService(tR TransactionRepository, lR LockRepository, sR SharedRepository, l listing.Service) Service {
 	return Service{
-		repo:   r,
-		lister: l,
+		txRepo:     tR,
+		lockRepo:   lR,
+		sharedRepo: sR,
+		lister:     l,
 	}
 }
 
@@ -50,7 +37,7 @@ func (s Service) StoreLock(l uniris.Lock) error {
 	if exist {
 		return errors.New("A lock already exist for this transaction")
 	}
-	s.repo.StoreLock(l)
+	s.lockRepo.StoreLock(l)
 	return nil
 }
 
@@ -61,14 +48,14 @@ func (s Service) RemoveLock(l uniris.Lock) error {
 		return err
 	}
 	if exist {
-		return s.repo.RemoveLock(l)
+		return s.lockRepo.RemoveLock(l)
 	}
 	return nil
 }
 
 //StoreSharedEmitterKeyPair handles emitter shared key storage
 func (s Service) StoreSharedEmitterKeyPair(kp uniris.SharedKeys) error {
-	return s.repo.StoreSharedEmitterKeyPair(kp)
+	return s.sharedRepo.StoreSharedEmitterKeyPair(kp)
 }
 
 //StoreTransaction handles the transaction storage
@@ -95,11 +82,11 @@ func (s Service) StoreTransaction(tx uniris.Transaction) error {
 }
 
 func (s Service) checkTransactionBeforeStorage(tx uniris.Transaction) error {
-	if !inspecting.IsAuthorizedToStoreTx(tx.TransactionHash()) {
+	if !s.isAuthorizedToStoreTx(tx.TransactionHash()) {
 		return errors.New("Not authorized storage")
 	}
 
-	minValid := inspecting.GetMinimumTransactionValidation(tx.TransactionHash())
+	minValid := mining.GetMinimumTransactionValidation(tx.TransactionHash())
 	if len(tx.ConfirmationsValidations()) < minValid {
 		return errors.New("Invalid number of validations")
 	}
@@ -140,7 +127,7 @@ func (s Service) getChainedTransaction(tx uniris.Transaction) (chainedTx uniris.
 
 func (s Service) storeTransaction(tx uniris.Transaction) error {
 	if tx.IsKO() {
-		return s.repo.StoreKO(tx)
+		return s.txRepo.StoreKO(tx)
 	}
 
 	switch tx.Type() {
@@ -150,7 +137,7 @@ func (s Service) storeTransaction(tx uniris.Transaction) error {
 			if err != nil {
 				return err
 			}
-			return s.repo.StoreKeychain(kc)
+			return s.txRepo.StoreKeychain(kc)
 		}
 	case uniris.IDTransactionType:
 		{
@@ -158,9 +145,13 @@ func (s Service) storeTransaction(tx uniris.Transaction) error {
 			if err != nil {
 				return err
 			}
-			return s.repo.StoreID(id)
+			return s.txRepo.StoreID(id)
 		}
 	}
 
 	return nil
+}
+
+func (s Service) isAuthorizedToStoreTx(txHash string) bool {
+	return true
 }

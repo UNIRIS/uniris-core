@@ -12,7 +12,6 @@ import (
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	uniris "github.com/uniris/uniris-core/pkg"
 	"github.com/uniris/uniris-core/pkg/crypto"
-	"github.com/uniris/uniris-core/pkg/pooling"
 	"google.golang.org/grpc"
 )
 
@@ -22,29 +21,29 @@ type poolR struct {
 }
 
 //NewPoolRequester creates a new pool requester as a GRPC client
-func NewPoolRequester(sharedPubk string, sharedPvk string) pooling.PoolRequester {
+func NewPoolRequester(sharedPubk string, sharedPvk string) uniris.PoolRequester {
 	return poolR{
 		sharedPubk: sharedPubk,
 		sharedPvk:  sharedPvk,
 	}
 }
 
-func (pr poolR) RequestLastTransaction(pool pooling.Pool, addr string) (tx uniris.Transaction, err error) {
+func (pr poolR) RequestLastTransaction(pool uniris.Pool, addr string) (tx uniris.Transaction, err error) {
 	return
 }
 
-func (pr poolR) RequestTransactionLock(pool pooling.Pool, txHash string, address string, masterPeerIP string) error {
+func (pr poolR) RequestTransactionLock(pool uniris.Pool, lock uniris.Lock) error {
 
 	var wg sync.WaitGroup
-	wg.Add(len(pool.Peers()))
+	wg.Add(len(pool))
 
 	var ackLock int32
 	lockChan := make(chan bool)
 
 	req := &api.LockRequest{
-		Address:         address,
-		TransactionHash: txHash,
-		MasterPeerIp:    masterPeerIP,
+		Address:         lock.Address(),
+		TransactionHash: lock.TransactionHash(),
+		MasterPeerIp:    lock.MasterRobotKey(),
 		Timestamp:       time.Now().Unix(),
 	}
 	reqBytes, err := json.Marshal(req)
@@ -57,14 +56,14 @@ func (pr poolR) RequestTransactionLock(pool pooling.Pool, txHash string, address
 	}
 	req.SignatureRequest = sig
 
-	for _, p := range pool.Peers() {
-		go func(p string) {
+	for _, p := range pool {
+		go func(p uniris.PeerIdentity) {
 			defer wg.Done()
 
-			serverAddr := fmt.Sprintf("%s:1717", p)
+			serverAddr := fmt.Sprintf("%s:%d", p.IP(), p.Port())
 			conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 			if err != nil {
-
+				fmt.Printf("LOCK TRANSACTION - ERROR: %s", err.Error())
 			}
 			defer conn.Close()
 			cli := api.NewTransactionServiceClient(conn)
@@ -103,11 +102,11 @@ func (pr poolR) RequestTransactionLock(pool pooling.Pool, txHash string, address
 	return nil
 }
 
-func (pr poolR) RequestTransactionUnlock(pool pooling.Pool, txHash string, address string) error {
+func (pr poolR) RequestTransactionUnlock(pool uniris.Pool, lock uniris.Lock) error {
 	return nil
 }
 
-func (pr poolR) RequestTransactionValidations(pool pooling.Pool, tx uniris.Transaction, masterValid uniris.MasterValidation, validChan chan<- uniris.MinerValidation, replyChan chan<- bool) {
+func (pr poolR) RequestTransactionValidations(pool uniris.Pool, tx uniris.Transaction, masterValid uniris.MasterValidation, validChan chan<- uniris.MinerValidation, replyChan chan<- bool) {
 
 	req := &api.ConfirmValidationRequest{
 		MasterValidation: formatAPIMasterValidationAPI(masterValid),
@@ -126,9 +125,9 @@ func (pr poolR) RequestTransactionValidations(pool pooling.Pool, tx uniris.Trans
 	}
 	req.SignatureRequest = sig
 
-	for _, p := range pool.Peers() {
+	for _, p := range pool {
 
-		serverAddr := fmt.Sprintf("%s:1717", p)
+		serverAddr := fmt.Sprintf("%s:%d", p.IP().String(), p.Port())
 		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 		if err != nil {
 
@@ -162,7 +161,7 @@ func (pr poolR) RequestTransactionValidations(pool pooling.Pool, tx uniris.Trans
 
 }
 
-func (pr poolR) RequestTransactionStorage(pool pooling.Pool, tx uniris.Transaction, ackChan chan<- bool) {
+func (pr poolR) RequestTransactionStorage(pool uniris.Pool, tx uniris.Transaction, ackChan chan<- bool) {
 	confValids := make([]*api.MinerValidation, 0)
 	for _, v := range tx.ConfirmationsValidations() {
 		confValids = append(confValids, formatAPIValidation(v))
@@ -190,8 +189,8 @@ func (pr poolR) RequestTransactionStorage(pool pooling.Pool, tx uniris.Transacti
 
 	req.SignatureRequest = sig
 
-	for _, p := range pool.Peers() {
-		serverAddr := fmt.Sprintf("%s:1717", p)
+	for _, p := range pool {
+		serverAddr := fmt.Sprintf("%s:%d", p.IP().String(), p.Port())
 		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 		if err != nil {
 

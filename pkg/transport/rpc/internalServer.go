@@ -4,12 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/uniris/uniris-core/pkg/crypto"
-	"github.com/uniris/uniris-core/pkg/inspecting"
-	"github.com/uniris/uniris-core/pkg/pooling"
+	"github.com/uniris/uniris-core/pkg/electing"
+	"github.com/uniris/uniris-core/pkg/mining"
 	"google.golang.org/grpc"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
@@ -18,27 +17,26 @@ import (
 
 type internalSrv struct {
 	lister          listing.Service
-	pooler          pooling.Service
 	sharedRobotPubK string
 	sharedRobotPvk  string
 }
 
 //NewInternalServer creates a new GRPC internal server
-func NewInternalServer(l listing.Service, p pooling.Service) api.InternalServiceServer {
+func NewInternalServer(l listing.Service) api.InternalServiceServer {
 	return internalSrv{
 		lister: l,
 	}
-
 }
 
 func (s internalSrv) GetTransactionStatus(ctx context.Context, req *api.TransactionStatusRequest) (*api.TransactionStatusResponse, error) {
-	pool, err := s.pooler.FindStoragePool(req.TransactionHash)
+
+	pool, err := electing.FindStoragePool(req.TransactionHash)
 	if err != nil {
 		return nil, err
 	}
 
 	//Select storage master peer
-	serverAddr := fmt.Sprintf("%s:1717", pool.Peers()[0])
+	serverAddr := fmt.Sprintf("%s:%d", pool[0].IP().String(), pool[0].Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
@@ -83,8 +81,8 @@ func (s internalSrv) HandleTransaction(ctx context.Context, req *api.IncomingTra
 		return nil, err
 	}
 
-	masterPeerIP := inspecting.FindTransactionMasterPeer(txHash)
-	minValidations := inspecting.GetMinimumTransactionValidation(txHash)
+	masterPeerIP := electing.FindTransactionMasterPeer(txHash)
+	minValidations := mining.GetMinimumTransactionValidation(txHash)
 	preValidReq := formatPreValidationRequest(txRaw, int(req.Type), txHash, minValidations)
 
 	serverAddr := fmt.Sprintf("%s:1717", masterPeerIP)
@@ -98,7 +96,7 @@ func (s internalSrv) HandleTransaction(ctx context.Context, req *api.IncomingTra
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("PRE VALIDATE TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+	fmt.Printf("PRE VALIDATE TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
 	txRes := &api.TransactionResult{
 		MasterPeerIp:    masterPeerIP,
@@ -166,13 +164,13 @@ func (s internalSrv) getID(idAddress string) (*api.IDResponse, error) {
 		return nil, err
 	}
 
-	idPool, err := s.pooler.FindStoragePool(address)
+	idPool, err := electing.FindStoragePool(address)
 	if err != nil {
 		return nil, err
 	}
 
 	//Select storage master peer
-	serverAddr := fmt.Sprintf("%s:1717", idPool.Peers()[0])
+	serverAddr := fmt.Sprintf("%s:%d", idPool[0].IP().String(), idPool[0].Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
@@ -218,13 +216,13 @@ func (s internalSrv) getKeychain(keychainAddr string) (*api.KeychainResponse, er
 	if err != nil {
 		return nil, err
 	}
-	keychainPool, err := s.pooler.FindStoragePool(keychainAddress)
+	keychainPool, err := electing.FindStoragePool(keychainAddress)
 	if err != nil {
 		return nil, err
 	}
 
 	//Select storage master peer
-	serverAddr := fmt.Sprintf("%s:1717", keychainPool.Peers()[0])
+	serverAddr := fmt.Sprintf("%s:%d", keychainPool[0].IP().String(), keychainPool[0].Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		return nil, err

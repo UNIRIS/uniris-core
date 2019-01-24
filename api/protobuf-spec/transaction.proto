@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "discovery.proto";
+
 package api;
 
 service TransactionService {
@@ -95,7 +97,7 @@ message ConfirmValidationResponse {
 }
 
 message MasterValidation {
-    repeated string previous_transaction_miners = 1;
+    repeated PeerIdentity previous_transaction_miners = 1;
     string proof_of_work = 2;
     MinerValidation pre_validation = 3;
 }
