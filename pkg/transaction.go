@@ -1,8 +1,10 @@
 package uniris
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/uniris/uniris-core/pkg/crypto"
@@ -58,8 +60,52 @@ type Transaction struct {
 	confirmValids []MinerValidation
 }
 
-//NewTransactionBase creates a basic transaction
-func NewTransactionBase(addr string, txType TransactionType, data string, timestamp time.Time, pubK string, sig string, emSig string, prop TransactionProposal, txHash string) Transaction {
+//NewTransaction creates a transaction
+func NewTransaction(addr string, txType TransactionType, data string, timestamp time.Time, pubK string, sig string, emSig string, prop TransactionProposal, txHash string) (Transaction, error) {
+	if _, err := crypto.IsHash(addr); err != nil {
+		return Transaction{}, fmt.Errorf("Transaction: %s", err.Error())
+	}
+
+	if _, err := crypto.IsHash(txHash); err != nil {
+		return Transaction{}, fmt.Errorf("Transaction: %s", err.Error())
+	}
+
+	if data == "" {
+		return Transaction{}, errors.New("Transaction: data is empty")
+	}
+	if _, err := hex.DecodeString(data); err != nil {
+		return Transaction{}, errors.New("Transaction: data is not in hexadecimal format")
+	}
+
+	if timestamp.Unix() > time.Now().Unix() {
+		return Transaction{}, errors.New("Transaction: timestamp must be greater lower than now")
+	}
+
+	if _, err := crypto.IsPublicKey(pubK); err != nil {
+		return Transaction{}, fmt.Errorf("Transaction: %s", err.Error())
+	}
+
+	if _, err := crypto.IsSignature(sig); err != nil {
+		return Transaction{}, fmt.Errorf("Transaction: %s", err.Error())
+	}
+
+	if _, err := crypto.IsSignature(emSig); err != nil {
+		return Transaction{}, fmt.Errorf("Transaction: %s", err.Error())
+	}
+
+	switch txType {
+	case KeychainTransactionType:
+	case IDTransactionType:
+	case ContractTransactionType:
+	case ContractMessageTransactionType:
+	default:
+		return Transaction{}, errors.New("Transaction: type not allowed")
+	}
+
+	if prop == (TransactionProposal{}) {
+		return Transaction{}, errors.New("Transaction: proposal is missing")
+	}
+
 	return Transaction{
 		address:   addr,
 		txType:    txType,
@@ -70,41 +116,7 @@ func NewTransactionBase(addr string, txType TransactionType, data string, timest
 		emSig:     emSig,
 		prop:      prop,
 		txHash:    txHash,
-	}
-}
-
-//NewChainedTransaction creates a transaction chained to another
-func NewChainedTransaction(tx Transaction, prevTx Transaction) Transaction {
-	return Transaction{
-		address:   tx.address,
-		txType:    tx.txType,
-		data:      tx.data,
-		timestamp: tx.timestamp,
-		pubKey:    tx.pubKey,
-		sig:       tx.sig,
-		emSig:     tx.emSig,
-		prop:      tx.prop,
-		txHash:    tx.txHash,
-		prevTx:    &prevTx,
-	}
-}
-
-//NewMinedTransaction creates a mined transaction
-func NewMinedTransaction(tx Transaction, masterV MasterValidation, confirms []MinerValidation) Transaction {
-	return Transaction{
-		address:       tx.address,
-		txType:        tx.txType,
-		data:          tx.data,
-		timestamp:     tx.timestamp,
-		pubKey:        tx.pubKey,
-		sig:           tx.sig,
-		emSig:         tx.emSig,
-		prop:          tx.prop,
-		txHash:        tx.txHash,
-		prevTx:        tx.prevTx,
-		masterV:       masterV,
-		confirmValids: confirms,
-	}
+	}, nil
 }
 
 //Address returns the Transaction's address (use for the sharding and identify the owner of the Transaction)
@@ -230,18 +242,62 @@ func (t Transaction) IsKO() bool {
 	return false
 }
 
+func (t *Transaction) AddMining(mv MasterValidation, confs []MinerValidation) error {
+	t.masterV = mv
+	if len(confs) == 0 {
+		return errors.New("Transaction: Missing confirmation validations")
+	}
+
+	t.confirmValids = confs
+	return nil
+}
+
+func (t *Transaction) Chain(prevTx *Transaction) {
+	if prevTx != nil && prevTx.TransactionHash() != "" {
+		t.prevTx = prevTx
+	}
+}
+
 func (t Transaction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Address   string
-		Data      string
-		Type      TransactionType
-		PublicKey string
-		Proposal  TransactionProposal
+		Address   string              `json:"address"`
+		Data      string              `json:"data"`
+		Type      TransactionType     `json:"type"`
+		PublicKey string              `json:"public_key"`
+		Proposal  TransactionProposal `json:"proposal"`
 	}{
 		Address:   t.Address(),
 		Data:      t.Data(),
 		Type:      t.Type(),
 		PublicKey: t.PublicKey(),
 		Proposal:  t.Proposal(),
+	})
+}
+
+//TransactionProposal describe a proposal for a Transaction
+type TransactionProposal struct {
+	sharedEmitterKP SharedKeys
+}
+
+//NewTransactionProposal create a new proposal for a Transaction
+func NewTransactionProposal(shdEmitterKP SharedKeys) (TransactionProposal, error) {
+	if (shdEmitterKP == SharedKeys{}) {
+		return TransactionProposal{}, errors.New("Transaction proposal: missing shared keys")
+	}
+	return TransactionProposal{
+		sharedEmitterKP: shdEmitterKP,
+	}, nil
+}
+
+//SharedEmitterKeyPair returns the keypair proposed for the shared emitter keys
+func (p TransactionProposal) SharedEmitterKeyPair() SharedKeys {
+	return p.sharedEmitterKP
+}
+
+func (p TransactionProposal) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		SharedEmitterKP SharedKeys `json:"shared_emitter_keys"`
+	}{
+		SharedEmitterKP: p.SharedEmitterKeyPair(),
 	})
 }

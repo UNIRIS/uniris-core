@@ -2,6 +2,7 @@ package uniris
 
 import (
 	"encoding/json"
+	"errors"
 )
 
 //ID represents a ID transaction
@@ -19,10 +20,14 @@ type idData struct {
 }
 
 //NewID creates an ID transaction by extracting the transaction data
-func NewID(tx Transaction) (id ID, err error) {
+func NewID(tx Transaction) (ID, error) {
 	var data idData
-	if err = json.Unmarshal([]byte(tx.Data()), &data); err != nil {
-		return
+	if err := json.Unmarshal([]byte(tx.Data()), &data); err != nil {
+		return ID{}, err
+	}
+
+	if data.EncryptedAESKey == "" || data.EncryptedAddressByID == "" || data.EncryptedAddressByRobot == "" {
+		return ID{}, errors.New("Missing ID transaction data")
 	}
 
 	return ID{
@@ -58,6 +63,12 @@ func (id ID) ToTransaction() (tx Transaction, err error) {
 	if err != nil {
 		return
 	}
-	txRoot := NewTransactionBase(id.address, IDTransactionType, string(b), id.timestamp, id.pubKey, id.sig, id.emSig, id.prop, id.txHash)
-	return NewMinedTransaction(txRoot, id.masterV, id.confirmValids), nil
+	tx, err = NewTransaction(id.address, IDTransactionType, string(b), id.timestamp, id.pubKey, id.sig, id.emSig, id.prop, id.txHash)
+	if err != nil {
+		return
+	}
+	if err = tx.AddMining(id.masterV, id.confirmValids); err != nil {
+		return
+	}
+	return tx, nil
 }

@@ -2,6 +2,7 @@ package uniris
 
 import (
 	"encoding/json"
+	"errors"
 )
 
 //Keychain represents a keychain transaction
@@ -17,10 +18,14 @@ type keychainData struct {
 }
 
 //NewKeychain creates a keychain transaction by extracting the transaction data
-func NewKeychain(tx Transaction) (kc Keychain, err error) {
+func NewKeychain(tx Transaction) (Keychain, error) {
 	var data keychainData
-	if err = json.Unmarshal([]byte(tx.Data()), &data); err != nil {
-		return
+	if err := json.Unmarshal([]byte(tx.Data()), &data); err != nil {
+		return Keychain{}, err
+	}
+
+	if data.EncryptedAddress == "" || data.EncryptedWallet == "" {
+		return Keychain{}, errors.New("Missing Keychain transaction data")
 	}
 
 	return Keychain{
@@ -50,10 +55,15 @@ func (k Keychain) ToTransaction() (tx Transaction, err error) {
 		return
 	}
 
-	tx = NewTransactionBase(k.address, KeychainTransactionType, string(b), k.timestamp, k.pubKey, k.sig, k.emSig, k.prop, k.txHash)
-	if k.prevTx == nil {
-		return NewMinedTransaction(tx, k.masterV, k.confirmValids), nil
+	tx, err = NewTransaction(k.address, KeychainTransactionType, string(b), k.timestamp, k.pubKey, k.sig, k.emSig, k.prop, k.txHash)
+	if err != nil {
+		return
 	}
-	tx = NewChainedTransaction(tx, *k.prevTx)
-	return NewMinedTransaction(tx, k.masterV, k.confirmValids), nil
+	if err = tx.AddMining(k.masterV, k.confirmValids); err != nil {
+		return
+	}
+	if k.prevTx != nil {
+		tx.Chain(k.prevTx)
+	}
+	return tx, nil
 }

@@ -69,12 +69,12 @@ func (s Service) StoreTransaction(tx uniris.Transaction) error {
 		return err
 	}
 
-	//Check integrity of the keychain
-	chainedTx, err := s.getChainedTransaction(tx)
+	chain, err := s.getTransactionChain(tx)
 	if err != nil {
 		return err
 	}
-	if err := chainedTx.CheckChainTransactionIntegrity(); err != nil {
+	tx.Chain(chain)
+	if err := tx.CheckChainTransactionIntegrity(); err != nil {
 		return err
 	}
 
@@ -108,21 +108,21 @@ func (s Service) checkTransactionBeforeStorage(tx uniris.Transaction) error {
 	return nil
 }
 
-func (s Service) getChainedTransaction(tx uniris.Transaction) (chainedTx uniris.Transaction, err error) {
+func (s Service) getTransactionChain(tx uniris.Transaction) (*uniris.Transaction, error) {
 	prev, err := s.lister.GetPreviousTransaction(tx.Address(), tx.Type())
 	if err != nil {
-		return
+		return nil, err
 	}
 	if prev == nil {
-		return tx, nil
+		return nil, nil
 	}
 
-	prevTx, err := s.getChainedTransaction(*prev)
+	prevTx, err := s.getTransactionChain(*prev)
 	if err != nil {
-		return chainedTx, err
+		return nil, err
 	}
 
-	return uniris.NewChainedTransaction(tx, prevTx), nil
+	return prevTx, nil
 }
 
 func (s Service) storeTransaction(tx uniris.Transaction) error {

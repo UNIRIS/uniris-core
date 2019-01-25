@@ -14,7 +14,7 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-var ErrInvalidSignature = errors.New("Invalid signature")
+var ErrInvalidSignature = errors.New("Signature is not valid")
 
 //Sign creates a signature from a given data
 func Sign(data string, pvKey string) (string, error) {
@@ -63,9 +63,32 @@ func VerifySignature(data string, pubKey string, sig string) error {
 	ecdsaPublic := pu.(*ecdsa.PublicKey)
 	asn1.Unmarshal(decodedsig, &signature)
 
+	if signature.R == nil || signature.S == nil {
+		return ErrInvalidSignature
+	}
+
 	if ecdsa.Verify(ecdsaPublic, []byte(HashString(data)), signature.R, signature.S) {
 		return nil
 	}
 
 	return ErrInvalidSignature
+}
+
+func IsSignature(sig string) (bool, error) {
+	if sig == "" {
+		return false, errors.New("Signature is empty")
+	}
+
+	decodedsig, err := hex.DecodeString(sig)
+	if err != nil {
+		return false, errors.New("Signature is not in hexadecimal format")
+	}
+
+	var signature ecdsaSignature
+	asn1.Unmarshal(decodedsig, &signature)
+
+	if signature.R == nil || signature.S == nil {
+		return false, ErrInvalidSignature
+	}
+	return true, nil
 }

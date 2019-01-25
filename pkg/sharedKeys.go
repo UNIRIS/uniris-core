@@ -1,6 +1,13 @@
 package uniris
 
-import "encoding/json"
+import (
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	"github.com/uniris/uniris-core/pkg/crypto"
+)
 
 //SharedKeys describe shared keypair
 type SharedKeys struct {
@@ -9,8 +16,20 @@ type SharedKeys struct {
 }
 
 //NewSharedKeyPair creates a new proposed keypair
-func NewSharedKeyPair(encPvKey, pubKey string) SharedKeys {
-	return SharedKeys{encPvKey, pubKey}
+func NewSharedKeyPair(encPvKey, pubKey string) (SharedKeys, error) {
+
+	if encPvKey == "" {
+		return SharedKeys{}, errors.New("Shared keys encrypted private key: is empty")
+	}
+	if _, err := hex.DecodeString(encPvKey); err != nil {
+		return SharedKeys{}, errors.New("Shared keys encrypted private key: is not in hexadecimal format")
+	}
+
+	if _, err := crypto.IsPublicKey(pubKey); err != nil {
+		return SharedKeys{}, fmt.Errorf("Shared keys: %s", err.Error())
+	}
+
+	return SharedKeys{encPvKey, pubKey}, nil
 }
 
 //PublicKey returns the public key for the proposed keypair

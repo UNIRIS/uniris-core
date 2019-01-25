@@ -3,6 +3,7 @@ package mining
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -46,17 +47,42 @@ func NewService(l listing.Service, poolR uniris.PoolRequester, minerPubK string,
 // - Requests storage
 // - Unlocks the transaction
 func (s Service) LeadTransactionValidation(tx uniris.Transaction, minValids int) {
-
 	log.Printf("Transaction %s is pending\n", tx.TransactionHash())
-
-	errChan := make(chan error)
 	go func() {
-		for err := range errChan {
-			log.Print(err)
+		lastValidationPool, validationPool, storagePool, err := s.findPools(tx)
+		if err != nil {
+			log.Printf("Transaction pool finding failed - Error: %s\n", err.Error())
+			return
+		}
+
+		lockTx, err := uniris.NewLock(tx.TransactionHash(), tx.Address(), s.currentIP)
+		if err != nil {
+			log.Printf("Lock creation failed - Error: %s\n", err.Error())
+			return
+		}
+		if err := s.poolR.RequestTransactionLock(lastValidationPool, lockTx); err != nil {
+			log.Printf("Transaction locking failed - Error: %s\n", err.Error())
+			return
+		}
+
+		log.Printf("Transaction %s is locked\n", tx.TransactionHash())
+
+		masterValid, confirmValids, err := s.mineTransaction(tx, validationPool, lastValidationPool, minValids)
+		if err != nil {
+			log.Printf("Transaction mining failed - Error: %s\n", err.Error())
+			return
+		}
+		if err := tx.AddMining(masterValid, confirmValids); err != nil {
+			log.Printf("Transaction mining is invalid - Error: %s\n", err.Error())
+			return
+		}
+		log.Printf("Transaction %s is validated \n", tx.TransactionHash())
+
+		if err := s.requestTransactionStorage(tx, storagePool, lastValidationPool); err != nil {
+			log.Printf("Transaction storage failed - Error: %s\n", err.Error())
+			return
 		}
 	}()
-
-	go s.leadMining(tx, minValids, errChan)
 }
 
 //ConfirmTransactionValidation confirms the transaction by providing a validation including:
@@ -72,38 +98,20 @@ func (s Service) ConfirmTransactionValidation(tx uniris.Transaction) (v uniris.M
 	}
 
 	if err = tx.CheckTransactionIntegrity(); err != nil {
-		return s.buildMinerValidation(uniris.ValidationKO, time.Now(), s.minerPubKey)
+		valid, err = uniris.NewMinerValidation(uniris.ValidationKO, time.Now(), s.minerPubKey, "")
+		if err != nil {
+			return
+		}
+	} else {
+		valid, err = uniris.NewMinerValidation(uniris.ValidationOK, time.Now(), s.minerPubKey, "")
+		if err != nil {
+			return
+		}
 	}
-	return s.buildMinerValidation(uniris.ValidationOK, time.Now(), s.minerPubKey)
-}
-
-func (s Service) leadMining(tx uniris.Transaction, minValids int, errChan chan error) {
-	lastValidationPool, validationPool, storagePool, err := s.findPools(tx)
-	if err != nil {
-		errChan <- err
+	if err = v.Sign(s.minerPrivKey); err != nil {
 		return
 	}
-
-	lockTx := uniris.NewLock(tx.TransactionHash(), tx.Address(), s.currentIP)
-	if err := s.poolR.RequestTransactionLock(lastValidationPool, lockTx); err != nil {
-		errChan <- err
-		return
-	}
-
-	log.Printf("Transaction %s is locked\n", tx.TransactionHash())
-
-	masterValid, confirmValids, err := s.mineTransaction(tx, validationPool, lastValidationPool, minValids)
-	if err != nil {
-		errChan <- err
-		return
-	}
-	minedTx := uniris.NewMinedTransaction(tx, masterValid, confirmValids)
-	log.Printf("Transaction %s is validated \n", tx.TransactionHash())
-
-	if err := s.requestTransactionStorage(minedTx, storagePool, lastValidationPool); err != nil {
-		errChan <- err
-		return
-	}
+	return valid, nil
 }
 
 func (s Service) findPools(tx uniris.Transaction) (lastValidationPool, validationPool, storagePool uniris.Pool, err error) {
@@ -135,7 +143,10 @@ func (s Service) mineTransaction(tx uniris.Transaction, vPool, lastVPool uniris.
 		return
 	}
 
-	masterValid = uniris.NewMasterValidation(lastVPool, pow, preValidation)
+	masterValid, err = uniris.NewMasterValidation(lastVPool, pow, preValidation)
+	if err != nil {
+		return
+	}
 
 	confirmations, err := s.requestConfirmations(tx, masterValid, vPool, minValids)
 	if err != nil {
@@ -219,7 +230,10 @@ func (s Service) requestTransactionStorage(tx uniris.Transaction, sP, lastP unir
 
 	log.Printf("Transaction %s is stored \n", tx.TransactionHash())
 
-	unlockTx := uniris.NewLock(tx.TransactionHash(), tx.Address(), s.currentIP)
+	unlockTx, err := uniris.NewLock(tx.TransactionHash(), tx.Address(), s.currentIP)
+	if err != nil {
+		return fmt.Errorf("Unlock creation failed - Error: %s", err.Error())
+	}
 	if err := s.poolR.RequestTransactionUnlock(lastP, unlockTx); err != nil {
 		return err
 	}
@@ -237,8 +251,11 @@ func (s Service) preValidateTx(tx uniris.Transaction) (v uniris.MinerValidation,
 		validStatus = uniris.ValidationOK
 	}
 
-	v, err = s.buildMinerValidation(validStatus, time.Now(), s.minerPubKey)
+	v, err = uniris.NewMinerValidation(validStatus, time.Now(), s.minerPubKey, "")
 	if err != nil {
+		return
+	}
+	if err = v.Sign(s.minerPrivKey); err != nil {
 		return
 	}
 	return v, pow, nil
@@ -263,17 +280,4 @@ func (s Service) performPow(tx uniris.Transaction) (pow string, err error) {
 	}
 
 	return "", nil
-}
-
-func (s Service) buildMinerValidation(status uniris.ValidationStatus, ts time.Time, pubK string) (v uniris.MinerValidation, err error) {
-	vBytes, err := json.Marshal(uniris.NewMinerValidation(status, ts, s.minerPubKey, ""))
-	if err != nil {
-		return
-	}
-
-	signature, err := crypto.Sign(string(vBytes), s.minerPrivKey)
-	if err != nil {
-		return
-	}
-	return uniris.NewMinerValidation(status, ts, pubK, signature), nil
 }

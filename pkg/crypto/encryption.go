@@ -7,11 +7,6 @@ import (
 	ecies "github.com/uniris/ecies/pkg"
 )
 
-//Encrypt use ECIES to encrypt a data
-func Encrypt(data string, pubKey string) (string, error) {
-	return "", nil
-}
-
 //Decrypt use ECIES to decrypt a data
 func Decrypt(data string, pvKey string) (string, error) {
 
@@ -20,7 +15,7 @@ func Decrypt(data string, pvKey string) (string, error) {
 		return "", err
 	}
 
-	robotKey, err := x509.ParseECPrivateKey(decodeKey)
+	key, err := x509.ParseECPrivateKey(decodeKey)
 	if err != nil {
 		return "", err
 	}
@@ -30,7 +25,7 @@ func Decrypt(data string, pvKey string) (string, error) {
 		return "", err
 	}
 
-	eciesKey := ecies.ImportECDSA(robotKey)
+	eciesKey := ecies.ImportECDSA(key)
 	message, err := eciesKey.Decrypt(decodeCipher, nil, nil)
 	if err != nil {
 		return "", err
