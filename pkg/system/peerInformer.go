@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/uniris/uniris-core/pkg/gossip"
+	"github.com/uniris/uniris-core/pkg/discovery"
 )
 
 type peerInfo struct {
@@ -19,7 +19,7 @@ type peerInfo struct {
 	privateIface   string
 }
 
-func NewPeerInformer(privateNetwork bool, privateIface string) gossip.PeerInformer {
+func NewPeerInformer(privateNetwork bool, privateIface string) discovery.PeerInformer {
 	return peerInfo{privateNetwork, privateIface}
 }
 

@@ -62,3 +62,56 @@ func TestVerifyBadSignature(t *testing.T) {
 	encData := "hello"
 	assert.Equal(t, ErrInvalidSignature, VerifySignature(encData, hex.EncodeToString(pubKey), hex.EncodeToString([]byte("fake sig"))))
 }
+
+/*
+Scenario: Check is signature with empty string
+	Given an empty signature
+	When I want to check it's a signature
+	Then I get an error
+*/
+func TestIsSignatureWithEmpty(t *testing.T) {
+	ok, err := IsSignature("")
+	assert.False(t, ok)
+	assert.EqualError(t, err, "signature is empty")
+}
+
+/*
+Scenario: Check is signature with not hexadecimal string
+	Given a signature with non hexa format
+	When I want to check it's a signature
+	Then I get an error
+*/
+func TestIsSignatureWithNotHexadecimal(t *testing.T) {
+	ok, err := IsSignature("hello")
+	assert.False(t, ok)
+	assert.EqualError(t, err, "signature is not in hexadecimal format")
+}
+
+/*
+Scenario: Check Is signature when the signature is invalid
+	Given a signature badly created
+	When I want to check it's a signature
+	Then I get an error
+*/
+func TestIsSignatureInvalid(t *testing.T) {
+	ok, err := IsSignature(hex.EncodeToString([]byte("signature")))
+	assert.False(t, ok)
+	assert.EqualError(t, err, "signature is not valid")
+}
+
+/*
+Scenario: Check Is signature when the signature is valid
+	Given a valid signature
+	When I want to check it's a signature
+	Then I get no error
+*/
+func TestIsSignatureValid(t *testing.T) {
+
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pv, _ := x509.MarshalECPrivateKey(key)
+	sig, _ := Sign("hello", hex.EncodeToString(pv))
+
+	ok, err := IsSignature(sig)
+	assert.True(t, ok)
+	assert.Nil(t, err)
+}

@@ -4,18 +4,21 @@ import (
 	"net"
 	"time"
 
+	"github.com/uniris/uniris-core/pkg/discovery"
+	"github.com/uniris/uniris-core/pkg/shared"
+
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
-	uniris "github.com/uniris/uniris-core/pkg"
+	"github.com/uniris/uniris-core/pkg/transaction"
 )
 
-func formatPeerDigest(p *api.PeerDigest) uniris.Peer {
-	return uniris.NewPeerDigest(
-		uniris.NewPeerIdentity(net.ParseIP(p.Identity.Ip), int(p.Identity.Port), p.Identity.PublicKey),
-		uniris.NewPeerHeartbeatState(time.Unix(p.HeartbeatState.GenerationTime, 0), p.HeartbeatState.ElapsedHeartbeats),
+func formatPeerDigest(p *api.PeerDigest) discovery.Peer {
+	return discovery.NewPeerDigest(
+		discovery.NewPeerIdentity(net.ParseIP(p.Identity.Ip), int(p.Identity.Port), p.Identity.PublicKey),
+		discovery.NewPeerHeartbeatState(time.Unix(p.HeartbeatState.GenerationTime, 0), p.HeartbeatState.ElapsedHeartbeats),
 	)
 }
 
-func formatPeerDigestAPI(p uniris.Peer) *api.PeerDigest {
+func formatPeerDigestAPI(p discovery.Peer) *api.PeerDigest {
 	return &api.PeerDigest{
 		Identity: &api.PeerIdentity{
 			Ip:        p.Identity().IP().String(),
@@ -29,7 +32,7 @@ func formatPeerDigestAPI(p uniris.Peer) *api.PeerDigest {
 	}
 }
 
-func formatPeerDiscoveredAPI(p uniris.Peer) *api.PeerDiscovered {
+func formatPeerDiscoveredAPI(p discovery.Peer) *api.PeerDiscovered {
 	return &api.PeerDiscovered{
 		Identity: &api.PeerIdentity{
 			Ip:        p.Identity().IP().String(),
@@ -55,20 +58,27 @@ func formatPeerDiscoveredAPI(p uniris.Peer) *api.PeerDiscovered {
 	}
 }
 
-func formatPeerDiscovered(p *api.PeerDiscovered) uniris.Peer {
-	return uniris.NewDiscoveredPeer(
-		uniris.NewPeerIdentity(net.ParseIP(p.Identity.Ip), int(p.Identity.Port), p.Identity.PublicKey),
-		uniris.NewPeerHeartbeatState(time.Unix(p.HeartbeatState.GenerationTime, 0), p.HeartbeatState.ElapsedHeartbeats),
-		uniris.NewPeerAppState(p.AppState.Version, uniris.PeerStatus(p.AppState.Status), float64(p.AppState.GeoPosition.Longitude), float64(p.AppState.GeoPosition.Longitude), p.AppState.CpuLoad, float64(p.AppState.FreeDiskSpace), int(p.AppState.P2PFactor), int(p.AppState.DiscoveredPeersNumber)),
+func formatPeerDiscovered(p *api.PeerDiscovered) discovery.Peer {
+	return discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(net.ParseIP(p.Identity.Ip), int(p.Identity.Port), p.Identity.PublicKey),
+		discovery.NewPeerHeartbeatState(time.Unix(p.HeartbeatState.GenerationTime, 0), p.HeartbeatState.ElapsedHeartbeats),
+		discovery.NewPeerAppState(p.AppState.Version, discovery.PeerStatus(p.AppState.Status), float64(p.AppState.GeoPosition.Longitude), float64(p.AppState.GeoPosition.Longitude), p.AppState.CpuLoad, float64(p.AppState.FreeDiskSpace), int(p.AppState.P2PFactor), int(p.AppState.DiscoveredPeersNumber)),
 	)
 }
 
-func formatTransaction(tx *api.Transaction) uniris.Transaction {
-	prop := uniris.NewTransactionProposal(
-		uniris.NewSharedKeyPair(tx.Proposal.SharedEmitterKeys.EncryptedPrivateKey, tx.Proposal.SharedEmitterKeys.PublicKey),
-	)
+func formatTransaction(tx *api.Transaction) (transaction.Transaction, error) {
 
-	return uniris.NewTransactionBase(tx.Address, uniris.TransactionType(tx.Type), tx.Data,
+	sharedKeys, err := shared.NewKeyPair(tx.Proposal.SharedEmitterKeys.EncryptedPrivateKey, tx.Proposal.SharedEmitterKeys.PublicKey)
+	if err != nil {
+		return transaction.Transaction{}, err
+	}
+
+	prop, err := transaction.NewProposal(sharedKeys)
+	if err != nil {
+		return transaction.Transaction{}, err
+	}
+
+	return transaction.New(tx.Address, transaction.Type(tx.Type), tx.Data,
 		time.Unix(tx.Timestamp, 0),
 		tx.PublicKey,
 		tx.Signature,
@@ -77,24 +87,54 @@ func formatTransaction(tx *api.Transaction) uniris.Transaction {
 		tx.TransactionHash)
 }
 
-func formatMinedTransaction(tx *api.Transaction, mv *api.MasterValidation, valids []*api.MinerValidation) uniris.Transaction {
+func formatMinedTransaction(t *api.Transaction, mv *api.MasterValidation, valids []*api.MinerValidation) (transaction.Transaction, error) {
 
-	prevMiners := make([]uniris.PeerIdentity, 0)
-	for _, m := range mv.PreviousTransactionMiners {
-		prevMiners = append(prevMiners, formatPeerIdentity(m))
+	masterValid, err := formatMasterValidation(mv)
+	if err != nil {
+		return transaction.Transaction{}, err
 	}
 
-	masterValidation := uniris.NewMasterValidation(prevMiners, mv.ProofOfWork, formatValidation(mv.PreValidation))
-
-	confValids := make([]uniris.MinerValidation, 0)
+	confValids := make([]transaction.MinerValidation, 0)
 	for _, v := range valids {
-		confValids = append(confValids, formatValidation(v))
+		txValid, err := formatValidation(v)
+		if err != nil {
+			return transaction.Transaction{}, err
+		}
+		confValids = append(confValids, txValid)
 	}
 
-	return uniris.NewMinedTransaction(formatTransaction(tx), masterValidation, confValids)
+	txRoot, err := formatTransaction(t)
+	if err != nil {
+		return transaction.Transaction{}, err
+	}
+	tx, err := transaction.New(txRoot.Address(), txRoot.Type(), txRoot.Data(), txRoot.Timestamp(), txRoot.PublicKey(), txRoot.Signature(), txRoot.EmitterSignature(), txRoot.Proposal(), txRoot.TransactionHash())
+	if err != nil {
+		return transaction.Transaction{}, err
+	}
+
+	if err := tx.AddMining(masterValid, confValids); err != nil {
+		return transaction.Transaction{}, err
+	}
+
+	return tx, nil
 }
 
-func formatAPIValidation(v uniris.MinerValidation) *api.MinerValidation {
+func formatMasterValidation(mv *api.MasterValidation) (transaction.MasterValidation, error) {
+	prevMiners := make([]transaction.PoolMember, 0)
+	for _, m := range mv.PreviousTransactionMiners {
+		prevMiners = append(prevMiners, transaction.NewPoolMember(net.ParseIP(m.Ip), int(m.Port)))
+	}
+
+	preValid, err := formatValidation(mv.PreValidation)
+	if err != nil {
+		return transaction.MasterValidation{}, err
+	}
+
+	masterValidation, err := transaction.NewMasterValidation(prevMiners, mv.ProofOfWork, preValid)
+	return masterValidation, err
+}
+
+func formatAPIValidation(v transaction.MinerValidation) *api.MinerValidation {
 	return &api.MinerValidation{
 		PublicKey: v.MinerPublicKey(),
 		Signature: v.MinerSignature(),
@@ -103,11 +143,11 @@ func formatAPIValidation(v uniris.MinerValidation) *api.MinerValidation {
 	}
 }
 
-func formatValidation(v *api.MinerValidation) uniris.MinerValidation {
-	return uniris.NewMinerValidation(uniris.ValidationStatus(v.Status), time.Unix(v.Timestamp, 0), v.PublicKey, v.Signature)
+func formatValidation(v *api.MinerValidation) (transaction.MinerValidation, error) {
+	return transaction.NewMinerValidation(transaction.ValidationStatus(v.Status), time.Unix(v.Timestamp, 0), v.PublicKey, v.Signature)
 }
 
-func formatAPITransaction(tx uniris.Transaction) *api.Transaction {
+func formatAPITransaction(tx transaction.Transaction) *api.Transaction {
 	return &api.Transaction{
 		Address:          tx.Address(),
 		Data:             tx.Data(),
@@ -126,11 +166,14 @@ func formatAPITransaction(tx uniris.Transaction) *api.Transaction {
 	}
 }
 
-func formatAPIMasterValidationAPI(masterValid uniris.MasterValidation) *api.MasterValidation {
+func formatAPIMasterValidationAPI(masterValid transaction.MasterValidation) *api.MasterValidation {
 
-	prevMiners := make([]*api.PeerIdentity, 0)
+	prevMiners := make([]*api.PoolMember, 0)
 	for _, m := range masterValid.PreviousTransactionMiners() {
-		prevMiners = append(prevMiners, formatPeerIdentityAPI(m))
+		prevMiners = append(prevMiners, &api.PoolMember{
+			Ip:   m.IP().String(),
+			Port: int32(m.Port()),
+		})
 	}
 
 	return &api.MasterValidation{
@@ -142,17 +185,5 @@ func formatAPIMasterValidationAPI(masterValid uniris.MasterValidation) *api.Mast
 			Status:    api.MinerValidation_ValidationStatus(masterValid.Validation().Status()),
 			Timestamp: masterValid.Validation().Timestamp().Unix(),
 		},
-	}
-}
-
-func formatPeerIdentity(identity *api.PeerIdentity) uniris.PeerIdentity {
-	return uniris.NewPeerIdentity(net.ParseIP(identity.Ip), int(identity.Port), identity.PublicKey)
-}
-
-func formatPeerIdentityAPI(identity uniris.PeerIdentity) *api.PeerIdentity {
-	return &api.PeerIdentity{
-		Ip:        identity.IP().String(),
-		Port:      int32(identity.Port()),
-		PublicKey: identity.PublicKey(),
 	}
 }

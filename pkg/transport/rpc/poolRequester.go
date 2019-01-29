@@ -9,8 +9,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uniris/uniris-core/pkg/transaction"
+
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
-	uniris "github.com/uniris/uniris-core/pkg"
 	"github.com/uniris/uniris-core/pkg/crypto"
 	"google.golang.org/grpc"
 )
@@ -21,18 +22,14 @@ type poolR struct {
 }
 
 //NewPoolRequester creates a new pool requester as a GRPC client
-func NewPoolRequester(sharedPubk string, sharedPvk string) uniris.PoolRequester {
+func NewPoolRequester(sharedPubk string, sharedPvk string) transaction.PoolRequester {
 	return poolR{
 		sharedPubk: sharedPubk,
 		sharedPvk:  sharedPvk,
 	}
 }
 
-func (pr poolR) RequestLastTransaction(pool uniris.Pool, addr string) (tx uniris.Transaction, err error) {
-	return
-}
-
-func (pr poolR) RequestTransactionLock(pool uniris.Pool, lock uniris.Lock) error {
+func (pr poolR) RequestTransactionLock(pool transaction.Pool, lock transaction.Lock) error {
 
 	var wg sync.WaitGroup
 	wg.Add(len(pool))
@@ -57,7 +54,7 @@ func (pr poolR) RequestTransactionLock(pool uniris.Pool, lock uniris.Lock) error
 	req.SignatureRequest = sig
 
 	for _, p := range pool {
-		go func(p uniris.PeerIdentity) {
+		go func(p transaction.PoolMember) {
 			defer wg.Done()
 
 			serverAddr := fmt.Sprintf("%s:%d", p.IP(), p.Port())
@@ -102,11 +99,11 @@ func (pr poolR) RequestTransactionLock(pool uniris.Pool, lock uniris.Lock) error
 	return nil
 }
 
-func (pr poolR) RequestTransactionUnlock(pool uniris.Pool, lock uniris.Lock) error {
+func (pr poolR) RequestTransactionUnlock(pool transaction.Pool, lock transaction.Lock) error {
 	return nil
 }
 
-func (pr poolR) RequestTransactionValidations(pool uniris.Pool, tx uniris.Transaction, masterValid uniris.MasterValidation, validChan chan<- uniris.MinerValidation, replyChan chan<- bool) {
+func (pr poolR) RequestTransactionValidations(pool transaction.Pool, tx transaction.Transaction, masterValid transaction.MasterValidation, validChan chan<- transaction.MinerValidation) {
 
 	req := &api.ConfirmValidationRequest{
 		MasterValidation: formatAPIMasterValidationAPI(masterValid),
@@ -141,7 +138,6 @@ func (pr poolR) RequestTransactionValidations(pool uniris.Pool, tx uniris.Transa
 		}
 
 		fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - %s", time.Unix(res.Timestamp, 0).String())
-		replyChan <- true
 
 		resBytes, err := json.Marshal(&api.ConfirmValidationResponse{
 			Timestamp:  res.Timestamp,
@@ -156,12 +152,16 @@ func (pr poolR) RequestTransactionValidations(pool uniris.Pool, tx uniris.Transa
 			return
 		}
 
-		validChan <- uniris.NewMinerValidation(uniris.ValidationStatus(res.Validation.Status), time.Unix(res.Timestamp, 0), res.Validation.PublicKey, res.Validation.Signature)
+		v, err := transaction.NewMinerValidation(transaction.ValidationStatus(res.Validation.Status), time.Unix(res.Timestamp, 0), res.Validation.PublicKey, res.Validation.Signature)
+		if err != nil {
+			return
+		}
+		validChan <- v
 	}
 
 }
 
-func (pr poolR) RequestTransactionStorage(pool uniris.Pool, tx uniris.Transaction, ackChan chan<- bool) {
+func (pr poolR) RequestTransactionStorage(pool transaction.Pool, tx transaction.Transaction, ackChan chan<- bool) {
 	confValids := make([]*api.MinerValidation, 0)
 	for _, v := range tx.ConfirmationsValidations() {
 		confValids = append(confValids, formatAPIValidation(v))

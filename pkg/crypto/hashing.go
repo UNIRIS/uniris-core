@@ -20,17 +20,17 @@ func HashBytes(data []byte) string {
 
 func IsHash(hash string) (bool, error) {
 	if hash == "" {
-		return false, errors.New("Hash is empty")
+		return false, errors.New("hash is empty")
 	}
 
 	bytes, err := hex.DecodeString(hash)
 	if err != nil {
-		return false, errors.New("Hash is not in hexadecimal format")
+		return false, errors.New("hash is not in hexadecimal format")
 	}
 
 	size := sha256.New().Size()
 	if len(bytes) != size {
-		return false, errors.New("Hash is not valid")
+		return false, errors.New("hash is not valid")
 	}
 
 	return true, nil

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/beevik/ntp"
-	"github.com/uniris/uniris-core/pkg/gossip"
+	"github.com/uniris/uniris-core/pkg/discovery"
 )
 
 const (
@@ -19,7 +19,7 @@ var cntp = [...]string{"1.pool.ntp.org", "2.pool.ntp.org", "3.pool.ntp.org", "4.
 
 type pNet struct{}
 
-func NewPeerNetworker() gossip.PeerNetworker {
+func NewPeerNetworker() discovery.PeerNetworker {
 	return pNet{}
 }
 
@@ -36,12 +36,12 @@ func (pn pNet) CheckNtpState() error {
 						}
 					}
 				}
-				return gossip.ErrNTPShift
+				return discovery.ErrNTPShift
 			}
 			return nil
 		}
 	}
-	return gossip.ErrNTPFailure
+	return discovery.ErrNTPFailure
 }
 
 func (pn pNet) CheckInternetState() error {

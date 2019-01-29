@@ -5,19 +5,19 @@ import (
 	"log"
 	"net"
 
+	"github.com/uniris/uniris-core/pkg/shared"
+
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
-	"github.com/uniris/uniris-core/pkg/adding"
-	"github.com/uniris/uniris-core/pkg/gossip"
-	"github.com/uniris/uniris-core/pkg/listing"
-	"github.com/uniris/uniris-core/pkg/mining"
+	"github.com/uniris/uniris-core/pkg/discovery"
 	memstorage "github.com/uniris/uniris-core/pkg/storage/mem"
 	"github.com/uniris/uniris-core/pkg/system"
+	"github.com/uniris/uniris-core/pkg/transaction"
 	"github.com/uniris/uniris-core/pkg/transport/rpc"
 	"google.golang.org/grpc"
 )
 
 func startDatamining(conf system.UnirisConfig) {
-	var pInfo gossip.PeerInformer
+	var pInfo discovery.PeerInformer
 	if conf.Network.Type == "private" {
 		pInfo = system.NewPeerInformer(true, conf.Network.Interface)
 	} else {
@@ -34,14 +34,16 @@ func startDatamining(conf system.UnirisConfig) {
 	sharedDb := memstorage.NewSharedDatabase()
 
 	poolReq := rpc.NewPoolRequester("", "")
+	poolRetr := rpc.NewPoolRetriever("", "")
 
-	lister := listing.NewService(txDb, lockDb, sharedDb)
-	adder := adding.NewService(txDb, lockDb, sharedDb, lister)
-	miner := mining.NewService(lister, poolReq, "", "", ip.String())
+	sharedSrv := shared.NewService(sharedDb)
+	poolFinderSrv := transaction.NewPoolFindingService(poolRetr)
+	miningSrv := transaction.NewMiningService(poolReq, poolFinderSrv, sharedSrv, ip.String(), conf.PublicKey, conf.PrivateKey)
+	storeSrv := transaction.NewStorageService(txDb, miningSrv)
+	lockSrv := transaction.NewLockService(lockDb)
 
-	intSrv := rpc.NewInternalServer(lister)
-	txSrv := rpc.NewTransactionServer(adder, lister, miner, "", "")
-	accSrv := rpc.NewAccountServer(lister)
+	intSrv := rpc.NewInternalServer(poolFinderSrv, miningSrv)
+	txSrv := rpc.NewTransactionServer(storeSrv, lockSrv, miningSrv, "", "")
 
 	go func() {
 		lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", conf.Services.Datamining.InternalPort))
@@ -62,9 +64,8 @@ func startDatamining(conf system.UnirisConfig) {
 	}
 	grpcServer := grpc.NewServer()
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
-	api.RegisterAccountServiceServer(grpcServer, accSrv)
 
-	log.Printf("Transaction,Account GRPC Server listening on %d", conf.Services.Datamining.ExternalPort)
+	log.Printf("Transaction GRPC Server listening on %d", conf.Services.Datamining.ExternalPort)
 	if err := grpcServer.Serve(lis); err != nil {
 		panic(err)
 	}

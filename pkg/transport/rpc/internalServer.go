@@ -6,31 +6,33 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uniris/uniris-core/pkg/crypto"
-	"github.com/uniris/uniris-core/pkg/electing"
-	"github.com/uniris/uniris-core/pkg/mining"
-	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
-	"github.com/uniris/uniris-core/pkg/listing"
+	"github.com/uniris/uniris-core/pkg/crypto"
+	"github.com/uniris/uniris-core/pkg/transaction"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 )
 
 type internalSrv struct {
-	lister          listing.Service
 	sharedRobotPubK string
 	sharedRobotPvk  string
+	poolFinding     transaction.PoolFindingService
+	mining          transaction.MiningService
 }
 
 //NewInternalServer creates a new GRPC internal server
-func NewInternalServer(l listing.Service) api.InternalServiceServer {
+func NewInternalServer(poolFinding transaction.PoolFindingService, mining transaction.MiningService) api.InternalServiceServer {
 	return internalSrv{
-		lister: l,
+		poolFinding: poolFinding,
+		mining:      mining,
 	}
 }
 
 func (s internalSrv) GetTransactionStatus(ctx context.Context, req *api.TransactionStatusRequest) (*api.TransactionStatusResponse, error) {
 
-	pool, err := electing.FindStoragePool(req.TransactionHash)
+	pool, err := s.poolFinding.FindStoragePool(req.TransactionHash)
 	if err != nil {
 		return nil, err
 	}
@@ -76,13 +78,13 @@ func (s internalSrv) HandleTransaction(ctx context.Context, req *api.IncomingTra
 	}
 	txHash := crypto.HashString(txJSON)
 
-	var txRaw transaction
+	var txRaw tx
 	if err := json.Unmarshal([]byte(txJSON), &txRaw); err != nil {
 		return nil, err
 	}
 
-	masterPeerIP := electing.FindTransactionMasterPeer(txHash)
-	minValidations := mining.GetMinimumTransactionValidation(txHash)
+	masterPeerIP := s.poolFinding.FindTransactionMasterPeer(txHash)
+	minValidations := s.mining.GetMinimumTransactionValidation(txHash)
 	preValidReq := formatPreValidationRequest(txRaw, int(req.Type), txHash, minValidations)
 
 	serverAddr := fmt.Sprintf("%s:1717", masterPeerIP)
@@ -130,19 +132,42 @@ func (s internalSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest)
 		return nil, err
 	}
 
-	id, err := s.getID(req.EncryptedIdAddress)
+	idAddr, err := crypto.Decrypt(req.EncryptedIdAddress, s.sharedRobotPvk)
+	if err != nil {
+		return nil, err
+	}
+	idTx, err := s.poolFinding.RequestLastTransaction(idAddr, transaction.IDType)
+	if err != nil {
+		return nil, err
+	}
+	if idTx == nil {
+		return nil, status.New(codes.NotFound, "ID does not exist").Err()
+	}
+
+	id, err := transaction.NewID(*idTx)
 	if err != nil {
 		return nil, err
 	}
 
-	keychain, err := s.getKeychain(id.EncryptedKeychainAddress)
+	keychainAddr, err := crypto.Decrypt(id.EncryptedAddrByRobot(), s.sharedRobotPvk)
 	if err != nil {
 		return nil, err
+	}
+	keychainTx, err := s.poolFinding.RequestLastTransaction(keychainAddr, transaction.KeychainType)
+	if err != nil {
+		return nil, err
+	}
+	keychain, err := transaction.NewKeychain(*keychainTx)
+	if err != nil {
+		return nil, err
+	}
+	if keychainTx == nil {
+		return nil, status.New(codes.NotFound, "Keychain does not exist").Err()
 	}
 
 	res := &api.GetAccountResponse{
-		EncryptedAesKey: id.EncryptedAesKey,
-		EncryptedWallet: keychain.EncryptedWallet,
+		EncryptedAesKey: id.EncryptedAESKey(),
+		EncryptedWallet: keychain.EncryptedWallet(),
 		Timestamp:       time.Now().Unix(),
 	}
 	resBytes, err := json.Marshal(res)
@@ -158,113 +183,7 @@ func (s internalSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest)
 	return res, nil
 }
 
-func (s internalSrv) getID(idAddress string) (*api.IDResponse, error) {
-	address, err := crypto.Decrypt(idAddress, s.sharedRobotPvk)
-	if err != nil {
-		return nil, err
-	}
-
-	idPool, err := electing.FindStoragePool(address)
-	if err != nil {
-		return nil, err
-	}
-
-	//Select storage master peer
-	serverAddr := fmt.Sprintf("%s:%d", idPool[0].IP().String(), idPool[0].Port())
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	cli := api.NewAccountServiceClient(conn)
-	req := &api.IDRequest{
-		EncryptedAddress: idAddress,
-		Timestamp:        time.Now().Unix(),
-	}
-	reqBytes, err := json.Marshal(req)
-	if err != nil {
-		return nil, err
-	}
-	sig, err := crypto.Sign(string(reqBytes), s.sharedRobotPvk)
-	if err != nil {
-		return nil, err
-	}
-	req.SignatureRequest = sig
-	res, err := cli.GetID(context.Background(), req)
-	if err != nil {
-		return nil, err
-	}
-
-	resBytes, err := json.Marshal(&api.IDResponse{
-		EncryptedAesKey: res.EncryptedAesKey,
-		Timestamp:       res.Timestamp,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if err := crypto.VerifySignature(string(resBytes), s.sharedRobotPubK, res.SignatureResponse); err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("GET ID RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
-	return res, nil
-}
-
-func (s internalSrv) getKeychain(keychainAddr string) (*api.KeychainResponse, error) {
-	keychainAddress, err := crypto.Decrypt(keychainAddr, s.sharedRobotPvk)
-	if err != nil {
-		return nil, err
-	}
-	keychainPool, err := electing.FindStoragePool(keychainAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	//Select storage master peer
-	serverAddr := fmt.Sprintf("%s:%d", keychainPool[0].IP().String(), keychainPool[0].Port())
-	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	cli := api.NewAccountServiceClient(conn)
-	req := &api.KeychainRequest{
-		EncryptedAddress: keychainAddr,
-		Timestamp:        time.Now().Unix(),
-	}
-	reqBytes, err := json.Marshal(req)
-	if err != nil {
-		return nil, err
-	}
-	sig, err := crypto.Sign(string(reqBytes), s.sharedRobotPvk)
-	if err != nil {
-		return nil, err
-	}
-	req.SignatureRequest = sig
-	res, err := cli.GetKeychain(context.Background(), req)
-	if err != nil {
-		return nil, err
-	}
-
-	resBytes, err := json.Marshal(&api.KeychainResponse{
-		EncryptedWallet: res.EncryptedWallet,
-		Timestamp:       res.Timestamp,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if err := crypto.VerifySignature(string(resBytes), s.sharedRobotPubK, res.SignatureResponse); err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("GET KEYCHAIN RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
-
-	return res, nil
-}
-
-type transaction struct {
+type tx struct {
 	Address          string
 	Data             string
 	Type             int
@@ -272,19 +191,19 @@ type transaction struct {
 	PublicKey        string
 	Signature        string
 	EmitterSignature string
-	Proposal         transactionProposal
+	Proposal         txProp
 }
 
-type transactionProposal struct {
-	SharedEmitterKeys transactionSharedKeys
+type txProp struct {
+	SharedEmitterKeys txSharedKeys
 }
 
-type transactionSharedKeys struct {
+type txSharedKeys struct {
 	EncryptedPrivateKey string
 	PublicKey           string
 }
 
-func formatPreValidationRequest(txRaw transaction, txType int, txHash string, minValidations int) *api.PreValidationRequest {
+func formatPreValidationRequest(txRaw tx, txType int, txHash string, minValidations int) *api.PreValidationRequest {
 	return &api.PreValidationRequest{
 		MinimumValidations: int32(minValidations),
 		Timestamp:          time.Now().Unix(),

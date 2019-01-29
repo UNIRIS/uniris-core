@@ -34,7 +34,7 @@ func main() {
 
 		conf.Version = app.Version
 
-		pub, err := crypto.GetPublicKey(conf.PrivateKey)
+		pub, err := crypto.GetPublicKeyFromPrivate(conf.PrivateKey)
 		if err != nil {
 			panic(err)
 		}

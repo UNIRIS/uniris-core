@@ -5,11 +5,25 @@ import "discovery.proto";
 package api;
 
 service TransactionService {
+    rpc GetLastTransaction(LastTransactionRequest) returns (LastTransactionResponse);
     rpc GetTransactionStatus(TransactionStatusRequest) returns (TransactionStatusResponse);
     rpc LockTransaction(LockRequest) returns (LockResponse);
     rpc PreValidateTransaction(PreValidationRequest) returns (PreValidationResponse);
     rpc ConfirmTransactionValidation(ConfirmValidationRequest) returns (ConfirmValidationResponse);
     rpc StoreTransaction(StoreRequest) returns (StoreResponse);
+}
+
+message LastTransactionRequest{
+    string transaction_address = 1;
+    TransactionType type = 2;
+    int64 timestamp = 3;
+    string signature_request = 4;
+}
+
+message LastTransactionResponse {
+    Transaction transaction = 1;
+    int64 timestamp = 2;
+    string signature_response = 3;
 }
 
 message TransactionStatusRequest {
@@ -97,9 +111,14 @@ message ConfirmValidationResponse {
 }
 
 message MasterValidation {
-    repeated PeerIdentity previous_transaction_miners = 1;
+    repeated PoolMember previous_transaction_miners = 1;
     string proof_of_work = 2;
     MinerValidation pre_validation = 3;
+}
+
+message PoolMember {
+    string ip = 1;
+    int32 port = 2;
 }
 
 message MinerValidation {

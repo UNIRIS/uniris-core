@@ -1,19 +1,16 @@
 package memstorage
 
 import (
-	uniris "github.com/uniris/uniris-core/pkg"
-	"github.com/uniris/uniris-core/pkg/adding"
-	"github.com/uniris/uniris-core/pkg/listing"
+	"github.com/uniris/uniris-core/pkg/shared"
 )
 
 //SharedDatabase is the shared memory database
 type SharedDatabase interface {
-	adding.SharedRepository
-	listing.SharedRepository
+	shared.KeyRepository
 }
 
 type sharedDb struct {
-	sharedKeys []uniris.SharedKeys
+	emitterKeys []shared.KeyPair
 }
 
 //NewSharedDatabase creates a new memory shared database
@@ -21,11 +18,11 @@ func NewSharedDatabase() SharedDatabase {
 	return &sharedDb{}
 }
 
-func (d sharedDb) ListSharedEmitterKeyPairs() ([]uniris.SharedKeys, error) {
-	return d.sharedKeys, nil
+func (d sharedDb) ListSharedEmitterKeyPairs() ([]shared.KeyPair, error) {
+	return d.emitterKeys, nil
 }
 
-func (d *sharedDb) StoreSharedEmitterKeyPair(sk uniris.SharedKeys) error {
-	d.sharedKeys = append(d.sharedKeys, sk)
+func (d *sharedDb) StoreSharedEmitterKeyPair(sk shared.KeyPair) error {
+	d.emitterKeys = append(d.emitterKeys, sk)
 	return nil
 }

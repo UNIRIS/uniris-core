@@ -5,32 +5,30 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uniris/uniris-core/pkg/gossip"
-
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
-	uniris "github.com/uniris/uniris-core/pkg"
+	"github.com/uniris/uniris-core/pkg/discovery"
 )
 
 type discoverySrv struct {
-	gossip gossip.Service
+	srv discovery.Service
 }
 
 //NewDiscoveryServer creates a new GRPC discovery server
-func NewDiscoveryServer(g gossip.Service) api.DiscoveryServiceServer {
+func NewDiscoveryServer(s discovery.Service) api.DiscoveryServiceServer {
 	return discoverySrv{
-		gossip: g,
+		srv: s,
 	}
 }
 
 func (s discoverySrv) Synchronize(ctx context.Context, req *api.SynRequest) (*api.SynResponse, error) {
 	fmt.Printf("SYN REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	reqP := make([]uniris.Peer, 0)
+	reqP := make([]discovery.Peer, 0)
 	for _, p := range req.KnownPeers {
 		reqP = append(reqP, formatPeerDigest(p))
 	}
 
-	unknown, new, err := s.gossip.CompareSyncRequest(reqP)
+	unknown, new, err := s.srv.SynchronizeGossip(reqP)
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +44,6 @@ func (s discoverySrv) Synchronize(ctx context.Context, req *api.SynRequest) (*ap
 	}
 
 	return &api.SynResponse{
-		Target:       req.Source,
-		Source:       req.Target,
 		UnknownPeers: unknownPeers,
 		NewPeers:     newPeers,
 		Timestamp:    time.Now().Unix(),
@@ -57,12 +53,12 @@ func (s discoverySrv) Synchronize(ctx context.Context, req *api.SynRequest) (*ap
 func (s discoverySrv) Acknowledge(ctx context.Context, req *api.AckRequest) (*api.AckResponse, error) {
 	fmt.Printf("ACK REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	newPeers := make([]uniris.Peer, 0)
+	newPeers := make([]discovery.Peer, 0)
 	for _, p := range req.RequestedPeers {
 		newPeers = append(newPeers, formatPeerDiscovered(p))
 	}
 
-	if err := s.gossip.StoreAcknowledgePeers(newPeers); err != nil {
+	if err := s.srv.AcknowledgeGossip(newPeers); err != nil {
 		return nil, err
 	}
 

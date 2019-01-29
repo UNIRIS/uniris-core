@@ -98,7 +98,7 @@ func getAccount() func(c *gin.Context) {
 func createAccount() func(c *gin.Context) {
 	return func(c *gin.Context) {
 
-		var form AccountCreationForm
+		var form accountCreationForm
 		if err := c.ShouldBindJSON(&form); err != nil {
 			c.AbortWithError(500, err)
 			return
@@ -131,20 +131,20 @@ func createAccount() func(c *gin.Context) {
 			c.AbortWithError(500, err)
 		}
 
-		c.JSON(http.StatusCreated, AccountCreationResult{
+		c.JSON(http.StatusCreated, accountCreationResult{
 			IDTransactionHash:       resID.TransactionHash,
 			KeychainTransactionHash: resKeychain.TransactionHash,
 		})
 	}
 }
 
-type AccountCreationForm struct {
+type accountCreationForm struct {
 	EncryptedKeychain string `json:"encrypted_id"`
 	EncryptedID       string `json:"encrypted_keychain"`
 	Signature         string `json:"signature"`
 }
 
-type AccountCreationResult struct {
+type accountCreationResult struct {
 	IDTransactionHash       string
 	KeychainTransactionHash string
 }

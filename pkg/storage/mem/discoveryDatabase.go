@@ -1,18 +1,15 @@
 package memstorage
 
-import (
-	uniris "github.com/uniris/uniris-core/pkg"
-	"github.com/uniris/uniris-core/pkg/gossip"
-)
+import "github.com/uniris/uniris-core/pkg/discovery"
 
 type discoveryDb struct {
-	knownPeers       []uniris.Peer
-	seedPeers        []uniris.Seed
+	knownPeers       []discovery.Peer
+	seedPeers        []discovery.Seed
 	unreachablePeers []string
 }
 
 //NewDiscoveryDatabase creates a new memory database
-func NewDiscoveryDatabase() gossip.Repository {
+func NewDiscoveryDatabase() discovery.Repository {
 	return &discoveryDb{}
 }
 
@@ -20,15 +17,15 @@ func (db discoveryDb) CountKnownPeers() (int, error) {
 	return len(db.knownPeers), nil
 }
 
-func (db discoveryDb) ListSeedPeers() ([]uniris.Seed, error) {
+func (db discoveryDb) ListSeedPeers() ([]discovery.Seed, error) {
 	return db.seedPeers, nil
 }
 
-func (db discoveryDb) ListKnownPeers() ([]uniris.Peer, error) {
+func (db discoveryDb) ListKnownPeers() ([]discovery.Peer, error) {
 	return db.knownPeers, nil
 }
 
-func (db *discoveryDb) StoreKnownPeer(peer uniris.Peer) error {
+func (db *discoveryDb) StoreKnownPeer(peer discovery.Peer) error {
 	for i, p := range db.knownPeers {
 		if p.Identity().PublicKey() == peer.Identity().PublicKey() {
 			db.knownPeers[i] = peer
@@ -39,8 +36,8 @@ func (db *discoveryDb) StoreKnownPeer(peer uniris.Peer) error {
 	return nil
 }
 
-func (db discoveryDb) ListReachablePeers() ([]uniris.Peer, error) {
-	pp := make([]uniris.Peer, 0)
+func (db discoveryDb) ListReachablePeers() ([]discovery.Peer, error) {
+	pp := make([]discovery.Peer, 0)
 	for i := 0; i < len(db.knownPeers); i++ {
 		if !db.ContainsUnreachablePeer(db.knownPeers[i].Identity().PublicKey()) {
 			pp = append(pp, db.knownPeers[i])
@@ -50,8 +47,8 @@ func (db discoveryDb) ListReachablePeers() ([]uniris.Peer, error) {
 }
 
 //ListunreachablePeers returns all unreachable peers
-func (db discoveryDb) ListUnreachablePeers() ([]uniris.Peer, error) {
-	pp := make([]uniris.Peer, 0)
+func (db discoveryDb) ListUnreachablePeers() ([]discovery.Peer, error) {
+	pp := make([]discovery.Peer, 0)
 	for i := 0; i < len(db.knownPeers); i++ {
 		if db.ContainsUnreachablePeer(db.knownPeers[i].Identity().PublicKey()) {
 			pp = append(pp, db.knownPeers[i])
@@ -60,7 +57,7 @@ func (db discoveryDb) ListUnreachablePeers() ([]uniris.Peer, error) {
 	return pp, nil
 }
 
-func (db *discoveryDb) StoreSeedPeer(s uniris.Seed) error {
+func (db *discoveryDb) StoreSeedPeer(s discovery.Seed) error {
 	db.seedPeers = append(db.seedPeers, s)
 	return nil
 }

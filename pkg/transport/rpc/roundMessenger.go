@@ -6,8 +6,7 @@ import (
 	"time"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
-	uniris "github.com/uniris/uniris-core/pkg"
-	"github.com/uniris/uniris-core/pkg/gossip"
+	"github.com/uniris/uniris-core/pkg/discovery"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -16,11 +15,11 @@ import (
 type rndMsg struct{}
 
 //NewGossipRoundMessenger creates a new gossip round message with GRPC
-func NewGossipRoundMessenger() gossip.RoundMessenger {
+func NewGossipRoundMessenger() discovery.RoundMessenger {
 	return rndMsg{}
 }
 
-func (m rndMsg) SendSyn(source uniris.Peer, target uniris.Peer, known []uniris.Peer) (unknown []uniris.Peer, new []uniris.Peer, err error) {
+func (m rndMsg) SendSyn(source discovery.Peer, target discovery.Peer, known []discovery.Peer) (unknown []discovery.Peer, new []discovery.Peer, err error) {
 	serverAddr := fmt.Sprintf("%s", target.Endpoint())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
@@ -44,7 +43,7 @@ func (m rndMsg) SendSyn(source uniris.Peer, target uniris.Peer, known []uniris.P
 		//If the peer cannot be reached, we throw an ErrPeerUnreachable error
 		statusCode, _ := status.FromError(err)
 		if statusCode.Code() == codes.Unavailable {
-			return nil, nil, gossip.ErrUnreachablePeer
+			return nil, nil, discovery.ErrUnreachablePeer
 		}
 		return nil, nil, err
 	}
@@ -61,7 +60,7 @@ func (m rndMsg) SendSyn(source uniris.Peer, target uniris.Peer, known []uniris.P
 	return
 }
 
-func (m rndMsg) SendAck(source uniris.Peer, target uniris.Peer, requested []uniris.Peer) error {
+func (m rndMsg) SendAck(source discovery.Peer, target discovery.Peer, requested []discovery.Peer) error {
 	serverAddr := fmt.Sprintf("%s", target.Endpoint())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()

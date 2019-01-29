@@ -14,7 +14,7 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-var ErrInvalidSignature = errors.New("Signature is not valid")
+var ErrInvalidSignature = errors.New("signature is not valid")
 
 //Sign creates a signature from a given data
 func Sign(data string, pvKey string) (string, error) {
@@ -76,12 +76,12 @@ func VerifySignature(data string, pubKey string, sig string) error {
 
 func IsSignature(sig string) (bool, error) {
 	if sig == "" {
-		return false, errors.New("Signature is empty")
+		return false, errors.New("signature is empty")
 	}
 
 	decodedsig, err := hex.DecodeString(sig)
 	if err != nil {
-		return false, errors.New("Signature is not in hexadecimal format")
+		return false, errors.New("signature is not in hexadecimal format")
 	}
 
 	var signature ecdsaSignature

@@ -9,8 +9,7 @@ import (
 	"time"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
-	uniris "github.com/uniris/uniris-core/pkg"
-	"github.com/uniris/uniris-core/pkg/gossip"
+	"github.com/uniris/uniris-core/pkg/discovery"
 	memstorage "github.com/uniris/uniris-core/pkg/storage/mem"
 	"github.com/uniris/uniris-core/pkg/system"
 	memtransport "github.com/uniris/uniris-core/pkg/transport/mem"
@@ -27,7 +26,7 @@ func startDiscovery(conf system.UnirisConfig) {
 	db := memstorage.NewDiscoveryDatabase()
 	pnet := system.NewPeerNetworker()
 
-	var pInfo gossip.PeerInformer
+	var pInfo discovery.PeerInformer
 	if conf.Network.Type == "private" {
 		pInfo = system.NewPeerInformer(true, conf.Network.Interface)
 	} else {
@@ -36,51 +35,51 @@ func startDiscovery(conf system.UnirisConfig) {
 
 	msg := rpc.NewGossipRoundMessenger()
 	notif := memtransport.NewGossipNotifier()
-	gossipSrv := gossip.NewService(db, msg, notif, pnet, pInfo)
+	discoverySrv := discovery.NewService(db, msg, notif, pnet, pInfo)
 
-	go startDiscoveryServer(gossipSrv, conf.Services.Discovery.Port)
+	go startDiscoveryServer(discoverySrv, conf.Services.Discovery.Port)
 
-	peer, err := gossipSrv.StoreLocalPeer(conf.PublicKey, conf.Services.Discovery.Port, conf.Version)
+	peer, err := discoverySrv.StoreLocalPeer(conf.PublicKey, conf.Services.Discovery.Port, conf.Version)
 	if err != nil {
 		panic(err)
 	}
 	log.Print("Local peer stored")
 
-	startGossip(peer, gossipSrv, conf)
+	startGossip(peer, discoverySrv, conf)
 }
 
-func getSeeds(conf system.UnirisConfig) (seeds []uniris.Seed) {
+func getSeeds(conf system.UnirisConfig) (seeds []discovery.Seed) {
 	seedsConf := strings.Split(conf.Services.Discovery.Seeds, ";")
 	for _, s := range seedsConf {
 		seedItems := strings.Split(s, ":")
 		ip := net.ParseIP(seedItems[0])
 		port, _ := strconv.Atoi(seedItems[1])
 		key := seedItems[2]
-		seeds = append(seeds, uniris.Seed{
-			PeerIdentity: uniris.NewPeerIdentity(ip, port, key),
+		seeds = append(seeds, discovery.Seed{
+			PeerIdentity: discovery.NewPeerIdentity(ip, port, key),
 		})
 	}
 	return
 }
 
-func startDiscoveryServer(gossipSrv gossip.Service, discoveryPort int) {
+func startDiscoveryServer(discoverySrv discovery.Service, discoveryPort int) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", discoveryPort))
 	if err != nil {
 		panic(err)
 	}
 	grpcServer := grpc.NewServer()
-	api.RegisterDiscoveryServiceServer(grpcServer, rpc.NewDiscoveryServer(gossipSrv))
+	api.RegisterDiscoveryServiceServer(grpcServer, rpc.NewDiscoveryServer(discoverySrv))
 	log.Printf("Discovery GRPC server listening on %d", discoveryPort)
 	if err := grpcServer.Serve(lis); err != nil {
 		panic(err)
 	}
 }
 
-func startGossip(p uniris.Peer, gossipSrv gossip.Service, conf system.UnirisConfig) {
+func startGossip(p discovery.Peer, discoverySrv discovery.Service, conf system.UnirisConfig) {
 	timer := time.NewTicker(time.Second * 3)
 	log.Print("Gossip running...")
 	seeds := getSeeds(conf)
-	abortChan, err := gossipSrv.Run(p, seeds, timer)
+	abortChan, err := discoverySrv.Gossip(p, seeds, timer)
 	if err != nil {
 		panic(err)
 	}
