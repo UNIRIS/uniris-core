@@ -86,7 +86,7 @@ Scenario: Store and notifies cycle unreachables peers
 */
 func TestHandlingCycleUnreaches(t *testing.T) {
 	c := cycle{
-		unreachChan: make(chan Peer),
+		unreachChan: make(chan PeerIdentity),
 	}
 
 	repo := &mockRepository{}
@@ -96,21 +96,17 @@ func TestHandlingCycleUnreaches(t *testing.T) {
 		repo:  repo,
 		notif: notif,
 	}
-	unreachChan := make(chan Peer)
+	unreachChan := make(chan PeerIdentity)
 	errChan := make(chan error)
 
 	go srv.handleUnreachables(c, unreachChan, errChan)
-	c.unreachChan <- NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
-		NewPeerHeartbeatState(time.Now(), 0),
-		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 200, 1, 0),
-	)
+	c.unreachChan <- NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key")
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		for d := range unreachChan {
-			assert.Equal(t, "key", d.Identity().PublicKey())
+			assert.Equal(t, "key", d.PublicKey())
 			wg.Done()
 
 		}
@@ -121,7 +117,7 @@ func TestHandlingCycleUnreaches(t *testing.T) {
 
 	assert.Len(t, repo.unreachablePeers, 1)
 	assert.Equal(t, "key", repo.unreachablePeers[0])
-	assert.Equal(t, "key", notif.unreaches[0].Identity().PublicKey())
+	assert.Equal(t, "key", notif.unreaches[0].PublicKey())
 
 }
 
@@ -133,7 +129,7 @@ Scenario: Store and notifies cycle reachables peers
 */
 func TestHandlingCycleReaches(t *testing.T) {
 	c := cycle{
-		reachChan: make(chan Peer),
+		reachChan: make(chan PeerIdentity),
 	}
 
 	repo := &mockRepository{}
@@ -143,7 +139,7 @@ func TestHandlingCycleReaches(t *testing.T) {
 		repo:  repo,
 		notif: notif,
 	}
-	reachChan := make(chan Peer)
+	reachChan := make(chan PeerIdentity)
 	errChan := make(chan error)
 
 	var wg sync.WaitGroup
@@ -152,23 +148,19 @@ func TestHandlingCycleReaches(t *testing.T) {
 	go srv.handleReachables(c, reachChan, errChan)
 	go func() {
 		for d := range reachChan {
-			assert.Equal(t, "key", d.Identity().PublicKey())
+			assert.Equal(t, "key", d.PublicKey())
 			wg.Done()
 		}
 	}()
 
-	c.reachChan <- NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
-		NewPeerHeartbeatState(time.Now(), 0),
-		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 200, 1, 0),
-	)
+	c.reachChan <- NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key")
 
 	wg.Wait()
 	close(reachChan)
 	close(errChan)
 
 	assert.Len(t, repo.unreachablePeers, 0)
-	assert.Equal(t, "key", notif.reaches[0].Identity().PublicKey())
+	assert.Equal(t, "key", notif.reaches[0].PublicKey())
 
 }
 
@@ -180,8 +172,8 @@ Scenario: Store and notifies cycle reachables peers after unreach
 */
 func TestHandlingCycleReachesAfterUnreach(t *testing.T) {
 	c := cycle{
-		reachChan:   make(chan Peer),
-		unreachChan: make(chan Peer),
+		reachChan:   make(chan PeerIdentity),
+		unreachChan: make(chan PeerIdentity),
 	}
 
 	repo := &mockRepository{}
@@ -191,8 +183,8 @@ func TestHandlingCycleReachesAfterUnreach(t *testing.T) {
 		repo:  repo,
 		notif: notif,
 	}
-	unreachChan := make(chan Peer)
-	reachChan := make(chan Peer)
+	unreachChan := make(chan PeerIdentity)
+	reachChan := make(chan PeerIdentity)
 	errChan := make(chan error)
 
 	var wg sync.WaitGroup
@@ -201,16 +193,12 @@ func TestHandlingCycleReachesAfterUnreach(t *testing.T) {
 	go srv.handleUnreachables(c, unreachChan, errChan)
 	go func() {
 		for d := range unreachChan {
-			assert.Equal(t, "key", d.Identity().PublicKey())
+			assert.Equal(t, "key", d.PublicKey())
 			wg.Done()
 		}
 	}()
 
-	c.unreachChan <- NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
-		NewPeerHeartbeatState(time.Now(), 0),
-		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 200, 1, 0),
-	)
+	c.unreachChan <- NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key")
 
 	wg.Wait()
 	close(unreachChan)
@@ -220,40 +208,34 @@ func TestHandlingCycleReachesAfterUnreach(t *testing.T) {
 	go srv.handleReachables(c, reachChan, errChan)
 	go func() {
 		for d := range reachChan {
-			assert.Equal(t, "key", d.Identity().PublicKey())
+			assert.Equal(t, "key", d.PublicKey())
 			wg2.Done()
 		}
 	}()
 
-	c.reachChan <- NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
-		NewPeerHeartbeatState(time.Now(), 0),
-		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 200, 1, 0),
-	)
+	c.reachChan <- NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key")
 
 	wg2.Wait()
 	close(reachChan)
 	close(errChan)
 
 	assert.Len(t, repo.unreachablePeers, 0)
-	assert.Equal(t, "key", notif.reaches[0].Identity().PublicKey())
+	assert.Equal(t, "key", notif.reaches[0].PublicKey())
 }
 
 func TestSpreadGossip(t *testing.T) {
 	repo := &mockRepository{}
 	notif := &mockNotifier{}
-	s := NewService(repo, mockMessenger{}, notif, mockPeerNetworker{}, mockPeerInfo{})
+	s := NewService(repo, mockClient{}, notif, mockPeerNetworker{}, mockPeerInfo{})
 
 	ownPeer := NewLocalPeer("key", net.ParseIP("127.0.0.1"), 3000, "", 30.0, 10.0)
-	seeds := []Seed{
-		Seed{
-			PeerIdentity: NewPeerIdentity(net.ParseIP("10.0.0.1"), 3000, "key1"),
-		},
+	seeds := []PeerIdentity{
+		NewPeerIdentity(net.ParseIP("10.0.0.1"), 3000, "key1"),
 	}
 
 	dChan := make(chan Peer)
-	rChan := make(chan Peer)
-	uChan := make(chan Peer)
+	rChan := make(chan PeerIdentity)
+	uChan := make(chan PeerIdentity)
 	errChan := make(chan error)
 	s.startCycle(ownPeer, seeds, dChan, rChan, uChan, errChan)
 
@@ -272,8 +254,157 @@ func TestSpreadGossip(t *testing.T) {
 	assert.Equal(t, "dKey1", repo.knownPeers[1].Identity().PublicKey())
 }
 
+/*
+Scenario: Compare peers with different key and get the unknown
+	Given a known peer and a different peer
+	When I want to get the unknown peer
+	Then I get the second peer
+*/
+func TestGetUnknownPeersWithDifferentKey(t *testing.T) {
+	kp := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
+		NewPeerHeartbeatState(time.Now(), 1000),
+	)
+
+	comparee := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key2"),
+		NewPeerHeartbeatState(time.Now(), 1000),
+	)
+
+	unkwown := Service{}.getUnknownPeers([]Peer{kp}, []Peer{comparee})
+	assert.Len(t, unkwown, 1)
+	assert.Equal(t, "key2", unkwown[0].Identity().PublicKey())
+}
+
+/*
+Scenario: Compare 2 equal peers and get no one
+	Given a known peer and another peer equal
+	When I want to get the unknown peer
+	Then I get no unknwown peers
+*/
+func TestGetUnknownPeersWithSameGenerationTime(t *testing.T) {
+	kp := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
+		NewPeerHeartbeatState(time.Now(), 1000),
+	)
+
+	comparee := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
+		NewPeerHeartbeatState(time.Now(), 1000),
+	)
+
+	unkwown := Service{}.getUnknownPeers([]Peer{kp}, []Peer{comparee})
+	assert.Empty(t, unkwown, 1)
+}
+
+/*
+Scenario: Compare 2 set of peers with different time and get the recent one
+	Given known peers and received peers with different elapsed heartbeats
+	When I want to get the unknown peers
+	Then I get the peer with the highest elapsed heartbeats
+*/
+func TestGetUnknownPeersMoreRecent(t *testing.T) {
+	kp1 := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
+		NewPeerHeartbeatState(time.Now(), 1000),
+	)
+	kp2 := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key2"),
+		NewPeerHeartbeatState(time.Now(), 1000),
+	)
+
+	comparee1 := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key2"),
+		NewPeerHeartbeatState(time.Now(), 1000),
+	)
+	comparee2 := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
+		NewPeerHeartbeatState(time.Now(), 1200),
+	)
+
+	unkwown := Service{}.getUnknownPeers([]Peer{kp1, kp2}, []Peer{comparee1, comparee2})
+	assert.Len(t, unkwown, 1)
+	assert.Equal(t, "key1", unkwown[0].Identity().PublicKey())
+	assert.Equal(t, int64(1200), unkwown[0].HeartbeatState().ElapsedHeartbeats())
+}
+
+/*
+Scenario: Compare peers with different key and get the new one
+	Given a known peer and a received peer
+	When I want to get the new peer
+	Then I get the first peer
+*/
+func TestGetNewPeersWithDifferentKey(t *testing.T) {
+	kp := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
+		NewPeerHeartbeatState(time.Now(), 1000),
+	)
+
+	comparee := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key2"),
+		NewPeerHeartbeatState(time.Now(), 1000),
+	)
+
+	news := Service{}.getNewPeers([]Peer{kp}, []Peer{comparee})
+	assert.Len(t, news, 1)
+	assert.Equal(t, "key1", news[0].Identity().PublicKey())
+
+}
+
+/*
+Scenario: Compare 2 set of peers with different time and get the recent one
+	Given known peers and received peers with different elapsed heartbeats
+	When I want to get the news peer
+	Then I get the peer with the highest elapsed heartbeats
+*/
+func TestGetNewsPeersMoreRecent(t *testing.T) {
+	kp1 := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
+		NewPeerHeartbeatState(time.Now(), 1000),
+	)
+	kp2 := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key2"),
+		NewPeerHeartbeatState(time.Now(), 1200),
+	)
+
+	comparee1 := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key2"),
+		NewPeerHeartbeatState(time.Now(), 1000),
+	)
+	comparee2 := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
+		NewPeerHeartbeatState(time.Now(), 1000),
+	)
+
+	news := Service{}.getNewPeers([]Peer{kp1, kp2}, []Peer{comparee1, comparee2})
+	assert.Len(t, news, 1)
+	assert.Equal(t, "key2", news[0].Identity().PublicKey())
+	assert.Equal(t, int64(1200), news[0].HeartbeatState().ElapsedHeartbeats())
+}
+
+/*
+Scenario: Compare 2 equal peers and get no one
+	Given a known peer and another peer equal
+	When I want to get the unknown peer
+	Then I get no unknwown peers
+*/
+func TestGetNewPeersWithSameGenerationTime(t *testing.T) {
+	kp := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
+		NewPeerHeartbeatState(time.Now(), 1000),
+	)
+
+	comparee := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
+		NewPeerHeartbeatState(time.Now(), 1000),
+	)
+
+	news := Service{}.getNewPeers([]Peer{kp}, []Peer{comparee})
+	assert.Empty(t, news, 1)
+}
+
 type mockRepository struct {
-	seedPeers        []Seed
+	seedPeers        []PeerIdentity
 	knownPeers       []Peer
 	unreachablePeers []string
 }
@@ -282,7 +413,7 @@ func (r *mockRepository) CountKnownPeers() (int, error) {
 	return len(r.knownPeers), nil
 }
 
-func (r *mockRepository) ListSeedPeers() ([]Seed, error) {
+func (r *mockRepository) ListSeedPeers() ([]PeerIdentity, error) {
 	return r.seedPeers, nil
 }
 
@@ -304,34 +435,34 @@ func (r *mockRepository) StoreKnownPeer(peer Peer) error {
 	return nil
 }
 
-func (r *mockRepository) ListReachablePeers() ([]Peer, error) {
-	pp := make([]Peer, 0)
+func (r *mockRepository) ListReachablePeers() ([]PeerIdentity, error) {
+	pp := make([]PeerIdentity, 0)
 	for i := 0; i < len(r.knownPeers); i++ {
 		if !r.ContainsUnreachablePeer(r.knownPeers[i].Identity().PublicKey()) {
-			pp = append(pp, r.knownPeers[i])
+			pp = append(pp, r.knownPeers[i].Identity())
 		}
 	}
 	return pp, nil
 }
 
-func (r *mockRepository) ListUnreachablePeers() ([]Peer, error) {
-	pp := make([]Peer, 0)
+func (r *mockRepository) ListUnreachablePeers() ([]PeerIdentity, error) {
+	pp := make([]PeerIdentity, 0)
 
 	for i := 0; i < len(r.seedPeers); i++ {
 		if r.ContainsUnreachablePeer(r.seedPeers[i].PublicKey()) {
-			pp = append(pp, r.seedPeers[i].AsPeer())
+			pp = append(pp, r.seedPeers[i])
 		}
 	}
 
 	for i := 0; i < len(r.knownPeers); i++ {
 		if r.ContainsUnreachablePeer(r.knownPeers[i].Identity().PublicKey()) {
-			pp = append(pp, r.knownPeers[i])
+			pp = append(pp, r.knownPeers[i].Identity())
 		}
 	}
 	return pp, nil
 }
 
-func (r *mockRepository) StoreSeedPeer(s Seed) error {
+func (r *mockRepository) StoreSeedPeer(s PeerIdentity) error {
 	r.seedPeers = append(r.seedPeers, s)
 	return nil
 }
@@ -374,16 +505,16 @@ func (r *mockRepository) containsPeer(p Peer) bool {
 }
 
 type mockNotifier struct {
-	reaches     []Peer
-	unreaches   []Peer
+	reaches     []PeerIdentity
+	unreaches   []PeerIdentity
 	discoveries []Peer
 }
 
-func (n *mockNotifier) NotifyReachable(p Peer) error {
+func (n *mockNotifier) NotifyReachable(p PeerIdentity) error {
 	n.reaches = append(n.reaches, p)
 	return nil
 }
-func (n *mockNotifier) NotifyUnreachable(p Peer) error {
+func (n *mockNotifier) NotifyUnreachable(p PeerIdentity) error {
 	n.unreaches = append(n.unreaches, p)
 	return nil
 }

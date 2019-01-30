@@ -52,6 +52,11 @@ func (p PeerIdentity) PublicKey() string {
 	return p.publicKey
 }
 
+//Endpoint returns the peer endpoint
+func (p PeerIdentity) Endpoint() string {
+	return fmt.Sprintf("%s:%d", p.IP().String(), p.Port())
+}
+
 //Peer describes a network member
 type Peer struct {
 	identity PeerIdentity
@@ -122,11 +127,6 @@ func (p Peer) IsLocal() bool {
 	return p.isLocal
 }
 
-//Endpoint returns the peer endpoint
-func (p Peer) Endpoint() string {
-	return fmt.Sprintf("%s:%d", p.Identity().IP().String(), p.Identity().Port())
-}
-
 //Refresh a peer with metrics and updates the elapsed heartbeats
 func (p *Peer) Refresh(status PeerStatus, disk float64, cpu string, p2pFactor int, discoveryPeersNb int) {
 	if !p.isLocal {
@@ -139,7 +139,7 @@ func (p *Peer) Refresh(status PeerStatus, disk float64, cpu string, p2pFactor in
 
 func (p Peer) String() string {
 	return fmt.Sprintf("Endpoint: %s, Local: %t, %s, %s",
-		p.Endpoint(),
+		p.Identity().Endpoint(),
 		p.IsLocal(),
 		p.HeartbeatState().String(),
 		p.AppState().String(),

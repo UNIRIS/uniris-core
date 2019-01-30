@@ -131,35 +131,29 @@ Scenario: Avergage number of discoveries with 3 seeds as the only known peers
 */
 func TestAvergageDiscoveriesWithOnlySeeds(t *testing.T) {
 
-	seed1 := Seed{
-		PeerIdentity: NewPeerIdentity(net.ParseIP("10.0.0.1"), 3001, "key1"),
-	}
-	seed2 := Seed{
-		PeerIdentity: NewPeerIdentity(net.ParseIP("10.0.0.2"), 3002, "key2"),
-	}
-	seed3 := Seed{
-		PeerIdentity: NewPeerIdentity(net.ParseIP("10.0.0.3"), 3003, "key3"),
-	}
+	seed1 := NewPeerIdentity(net.ParseIP("10.0.0.1"), 3001, "key1")
+	seed2 := NewPeerIdentity(net.ParseIP("10.0.0.2"), 3002, "key2")
+	seed3 := NewPeerIdentity(net.ParseIP("10.0.0.3"), 3003, "key3")
 
 	p1 := NewDiscoveredPeer(
-		seed1.PeerIdentity,
+		seed1,
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("0.0", OkPeerStatus, 30.0, 12.0, "0.0.0", 0.0, 0, 5),
 	)
 
 	p2 := NewDiscoveredPeer(
-		seed2.PeerIdentity,
+		seed2,
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("0.0", OkPeerStatus, 20.0, 5.0, "0.0.0", 0.0, 0, 6),
 	)
 
 	p3 := NewDiscoveredPeer(
-		seed3.PeerIdentity,
+		seed3,
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("0.0", OkPeerStatus, 10.0, 3.0, "0.0.0", 0.0, 0, 7),
 	)
 
-	avg := getSeedDiscoveryAverage([]Seed{seed1, seed2, seed3}, []Peer{p1, p2, p3})
+	avg := getSeedDiscoveryAverage([]PeerIdentity{seed1, seed2, seed3}, []Peer{p1, p2, p3})
 	assert.Equal(t, 6, avg)
 }
 
@@ -171,30 +165,24 @@ Scenario: Avergage discoveries peers including seeds and discovered peers
 */
 func TestAvergageDiscoveriesWithSeedAndDiscoveries(t *testing.T) {
 
-	seed1 := Seed{
-		PeerIdentity: NewPeerIdentity(net.ParseIP("10.0.0.1"), 3001, "key1"),
-	}
-	seed2 := Seed{
-		PeerIdentity: NewPeerIdentity(net.ParseIP("10.0.0.2"), 3002, "key2"),
-	}
-	seed3 := Seed{
-		PeerIdentity: NewPeerIdentity(net.ParseIP("10.0.0.3"), 3003, "key3"),
-	}
+	seed1 := NewPeerIdentity(net.ParseIP("10.0.0.1"), 3001, "key1")
+	seed2 := NewPeerIdentity(net.ParseIP("10.0.0.2"), 3002, "key2")
+	seed3 := NewPeerIdentity(net.ParseIP("10.0.0.3"), 3003, "key3")
 
 	p1 := NewDiscoveredPeer(
-		seed1.PeerIdentity,
+		seed1,
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("0.0", OkPeerStatus, 30.0, 12.0, "0.0.0", 0.0, 0, 5),
 	)
 
 	p2 := NewDiscoveredPeer(
-		seed2.PeerIdentity,
+		seed2,
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("0.0", OkPeerStatus, 20.0, 5.0, "0.0.0", 0.0, 0, 5),
 	)
 
 	p3 := NewDiscoveredPeer(
-		seed3.PeerIdentity,
+		seed3,
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("0.0", OkPeerStatus, 10.0, 3.0, "0.0.0", 0.0, 0, 5),
 	)
@@ -205,7 +193,7 @@ func TestAvergageDiscoveriesWithSeedAndDiscoveries(t *testing.T) {
 		NewPeerAppState("0.0", OkPeerStatus, 40.0, 3.0, "0.0.0", 0.0, 0, 5),
 	)
 
-	avg := getSeedDiscoveryAverage([]Seed{seed1, seed2, seed3}, []Peer{p1, p2, p3, p4})
+	avg := getSeedDiscoveryAverage([]PeerIdentity{seed1, seed2, seed3}, []Peer{p1, p2, p3, p4})
 	assert.Equal(t, 5, avg)
 }
 

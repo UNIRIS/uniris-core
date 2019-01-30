@@ -84,7 +84,7 @@ func getP2PFactor(peers []Peer) int {
 	return 1
 }
 
-func getSeedDiscoveryAverage(seeds []Seed, knownPeers []Peer) int {
+func getSeedDiscoveryAverage(seeds []PeerIdentity, knownPeers []Peer) int {
 	avg := 0
 	for i := 0; i < len(seeds); i++ {
 		ipseed := seeds[i].IP()

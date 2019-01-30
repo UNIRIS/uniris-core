@@ -8,23 +8,19 @@ service DiscoveryService {
 }
 
 message SynRequest {
-    PeerDigest source = 1;
-    PeerDigest target = 2;
-    repeated PeerDigest known_peers = 3;
-    int64 timestamp = 4;
+    repeated PeerDigest known_peers = 1;
+    int64 timestamp = 2;
 }
 
 message SynResponse {
-    repeated PeerDiscovered new_peers = 3;
-    repeated PeerDigest unknown_peers = 4;
-    int64 timestamp = 5;
+    repeated PeerDiscovered new_peers = 1;
+    repeated PeerDigest unknown_peers = 2;
+    int64 timestamp = 3;
 }
 
 message AckRequest {
-    PeerDigest source = 1;
-    PeerDigest target = 2;
-    repeated PeerDiscovered requested_peers = 3;
-    int64 timestamp = 4;
+    repeated PeerDiscovered requested_peers = 1;
+    int64 timestamp = 2;
 }
 
 message AckResponse {

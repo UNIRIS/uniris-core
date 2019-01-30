@@ -7,21 +7,20 @@ import (
 //ErrUnreachablePeer is returns when no owned peers has been stored
 var ErrUnreachablePeer = errors.New("Unreachable Peer")
 
-//RoundMessenger is the interface that provides methods to send gossip requests
-type RoundMessenger interface {
-	SendSyn(source Peer, target Peer, known []Peer) (unknown []Peer, new []Peer, err error)
-	SendAck(source Peer, target Peer, requested []Peer) error
+//Client is the interface that provides methods to send gossip requests
+type Client interface {
+	SendSyn(target PeerIdentity, known []Peer) (unknown []Peer, new []Peer, err error)
+	SendAck(target PeerIdentity, requested []Peer) error
 }
 
 type round struct {
-	initator Peer
-	target   Peer
-	msg      RoundMessenger
+	target PeerIdentity
+	cli    Client
 }
 
 //run starts the gossip round by messenging with the target peer
-func (r round) run(kp []Peer, discovP chan<- Peer, reachP chan<- Peer, unreachP chan<- Peer) error {
-	unknowns, news, err := r.msg.SendSyn(r.initator, r.target, kp)
+func (r round) run(kp []Peer, discovP chan<- Peer, reachP chan<- PeerIdentity, unreachP chan<- PeerIdentity) error {
+	unknowns, news, err := r.cli.SendSyn(r.target, kp)
 	if err != nil {
 		//We do not throw an error when the peer is unreachable
 		//Gossip must continue
@@ -46,7 +45,7 @@ func (r round) run(kp []Peer, discovP chan<- Peer, reachP chan<- Peer, unreachP 
 		}
 
 		//Send to the SYN receiver an ACK with the peer detailed requested
-		if err := r.msg.SendAck(r.initator, r.target, reqPeers); err != nil {
+		if err := r.cli.SendAck(r.target, reqPeers); err != nil {
 			//We do not throw an error when the peer is unreachable
 			//Gossip must continue
 			//We catch the unreachable peer, store somewhere

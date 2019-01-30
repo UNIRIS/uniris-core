@@ -29,20 +29,18 @@ Scenario: Picks a random peer from an only list of seeds
 	Then we get a random seed
 */
 func TestSelectPeersWithOnlyPeers(t *testing.T) {
-	seeds := []Seed{
-		Seed{
-			PeerIdentity: NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
-		},
+	seeds := []PeerIdentity{
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
 	}
 
 	c := cycle{
 		initator: NewLocalPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0),
 	}
-	pp, err := c.selectRandomPeers(seeds, []Peer{}, []Peer{})
+	pp, err := c.selectRandomPeers(seeds, []PeerIdentity{}, []PeerIdentity{})
 	assert.Nil(t, err)
 	assert.NotNil(t, pp)
 	assert.Equal(t, 1, len(pp))
-	assert.Equal(t, "127.0.0.1", pp[0].Identity().IP().String())
+	assert.Equal(t, "127.0.0.1", pp[0].IP().String())
 }
 
 /*
@@ -52,16 +50,14 @@ Scenario: Picks a random peer from an only list of seeds excluding ourself
 	Then we get a random seed
 */
 func TestSelectPeersWithOnlyPeersExcludingOurself(t *testing.T) {
-	seeds := []Seed{
-		Seed{
-			PeerIdentity: NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
-		},
+	seeds := []PeerIdentity{
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
 	}
 
 	c := cycle{
 		initator: NewLocalPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", 30.0, 12.0),
 	}
-	pp, err := c.selectRandomPeers(seeds, []Peer{}, []Peer{})
+	pp, err := c.selectRandomPeers(seeds, []PeerIdentity{}, []PeerIdentity{})
 	assert.Nil(t, err)
 	assert.NotNil(t, pp)
 	assert.Empty(t, pp)
@@ -74,28 +70,22 @@ Scenario: Pick two random peers (seed and a reachable peer)
 	Then we get a random seed and a random reachable peer
 */
 func TestSelectPeerWithSomeReachablePeers(t *testing.T) {
-	seeds := []Seed{
-		Seed{
-			PeerIdentity: NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
-		},
+	seeds := []PeerIdentity{
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
 	}
-
-	p1 := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key"),
-		NewPeerHeartbeatState(time.Now(), 0))
 
 	c := cycle{
 		initator: NewLocalPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0),
 	}
 
-	reachP := []Peer{p1}
+	reachP := []PeerIdentity{NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key")}
 
-	pp, err := c.selectRandomPeers(seeds, reachP, []Peer{})
+	pp, err := c.selectRandomPeers(seeds, reachP, []PeerIdentity{})
 	assert.Nil(t, err)
 	assert.NotNil(t, pp)
 	assert.Equal(t, 2, len(pp))
-	assert.Equal(t, "127.0.0.1", pp[0].Identity().IP().String())
-	assert.Equal(t, "20.0.0.1", pp[1].Identity().IP().String())
+	assert.Equal(t, "127.0.0.1", pp[0].IP().String())
+	assert.Equal(t, "20.0.0.1", pp[1].IP().String())
 }
 
 /*
@@ -105,10 +95,8 @@ Scenario: Pick two random peers (seed and a reachable peer) but ourself is in th
 	Then we get a random seed and no reachable peers
 */
 func TestSelectPeerWithOurselfAsReachable(t *testing.T) {
-	seeds := []Seed{
-		Seed{
-			PeerIdentity: NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
-		},
+	seeds := []PeerIdentity{
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
 	}
 
 	me := NewLocalPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0)
@@ -117,13 +105,13 @@ func TestSelectPeerWithOurselfAsReachable(t *testing.T) {
 		initator: me,
 	}
 
-	reachP := []Peer{me}
+	reachP := []PeerIdentity{me.Identity()}
 
-	pp, err := c.selectRandomPeers(seeds, reachP, []Peer{})
+	pp, err := c.selectRandomPeers(seeds, reachP, []PeerIdentity{})
 	assert.Nil(t, err)
 	assert.NotNil(t, pp)
 	assert.Equal(t, 1, len(pp))
-	assert.Equal(t, "127.0.0.1", pp[0].Identity().IP().String())
+	assert.Equal(t, "127.0.0.1", pp[0].IP().String())
 }
 
 /*
@@ -133,10 +121,8 @@ Scenario: Pick two random peers (seed and a unreachable peer)
 	Then we get a random seed and a random unreachable peer
 */
 func TestSelectPeerWithSomeUnReachablePeers(t *testing.T) {
-	seeds := []Seed{
-		Seed{
-			PeerIdentity: NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
-		},
+	seeds := []PeerIdentity{
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
 	}
 
 	p1 := NewPeerDigest(
@@ -147,14 +133,14 @@ func TestSelectPeerWithSomeUnReachablePeers(t *testing.T) {
 		initator: NewLocalPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0),
 	}
 
-	unreachP := []Peer{p1}
+	unreachP := []PeerIdentity{p1.Identity()}
 
-	pp, err := c.selectRandomPeers(seeds, []Peer{}, unreachP)
+	pp, err := c.selectRandomPeers(seeds, []PeerIdentity{}, unreachP)
 	assert.Nil(t, err)
 	assert.NotNil(t, pp)
 	assert.Equal(t, 2, len(pp))
-	assert.Equal(t, "127.0.0.1", pp[0].Identity().IP().String())
-	assert.Equal(t, "20.0.0.1", pp[1].Identity().IP().String())
+	assert.Equal(t, "127.0.0.1", pp[0].IP().String())
+	assert.Equal(t, "20.0.0.1", pp[1].IP().String())
 }
 
 /*
@@ -164,39 +150,29 @@ Scenario: Pick random peers (seed, reachable and unreachable)
 	Then we get a seed, a reachable and an unreachable peer
 */
 func TestSelectPeersFully(t *testing.T) {
-	seeds := []Seed{
-		Seed{
-			PeerIdentity: NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
-		},
+	seeds := []PeerIdentity{
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
 	}
 
-	p1 := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key"),
-		NewPeerHeartbeatState(time.Now(), 0))
-	p2 := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("21.0.0.1"), 3000, "key"),
-		NewPeerHeartbeatState(time.Now(), 0))
-	p3 := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("22.0.0.1"), 3000, "key"),
-		NewPeerHeartbeatState(time.Now(), 0))
-	p4 := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("23.0.0.1"), 3000, "key"),
-		NewPeerHeartbeatState(time.Now(), 0))
+	p1 := NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key")
+	p2 := NewPeerIdentity(net.ParseIP("21.0.0.1"), 3000, "key")
+	p3 := NewPeerIdentity(net.ParseIP("22.0.0.1"), 3000, "key")
+	p4 := NewPeerIdentity(net.ParseIP("23.0.0.1"), 3000, "key")
 
 	c := cycle{
 		initator: NewLocalPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0),
 	}
 
-	reachP := []Peer{p1, p2}
-	unreachP := []Peer{p3, p4}
+	reachP := []PeerIdentity{p1, p2}
+	unreachP := []PeerIdentity{p3, p4}
 
 	pp, err := c.selectRandomPeers(seeds, reachP, unreachP)
 	assert.Nil(t, err)
 	assert.NotNil(t, pp)
 	assert.Equal(t, 3, len(pp))
-	assert.True(t, pp[0].Identity().IP().String() == "127.0.0.1" || pp[0].Identity().IP().String() == "30.0.0.1")
-	assert.True(t, pp[1].Identity().IP().String() == "20.0.0.1" || pp[1].Identity().IP().String() == "21.0.0.1")
-	assert.True(t, pp[2].Identity().IP().String() == "22.0.0.1" || pp[2].Identity().IP().String() == "23.0.0.1")
+	assert.True(t, pp[0].IP().String() == "127.0.0.1" || pp[0].IP().String() == "30.0.0.1")
+	assert.True(t, pp[1].IP().String() == "20.0.0.1" || pp[1].IP().String() == "21.0.0.1")
+	assert.True(t, pp[2].IP().String() == "22.0.0.1" || pp[2].IP().String() == "23.0.0.1")
 
 }
 
@@ -211,13 +187,13 @@ func TestRun(t *testing.T) {
 
 	kp1 := NewPeerDigest(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key2"),
-		NewPeerHeartbeatState(time.Now(), 0),
-	)
+		NewPeerHeartbeatState(time.Now(), 0))
 
-	seeds := []Seed{Seed{
-		PeerIdentity: NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key3")}}
+	seeds := []PeerIdentity{
+		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key3"),
+	}
 
-	c := newCycle(init, mockMessenger{}, []Peer{kp1}, []Peer{})
+	c := newCycle(init, mockClient{}, []PeerIdentity{kp1.Identity()}, []PeerIdentity{})
 
 	var wg sync.WaitGroup
 	wg.Add(4)
@@ -255,9 +231,9 @@ func TestRun(t *testing.T) {
 	assert.Equal(t, "dKey1", newP[1].Identity().PublicKey())
 }
 
-type mockMessenger struct{}
+type mockClient struct{}
 
-func (m mockMessenger) SendSyn(source Peer, target Peer, known []Peer) (unknown []Peer, new []Peer, err error) {
+func (m mockClient) SendSyn(target PeerIdentity, known []Peer) (unknown []Peer, new []Peer, err error) {
 	tar := NewLocalPeer("uKey1", net.ParseIP("200.18.186.39"), 3000, "1.1", 40.4, 2.50)
 
 	hb := NewPeerHeartbeatState(time.Now(), 0)
@@ -273,7 +249,7 @@ func (m mockMessenger) SendSyn(source Peer, target Peer, known []Peer) (unknown 
 	return unknownPeers, newPeers, nil
 }
 
-func (m mockMessenger) SendAck(source Peer, target Peer, requested []Peer) error {
+func (m mockClient) SendAck(target PeerIdentity, requested []Peer) error {
 	return nil
 }
 

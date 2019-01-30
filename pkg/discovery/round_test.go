@@ -17,11 +17,8 @@ Scenario: Spread a gossip round and discover peers
 	Then we get the new peers discovered
 */
 func TestSpreadDiscoveries(t *testing.T) {
-	initP := NewLocalPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", 30.0, 10.0)
 
-	target := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2"),
-		NewPeerHeartbeatState(time.Now(), 0))
+	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2")
 
 	p1 := NewDiscoveredPeer(
 		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key3"),
@@ -35,12 +32,12 @@ func TestSpreadDiscoveries(t *testing.T) {
 		NewPeerAppState("1.0", OkPeerStatus, 20.0, 19.4, "", 0, 1, 0),
 	)
 
-	r := round{initP, target, mockMessenger{}}
+	r := round{target, mockClient{}}
 
 	kp := []Peer{p1, p2}
 
 	discoveries := make(chan Peer)
-	reaches := make(chan Peer)
+	reaches := make(chan PeerIdentity)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -56,7 +53,7 @@ func TestSpreadDiscoveries(t *testing.T) {
 		}
 	}()
 
-	reachP := make([]Peer, 0)
+	reachP := make([]PeerIdentity, 0)
 	go func() {
 		for p := range reaches {
 			reachP = append(reachP, p)
@@ -81,11 +78,8 @@ Scenario: Spread gossip but unreach the target peer during the SYN request
 	Then we get the unreached peer
 */
 func TestSYNSpreadUnreachables(t *testing.T) {
-	initP := NewLocalPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", 30.0, 10.0)
 
-	target := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2"),
-		NewPeerHeartbeatState(time.Now(), 0))
+	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2")
 
 	p1 := NewDiscoveredPeer(
 		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key3"),
@@ -99,11 +93,11 @@ func TestSYNSpreadUnreachables(t *testing.T) {
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
 
-	r := round{initP, target, mockMessengerWithSynFailure{}}
+	r := round{target, mockClientWithSynFailure{}}
 
 	kp := []Peer{p1, p2}
 
-	unreaches := make(chan Peer)
+	unreaches := make(chan PeerIdentity)
 
 	go func() {
 		err := r.run(kp, nil, nil, unreaches)
@@ -111,14 +105,14 @@ func TestSYNSpreadUnreachables(t *testing.T) {
 		close(unreaches)
 	}()
 
-	pp := make([]Peer, 0)
+	pp := make([]PeerIdentity, 0)
 	for p := range unreaches {
 		pp = append(pp, p)
 	}
 
 	assert.NotEmpty(t, pp)
 	assert.Equal(t, 1, len(pp))
-	assert.Equal(t, target.Identity().PublicKey(), pp[0].Identity().PublicKey())
+	assert.Equal(t, target.PublicKey(), pp[0].PublicKey())
 }
 
 /*
@@ -128,11 +122,8 @@ Scenario: Spread gossip but unreach the target peer during the SYN request
 	Then we get the unreached peer
 */
 func TestACKSpreadUnreachables(t *testing.T) {
-	initP := NewLocalPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", 30.0, 10.0)
 
-	target := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2"),
-		NewPeerHeartbeatState(time.Now(), 0))
+	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2")
 
 	p1 := NewDiscoveredPeer(
 		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key3"),
@@ -146,13 +137,13 @@ func TestACKSpreadUnreachables(t *testing.T) {
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
 
-	r := round{initP, target, mockMessengerWithAckFailure{}}
+	r := round{target, mockClientWithAckFailure{}}
 
 	kp := []Peer{p1, p2}
 
 	discoveries := make(chan Peer)
-	reaches := make(chan Peer)
-	unreaches := make(chan Peer)
+	reaches := make(chan PeerIdentity)
+	unreaches := make(chan PeerIdentity)
 
 	go func() {
 		err := r.run(kp, discoveries, reaches, unreaches)
@@ -167,7 +158,7 @@ func TestACKSpreadUnreachables(t *testing.T) {
 		}
 	}()
 
-	unreachP := make([]Peer, 0)
+	unreachP := make([]PeerIdentity, 0)
 	for p := range unreaches {
 		unreachP = append(unreachP, p)
 	}
@@ -179,7 +170,7 @@ func TestACKSpreadUnreachables(t *testing.T) {
 
 	assert.NotEmpty(t, unreachP)
 	assert.Equal(t, 1, len(unreachP))
-	assert.Equal(t, target.Identity().PublicKey(), unreachP[0].Identity().PublicKey())
+	assert.Equal(t, target.PublicKey(), unreachP[0].PublicKey())
 
 	assert.Empty(t, discovP)
 }
@@ -191,11 +182,8 @@ Scenario: Gossip but gets an unexpected error
 	Then we get retrieve the error
 */
 func TestSpreadUnexpectedError(t *testing.T) {
-	initP := NewLocalPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", 30.0, 10.0)
 
-	target := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2"),
-		NewPeerHeartbeatState(time.Now(), 0))
+	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2")
 
 	p1 := NewDiscoveredPeer(
 		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key3"),
@@ -209,7 +197,7 @@ func TestSpreadUnexpectedError(t *testing.T) {
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
 
-	r := round{initP, target, mockMessengerUnexpectedFailure{}}
+	r := round{target, mockClientUnexpectedFailure{}}
 
 	kp := []Peer{p1, p2}
 
@@ -218,21 +206,21 @@ func TestSpreadUnexpectedError(t *testing.T) {
 	assert.Error(t, err, "Unexpected")
 }
 
-type mockMessengerWithSynFailure struct {
+type mockClientWithSynFailure struct {
 }
 
-func (m mockMessengerWithSynFailure) SendSyn(source Peer, target Peer, known []Peer) (unknown []Peer, new []Peer, err error) {
+func (m mockClientWithSynFailure) SendSyn(target PeerIdentity, known []Peer) (unknown []Peer, new []Peer, err error) {
 	return nil, nil, ErrUnreachablePeer
 }
 
-func (m mockMessengerWithSynFailure) SendAck(source Peer, target Peer, requested []Peer) error {
+func (m mockClientWithSynFailure) SendAck(target PeerIdentity, requested []Peer) error {
 	return nil
 }
 
-type mockMessengerWithAckFailure struct {
+type mockClientWithAckFailure struct {
 }
 
-func (m mockMessengerWithAckFailure) SendSyn(source Peer, target Peer, known []Peer) (unknown []Peer, new []Peer, err error) {
+func (m mockClientWithAckFailure) SendSyn(target PeerIdentity, known []Peer) (unknown []Peer, new []Peer, err error) {
 	tar := NewLocalPeer("uKey1", net.ParseIP("200.18.186.39"), 3000, "1.1", 30.0, 10.0)
 
 	hb := NewPeerHeartbeatState(time.Now(), 0)
@@ -250,17 +238,17 @@ func (m mockMessengerWithAckFailure) SendSyn(source Peer, target Peer, known []P
 	return unknownPeers, newPeers, nil
 }
 
-func (m mockMessengerWithAckFailure) SendAck(source Peer, target Peer, requested []Peer) error {
+func (m mockClientWithAckFailure) SendAck(target PeerIdentity, requested []Peer) error {
 	return ErrUnreachablePeer
 }
 
-type mockMessengerUnexpectedFailure struct {
+type mockClientUnexpectedFailure struct {
 }
 
-func (m mockMessengerUnexpectedFailure) SendSyn(source Peer, target Peer, known []Peer) (unknown []Peer, new []Peer, err error) {
+func (m mockClientUnexpectedFailure) SendSyn(target PeerIdentity, known []Peer) (unknown []Peer, new []Peer, err error) {
 	return nil, nil, errors.New("Unexpected")
 }
 
-func (m mockMessengerUnexpectedFailure) SendAck(source Peer, target Peer, requested []Peer) error {
+func (m mockClientUnexpectedFailure) SendAck(target PeerIdentity, requested []Peer) error {
 	return nil
 }

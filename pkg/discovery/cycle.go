@@ -8,33 +8,33 @@ import (
 
 type cycle struct {
 	initator      Peer
-	msg           RoundMessenger
-	prevReaches   []Peer
-	prevUnreaches []Peer
+	cli           Client
+	prevReaches   []PeerIdentity
+	prevUnreaches []PeerIdentity
 	discoveryChan chan Peer
-	unreachChan   chan Peer
-	reachChan     chan Peer
+	unreachChan   chan PeerIdentity
+	reachChan     chan PeerIdentity
 	errChan       chan error
 }
 
 //ErrEmptySeed is returns when no seeds has been provided
 var ErrEmptySeed = errors.New("Cannot start a gossip round without a list seeds")
 
-func newCycle(initiator Peer, msg RoundMessenger, rP []Peer, unrP []Peer) cycle {
+func newCycle(initiator Peer, cli Client, rP []PeerIdentity, unrP []PeerIdentity) cycle {
 	return cycle{
-		msg:           msg,
+		cli:           cli,
 		initator:      initiator,
 		prevReaches:   rP,
 		prevUnreaches: unrP,
 		discoveryChan: make(chan Peer),
-		unreachChan:   make(chan Peer),
+		unreachChan:   make(chan PeerIdentity),
 		errChan:       make(chan error, 1),
-		reachChan:     make(chan Peer),
+		reachChan:     make(chan PeerIdentity),
 	}
 }
 
 //run starts gossip cycle by creating rounds from a peer selection to spread the known peers and discover new peers
-func (c cycle) run(p Peer, ss []Seed, kp []Peer) {
+func (c cycle) run(p Peer, ss []PeerIdentity, kp []Peer) {
 
 	selected, err := c.selectRandomPeers(ss, c.prevReaches, c.prevUnreaches)
 	if err != nil {
@@ -46,10 +46,10 @@ func (c cycle) run(p Peer, ss []Seed, kp []Peer) {
 	wg.Add(len(selected))
 
 	for _, p := range selected {
-		go func(target Peer) {
+		go func(target PeerIdentity) {
 			defer wg.Done()
 
-			r := round{c.initator, target, c.msg}
+			r := round{target, c.cli}
 			if err := r.run(kp, c.discoveryChan, c.reachChan, c.unreachChan); err != nil {
 				c.errChan <- err
 			}
@@ -59,28 +59,24 @@ func (c cycle) run(p Peer, ss []Seed, kp []Peer) {
 	wg.Wait()
 }
 
-func (c cycle) selectRandomPeers(seeds []Seed, reachP []Peer, unreachP []Peer) ([]Peer, error) {
+func (c cycle) selectRandomPeers(seeds []PeerIdentity, reachP []PeerIdentity, unreachP []PeerIdentity) ([]PeerIdentity, error) {
 	if seeds == nil || len(seeds) == 0 {
 		return nil, ErrEmptySeed
 	}
 
-	peers := make([]Peer, 0)
+	peers := make([]PeerIdentity, 0)
 
 	//We pick a random seed peer
 	//and exclude ourself if we are of inside our list seed (impossible in reality, useful for testing)
-	ppSeeds := make([]Peer, 0)
-	for _, seed := range seeds {
-		ppSeeds = append(ppSeeds, seed.AsPeer())
-	}
-	s := c.random(ppSeeds)
-	if s.Endpoint() != c.initator.Endpoint() {
+	s := c.random(seeds)
+	if s.Endpoint() != c.initator.Identity().Endpoint() {
 		peers = append(peers, s)
 	}
 
 	//We pick a random reachables(discovered) peer and we filter ourself (we don't want gossip with ourself)
-	filteredReachP := make([]Peer, 0)
+	filteredReachP := make([]PeerIdentity, 0)
 	for _, p := range reachP {
-		if p.Endpoint() != c.initator.Endpoint() {
+		if p.Endpoint() != c.initator.Identity().Endpoint() {
 			filteredReachP = append(filteredReachP, p)
 		}
 	}
@@ -96,7 +92,7 @@ func (c cycle) selectRandomPeers(seeds []Seed, reachP []Peer, unreachP []Peer) (
 	return peers, nil
 }
 
-func (c cycle) random(items []Peer) Peer {
+func (c cycle) random(items []PeerIdentity) PeerIdentity {
 	if len(items) > 1 {
 		rnd := rand.Intn(len(items))
 		return items[rnd]
