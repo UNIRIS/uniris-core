@@ -18,12 +18,12 @@ func (n gossipNotif) NotifyDiscovery(p discovery.Peer) error {
 	return nil
 }
 
-func (n gossipNotif) NotifyReachable(p discovery.Peer) error {
-	log.Printf("Peer reached %s", p.String())
+func (n gossipNotif) NotifyReachable(p discovery.PeerIdentity) error {
+	log.Printf("Peer reached %s", p.Endpoint())
 	return nil
 }
 
-func (n gossipNotif) NotifyUnreachable(p discovery.Peer) error {
-	log.Printf("Peer unreached %s", p.String())
+func (n gossipNotif) NotifyUnreachable(p discovery.PeerIdentity) error {
+	log.Printf("Peer unreached %s", p.Endpoint())
 	return nil
 }

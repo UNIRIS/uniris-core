@@ -116,7 +116,6 @@ func createAccount() func(c *gin.Context) {
 		resID, err := cli.HandleTransaction(context.Background(), &api.IncomingTransaction{
 			EncryptedTransaction: form.EncryptedID,
 			Timestamp:            time.Now().Unix(),
-			Type:                 api.TransactionType_ID,
 		})
 		if err != nil {
 			c.AbortWithError(500, err)
@@ -125,7 +124,6 @@ func createAccount() func(c *gin.Context) {
 		resKeychain, err := cli.HandleTransaction(context.Background(), &api.IncomingTransaction{
 			EncryptedTransaction: form.EncryptedID,
 			Timestamp:            time.Now().Unix(),
-			Type:                 api.TransactionType_KEYCHAIN,
 		})
 		if err != nil {
 			c.AbortWithError(500, err)

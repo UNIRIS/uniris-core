@@ -4,7 +4,7 @@ import "github.com/uniris/uniris-core/pkg/discovery"
 
 type discoveryDb struct {
 	knownPeers       []discovery.Peer
-	seedPeers        []discovery.Seed
+	seedPeers        []discovery.PeerIdentity
 	unreachablePeers []string
 }
 
@@ -17,7 +17,7 @@ func (db discoveryDb) CountKnownPeers() (int, error) {
 	return len(db.knownPeers), nil
 }
 
-func (db discoveryDb) ListSeedPeers() ([]discovery.Seed, error) {
+func (db discoveryDb) ListSeedPeers() ([]discovery.PeerIdentity, error) {
 	return db.seedPeers, nil
 }
 
@@ -36,28 +36,28 @@ func (db *discoveryDb) StoreKnownPeer(peer discovery.Peer) error {
 	return nil
 }
 
-func (db discoveryDb) ListReachablePeers() ([]discovery.Peer, error) {
-	pp := make([]discovery.Peer, 0)
+func (db discoveryDb) ListReachablePeers() ([]discovery.PeerIdentity, error) {
+	pp := make([]discovery.PeerIdentity, 0)
 	for i := 0; i < len(db.knownPeers); i++ {
 		if !db.ContainsUnreachablePeer(db.knownPeers[i].Identity().PublicKey()) {
-			pp = append(pp, db.knownPeers[i])
+			pp = append(pp, db.knownPeers[i].Identity())
 		}
 	}
 	return pp, nil
 }
 
 //ListunreachablePeers returns all unreachable peers
-func (db discoveryDb) ListUnreachablePeers() ([]discovery.Peer, error) {
-	pp := make([]discovery.Peer, 0)
+func (db discoveryDb) ListUnreachablePeers() ([]discovery.PeerIdentity, error) {
+	pp := make([]discovery.PeerIdentity, 0)
 	for i := 0; i < len(db.knownPeers); i++ {
 		if db.ContainsUnreachablePeer(db.knownPeers[i].Identity().PublicKey()) {
-			pp = append(pp, db.knownPeers[i])
+			pp = append(pp, db.knownPeers[i].Identity())
 		}
 	}
 	return pp, nil
 }
 
-func (db *discoveryDb) StoreSeedPeer(s discovery.Seed) error {
+func (db *discoveryDb) StoreSeedPeer(s discovery.PeerIdentity) error {
 	db.seedPeers = append(db.seedPeers, s)
 	return nil
 }

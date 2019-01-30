@@ -87,25 +87,6 @@ func TestCreateDiscoveredPeer(t *testing.T) {
 }
 
 /*
-Scenario: Convers a seed into a peer
-	Given a seed
-	When we want to convert it to a peer
-	Then we get a peer with the IP and the Port defined
-*/
-func TestSeedToPeer(t *testing.T) {
-	s := Seed{
-		PeerIdentity: PeerIdentity{
-			ip: net.ParseIP("127.0.0.1"), port: 3000, publicKey: "key",
-		},
-	}
-	p := s.AsPeer()
-	assert.NotNil(t, p)
-	assert.Equal(t, "127.0.0.1", p.Identity().IP().String())
-	assert.Equal(t, 3000, p.Identity().Port())
-	assert.Equal(t, "key", p.Identity().PublicKey())
-}
-
-/*
 Scenario: Refreshes elapsed hearbeats
 	Given an heartbeat state
 	When we want to refresh the elapsed heartbeats

@@ -42,7 +42,7 @@ func startDatamining(conf system.UnirisConfig) {
 	storeSrv := transaction.NewStorageService(txDb, miningSrv)
 	lockSrv := transaction.NewLockService(lockDb)
 
-	intSrv := rpc.NewInternalServer(poolFinderSrv, miningSrv)
+	intSrv := rpc.NewInternalServer(poolFinderSrv, miningSrv, "", "")
 	txSrv := rpc.NewTransactionServer(storeSrv, lockSrv, miningSrv, "", "")
 
 	go func() {

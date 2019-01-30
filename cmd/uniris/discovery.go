@@ -33,9 +33,9 @@ func startDiscovery(conf system.UnirisConfig) {
 		pInfo = system.NewPeerInformer(false, "")
 	}
 
-	msg := rpc.NewGossipRoundMessenger()
+	cli := rpc.NewDiscoveryClient()
 	notif := memtransport.NewGossipNotifier()
-	discoverySrv := discovery.NewService(db, msg, notif, pnet, pInfo)
+	discoverySrv := discovery.NewService(db, cli, notif, pnet, pInfo)
 
 	go startDiscoveryServer(discoverySrv, conf.Services.Discovery.Port)
 
@@ -48,16 +48,14 @@ func startDiscovery(conf system.UnirisConfig) {
 	startGossip(peer, discoverySrv, conf)
 }
 
-func getSeeds(conf system.UnirisConfig) (seeds []discovery.Seed) {
+func getSeeds(conf system.UnirisConfig) (seeds []discovery.PeerIdentity) {
 	seedsConf := strings.Split(conf.Services.Discovery.Seeds, ";")
 	for _, s := range seedsConf {
 		seedItems := strings.Split(s, ":")
 		ip := net.ParseIP(seedItems[0])
 		port, _ := strconv.Atoi(seedItems[1])
 		key := seedItems[2]
-		seeds = append(seeds, discovery.Seed{
-			PeerIdentity: discovery.NewPeerIdentity(ip, port, key),
-		})
+		seeds = append(seeds, discovery.NewPeerIdentity(ip, port, key))
 	}
 	return
 }

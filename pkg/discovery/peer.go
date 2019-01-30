@@ -7,17 +7,6 @@ import (
 	"time"
 )
 
-//Seed describes a seeding peer
-type Seed struct {
-	PeerIdentity
-}
-
-func (s Seed) AsPeer() Peer {
-	return Peer{
-		identity: s.PeerIdentity,
-	}
-}
-
 //ErrChangeNotOwnedPeer is returned when you try to change the state of peer that you don't own
 var ErrChangeNotOwnedPeer = errors.New("Cannot change a peer that you don't own")
 
