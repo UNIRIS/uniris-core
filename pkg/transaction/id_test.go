@@ -33,18 +33,15 @@ func TestNewID(t *testing.T) {
 
 	addr := crypto.HashString("address")
 
-	dataBytes, _ := json.Marshal(idData{
-		EncryptedAESKey:         hex.EncodeToString([]byte("aesKey")),
-		EncryptedAddressByID:    hex.EncodeToString([]byte("addr")),
-		EncryptedAddressByRobot: hex.EncodeToString([]byte("addr")),
-	})
-
-	data := hex.EncodeToString(dataBytes)
 	hash := crypto.HashString("hash")
 
 	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
 
-	tx, err := New(addr, IDType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	tx, err := New(addr, IDType, map[string]string{
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	id, err := NewID(tx)
@@ -73,18 +70,15 @@ func TestNewIDWithInvalidType(t *testing.T) {
 
 	addr := crypto.HashString("address")
 
-	dataBytes, _ := json.Marshal(idData{
-		EncryptedAESKey:         hex.EncodeToString([]byte("aesKey")),
-		EncryptedAddressByID:    hex.EncodeToString([]byte("addr")),
-		EncryptedAddressByRobot: hex.EncodeToString([]byte("addr")),
-	})
-
-	data := hex.EncodeToString(dataBytes)
 	hash := crypto.HashString("hash")
 
 	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
 
-	tx, err := New(addr, KeychainType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	tx, err := New(addr, KeychainType, map[string]string{
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	_, err = NewID(tx)
@@ -109,21 +103,36 @@ func TestNewIDWithMissingDataFields(t *testing.T) {
 
 	addr := crypto.HashString("address")
 
-	dataBytes, _ := json.Marshal(idData{
-		EncryptedAddressByID:    hex.EncodeToString([]byte("addr")),
-		EncryptedAddressByRobot: hex.EncodeToString([]byte("addr")),
-	})
-
-	data := hex.EncodeToString(dataBytes)
 	hash := crypto.HashString("hash")
 
 	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
 
-	tx, err := New(addr, IDType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	tx, err := New(addr, IDType, map[string]string{
+		"encrypted_address_by_id": hex.EncodeToString([]byte("addr")),
+		"encrypted_aes_key":       hex.EncodeToString([]byte("aesKey")),
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	_, err = NewID(tx)
-	assert.EqualError(t, err, "transaction: missing id transaction data")
+	assert.EqualError(t, err, "transaction: missing data ID 'encrypted_address_by_robot'")
+
+	tx, err = New(addr, IDType, map[string]string{
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	assert.Nil(t, err)
+
+	_, err = NewID(tx)
+	assert.EqualError(t, err, "transaction: missing data ID 'encrypted_address_by_id'")
+
+	tx, err = New(addr, IDType, map[string]string{
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	assert.Nil(t, err)
+
+	_, err = NewID(tx)
+	assert.EqualError(t, err, "transaction: missing data ID 'encrypted_aes_key'")
 }
 
 /*
@@ -143,38 +152,31 @@ func TestNewIDWithNotHexDataFields(t *testing.T) {
 
 	addr := crypto.HashString("address")
 
-	dataBytes1, _ := json.Marshal(idData{
-		EncryptedAESKey:         "aesKey",
-		EncryptedAddressByID:    "addr",
-		EncryptedAddressByRobot: "addr",
-	})
-
-	data1 := hex.EncodeToString(dataBytes1)
 	hash := crypto.HashString("hash")
 
 	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
 
-	tx, _ := New(addr, IDType, data1, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	tx, _ := New(addr, IDType, map[string]string{
+		"encrypted_aes_key":          "aes key",
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
 	_, err := NewID(tx)
 	assert.EqualError(t, err, "transaction: id encrypted aes key is not in hexadecimal format")
 
-	dataBytes2, _ := json.Marshal(idData{
-		EncryptedAESKey:         hex.EncodeToString([]byte("aesKey")),
-		EncryptedAddressByID:    "addr",
-		EncryptedAddressByRobot: "addr",
-	})
-	data2 := hex.EncodeToString(dataBytes2)
-	tx, _ = New(addr, IDType, data2, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	tx, _ = New(addr, IDType, map[string]string{
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_id":    "addr",
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
 	_, err = NewID(tx)
 	assert.EqualError(t, err, "transaction: id encrypted address for id is not in hexadecimal format")
 
-	dataBytes3, _ := json.Marshal(idData{
-		EncryptedAESKey:         hex.EncodeToString([]byte("aesKey")),
-		EncryptedAddressByID:    hex.EncodeToString([]byte("addr")),
-		EncryptedAddressByRobot: "addr",
-	})
-	data3 := hex.EncodeToString(dataBytes3)
-	tx, _ = New(addr, IDType, data3, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	tx, _ = New(addr, IDType, map[string]string{
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_robot": "addr",
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
 	_, err = NewID(tx)
 	assert.EqualError(t, err, "transaction: id encrypted address for robot is not in hexadecimal format")
 }
@@ -195,18 +197,15 @@ func TestIDToTransaction(t *testing.T) {
 
 	addr := crypto.HashString("address")
 
-	dataBytes, _ := json.Marshal(idData{
-		EncryptedAESKey:         hex.EncodeToString([]byte("aesKey")),
-		EncryptedAddressByID:    hex.EncodeToString([]byte("addr")),
-		EncryptedAddressByRobot: hex.EncodeToString([]byte("addr")),
-	})
-
-	data := hex.EncodeToString(dataBytes)
 	hash := crypto.HashString("hash")
 
 	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
 
-	tx, err := New(addr, IDType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	tx, err := New(addr, IDType, map[string]string{
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	id, err := NewID(tx)
@@ -214,7 +213,11 @@ func TestIDToTransaction(t *testing.T) {
 
 	tx, err = id.ToTransaction()
 	assert.Nil(t, err)
-	assert.Equal(t, data, tx.Data())
+	assert.Equal(t, map[string]string{
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+	}, tx.Data())
 
 	b, _ := json.Marshal(MinerValidation{
 		minerPubk: hex.EncodeToString(pub),

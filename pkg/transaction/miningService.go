@@ -182,7 +182,7 @@ func (s MiningService) performPow(tx Transaction) (pow string, err error) {
 		return
 	}
 
-	txBytes, err := json.Marshal(tx)
+	txBytes, err := tx.MarshalBeforeSignature()
 	if err != nil {
 		return "", err
 	}

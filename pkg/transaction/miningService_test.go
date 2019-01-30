@@ -89,23 +89,27 @@ func TestValidateTransaction(t *testing.T) {
 	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(sk)
 
-	data, _ := json.Marshal(idData{
-		EncryptedAddressByID:    hex.EncodeToString([]byte("addr")),
-		EncryptedAddressByRobot: hex.EncodeToString([]byte("addr")),
-		EncryptedAESKey:         hex.EncodeToString([]byte("aesKey")),
-	})
+	data := map[string]string{
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+	}
 
-	txBytes, _ := json.Marshal(Transaction{
+	tx := Transaction{
 		address:   crypto.HashString("addr"),
-		txType:    IDType,
-		data:      hex.EncodeToString(data),
+		data:      data,
+		txType:    KeychainType,
 		timestamp: time.Now(),
 		pubKey:    hex.EncodeToString(pub),
 		prop:      prop,
-	})
-	sig, _ := crypto.Sign(string(txBytes), hex.EncodeToString(pv))
-
-	tx, _ := New(crypto.HashString("addr"), IDType, hex.EncodeToString(data), time.Now(), hex.EncodeToString(pub), sig, sig, prop, crypto.HashBytes(txBytes))
+	}
+	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
+	sig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	tx.emSig = sig
+	tx.sig = sig
+	txBytes, _ := tx.MarshalHash()
+	txHash := crypto.HashBytes(txBytes)
+	tx.txHash = txHash
 
 	s := MiningService{
 		minerPubK: hex.EncodeToString(pub),
@@ -140,14 +144,14 @@ func TestValidateTransactionWithBadIntegrity(t *testing.T) {
 	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(sk)
 
-	data, _ := json.Marshal(idData{
-		EncryptedAddressByID:    hex.EncodeToString([]byte("addr")),
-		EncryptedAddressByRobot: hex.EncodeToString([]byte("addr")),
-		EncryptedAESKey:         hex.EncodeToString([]byte("aesKey")),
-	})
+	data := map[string]string{
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+	}
 
 	sig, _ := crypto.Sign("hello", hex.EncodeToString(pv))
-	tx, _ := New(crypto.HashString("addr"), IDType, hex.EncodeToString(data), time.Now(), hex.EncodeToString(pub), sig, sig, prop, crypto.HashString("hash"))
+	tx, _ := New(crypto.HashString("addr"), IDType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, crypto.HashString("hash"))
 
 	s := MiningService{
 		minerPvk: hex.EncodeToString(pv),
@@ -185,23 +189,23 @@ func TestRequestValidations(t *testing.T) {
 	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(sk)
 
-	data, _ := json.Marshal(idData{
-		EncryptedAddressByID:    hex.EncodeToString([]byte("addr")),
-		EncryptedAddressByRobot: hex.EncodeToString([]byte("addr")),
-		EncryptedAESKey:         hex.EncodeToString([]byte("aesKey")),
-	})
+	data := map[string]string{
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+	}
 
 	txBytes, _ := json.Marshal(Transaction{
 		address:   crypto.HashString("addr"),
 		txType:    IDType,
-		data:      hex.EncodeToString(data),
+		data:      data,
 		timestamp: time.Now(),
 		pubKey:    hex.EncodeToString(pub),
 		prop:      prop,
 	})
 	sig, _ := crypto.Sign(string(txBytes), hex.EncodeToString(pv))
 
-	tx, _ := New(crypto.HashString("addr"), IDType, hex.EncodeToString(data), time.Now(), hex.EncodeToString(pub), sig, sig, prop, crypto.HashBytes(txBytes))
+	tx, _ := New(crypto.HashString("addr"), IDType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, crypto.HashBytes(txBytes))
 
 	valids, err := s.requestValidations(tx, mv, Pool{}, 1)
 	assert.Nil(t, err)
@@ -238,23 +242,23 @@ func TestRequestStorage(t *testing.T) {
 	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(sk)
 
-	data, _ := json.Marshal(idData{
-		EncryptedAddressByID:    hex.EncodeToString([]byte("addr")),
-		EncryptedAddressByRobot: hex.EncodeToString([]byte("addr")),
-		EncryptedAESKey:         hex.EncodeToString([]byte("aesKey")),
-	})
+	data := map[string]string{
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+	}
 
 	txBytes, _ := json.Marshal(Transaction{
 		address:   crypto.HashString("addr"),
 		txType:    IDType,
-		data:      hex.EncodeToString(data),
+		data:      data,
 		timestamp: time.Now(),
 		pubKey:    hex.EncodeToString(pub),
 		prop:      prop,
 	})
 	sig, _ := crypto.Sign(string(txBytes), hex.EncodeToString(pv))
 
-	tx, _ := New(crypto.HashString("addr"), IDType, hex.EncodeToString(data), time.Now(), hex.EncodeToString(pub), sig, sig, prop, crypto.HashBytes(txBytes))
+	tx, _ := New(crypto.HashString("addr"), IDType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, crypto.HashBytes(txBytes))
 	tx.AddMining(mv, []MinerValidation{v})
 
 	s.requestTransactionStorage(tx, Pool{})
@@ -293,24 +297,28 @@ func TestPerformPOW(t *testing.T) {
 	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(propPub))
 	prop, _ := NewProposal(sk)
 
-	data, _ := json.Marshal(idData{
-		EncryptedAddressByID:    hex.EncodeToString([]byte("addr")),
-		EncryptedAddressByRobot: hex.EncodeToString([]byte("addr")),
-		EncryptedAESKey:         hex.EncodeToString([]byte("aesKey")),
-	})
+	data := map[string]string{
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+	}
 
-	txBytes, _ := json.Marshal(Transaction{
+	tx := Transaction{
 		address:   crypto.HashString("addr"),
+		data:      data,
 		txType:    IDType,
-		data:      hex.EncodeToString(data),
 		timestamp: time.Now(),
 		pubKey:    hex.EncodeToString(txKeyPub),
 		prop:      prop,
-	})
-	sig, _ := crypto.Sign(string(txBytes), hex.EncodeToString(txKeyPv))
-	emSig, _ := crypto.Sign(string(txBytes), hex.EncodeToString(emPv))
-
-	tx, _ := New(crypto.HashString("addr"), IDType, hex.EncodeToString(data), time.Now(), hex.EncodeToString(txKeyPub), sig, emSig, prop, crypto.HashBytes(txBytes))
+	}
+	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(emPv))
+	txSig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(txKeyPv))
+	tx.emSig = emSig
+	tx.sig = txSig
+	txBytes, _ := tx.MarshalHash()
+	txHash := crypto.HashBytes(txBytes)
+	tx.txHash = txHash
 
 	pow, err := s.performPow(tx)
 	assert.Nil(t, err)
@@ -353,24 +361,28 @@ func TestPreValidateTransaction(t *testing.T) {
 	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(propPub))
 	prop, _ := NewProposal(sk)
 
-	data, _ := json.Marshal(idData{
-		EncryptedAddressByID:    hex.EncodeToString([]byte("addr")),
-		EncryptedAddressByRobot: hex.EncodeToString([]byte("addr")),
-		EncryptedAESKey:         hex.EncodeToString([]byte("aesKey")),
-	})
+	data := map[string]string{
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+	}
 
-	txBytes, _ := json.Marshal(Transaction{
+	tx := Transaction{
 		address:   crypto.HashString("addr"),
+		data:      data,
 		txType:    IDType,
-		data:      hex.EncodeToString(data),
 		timestamp: time.Now(),
 		pubKey:    hex.EncodeToString(txKeyPub),
 		prop:      prop,
-	})
-	sig, _ := crypto.Sign(string(txBytes), hex.EncodeToString(txKeyPv))
-	sigEm, _ := crypto.Sign(string(txBytes), hex.EncodeToString(emPv))
-
-	tx, _ := New(crypto.HashString("addr"), IDType, hex.EncodeToString(data), time.Now(), hex.EncodeToString(txKeyPub), sig, sigEm, prop, crypto.HashBytes(txBytes))
+	}
+	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(emPv))
+	txSig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(txKeyPv))
+	tx.emSig = emSig
+	tx.sig = txSig
+	txBytes, _ := tx.MarshalHash()
+	txHash := crypto.HashBytes(txBytes)
+	tx.txHash = txHash
 
 	v, pow, err := s.preValidateTx(tx)
 	assert.Nil(t, err)
@@ -419,24 +431,28 @@ func TestMineTransaction(t *testing.T) {
 	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(propPub))
 	prop, _ := NewProposal(sk)
 
-	data, _ := json.Marshal(idData{
-		EncryptedAddressByID:    hex.EncodeToString([]byte("addr")),
-		EncryptedAddressByRobot: hex.EncodeToString([]byte("addr")),
-		EncryptedAESKey:         hex.EncodeToString([]byte("aesKey")),
-	})
+	data := map[string]string{
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+	}
 
-	txBytes, _ := json.Marshal(Transaction{
+	tx := Transaction{
 		address:   crypto.HashString("addr"),
+		data:      data,
 		txType:    IDType,
-		data:      hex.EncodeToString(data),
 		timestamp: time.Now(),
 		pubKey:    hex.EncodeToString(txKeyPub),
 		prop:      prop,
-	})
-	sig, _ := crypto.Sign(string(txBytes), hex.EncodeToString(txKeyPv))
-	sigEm, _ := crypto.Sign(string(txBytes), hex.EncodeToString(emPv))
-
-	tx, _ := New(crypto.HashString("addr"), IDType, hex.EncodeToString(data), time.Now(), hex.EncodeToString(txKeyPub), sig, sigEm, prop, crypto.HashBytes(txBytes))
+	}
+	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(emPv))
+	txSig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(txKeyPv))
+	tx.emSig = emSig
+	tx.sig = txSig
+	txBytes, _ := tx.MarshalHash()
+	txHash := crypto.HashBytes(txBytes)
+	tx.txHash = txHash
 
 	masterValid, confs, err := s.mineTransaction(tx, Pool{}, Pool{}, 1)
 	assert.Nil(t, err)
@@ -482,24 +498,28 @@ func TestMineTransactionWithKO(t *testing.T) {
 	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(propPub))
 	prop, _ := NewProposal(sk)
 
-	data, _ := json.Marshal(idData{
-		EncryptedAddressByID:    hex.EncodeToString([]byte("addr")),
-		EncryptedAddressByRobot: hex.EncodeToString([]byte("addr")),
-		EncryptedAESKey:         hex.EncodeToString([]byte("aesKey")),
-	})
+	data := map[string]string{
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+	}
 
-	txBytes, _ := json.Marshal(Transaction{
+	tx := Transaction{
 		address:   crypto.HashString("addr"),
+		data:      data,
 		txType:    IDType,
-		data:      hex.EncodeToString(data),
 		timestamp: time.Now(),
 		pubKey:    hex.EncodeToString(txKeyPub),
 		prop:      prop,
-	})
-	sig, _ := crypto.Sign(string(txBytes), hex.EncodeToString(txKeyPv))
-	sigEm, _ := crypto.Sign(string(txBytes), hex.EncodeToString(emPv))
-
-	tx, _ := New(crypto.HashString("addr"), IDType, hex.EncodeToString(data), time.Now(), hex.EncodeToString(txKeyPub), sig, sigEm, prop, crypto.HashBytes(txBytes))
+	}
+	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(emPv))
+	txSig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(txKeyPv))
+	tx.emSig = emSig
+	tx.sig = txSig
+	txBytes, _ := tx.MarshalHash()
+	txHash := crypto.HashBytes(txBytes)
+	tx.txHash = txHash
 
 	_, _, err := s.mineTransaction(tx, Pool{}, Pool{}, 1)
 	assert.Equal(t, err, ErrInvalidTransaction)
@@ -570,24 +590,28 @@ func TestLeadTransactionValidation(t *testing.T) {
 	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(propPub))
 	prop, _ := NewProposal(sk)
 
-	data, _ := json.Marshal(idData{
-		EncryptedAddressByID:    hex.EncodeToString([]byte("addr")),
-		EncryptedAddressByRobot: hex.EncodeToString([]byte("addr")),
-		EncryptedAESKey:         hex.EncodeToString([]byte("aesKey")),
-	})
+	data := map[string]string{
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+	}
 
-	txBytes, _ := json.Marshal(Transaction{
+	tx := Transaction{
 		address:   crypto.HashString("addr"),
+		data:      data,
 		txType:    IDType,
-		data:      hex.EncodeToString(data),
 		timestamp: time.Now(),
 		pubKey:    hex.EncodeToString(txKeyPub),
 		prop:      prop,
-	})
-	sig, _ := crypto.Sign(string(txBytes), hex.EncodeToString(txKeyPv))
-	sigEm, _ := crypto.Sign(string(txBytes), hex.EncodeToString(emPv))
-
-	tx, _ := New(crypto.HashString("addr"), IDType, hex.EncodeToString(data), time.Now(), hex.EncodeToString(txKeyPub), sig, sigEm, prop, crypto.HashBytes(txBytes))
+	}
+	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(emPv))
+	txSig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(txKeyPv))
+	tx.emSig = emSig
+	tx.sig = txSig
+	txBytes, _ := tx.MarshalHash()
+	txHash := crypto.HashBytes(txBytes)
+	tx.txHash = txHash
 
 	s.LeadTransactionValidation(tx, 1)
 

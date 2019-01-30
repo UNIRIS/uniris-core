@@ -1,7 +1,6 @@
 package transaction
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,7 +47,7 @@ const (
 type Transaction struct {
 	address       string
 	txType        Type
-	data          string
+	data          map[string]string
 	timestamp     time.Time
 	pubKey        string
 	sig           string
@@ -61,7 +60,7 @@ type Transaction struct {
 }
 
 //New creates a transaction
-func New(addr string, txType Type, data string, timestamp time.Time, pubK string, sig string, emSig string, prop Proposal, txHash string) (Transaction, error) {
+func New(addr string, txType Type, data map[string]string, timestamp time.Time, pubK string, sig string, emSig string, prop Proposal, txHash string) (Transaction, error) {
 
 	tx := Transaction{
 		address:   addr,
@@ -91,7 +90,7 @@ func (t Transaction) Type() Type {
 }
 
 //Data returns Transaction's data
-func (t Transaction) Data() string {
+func (t Transaction) Data() map[string]string {
 	return t.data
 }
 
@@ -158,16 +157,21 @@ func (t *Transaction) CheckChainTransactionIntegrity() error {
 }
 
 func (t Transaction) checkTransactionIntegrity() error {
-	txBytes, err := json.Marshal(t)
+	txBytesForHash, err := t.MarshalHash()
 	if err != nil {
 		return err
 	}
-	txHash := crypto.HashBytes(txBytes)
+	txHash := crypto.HashBytes(txBytesForHash)
 	if txHash != t.TransactionHash() {
 		return errors.New("transaction integrity violated")
 	}
 
-	err = crypto.VerifySignature(string(txBytes), t.PublicKey(), t.Signature())
+	txBytesBeforeSig, err := t.MarshalBeforeSignature()
+	if err != nil {
+		return err
+	}
+
+	err = crypto.VerifySignature(string(txBytesBeforeSig), t.PublicKey(), t.Signature())
 	if err == crypto.ErrInvalidSignature {
 		return errors.New("transaction signature invalid")
 	}
@@ -180,12 +184,12 @@ func (t Transaction) CheckMasterValidation() error {
 		return err
 	}
 
-	txBytes, err := json.Marshal(t)
+	txBytesBeforeSig, err := t.MarshalBeforeSignature()
 	if err != nil {
 		return err
 	}
 
-	err = crypto.VerifySignature(string(txBytes), t.MasterValidation().ProofOfWork(), t.EmitterSignature())
+	err = crypto.VerifySignature(string(txBytesBeforeSig), t.MasterValidation().ProofOfWork(), t.EmitterSignature())
 	if err == crypto.ErrInvalidSignature {
 		return errors.New("invalid proof of work")
 	}
@@ -231,15 +235,15 @@ func (t *Transaction) Chain(prevTx *Transaction) error {
 	return nil
 }
 
-//MarshalJSON serializes as JSON the transaction
-func (t Transaction) MarshalJSON() ([]byte, error) {
+//MarshalBeforeSignature serializes as JSON the transaction before its signature
+func (t Transaction) MarshalBeforeSignature() ([]byte, error) {
 	return json.Marshal(struct {
-		Address   string   `json:"address"`
-		Data      string   `json:"data"`
-		Timestamp int64    `json:"timestamp"`
-		Type      Type     `json:"type"`
-		PublicKey string   `json:"public_key"`
-		Proposal  Proposal `json:"proposal"`
+		Address   string            `json:"address"`
+		Data      map[string]string `json:"data"`
+		Timestamp int64             `json:"timestamp"`
+		Type      Type              `json:"type"`
+		PublicKey string            `json:"public_key"`
+		Proposal  Proposal          `json:"proposal"`
 	}{
 		Address:   t.Address(),
 		Data:      t.Data(),
@@ -247,6 +251,29 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 		Type:      t.Type(),
 		PublicKey: t.PublicKey(),
 		Proposal:  t.Proposal(),
+	})
+}
+
+//MarshalHash serializes as JSON the transaction to produce its hash
+func (t Transaction) MarshalHash() ([]byte, error) {
+	return json.Marshal(struct {
+		Address          string            `json:"address"`
+		Data             map[string]string `json:"data"`
+		Timestamp        int64             `json:"timestamp"`
+		Type             Type              `json:"type"`
+		PublicKey        string            `json:"public_key"`
+		Proposal         Proposal          `json:"proposal"`
+		Signature        string            `json:"signature"`
+		EmitterSignature string            `json:"em_signature"`
+	}{
+		Address:          t.Address(),
+		Data:             t.Data(),
+		Timestamp:        t.Timestamp().Unix(),
+		Type:             t.Type(),
+		PublicKey:        t.PublicKey(),
+		Proposal:         t.Proposal(),
+		Signature:        t.Signature(),
+		EmitterSignature: t.EmitterSignature(),
 	})
 }
 
@@ -270,11 +297,8 @@ func (t Transaction) checkFields() error {
 		return fmt.Errorf("transaction: %s", err.Error())
 	}
 
-	if t.data == "" {
+	if len(t.data) == 0 {
 		return errors.New("transaction: data is empty")
-	}
-	if _, err := hex.DecodeString(t.data); err != nil {
-		return errors.New("transaction: data is not in hexadecimal format")
 	}
 
 	if t.timestamp.Unix() > time.Now().Unix() {

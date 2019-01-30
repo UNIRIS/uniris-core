@@ -70,6 +70,6 @@ func (s PoolFindingService) FindStoragePool(address string) (Pool, error) {
 
 //FindTransactionMasterPeer finds a master peer from a transaction hash
 //TODO: To implement with AI algorithms
-func (s PoolFindingService) FindTransactionMasterPeer(txHash string) string {
-	return "127.0.0.1"
+func (s PoolFindingService) FindTransactionMasterPeer(txHash string) (string, int) {
+	return "127.0.0.1", 3545
 }

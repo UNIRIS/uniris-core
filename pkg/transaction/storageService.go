@@ -132,6 +132,9 @@ func (s StorageService) GetLastTransaction(txAddr string, txType Type) (*Transac
 		if err != nil {
 			return nil, err
 		}
+		if keychain == nil {
+			return nil, nil
+		}
 		tx, err := keychain.ToTransaction()
 		if err != nil {
 			return nil, err
@@ -141,6 +144,9 @@ func (s StorageService) GetLastTransaction(txAddr string, txType Type) (*Transac
 		id, err := s.repo.FindIDByAddress(txAddr)
 		if err != nil {
 			return nil, err
+		}
+		if id == nil {
+			return nil, nil
 		}
 		tx, err := id.ToTransaction()
 		if err != nil {

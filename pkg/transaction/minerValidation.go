@@ -92,7 +92,6 @@ func (v MinerValidation) MarshalJSON() ([]byte, error) {
 		Status    ValidationStatus `json:"status"`
 		PublicKey string           `json:"public_key"`
 		Timestamp int64            `json:"timestamp"`
-		Signature string           `json:"signature,omitempty"`
 	}{
 		Status:    v.status,
 		PublicKey: v.minerPubk,
@@ -105,11 +104,11 @@ type ValidationStatus int
 
 const (
 
-	//ValidationOK defines when a validation successed
-	ValidationOK ValidationStatus = iota
-
 	//ValidationKO defines when a validation failed
-	ValidationKO ValidationStatus = 1
+	ValidationKO ValidationStatus = iota
+
+	//ValidationOK defines when a validation successed
+	ValidationOK ValidationStatus = 1
 )
 
 //MasterValidation describe the master Transaction validation

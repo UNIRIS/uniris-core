@@ -71,8 +71,9 @@ Scenario: Find master validation peer
 func TestFindMasterValidationPeer(t *testing.T) {
 	s := PoolFindingService{}
 
-	masterPeerIP := s.FindTransactionMasterPeer("hash")
+	masterPeerIP, masterPeerPort := s.FindTransactionMasterPeer("hash")
 	assert.Equal(t, "127.0.0.1", masterPeerIP)
+	assert.Equal(t, 3545, masterPeerPort)
 }
 
 type mockPoolRetriever struct{}
@@ -81,7 +82,7 @@ func (pr mockPoolRetriever) RequestLastTransaction(pool Pool, txAddr string, txT
 	return &Transaction{
 		masterV: MasterValidation{
 			prevMiners: Pool{
-				PoolMember{ip: net.ParseIP("127.0.0.1"), port: 3000},
+				PoolMember{ip: net.ParseIP("127.0.0.1"), port: 3545},
 			},
 		},
 	}, nil

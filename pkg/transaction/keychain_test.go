@@ -33,17 +33,13 @@ func TestNewKeychain(t *testing.T) {
 
 	addr := crypto.HashString("address")
 
-	dataBytes, _ := json.Marshal(keychainData{
-		EncryptedAddress: hex.EncodeToString([]byte("addr")),
-		EncryptedWallet:  hex.EncodeToString([]byte("wallet")),
-	})
-
-	data := hex.EncodeToString(dataBytes)
 	hash := crypto.HashString("hash")
-
 	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
 
-	tx, err := New(addr, KeychainType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	tx, err := New(addr, KeychainType, map[string]string{
+		"encrypted_address": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	keychain, err := NewKeychain(tx)
@@ -71,17 +67,14 @@ func TestNewKeychainWithInvalkeychainType(t *testing.T) {
 
 	addr := crypto.HashString("address")
 
-	dataBytes, _ := json.Marshal(keychainData{
-		EncryptedAddress: hex.EncodeToString([]byte("addr")),
-		EncryptedWallet:  hex.EncodeToString([]byte("wallet")),
-	})
-
-	data := hex.EncodeToString(dataBytes)
 	hash := crypto.HashString("hash")
 
 	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
 
-	tx, err := New(addr, IDType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	tx, err := New(addr, IDType, map[string]string{
+		"encrypted_address": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	_, err = NewKeychain(tx)
@@ -106,20 +99,25 @@ func TestNewKeychainWithMissingDataFields(t *testing.T) {
 
 	addr := crypto.HashString("address")
 
-	dataBytes, _ := json.Marshal(keychainData{
-		EncryptedWallet: hex.EncodeToString([]byte("wallet")),
-	})
-
-	data := hex.EncodeToString(dataBytes)
 	hash := crypto.HashString("hash")
 
 	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
 
-	tx, err := New(addr, KeychainType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	tx, err := New(addr, KeychainType, map[string]string{
+		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	_, err = NewKeychain(tx)
-	assert.EqualError(t, err, "transaction: missing keychain transaction data")
+	assert.EqualError(t, err, "transaction: missing data keychain: 'encrypted_address'")
+
+	tx, err = New(addr, KeychainType, map[string]string{
+		"encrypted_address": hex.EncodeToString([]byte("wallet")),
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	assert.Nil(t, err)
+
+	_, err = NewKeychain(tx)
+	assert.EqualError(t, err, "transaction: missing data keychain: 'encrypted_wallet'")
 }
 
 /*
@@ -139,26 +137,21 @@ func TestNewKeychainWithNotHexDataFields(t *testing.T) {
 
 	addr := crypto.HashString("address")
 
-	dataBytes1, _ := json.Marshal(keychainData{
-		EncryptedAddress: "addr",
-		EncryptedWallet:  "wallet",
-	})
-
-	data1 := hex.EncodeToString(dataBytes1)
 	hash := crypto.HashString("hash")
 
 	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
 
-	tx, _ := New(addr, KeychainType, data1, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	tx, _ := New(addr, KeychainType, map[string]string{
+		"encrypted_address": "addr",
+		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
 	_, err := NewKeychain(tx)
 	assert.EqualError(t, err, "transaction: keychain encrypted address is not in hexadecimal format")
 
-	dataBytes2, _ := json.Marshal(keychainData{
-		EncryptedAddress: hex.EncodeToString([]byte("addr")),
-		EncryptedWallet:  "wallet",
-	})
-	data2 := hex.EncodeToString(dataBytes2)
-	tx, _ = New(addr, KeychainType, data2, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	tx, _ = New(addr, KeychainType, map[string]string{
+		"encrypted_address": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":  "wallet",
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
 	_, err = NewKeychain(tx)
 	assert.EqualError(t, err, "transaction: keychain encrypted wallet is not in hexadecimal format")
 }
@@ -179,17 +172,14 @@ func TestKeychainToTransaction(t *testing.T) {
 
 	addr := crypto.HashString("address")
 
-	dataBytes, _ := json.Marshal(keychainData{
-		EncryptedAddress: hex.EncodeToString([]byte("addr")),
-		EncryptedWallet:  hex.EncodeToString([]byte("wallet")),
-	})
-
-	data := hex.EncodeToString(dataBytes)
 	hash := crypto.HashString("hash")
 
 	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
 
-	tx, err := New(addr, KeychainType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	tx, err := New(addr, KeychainType, map[string]string{
+		"encrypted_address": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	keychain, err := NewKeychain(tx)
@@ -197,7 +187,11 @@ func TestKeychainToTransaction(t *testing.T) {
 
 	tx, err = keychain.ToTransaction()
 	assert.Nil(t, err)
-	assert.Equal(t, data, tx.Data())
+
+	assert.Equal(t, map[string]string{
+		"encrypted_address": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+	}, tx.Data())
 
 	b, _ := json.Marshal(MinerValidation{
 		minerPubk: hex.EncodeToString(pub),

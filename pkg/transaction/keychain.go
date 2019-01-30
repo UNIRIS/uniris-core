@@ -2,7 +2,6 @@ package transaction
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 )
 
@@ -21,11 +20,6 @@ type Keychain struct {
 	Transaction
 }
 
-type keychainData struct {
-	EncryptedAddress string `json:"encrypted_address"`
-	EncryptedWallet  string `json:"encrypted_wallet"`
-}
-
 //NewKeychain creates a keychain transaction by extracting the transaction data
 func NewKeychain(tx Transaction) (Keychain, error) {
 
@@ -33,32 +27,27 @@ func NewKeychain(tx Transaction) (Keychain, error) {
 		return Keychain{}, errors.New("transaction: invalid type of transaction")
 	}
 
-	var data keychainData
-
-	dataBytes, err := hex.DecodeString(tx.Data())
-	if err != nil {
-		return Keychain{}, err
+	addr, exist := tx.data["encrypted_address"]
+	if !exist {
+		return Keychain{}, errors.New("transaction: missing data keychain: 'encrypted_address'")
 	}
 
-	if err := json.Unmarshal(dataBytes, &data); err != nil {
-		return Keychain{}, err
+	wallet, exist := tx.data["encrypted_wallet"]
+	if !exist {
+		return Keychain{}, errors.New("transaction: missing data keychain: 'encrypted_wallet'")
 	}
 
-	if data.EncryptedAddress == "" || data.EncryptedWallet == "" {
-		return Keychain{}, errors.New("transaction: missing keychain transaction data")
-	}
-
-	if _, err := hex.DecodeString(data.EncryptedAddress); err != nil {
+	if _, err := hex.DecodeString(addr); err != nil {
 		return Keychain{}, errors.New("transaction: keychain encrypted address is not in hexadecimal format")
 	}
 
-	if _, err := hex.DecodeString(data.EncryptedWallet); err != nil {
+	if _, err := hex.DecodeString(wallet); err != nil {
 		return Keychain{}, errors.New("transaction: keychain encrypted wallet is not in hexadecimal format")
 	}
 
 	return Keychain{
-		encAddr:     data.EncryptedAddress,
-		encWallet:   data.EncryptedWallet,
+		encAddr:     addr,
+		encWallet:   wallet,
 		Transaction: tx,
 	}, nil
 }
@@ -75,16 +64,11 @@ func (k Keychain) EncryptedWallet() string {
 
 //ToTransaction converts back Keychain to transaction root
 func (k Keychain) ToTransaction() (Transaction, error) {
-	data := keychainData{
-		EncryptedAddress: k.EncryptedAddrByRobot(),
-		EncryptedWallet:  k.EncryptedWallet(),
+	data := map[string]string{
+		"encrypted_address": k.encAddr,
+		"encrypted_wallet":  k.encWallet,
 	}
-	dataBytes, err := json.Marshal(data)
-	if err != nil {
-		return Transaction{}, nil
-	}
-
-	tx, err := New(k.Address(), KeychainType, hex.EncodeToString(dataBytes), k.Timestamp(), k.PublicKey(), k.Signature(), k.EmitterSignature(), k.Proposal(), k.TransactionHash())
+	tx, err := New(k.Address(), KeychainType, data, k.Timestamp(), k.PublicKey(), k.Signature(), k.EmitterSignature(), k.Proposal(), k.TransactionHash())
 	if err != nil {
 		return Transaction{}, nil
 	}

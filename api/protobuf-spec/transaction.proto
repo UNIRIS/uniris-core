@@ -8,7 +8,8 @@ service TransactionService {
     rpc GetLastTransaction(LastTransactionRequest) returns (LastTransactionResponse);
     rpc GetTransactionStatus(TransactionStatusRequest) returns (TransactionStatusResponse);
     rpc LockTransaction(LockRequest) returns (LockResponse);
-    rpc PreValidateTransaction(PreValidationRequest) returns (PreValidationResponse);
+    rpc UnlockTransaction(LockRequest) returns (LockResponse);
+    rpc LeadTransactionMining(LeadMiningRequest) returns (LeadMiningResponse);
     rpc ConfirmTransactionValidation(ConfirmValidationRequest) returns (ConfirmValidationResponse);
     rpc StoreTransaction(StoreRequest) returns (StoreResponse);
 }
@@ -48,7 +49,7 @@ message TransactionStatusResponse {
 message LockRequest {
     string transaction_hash = 1;
     string address = 2;
-    string master_peer_ip = 3;
+    string master_peer_public_key = 3;
     int64 timestamp = 4;
     string signature_request = 5;
 }
@@ -67,7 +68,7 @@ enum TransactionType {
 message Transaction {
     string address = 1;
     TransactionType type = 2;
-    string data = 3;
+    map<string, string> data = 3;
     int64 timestamp = 4;
     string public_key = 5;
     string signature = 6;
@@ -85,14 +86,14 @@ message SharedKeys {
     string public_key = 2;
 }
 
-message PreValidationRequest {
+message LeadMiningRequest {
     Transaction transaction = 1;
     int32 minimum_validations = 2;
     int64 timestamp = 3;
     string signature_request = 4;
 }
 
-message PreValidationResponse {
+message LeadMiningResponse {
     int64 timestamp = 1;
     string signature_response = 2;
 }

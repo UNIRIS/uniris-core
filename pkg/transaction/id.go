@@ -2,7 +2,6 @@ package transaction
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 )
 
@@ -21,12 +20,6 @@ type ID struct {
 	Transaction
 }
 
-type idData struct {
-	EncryptedAddressByRobot string
-	EncryptedAddressByID    string
-	EncryptedAESKey         string
-}
-
 //NewID creates an ID transaction by extracting the transaction data
 func NewID(tx Transaction) (ID, error) {
 
@@ -34,37 +27,35 @@ func NewID(tx Transaction) (ID, error) {
 		return ID{}, errors.New("transaction: invalid type of transaction")
 	}
 
-	var data idData
-
-	dataBytes, err := hex.DecodeString(tx.Data())
-	if err != nil {
-		return ID{}, err
+	addrRobot, exist := tx.data["encrypted_address_by_robot"]
+	if !exist {
+		return ID{}, errors.New("transaction: missing data ID 'encrypted_address_by_robot'")
+	}
+	addrID, exist := tx.data["encrypted_address_by_id"]
+	if !exist {
+		return ID{}, errors.New("transaction: missing data ID 'encrypted_address_by_id'")
+	}
+	aesKey, exist := tx.data["encrypted_aes_key"]
+	if !exist {
+		return ID{}, errors.New("transaction: missing data ID 'encrypted_aes_key'")
 	}
 
-	if err := json.Unmarshal(dataBytes, &data); err != nil {
-		return ID{}, err
-	}
-
-	if data.EncryptedAESKey == "" || data.EncryptedAddressByID == "" || data.EncryptedAddressByRobot == "" {
-		return ID{}, errors.New("transaction: missing id transaction data")
-	}
-
-	if _, err := hex.DecodeString(data.EncryptedAESKey); err != nil {
+	if _, err := hex.DecodeString(aesKey); err != nil {
 		return ID{}, errors.New("transaction: id encrypted aes key is not in hexadecimal format")
 	}
 
-	if _, err := hex.DecodeString(data.EncryptedAddressByID); err != nil {
+	if _, err := hex.DecodeString(addrID); err != nil {
 		return ID{}, errors.New("transaction: id encrypted address for id is not in hexadecimal format")
 	}
 
-	if _, err := hex.DecodeString(data.EncryptedAddressByRobot); err != nil {
+	if _, err := hex.DecodeString(addrRobot); err != nil {
 		return ID{}, errors.New("transaction: id encrypted address for robot is not in hexadecimal format")
 	}
 
 	return ID{
-		encAddrByID:    data.EncryptedAddressByID,
-		encAddrByRobot: data.EncryptedAddressByRobot,
-		encAesKey:      data.EncryptedAESKey,
+		encAddrByID:    addrID,
+		encAddrByRobot: addrRobot,
+		encAesKey:      aesKey,
 		Transaction:    tx,
 	}, nil
 }
@@ -86,16 +77,11 @@ func (id ID) EncryptedAESKey() string {
 
 //ToTransaction converts back ID to transaction root
 func (id ID) ToTransaction() (tx Transaction, err error) {
-	data := idData{
-		EncryptedAddressByID:    id.EncryptedAddrByID(),
-		EncryptedAddressByRobot: id.EncryptedAddrByRobot(),
-		EncryptedAESKey:         id.EncryptedAESKey(),
-	}
-	dataBytes, err := json.Marshal(data)
-	if err != nil {
-		return
-	}
-	tx, err = New(id.Address(), IDType, hex.EncodeToString(dataBytes), id.Timestamp(), id.PublicKey(), id.Signature(), id.EmitterSignature(), id.Proposal(), id.TransactionHash())
+	tx, err = New(id.Address(), IDType, map[string]string{
+		"encrypted_address_by_robot": id.encAddrByRobot,
+		"encrypted_address_by_id":    id.encAddrByID,
+		"encrypted_aes_key":          id.encAesKey,
+	}, id.Timestamp(), id.PublicKey(), id.Signature(), id.EmitterSignature(), id.Proposal(), id.TransactionHash())
 	if err != nil {
 		return
 	}
