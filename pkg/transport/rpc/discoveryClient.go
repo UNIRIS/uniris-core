@@ -14,13 +14,13 @@ import (
 
 type rndMsg struct{}
 
-//NewGossipRoundMessenger creates a new gossip round message with GRPC
-func NewGossipRoundMessenger() discovery.RoundMessenger {
+//NewDiscoveryClient creates a new discovery client with GRPC
+func NewDiscoveryClient() discovery.Client {
 	return rndMsg{}
 }
 
-func (m rndMsg) SendSyn(source discovery.Peer, target discovery.Peer, known []discovery.Peer) (unknown []discovery.Peer, new []discovery.Peer, err error) {
-	serverAddr := fmt.Sprintf("%s", target.Endpoint())
+func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (unknown []discovery.Peer, new []discovery.Peer, err error) {
+	serverAddr := fmt.Sprintf("%s:%d", target.IP().String(), target.Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		return nil, nil, nil
@@ -34,8 +34,6 @@ func (m rndMsg) SendSyn(source discovery.Peer, target discovery.Peer, known []di
 
 	client := api.NewDiscoveryServiceClient(conn)
 	res, err := client.Synchronize(context.Background(), &api.SynRequest{
-		Source:     formatPeerDigestAPI(source),
-		Target:     formatPeerDigestAPI(target),
 		KnownPeers: kp,
 		Timestamp:  time.Now().Unix(),
 	})
@@ -60,8 +58,8 @@ func (m rndMsg) SendSyn(source discovery.Peer, target discovery.Peer, known []di
 	return
 }
 
-func (m rndMsg) SendAck(source discovery.Peer, target discovery.Peer, requested []discovery.Peer) error {
-	serverAddr := fmt.Sprintf("%s", target.Endpoint())
+func (m rndMsg) SendAck(target discovery.PeerIdentity, requested []discovery.Peer) error {
+	serverAddr := fmt.Sprintf("%s:%d", target.IP().String(), target.Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
 
@@ -77,11 +75,14 @@ func (m rndMsg) SendAck(source discovery.Peer, target discovery.Peer, requested 
 	}
 
 	res, err := client.Acknowledge(context.Background(), &api.AckRequest{
-		Source:         formatPeerDigestAPI(source),
-		Target:         formatPeerDigestAPI(target),
 		RequestedPeers: reqP,
 	})
 	if err != nil {
+		//If the peer cannot be reached, we throw an ErrPeerUnreachable error
+		statusCode, _ := status.FromError(err)
+		if statusCode.Code() == codes.Unavailable {
+			return discovery.ErrUnreachablePeer
+		}
 		return err
 	}
 

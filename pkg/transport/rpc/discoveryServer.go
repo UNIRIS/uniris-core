@@ -28,7 +28,7 @@ func (s discoverySrv) Synchronize(ctx context.Context, req *api.SynRequest) (*ap
 		reqP = append(reqP, formatPeerDigest(p))
 	}
 
-	unknown, new, err := s.srv.SynchronizeGossip(reqP)
+	unknown, new, err := s.srv.ComparePeers(reqP)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func (s discoverySrv) Acknowledge(ctx context.Context, req *api.AckRequest) (*ap
 		newPeers = append(newPeers, formatPeerDiscovered(p))
 	}
 
-	if err := s.srv.AcknowledgeGossip(newPeers); err != nil {
+	if err := s.srv.AcknowledgeNewPeers(newPeers); err != nil {
 		return nil, err
 	}
 

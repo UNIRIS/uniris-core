@@ -78,7 +78,12 @@ func formatTransaction(tx *api.Transaction) (transaction.Transaction, error) {
 		return transaction.Transaction{}, err
 	}
 
-	return transaction.New(tx.Address, transaction.Type(tx.Type), tx.Data,
+	data := make(map[string]string, 0)
+	for k, v := range tx.Data {
+		data[k] = v
+	}
+
+	return transaction.New(tx.Address, transaction.Type(tx.Type), data,
 		time.Unix(tx.Timestamp, 0),
 		tx.PublicKey,
 		tx.Signature,
@@ -166,7 +171,7 @@ func formatAPITransaction(tx transaction.Transaction) *api.Transaction {
 	}
 }
 
-func formatAPIMasterValidationAPI(masterValid transaction.MasterValidation) *api.MasterValidation {
+func formatAPIMasterValidation(masterValid transaction.MasterValidation) *api.MasterValidation {
 
 	prevMiners := make([]*api.PoolMember, 0)
 	for _, m := range masterValid.PreviousTransactionMiners() {
@@ -179,11 +184,6 @@ func formatAPIMasterValidationAPI(masterValid transaction.MasterValidation) *api
 	return &api.MasterValidation{
 		ProofOfWork:               masterValid.ProofOfWork(),
 		PreviousTransactionMiners: prevMiners,
-		PreValidation: &api.MinerValidation{
-			PublicKey: masterValid.Validation().MinerPublicKey(),
-			Signature: masterValid.Validation().MinerSignature(),
-			Status:    api.MinerValidation_ValidationStatus(masterValid.Validation().Status()),
-			Timestamp: masterValid.Validation().Timestamp().Unix(),
-		},
+		PreValidation:             formatAPIValidation(masterValid.Validation()),
 	}
 }

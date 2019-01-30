@@ -34,20 +34,19 @@ func (pr poolR) RequestTransactionLock(pool transaction.Pool, lock transaction.L
 	var wg sync.WaitGroup
 	wg.Add(len(pool))
 
-	var ackLock int32
-	lockChan := make(chan bool)
+	var ackUnlock int32
 
 	req := &api.LockRequest{
-		Address:         lock.Address(),
-		TransactionHash: lock.TransactionHash(),
-		MasterPeerIp:    lock.MasterRobotKey(),
-		Timestamp:       time.Now().Unix(),
+		Address:             lock.Address(),
+		TransactionHash:     lock.TransactionHash(),
+		MasterPeerPublicKey: lock.MasterRobotKey(),
+		Timestamp:           time.Now().Unix(),
 	}
 	reqBytes, err := json.Marshal(req)
 	if err != nil {
 		return err
 	}
-	sig, err := crypto.Sign(string(reqBytes), pr.sharedPubk)
+	sig, err := crypto.Sign(string(reqBytes), pr.sharedPvk)
 	if err != nil {
 		return err
 	}
@@ -72,41 +71,107 @@ func (pr poolR) RequestTransactionLock(pool transaction.Pool, lock transaction.L
 
 			fmt.Printf("LOCK TRANSACTION RESPONSE - %s", time.Unix(res.Timestamp, 0).String())
 
-			resBytes, err := json.Marshal(res)
+			resBytes, err := json.Marshal(&api.LockResponse{
+				Timestamp: req.Timestamp,
+			})
 			if err != nil {
-				fmt.Printf("LOCK TRANSACTION RESPONSE UNMARSHALING - ERROR: %s", err.Error())
+				fmt.Printf("LOCK TRANSACTION RESPONSE - ERROR: %s", err.Error())
 				return
 			}
 			if err := crypto.VerifySignature(string(resBytes), pr.sharedPubk, res.SignatureResponse); err != nil {
-				fmt.Printf("LOCK TRANSACTION RESPONSE VERIFICATION - ERROR: %s", err.Error())
+				fmt.Printf("LOCK TRANSACTION RESPONSE - ERROR: %s", err.Error())
 				return
 			}
 
-			atomic.AddInt32(&ackLock, 1)
+			atomic.AddInt32(&ackUnlock, 1)
 		}(p)
 	}
 
 	wg.Wait()
-	close(lockChan)
 
 	//TODO: specify minium required locks
 	minLocks := 1
-	lockFinal := atomic.LoadInt32(&ackLock)
+	lockFinal := atomic.LoadInt32(&ackUnlock)
 	if int(lockFinal) < minLocks {
-		return errors.New("Transaction locking failed")
+		return errors.New("number of locks are not reached")
 	}
 
 	return nil
 }
 
 func (pr poolR) RequestTransactionUnlock(pool transaction.Pool, lock transaction.Lock) error {
+	var wg sync.WaitGroup
+	wg.Add(len(pool))
+
+	var ackUnlock int32
+
+	req := &api.LockRequest{
+		Address:             lock.Address(),
+		TransactionHash:     lock.TransactionHash(),
+		MasterPeerPublicKey: lock.MasterRobotKey(),
+		Timestamp:           time.Now().Unix(),
+	}
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	sig, err := crypto.Sign(string(reqBytes), pr.sharedPvk)
+	if err != nil {
+		return err
+	}
+	req.SignatureRequest = sig
+
+	for _, p := range pool {
+		go func(p transaction.PoolMember) {
+			defer wg.Done()
+
+			serverAddr := fmt.Sprintf("%s:%d", p.IP(), p.Port())
+			conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+			if err != nil {
+				fmt.Printf("UNLOCK TRANSACTION - ERROR: %s", err.Error())
+			}
+			defer conn.Close()
+			cli := api.NewTransactionServiceClient(conn)
+			res, err := cli.UnlockTransaction(context.Background(), req)
+			if err != nil {
+				fmt.Printf("UNLOCK TRANSACTION RESPONSE - ERROR: %s", err.Error())
+				return
+			}
+
+			fmt.Printf("UNLOCK TRANSACTION RESPONSE - %s", time.Unix(res.Timestamp, 0).String())
+
+			resBytes, err := json.Marshal(&api.LockResponse{
+				Timestamp: req.Timestamp,
+			})
+			if err != nil {
+				fmt.Printf("UNLOCK TRANSACTION RESPONSE - ERROR: %s", err.Error())
+				return
+			}
+			if err := crypto.VerifySignature(string(resBytes), pr.sharedPubk, res.SignatureResponse); err != nil {
+				fmt.Printf("UNLOCK TRANSACTION RESPONSE - ERROR: %s", err.Error())
+				return
+			}
+
+			atomic.AddInt32(&ackUnlock, 1)
+		}(p)
+	}
+
+	wg.Wait()
+
+	//TODO: specify minium required unlocks
+	minUnlocks := 1
+	unlockFinal := atomic.LoadInt32(&ackUnlock)
+	if int(unlockFinal) < minUnlocks {
+		return errors.New("number of unlocks are not reached")
+	}
+
 	return nil
 }
 
 func (pr poolR) RequestTransactionValidations(pool transaction.Pool, tx transaction.Transaction, masterValid transaction.MasterValidation, validChan chan<- transaction.MinerValidation) {
 
 	req := &api.ConfirmValidationRequest{
-		MasterValidation: formatAPIMasterValidationAPI(masterValid),
+		MasterValidation: formatAPIMasterValidation(masterValid),
 		Transaction:      formatAPITransaction(tx),
 		Timestamp:        time.Now().Unix(),
 	}
@@ -169,7 +234,7 @@ func (pr poolR) RequestTransactionStorage(pool transaction.Pool, tx transaction.
 
 	req := &api.StoreRequest{
 		MinedTransaction: &api.MinedTransaction{
-			MasterValidation:   formatAPIMasterValidationAPI(tx.MasterValidation()),
+			MasterValidation:   formatAPIMasterValidation(tx.MasterValidation()),
 			ConfirmValidations: confValids,
 			Transaction:        formatAPITransaction(tx),
 		},

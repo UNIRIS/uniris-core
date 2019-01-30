@@ -40,7 +40,7 @@ func (pr poolRtrv) RequestLastTransaction(pool transaction.Pool, txAddr string, 
 	if err != nil {
 		return nil, err
 	}
-	sig, err := crypto.Sign(string(reqBytes), pr.sharedPubk)
+	sig, err := crypto.Sign(string(reqBytes), pr.sharedPvk)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,10 @@ func (pr poolRtrv) RequestLastTransaction(pool transaction.Pool, txAddr string, 
 
 			fmt.Printf("GET LAST TRANSACTION RESPONSE - %s", time.Unix(res.Timestamp, 0).String())
 
-			resBytes, err := json.Marshal(res)
+			resBytes, err := json.Marshal(&api.LastTransactionResponse{
+				Timestamp:   res.Timestamp,
+				Transaction: res.Transaction,
+			})
 			if err != nil {
 				fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s", err.Error())
 				return
@@ -77,12 +80,14 @@ func (pr poolRtrv) RequestLastTransaction(pool transaction.Pool, txAddr string, 
 				return
 			}
 
-			tx, err := formatTransaction(res.Transaction)
-			if err != nil {
-				fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s", err.Error())
-				return
+			if res.Transaction != nil {
+				tx, err := formatTransaction(res.Transaction)
+				if err != nil {
+					fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s", err.Error())
+					return
+				}
+				txRes = append(txRes, tx)
 			}
-			txRes = append(txRes, tx)
 		}(p)
 	}
 

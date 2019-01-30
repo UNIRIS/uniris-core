@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/transaction"
@@ -48,6 +51,9 @@ func (s transactionSrv) GetLastTransaction(ctx context.Context, req *api.LastTra
 	tx, err := s.storeSrv.GetLastTransaction(req.TransactionAddress, transaction.Type(req.Type))
 	if err != nil {
 		return nil, err
+	}
+	if tx == nil {
+		return nil, status.New(codes.NotFound, "transaction does not exist").Err()
 	}
 
 	res := &api.LastTransactionResponse{
@@ -107,15 +113,16 @@ func (s transactionSrv) LockTransaction(ctx context.Context, req *api.LockReques
 	fmt.Printf("LOCK TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
 	reqBytes, err := json.Marshal(&api.LockRequest{
-		TransactionHash: req.TransactionHash,
-		MasterPeerIp:    req.MasterPeerIp,
-		Timestamp:       req.Timestamp,
+		TransactionHash:     req.TransactionHash,
+		MasterPeerPublicKey: req.MasterPeerPublicKey,
+		Timestamp:           req.Timestamp,
+		Address:             req.Address,
 	})
 	if err := crypto.VerifySignature(string(reqBytes), s.sharedPubKey, req.SignatureRequest); err != nil {
 		return nil, err
 	}
 
-	lock, err := transaction.NewLock(req.TransactionHash, req.Address, req.MasterPeerIp)
+	lock, err := transaction.NewLock(req.TransactionHash, req.Address, req.MasterPeerPublicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -138,10 +145,46 @@ func (s transactionSrv) LockTransaction(ctx context.Context, req *api.LockReques
 	return res, nil
 }
 
-func (s transactionSrv) PreValidateTransaction(ctx context.Context, req *api.PreValidationRequest) (*api.PreValidationResponse, error) {
-	fmt.Printf("PRE VALIDATE TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
+func (s transactionSrv) UnlockTransaction(ctx context.Context, req *api.LockRequest) (*api.LockResponse, error) {
+	fmt.Printf("UNLOCK TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	reqBytes, err := json.Marshal(&api.PreValidationRequest{
+	reqBytes, err := json.Marshal(&api.LockRequest{
+		TransactionHash:     req.TransactionHash,
+		MasterPeerPublicKey: req.MasterPeerPublicKey,
+		Timestamp:           req.Timestamp,
+		Address:             req.Address,
+	})
+	if err := crypto.VerifySignature(string(reqBytes), s.sharedPubKey, req.SignatureRequest); err != nil {
+		return nil, err
+	}
+
+	lock, err := transaction.NewLock(req.TransactionHash, req.Address, req.MasterPeerPublicKey)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.lockSrv.RemoveLock(lock); err != nil {
+		return nil, err
+	}
+
+	res := &api.LockResponse{
+		Timestamp: time.Now().Unix(),
+	}
+	resBytes, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+	sig, err := crypto.Sign(string(resBytes), s.sharedPvKey)
+	if err != nil {
+		return nil, err
+	}
+	res.SignatureResponse = sig
+	return res, nil
+}
+
+func (s transactionSrv) LeadTransactionMining(ctx context.Context, req *api.LeadMiningRequest) (*api.LeadMiningResponse, error) {
+	fmt.Printf("LEAD TRANSACTION MINING REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
+
+	reqBytes, err := json.Marshal(&api.LeadMiningRequest{
 		Transaction:        req.Transaction,
 		MinimumValidations: req.MinimumValidations,
 		Timestamp:          req.Timestamp,
@@ -156,7 +199,7 @@ func (s transactionSrv) PreValidateTransaction(ctx context.Context, req *api.Pre
 	}
 	s.miningSrv.LeadTransactionValidation(tx, int(req.MinimumValidations))
 
-	res := &api.PreValidationResponse{
+	res := &api.LeadMiningResponse{
 		Timestamp: time.Now().Unix(),
 	}
 	resBytes, err := json.Marshal(res)
