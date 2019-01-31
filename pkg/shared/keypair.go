@@ -43,11 +43,8 @@ func (kp KeyPair) EncryptedPrivateKey() string {
 }
 
 func (sk KeyPair) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		EncryptedPrivateKey string `json:"encrypted_private_key"`
-		PublicKey           string `json:"public_key"`
-	}{
-		EncryptedPrivateKey: sk.EncryptedPrivateKey(),
-		PublicKey:           sk.PublicKey(),
+	return json.Marshal(map[string]string{
+		"encrypted_private_key": sk.EncryptedPrivateKey(),
+		"public_key":            sk.PublicKey(),
 	})
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/transaction"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 )
 
 type poolRtrv struct {
@@ -55,35 +56,37 @@ func (pr poolRtrv) RequestLastTransaction(pool transaction.Pool, txAddr string, 
 			serverAddr := fmt.Sprintf("%s:%d", p.IP(), p.Port())
 			conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 			if err != nil {
-				fmt.Printf("GET LAST TRANSACTION - ERROR: %s", err.Error())
+				fmt.Printf("GET LAST TRANSACTION - ERROR: %s\n", err.Error())
+				return
 			}
 			defer conn.Close()
 			cli := api.NewTransactionServiceClient(conn)
 			res, err := cli.GetLastTransaction(context.Background(), req)
 			if err != nil {
-				fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s", err.Error())
+				grpcErr, _ := status.FromError(err)
+				fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s\n", grpcErr.Message())
 				return
 			}
 
-			fmt.Printf("GET LAST TRANSACTION RESPONSE - %s", time.Unix(res.Timestamp, 0).String())
+			fmt.Printf("GET LAST TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
 			resBytes, err := json.Marshal(&api.LastTransactionResponse{
 				Timestamp:   res.Timestamp,
 				Transaction: res.Transaction,
 			})
 			if err != nil {
-				fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s", err.Error())
+				fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 				return
 			}
 			if err := crypto.VerifySignature(string(resBytes), pr.sharedPubk, res.SignatureResponse); err != nil {
-				fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s", err.Error())
+				fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 				return
 			}
 
 			if res.Transaction != nil {
 				tx, err := formatTransaction(res.Transaction)
 				if err != nil {
-					fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s", err.Error())
+					fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 					return
 				}
 				txRes = append(txRes, tx)

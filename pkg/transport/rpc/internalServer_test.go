@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
-	"log"
 	"net"
 	"testing"
 	"time"
@@ -50,13 +49,11 @@ func TestHandleGetTransactionStatusInternal(t *testing.T) {
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
-	req := &api.TransactionStatusRequest{
-		TransactionHash: crypto.HashString("tx"),
-		Timestamp:       time.Now().Unix(),
+	req := &api.InternalTransactionStatusRequest{
+		TransactionHash:    crypto.HashString("tx"),
+		TransactionAddress: crypto.HashString("address"),
+		Timestamp:          time.Now().Unix(),
 	}
-	reqBytes, _ := json.Marshal(req)
-	reqSig, _ := crypto.Sign(string(reqBytes), hex.EncodeToString(pv))
-	req.SignatureRequest = reqSig
 	res, err := intSrv.GetTransactionStatus(context.TODO(), req)
 	assert.Nil(t, err)
 	assert.Equal(t, api.TransactionStatusResponse_UNKNOWN, res.Status)
@@ -102,42 +99,29 @@ func TestHandleIncomingTransaction(t *testing.T) {
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
-	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+	tx := map[string]interface{}{
+		"address": crypto.HashString("addr"),
+		"data": map[string]string{
+			"encrypted_address": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       int(transaction.KeychainType),
+		"public_key": hex.EncodeToString(pub),
+		"proposal": map[string]interface{}{
+			"shared_emitter_keys": map[string]string{
+				"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
+				"public_key":            hex.EncodeToString(pub),
+			},
+		},
 	}
+	txBytes, _ := json.Marshal(tx)
+	sig, _ := crypto.Sign(string(txBytes), hex.EncodeToString(pv))
+	tx["signature"] = sig
+	tx["em_signature"] = sig
+	txBytes, _ = json.Marshal(tx)
 
-	tx, _ := json.Marshal(txRaw{
-		Address: crypto.HashString("addr"),
-		Data:    data,
-		Proposal: txProp{
-			SharedEmitterKeys: txSharedKeys{
-				EncryptedPrivateKey: hex.EncodeToString([]byte("encPV")),
-				PublicKey:           hex.EncodeToString(pub),
-			},
-		},
-		Timestamp: time.Now().Unix(),
-		Type:      int(transaction.KeychainType),
-		PublicKey: hex.EncodeToString(pub),
-	})
-	sig, _ := crypto.Sign(string(tx), hex.EncodeToString(pv))
-	txSigned, _ := json.Marshal(txSigned{
-		Address: crypto.HashString("addr"),
-		Data:    data,
-		Proposal: txProp{
-			SharedEmitterKeys: txSharedKeys{
-				EncryptedPrivateKey: hex.EncodeToString([]byte("encPV")),
-				PublicKey:           hex.EncodeToString(pub),
-			},
-		},
-		Timestamp:        time.Now().Unix(),
-		Type:             int(transaction.KeychainType),
-		PublicKey:        hex.EncodeToString(pub),
-		EmitterSignature: sig,
-		Signature:        sig,
-	})
-
-	cipherTx, _ := crypto.Encrypt(string(txSigned), hex.EncodeToString(pub))
+	cipherTx, _ := crypto.Encrypt(string(txBytes), hex.EncodeToString(pub))
 	res, err := intSrv.HandleTransaction(context.TODO(), &api.IncomingTransaction{
 		EncryptedTransaction: cipherTx,
 		Timestamp:            time.Now().Unix(),
@@ -150,7 +134,7 @@ func TestHandleIncomingTransaction(t *testing.T) {
 		TransactionHash: res.TransactionHash,
 	})
 	assert.Nil(t, crypto.VerifySignature(string(resBytes), hex.EncodeToString(pub), res.Signature))
-	assert.Equal(t, crypto.HashBytes(txSigned), res.TransactionHash)
+	assert.Equal(t, crypto.HashBytes(txBytes), res.TransactionHash)
 
 	time.Sleep(2 * time.Second)
 
@@ -195,43 +179,30 @@ func TestHandleGetAccount(t *testing.T) {
 	encAddr, _ := crypto.Encrypt(crypto.HashString("addr"), hex.EncodeToString(pub))
 
 	//First send the ID transaction
-	iddata := map[string]string{
-		"encrypted_address_by_id":    encAddr,
-		"encrypted_address_by_robot": encAddr,
-		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+	txID := map[string]interface{}{
+		"address": crypto.HashString("idHash"),
+		"data": map[string]string{
+			"encrypted_address_by_id":    encAddr,
+			"encrypted_address_by_robot": encAddr,
+			"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       int(transaction.IDType),
+		"public_key": hex.EncodeToString(pub),
+		"proposal": map[string]interface{}{
+			"shared_emitter_keys": map[string]string{
+				"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
+				"public_key":            hex.EncodeToString(pub),
+			},
+		},
 	}
+	txIDBytes, _ := json.Marshal(txID)
+	sigID, _ := crypto.Sign(string(txIDBytes), hex.EncodeToString(pv))
+	txID["signature"] = sigID
+	txID["em_signature"] = sigID
+	txIDBytes, _ = json.Marshal(txID)
 
-	txRaw1, _ := json.Marshal(txRaw{
-		Address: crypto.HashString("idHash"),
-		Data:    iddata,
-		Proposal: txProp{
-			SharedEmitterKeys: txSharedKeys{
-				EncryptedPrivateKey: hex.EncodeToString([]byte("encPV")),
-				PublicKey:           hex.EncodeToString(pub),
-			},
-		},
-		Timestamp: time.Now().Unix(),
-		Type:      int(transaction.IDType),
-		PublicKey: hex.EncodeToString(pub),
-	})
-	sig, _ := crypto.Sign(string(txRaw1), hex.EncodeToString(pv))
-	txSigned1, _ := json.Marshal(txSigned{
-		Address: crypto.HashString("idHash"),
-		Data:    iddata,
-		Proposal: txProp{
-			SharedEmitterKeys: txSharedKeys{
-				EncryptedPrivateKey: hex.EncodeToString([]byte("encPV")),
-				PublicKey:           hex.EncodeToString(pub),
-			},
-		},
-		Timestamp:        time.Now().Unix(),
-		Type:             int(transaction.IDType),
-		PublicKey:        hex.EncodeToString(pub),
-		EmitterSignature: sig,
-		Signature:        sig,
-	})
-
-	cipherTx, _ := crypto.Encrypt(string(txSigned1), hex.EncodeToString(pub))
+	cipherTx, _ := crypto.Encrypt(string(txIDBytes), hex.EncodeToString(pub))
 	res, err := intSrv.HandleTransaction(context.TODO(), &api.IncomingTransaction{
 		EncryptedTransaction: cipherTx,
 		Timestamp:            time.Now().Unix(),
@@ -241,45 +212,31 @@ func TestHandleGetAccount(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 	assert.Equal(t, crypto.HashString("idHash"), txRepo.ids[0].Address())
-	log.Print(crypto.HashString("idHash"))
 
 	//Then send the keychain transaction
-	keychainData := map[string]string{
-		"encrypted_address": encAddr,
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+	txKeychain := map[string]interface{}{
+		"address": crypto.HashString("addr"),
+		"data": map[string]string{
+			"encrypted_address": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       int(transaction.KeychainType),
+		"public_key": hex.EncodeToString(pub),
+		"proposal": map[string]interface{}{
+			"shared_emitter_keys": map[string]string{
+				"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
+				"public_key":            hex.EncodeToString(pub),
+			},
+		},
 	}
+	txKeychainBytes, _ := json.Marshal(txKeychain)
+	sigKeychain, _ := crypto.Sign(string(txKeychainBytes), hex.EncodeToString(pv))
+	txKeychain["signature"] = sigKeychain
+	txKeychain["em_signature"] = sigKeychain
+	txKeychainBytes, _ = json.Marshal(txKeychain)
 
-	txRaw2, _ := json.Marshal(txRaw{
-		Address: crypto.HashString("addr"),
-		Data:    keychainData,
-		Proposal: txProp{
-			SharedEmitterKeys: txSharedKeys{
-				EncryptedPrivateKey: hex.EncodeToString([]byte("encPV")),
-				PublicKey:           hex.EncodeToString(pub),
-			},
-		},
-		Timestamp: time.Now().Unix(),
-		Type:      int(transaction.KeychainType),
-		PublicKey: hex.EncodeToString(pub),
-	})
-	sig2, _ := crypto.Sign(string(txRaw2), hex.EncodeToString(pv))
-	txSigned2, _ := json.Marshal(txSigned{
-		Address: crypto.HashString("addr"),
-		Data:    keychainData,
-		Proposal: txProp{
-			SharedEmitterKeys: txSharedKeys{
-				EncryptedPrivateKey: hex.EncodeToString([]byte("encPV")),
-				PublicKey:           hex.EncodeToString(pub),
-			},
-		},
-		Timestamp:        time.Now().Unix(),
-		Type:             int(transaction.KeychainType),
-		PublicKey:        hex.EncodeToString(pub),
-		EmitterSignature: sig2,
-		Signature:        sig2,
-	})
-
-	cipherTx2, _ := crypto.Encrypt(string(txSigned2), hex.EncodeToString(pub))
+	cipherTx2, _ := crypto.Encrypt(string(txKeychainBytes), hex.EncodeToString(pub))
 	res2, err := intSrv.HandleTransaction(context.TODO(), &api.IncomingTransaction{
 		EncryptedTransaction: cipherTx2,
 		Timestamp:            time.Now().Unix(),
@@ -295,9 +252,6 @@ func TestHandleGetAccount(t *testing.T) {
 		EncryptedIdAddress: encIDHash,
 		Timestamp:          time.Now().Unix(),
 	}
-	reqBytes, _ := json.Marshal(req)
-	sigReq, _ := crypto.Sign(string(reqBytes), hex.EncodeToString(pv))
-	req.SignatureRequest = sigReq
 
 	resGet, err := intSrv.GetAccount(context.TODO(), req)
 	assert.Nil(t, err)

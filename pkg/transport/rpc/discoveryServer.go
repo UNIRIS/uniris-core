@@ -7,6 +7,8 @@ import (
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/discovery"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type discoverySrv struct {
@@ -30,7 +32,7 @@ func (s discoverySrv) Synchronize(ctx context.Context, req *api.SynRequest) (*ap
 
 	unknown, new, err := s.srv.ComparePeers(reqP)
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
 	unknownPeers := make([]*api.PeerDigest, 0)
@@ -59,7 +61,7 @@ func (s discoverySrv) Acknowledge(ctx context.Context, req *api.AckRequest) (*ap
 	}
 
 	if err := s.srv.AcknowledgeNewPeers(newPeers); err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
 	return &api.AckResponse{

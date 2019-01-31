@@ -28,9 +28,7 @@ func (p Proposal) SharedEmitterKeyPair() shared.KeyPair {
 }
 
 func (p Proposal) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		SharedEmitterKP shared.KeyPair `json:"shared_emitter_keys"`
-	}{
-		SharedEmitterKP: p.SharedEmitterKeyPair(),
+	return json.Marshal(map[string]interface{}{
+		"shared_emitter_keys": p.SharedEmitterKeyPair(),
 	})
 }

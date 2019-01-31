@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"google.golang.org/grpc/status"
+
 	"github.com/uniris/uniris-core/pkg/transaction"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
@@ -59,17 +61,20 @@ func (pr poolR) RequestTransactionLock(pool transaction.Pool, lock transaction.L
 			serverAddr := fmt.Sprintf("%s:%d", p.IP(), p.Port())
 			conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 			if err != nil {
-				fmt.Printf("LOCK TRANSACTION - ERROR: %s", err.Error())
+				grpcErr, _ := status.FromError(err)
+				fmt.Printf("LOCK TRANSACTION REQUEST - ERROR: %s\n", grpcErr.Message())
+				return
 			}
 			defer conn.Close()
 			cli := api.NewTransactionServiceClient(conn)
 			res, err := cli.LockTransaction(context.Background(), req)
 			if err != nil {
-				fmt.Printf("LOCK TRANSACTION RESPONSE - ERROR: %s", err.Error())
+				grpcErr, _ := status.FromError(err)
+				fmt.Printf("LOCK TRANSACTION RESPONSE - ERROR: %s\n", grpcErr.Message())
 				return
 			}
 
-			fmt.Printf("LOCK TRANSACTION RESPONSE - %s", time.Unix(res.Timestamp, 0).String())
+			fmt.Printf("LOCK TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
 			resBytes, err := json.Marshal(&api.LockResponse{
 				Timestamp: req.Timestamp,
@@ -79,7 +84,7 @@ func (pr poolR) RequestTransactionLock(pool transaction.Pool, lock transaction.L
 				return
 			}
 			if err := crypto.VerifySignature(string(resBytes), pr.sharedPubk, res.SignatureResponse); err != nil {
-				fmt.Printf("LOCK TRANSACTION RESPONSE - ERROR: %s", err.Error())
+				fmt.Printf("LOCK TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 				return
 			}
 
@@ -128,27 +133,30 @@ func (pr poolR) RequestTransactionUnlock(pool transaction.Pool, lock transaction
 			serverAddr := fmt.Sprintf("%s:%d", p.IP(), p.Port())
 			conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 			if err != nil {
-				fmt.Printf("UNLOCK TRANSACTION - ERROR: %s", err.Error())
+				grpcErr, _ := status.FromError(err)
+				fmt.Printf("UNLOCK TRANSACTION REQUEST - ERROR: %s\n", grpcErr.Message())
+				return
 			}
 			defer conn.Close()
 			cli := api.NewTransactionServiceClient(conn)
 			res, err := cli.UnlockTransaction(context.Background(), req)
 			if err != nil {
-				fmt.Printf("UNLOCK TRANSACTION RESPONSE - ERROR: %s", err.Error())
+				grpcErr, _ := status.FromError(err)
+				fmt.Printf("UNLOCK TRANSACTION RESPONSE - ERROR: %s\n", grpcErr.Message())
 				return
 			}
 
-			fmt.Printf("UNLOCK TRANSACTION RESPONSE - %s", time.Unix(res.Timestamp, 0).String())
+			fmt.Printf("UNLOCK TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
 			resBytes, err := json.Marshal(&api.LockResponse{
 				Timestamp: req.Timestamp,
 			})
 			if err != nil {
-				fmt.Printf("UNLOCK TRANSACTION RESPONSE - ERROR: %s", err.Error())
+				fmt.Printf("UNLOCK TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 				return
 			}
 			if err := crypto.VerifySignature(string(resBytes), pr.sharedPubk, res.SignatureResponse); err != nil {
-				fmt.Printf("UNLOCK TRANSACTION RESPONSE - ERROR: %s", err.Error())
+				fmt.Printf("UNLOCK TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 				return
 			}
 
@@ -177,12 +185,12 @@ func (pr poolR) RequestTransactionValidations(pool transaction.Pool, tx transact
 	}
 	reqBytes, err := json.Marshal(req)
 	if err != nil {
-		fmt.Printf("CONFIRM VALIDATION TRANSACTION REQUEST - ERROR: %s", err.Error())
+		fmt.Printf("CONFIRM VALIDATION TRANSACTION REQUEST - ERROR: %s\n", err.Error())
 		return
 	}
 	sig, err := crypto.Sign(string(reqBytes), pr.sharedPvk)
 	if err != nil {
-		fmt.Printf("CONFIRM VALIDATION TRANSACTION REQUEST - ERROR: %s", err.Error())
+		fmt.Printf("CONFIRM VALIDATION TRANSACTION REQUEST - ERROR: %s\n", err.Error())
 		return
 	}
 	req.SignatureRequest = sig
@@ -192,28 +200,31 @@ func (pr poolR) RequestTransactionValidations(pool transaction.Pool, tx transact
 		serverAddr := fmt.Sprintf("%s:%d", p.IP().String(), p.Port())
 		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 		if err != nil {
-
+			grpcErr, _ := status.FromError(err)
+			fmt.Printf("CONFIRM VALIDATION TRANSACTION REQUEST - ERROR: %s\n", grpcErr.Message())
+			return
 		}
 		defer conn.Close()
 		cli := api.NewTransactionServiceClient(conn)
 		res, err := cli.ConfirmTransactionValidation(context.Background(), req)
 		if err != nil {
-			fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s", err.Error())
+			grpcErr, _ := status.FromError(err)
+			fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s\n", grpcErr.Message())
 			return
 		}
 
-		fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - %s", time.Unix(res.Timestamp, 0).String())
+		fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
 		resBytes, err := json.Marshal(&api.ConfirmValidationResponse{
 			Timestamp:  res.Timestamp,
 			Validation: res.Validation,
 		})
 		if err != nil {
-			fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s", err.Error())
+			fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 			return
 		}
 		if err := crypto.VerifySignature(string(resBytes), pr.sharedPubk, res.SignatureResponse); err != nil {
-			fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s", err.Error())
+			fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 			return
 		}
 
@@ -243,12 +254,12 @@ func (pr poolR) RequestTransactionStorage(pool transaction.Pool, tx transaction.
 
 	reqBytes, err := json.Marshal(req)
 	if err != nil {
-		fmt.Printf("STORE TRANSACTION REQUEST - ERROR: %s", err.Error())
+		fmt.Printf("STORE TRANSACTION REQUEST - ERROR: %s\n", err.Error())
 		return
 	}
 	sig, err := crypto.Sign(string(reqBytes), pr.sharedPvk)
 	if err != nil {
-		fmt.Printf("STORE TRANSACTION REQUEST - ERROR: %s", err.Error())
+		fmt.Printf("STORE TRANSACTION REQUEST - ERROR: %s\n", err.Error())
 		return
 	}
 
@@ -258,27 +269,30 @@ func (pr poolR) RequestTransactionStorage(pool transaction.Pool, tx transaction.
 		serverAddr := fmt.Sprintf("%s:%d", p.IP().String(), p.Port())
 		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 		if err != nil {
-
+			grpcErr, _ := status.FromError(err)
+			fmt.Printf("STORE TRANSACTION REQUEST - ERROR: %s\n", grpcErr.Message())
+			return
 		}
 		defer conn.Close()
 		cli := api.NewTransactionServiceClient(conn)
 		res, err := cli.StoreTransaction(context.Background(), req)
 		if err != nil {
-			fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s", err.Error())
+			grpcErr, _ := status.FromError(err)
+			fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s\n", grpcErr.Message())
 			return
 		}
 
-		fmt.Printf("STORE TRANSACTION RESPONSE - %s", time.Unix(res.Timestamp, 0).String())
+		fmt.Printf("STORE TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
 		resBytes, err := json.Marshal(&api.StoreResponse{
 			Timestamp: res.Timestamp,
 		})
 		if err != nil {
-			fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s", err.Error())
+			fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 			return
 		}
 		if err := crypto.VerifySignature(string(resBytes), pr.sharedPubk, res.SignatureResponse); err != nil {
-			fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s", err.Error())
+			fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 			return
 		}
 

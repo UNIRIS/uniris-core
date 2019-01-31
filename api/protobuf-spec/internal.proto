@@ -6,7 +6,7 @@ package api;
 
 service InternalService {
     rpc HandleTransaction(IncomingTransaction) returns(TransactionResult);
-    rpc GetTransactionStatus(TransactionStatusRequest) returns (TransactionStatusResponse);
+    rpc GetTransactionStatus(InternalTransactionStatusRequest) returns (TransactionStatusResponse);
     rpc GetAccount(GetAccountRequest) returns (GetAccountResponse);
 }
 
@@ -15,16 +15,21 @@ message IncomingTransaction {
     int64 timestamp = 2;
 }
 
+message InternalTransactionStatusRequest {
+    string transaction_hash = 1;
+    string transaction_address = 2;
+    int64 timestamp = 3;
+}
+
 message TransactionResult {
     string transaction_hash = 1;
-    int64 timestamp = 2;
-    string signature = 3;
+    int64 timestamp = 3;
+    string signature = 4;
 }
 
 message GetAccountRequest {
     string encrypted_id_address = 1;
     int64 timestamp = 2;
-    string signature_request = 3;
 }
 
 message GetAccountResponse {

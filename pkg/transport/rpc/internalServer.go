@@ -32,9 +32,9 @@ func NewInternalServer(poolFinding transaction.PoolFindingService, mining transa
 	}
 }
 
-func (s internalSrv) GetTransactionStatus(ctx context.Context, req *api.TransactionStatusRequest) (*api.TransactionStatusResponse, error) {
+func (s internalSrv) GetTransactionStatus(ctx context.Context, req *api.InternalTransactionStatusRequest) (*api.TransactionStatusResponse, error) {
 
-	pool, err := s.poolFinding.FindStoragePool(req.TransactionHash)
+	pool, err := s.poolFinding.FindStoragePool(req.TransactionAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -48,9 +48,25 @@ func (s internalSrv) GetTransactionStatus(ctx context.Context, req *api.Transact
 	defer conn.Close()
 
 	cli := api.NewTransactionServiceClient(conn)
-	res, err := cli.GetTransactionStatus(context.Background(), req)
+
+	reqStatus := &api.TransactionStatusRequest{
+		TransactionHash: req.TransactionHash,
+		Timestamp:       time.Now().Unix(),
+	}
+	reqBytes, err := json.Marshal(reqStatus)
 	if err != nil {
 		return nil, err
+	}
+	sig, err := crypto.Sign(string(reqBytes), s.sharedPvKey)
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	reqStatus.SignatureRequest = sig
+
+	res, err := cli.GetTransactionStatus(context.Background(), reqStatus)
+	if err != nil {
+		grpcErr, _ := status.FromError(err)
+		return nil, status.New(grpcErr.Code(), grpcErr.Message()).Err()
 	}
 
 	fmt.Printf("GET TRANSACTION STATUS RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
@@ -59,11 +75,11 @@ func (s internalSrv) GetTransactionStatus(ctx context.Context, req *api.Transact
 		Timestamp: res.Timestamp,
 	})
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
 	if err := crypto.VerifySignature(string(resBytes), s.sharedPubKey, res.SignatureResponse); err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
 	return res, nil
@@ -76,13 +92,13 @@ func (s internalSrv) HandleTransaction(ctx context.Context, req *api.IncomingTra
 
 	txJSON, err := crypto.Decrypt(req.EncryptedTransaction, s.sharedPvKey)
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 	txHash := crypto.HashString(txJSON)
 
 	var tx txSigned
 	if err := json.Unmarshal([]byte(txJSON), &tx); err != nil {
-		return nil, err
+		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
 	masterPeerIP, masterPeerPort := s.poolFinding.FindTransactionMasterPeer(txHash)
@@ -92,11 +108,11 @@ func (s internalSrv) HandleTransaction(ctx context.Context, req *api.IncomingTra
 	leadReq := formatLeadMiningRequest(tx, txHash, minValidations)
 	leadRBytes, err := json.Marshal(leadReq)
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 	reqSig, err := crypto.Sign(string(leadRBytes), s.sharedPvKey)
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 	leadReq.SignatureRequest = reqSig
 
@@ -104,13 +120,14 @@ func (s internalSrv) HandleTransaction(ctx context.Context, req *api.IncomingTra
 	serverAddr := fmt.Sprintf("%s:%d", masterPeerIP, masterPeerPort)
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 	defer conn.Close()
 	cli := api.NewTransactionServiceClient(conn)
 	res, err := cli.LeadTransactionMining(context.Background(), leadReq)
 	if err != nil {
-		return nil, err
+		statusCodes, _ := status.FromError(err)
+		return nil, status.New(statusCodes.Code(), err.Error()).Err()
 	}
 	fmt.Printf("PRE VALIDATE TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
@@ -120,11 +137,11 @@ func (s internalSrv) HandleTransaction(ctx context.Context, req *api.IncomingTra
 	}
 	txResBytes, err := json.Marshal(txRes)
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 	sig, err := crypto.Sign(string(txResBytes), s.sharedPvKey)
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
 	txRes.Signature = sig
@@ -134,24 +151,13 @@ func (s internalSrv) HandleTransaction(ctx context.Context, req *api.IncomingTra
 func (s internalSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest) (*api.GetAccountResponse, error) {
 	fmt.Printf("GET ACCOUNT REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	reqBytes, err := json.Marshal(&api.GetAccountRequest{
-		EncryptedIdAddress: req.EncryptedIdAddress,
-		Timestamp:          req.Timestamp,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if err := crypto.VerifySignature(string(reqBytes), s.sharedPubKey, req.SignatureRequest); err != nil {
-		return nil, err
-	}
-
 	idAddr, err := crypto.Decrypt(req.EncryptedIdAddress, s.sharedPvKey)
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 	idTx, err := s.poolFinding.RequestLastTransaction(idAddr, transaction.IDType)
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 	if idTx == nil {
 		return nil, status.New(codes.NotFound, "ID does not exist").Err()
@@ -164,18 +170,18 @@ func (s internalSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest)
 
 	keychainAddr, err := crypto.Decrypt(id.EncryptedAddrByRobot(), s.sharedPvKey)
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 	keychainTx, err := s.poolFinding.RequestLastTransaction(keychainAddr, transaction.KeychainType)
 	if err != nil {
-		return nil, err
-	}
-	keychain, err := transaction.NewKeychain(*keychainTx)
-	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 	if keychainTx == nil {
 		return nil, status.New(codes.NotFound, "Keychain does not exist").Err()
+	}
+	keychain, err := transaction.NewKeychain(*keychainTx)
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
 	res := &api.GetAccountResponse{
@@ -185,12 +191,12 @@ func (s internalSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest)
 	}
 	resBytes, err := json.Marshal(res)
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
 	sig, err := crypto.Sign(string(resBytes), s.sharedPvKey)
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 	res.SignatureResponse = sig
 	return res, nil

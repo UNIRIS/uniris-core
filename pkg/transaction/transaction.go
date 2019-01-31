@@ -237,43 +237,27 @@ func (t *Transaction) Chain(prevTx *Transaction) error {
 
 //MarshalBeforeSignature serializes as JSON the transaction before its signature
 func (t Transaction) MarshalBeforeSignature() ([]byte, error) {
-	return json.Marshal(struct {
-		Address   string            `json:"address"`
-		Data      map[string]string `json:"data"`
-		Timestamp int64             `json:"timestamp"`
-		Type      Type              `json:"type"`
-		PublicKey string            `json:"public_key"`
-		Proposal  Proposal          `json:"proposal"`
-	}{
-		Address:   t.Address(),
-		Data:      t.Data(),
-		Timestamp: t.Timestamp().Unix(),
-		Type:      t.Type(),
-		PublicKey: t.PublicKey(),
-		Proposal:  t.Proposal(),
+	return json.Marshal(map[string]interface{}{
+		"address":    t.Address(),
+		"data":       t.Data(),
+		"timestamp":  t.Timestamp().Unix(),
+		"type":       t.Type(),
+		"public_key": t.PublicKey(),
+		"proposal":   t.Proposal(),
 	})
 }
 
 //MarshalHash serializes as JSON the transaction to produce its hash
 func (t Transaction) MarshalHash() ([]byte, error) {
-	return json.Marshal(struct {
-		Address          string            `json:"address"`
-		Data             map[string]string `json:"data"`
-		Timestamp        int64             `json:"timestamp"`
-		Type             Type              `json:"type"`
-		PublicKey        string            `json:"public_key"`
-		Proposal         Proposal          `json:"proposal"`
-		Signature        string            `json:"signature"`
-		EmitterSignature string            `json:"em_signature"`
-	}{
-		Address:          t.Address(),
-		Data:             t.Data(),
-		Timestamp:        t.Timestamp().Unix(),
-		Type:             t.Type(),
-		PublicKey:        t.PublicKey(),
-		Proposal:         t.Proposal(),
-		Signature:        t.Signature(),
-		EmitterSignature: t.EmitterSignature(),
+	return json.Marshal(map[string]interface{}{
+		"address":      t.Address(),
+		"data":         t.Data(),
+		"timestamp":    t.Timestamp().Unix(),
+		"type":         t.Type(),
+		"public_key":   t.PublicKey(),
+		"proposal":     t.Proposal(),
+		"signature":    t.Signature(),
+		"em_signature": t.EmitterSignature(),
 	})
 }
 
@@ -290,7 +274,7 @@ func (t Transaction) IsValid() (bool, error) {
 
 func (t Transaction) checkFields() error {
 	if _, err := crypto.IsHash(t.address); err != nil {
-		return fmt.Errorf("transaction: %s", err.Error())
+		return fmt.Errorf("transaction: address %s", err.Error())
 	}
 
 	if _, err := crypto.IsHash(t.txHash); err != nil {

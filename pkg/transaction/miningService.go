@@ -72,16 +72,19 @@ func (s MiningService) LeadTransactionValidation(tx Transaction, minValids int) 
 			return
 		}
 
-		lockTx, err := NewLock(tx.TransactionHash(), tx.address, s.minerPubK)
-		if err != nil {
-			return
-		}
-		if err := s.poolR.RequestTransactionLock(lastValidationPool, lockTx); err != nil {
-			log.Printf("transaction lock failed: %s\n", err.Error())
-			return
-		}
+		//TODO: find a solution when no last validation pool (example for the first transaction)
+		if lastValidationPool != nil {
+			lockTx, err := NewLock(tx.TransactionHash(), tx.address, s.minerPubK)
+			if err != nil {
+				return
+			}
+			if err := s.poolR.RequestTransactionLock(lastValidationPool, lockTx); err != nil {
+				log.Printf("transaction lock failed: %s\n", err.Error())
+				return
+			}
 
-		log.Printf("transaction %s is locked\n", tx.txHash)
+			log.Printf("transaction %s is locked\n", tx.txHash)
+		}
 
 		masterValid, confirmValids, err := s.mineTransaction(tx, validationPool, lastValidationPool, minValids)
 		if err != nil {
@@ -97,13 +100,16 @@ func (s MiningService) LeadTransactionValidation(tx Transaction, minValids int) 
 		s.requestTransactionStorage(tx, storagePool)
 		log.Printf("transaction %s is stored \n", tx.txHash)
 
-		unlockTx, err := NewLock(tx.txHash, tx.address, s.minerPubK)
-		if err != nil {
-			return
-		}
-		if err := s.poolR.RequestTransactionUnlock(lastValidationPool, unlockTx); err != nil {
-			log.Printf("transaction lock failed: %s", err.Error())
-			return
+		//TODO: find a solution when no last validation pool (example for the first transaction)
+		if lastValidationPool != nil {
+			unlockTx, err := NewLock(tx.txHash, tx.address, s.minerPubK)
+			if err != nil {
+				return
+			}
+			if err := s.poolR.RequestTransactionUnlock(lastValidationPool, unlockTx); err != nil {
+				log.Printf("transaction lock failed: %s", err.Error())
+				return
+			}
 		}
 	}()
 }
