@@ -131,19 +131,3 @@ func TestIsPrivateKeyValid(t *testing.T) {
 	assert.Nil(t, err)
 
 }
-
-/*
-Scenario: Get a public key from a private key
-	Given a private key exported as string/hex
-	When I want to extract its public key
-	Then I can get a valid public key related to the private key
-*/
-func TestGetPublicKeyFromPrivate(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pv, _ := x509.MarshalECPrivateKey(key)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-
-	pubRes, err := GetPublicKeyFromPrivate(hex.EncodeToString(pv))
-	assert.Nil(t, err)
-	assert.Equal(t, hex.EncodeToString(pub), pubRes)
-}

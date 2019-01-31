@@ -1,0 +1,67 @@
+<!-- HTML for static distribution bundle build -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>UNIRIS API</title>
+    <link rel="stylesheet" type="text/css" href="/static/swagger-ui.css" >
+    <link rel="icon" type="image/png" href="/static/favicon.ico" />
+    <link rel="stylesheet" type="text/css" href="/static/uniris.css">
+    <style>
+      html
+      {
+        box-sizing: border-box;
+        overflow: -moz-scrollbars-vertical;
+        overflow-y: scroll;
+      }
+
+      *,
+      *:before,
+      *:after
+      {
+        box-sizing: inherit;
+      }
+
+      body
+      {
+        margin:0;
+        background: #fafafa;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="swagger-ui"></div>
+
+    <script src="/static/swagger-ui-bundle.js"> </script>
+    <script src="/static/swagger-ui-standalone-preset.js"> </script>
+    <script>
+    window.onload = function() {
+
+      // Build a system
+      const ui = SwaggerUIBundle({
+        url: "/swagger.yaml",
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+        layout: "StandaloneLayout"
+      })
+
+      window.ui = ui
+    }
+
+    setTimeout(function () {
+      document.querySelector(".swagger-ui .topbar .link span").innerText = "UNIRIS Blockchain Robot"
+    }, 200)
+
+
+  </script>
+
+  </body>
+</html>

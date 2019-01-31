@@ -7,6 +7,7 @@ import (
 	"errors"
 )
 
+//IsPublicKey checks if the given string is a public key
 func IsPublicKey(pubKey string) (bool, error) {
 	if pubKey == "" {
 		return false, errors.New("public key is empty")
@@ -29,6 +30,7 @@ func IsPublicKey(pubKey string) (bool, error) {
 	}
 }
 
+//IsPrivateKey checks if the given is a private key
 func IsPrivateKey(pvKey string) (bool, error) {
 	if pvKey == "" {
 		return false, errors.New("private key is empty")
@@ -44,28 +46,4 @@ func IsPrivateKey(pvKey string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func GetPublicKeyFromPrivate(pvKey string) (string, error) {
-
-	if _, err := IsPrivateKey(pvKey); err != nil {
-		return "", err
-	}
-
-	decodeKey, err := hex.DecodeString(pvKey)
-	if err != nil {
-		return "", err
-	}
-
-	key, err := x509.ParseECPrivateKey(decodeKey)
-	if err != nil {
-		return "", err
-	}
-
-	bPub, err := x509.MarshalPKIXPublicKey(key.Public())
-	if err != nil {
-		return "", err
-	}
-
-	return hex.EncodeToString(bPub), nil
 }

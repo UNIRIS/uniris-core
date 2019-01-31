@@ -9,6 +9,7 @@ import (
 	ecies "github.com/uniris/ecies/pkg"
 )
 
+//Encrypt use ECIES to encrypt a data
 func Encrypt(data string, pubKey string) (string, error) {
 	decodeKey, err := hex.DecodeString(pubKey)
 	if err != nil {

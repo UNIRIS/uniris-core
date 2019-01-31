@@ -18,6 +18,7 @@ func HashBytes(data []byte) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
+//IsHash checks if the given string is a hash
 func IsHash(hash string) (bool, error) {
 	if hash == "" {
 		return false, errors.New("hash is empty")

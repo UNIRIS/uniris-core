@@ -14,6 +14,7 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
+//ErrInvalidSignature is returned when the signature is not valid
 var ErrInvalidSignature = errors.New("signature is not valid")
 
 //Sign creates a signature from a given data
@@ -74,6 +75,7 @@ func VerifySignature(data string, pubKey string, sig string) error {
 	return ErrInvalidSignature
 }
 
+//IsSignature checks if the given string is a signature
 func IsSignature(sig string) (bool, error) {
 	if sig == "" {
 		return false, errors.New("signature is empty")
