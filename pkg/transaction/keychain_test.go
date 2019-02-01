@@ -1,10 +1,6 @@
 package transaction
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"testing"
@@ -24,22 +20,20 @@ Scenario: Create a new Keychain transaction
 */
 func TestNewKeychain(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	kp, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(pub))
+	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 	prop, _ := NewProposal(kp)
 
 	addr := crypto.HashString("address")
 
 	hash := crypto.HashString("hash")
-	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
+	sig, _ := crypto.Sign("data", pv)
 
 	tx, err := New(addr, KeychainType, map[string]string{
 		"encrypted_address": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	keychain, err := NewKeychain(tx)
@@ -58,23 +52,21 @@ Scenario: Create a new Keychain transaction with another type of transaction
 */
 func TestNewKeychainWithInvalkeychainType(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	kp, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(pub))
+	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 	prop, _ := NewProposal(kp)
 
 	addr := crypto.HashString("address")
 
 	hash := crypto.HashString("hash")
 
-	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
+	sig, _ := crypto.Sign("data", pv)
 
 	tx, err := New(addr, IDType, map[string]string{
 		"encrypted_address": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	_, err = NewKeychain(tx)
@@ -90,22 +82,20 @@ Scenario: Create a new Keychain transaction with missing data fields
 */
 func TestNewKeychainWithMissingDataFields(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	kp, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(pub))
+	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 	prop, _ := NewProposal(kp)
 
 	addr := crypto.HashString("address")
 
 	hash := crypto.HashString("hash")
 
-	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
+	sig, _ := crypto.Sign("data", pv)
 
 	tx, err := New(addr, KeychainType, map[string]string{
 		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	_, err = NewKeychain(tx)
@@ -113,7 +103,7 @@ func TestNewKeychainWithMissingDataFields(t *testing.T) {
 
 	tx, err = New(addr, KeychainType, map[string]string{
 		"encrypted_address": hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	_, err = NewKeychain(tx)
@@ -128,30 +118,28 @@ Scenario: Create a new Keychain transaction with data fields not in hex
 */
 func TestNewKeychainWithNotHexDataFields(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	kp, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(pub))
+	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 	prop, _ := NewProposal(kp)
 
 	addr := crypto.HashString("address")
 
 	hash := crypto.HashString("hash")
 
-	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
+	sig, _ := crypto.Sign("data", pv)
 
 	tx, _ := New(addr, KeychainType, map[string]string{
 		"encrypted_address": "addr",
 		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	_, err := NewKeychain(tx)
 	assert.EqualError(t, err, "transaction: keychain encrypted address is not in hexadecimal format")
 
 	tx, _ = New(addr, KeychainType, map[string]string{
 		"encrypted_address": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":  "wallet",
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	_, err = NewKeychain(tx)
 	assert.EqualError(t, err, "transaction: keychain encrypted wallet is not in hexadecimal format")
 }
@@ -163,23 +151,21 @@ Scenario: Convert back a Keychain to its parent Transaction
 	Then I get a transaction struct
 */
 func TestKeychainToTransaction(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	kp, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(pub))
+	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 	prop, _ := NewProposal(kp)
 
 	addr := crypto.HashString("address")
 
 	hash := crypto.HashString("hash")
 
-	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
+	sig, _ := crypto.Sign("data", pv)
 
 	tx, err := New(addr, KeychainType, map[string]string{
 		"encrypted_address": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	keychain, err := NewKeychain(tx)
@@ -194,14 +180,14 @@ func TestKeychainToTransaction(t *testing.T) {
 	}, tx.Data())
 
 	b, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	sig, _ = crypto.Sign(string(b), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), sig)
+	sig, _ = crypto.Sign(string(b), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, sig)
 
-	masterValkeychain, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	masterValkeychain, _ := NewMasterValidation(Pool{}, pub, v)
 
 	tx.AddMining(masterValkeychain, []MinerValidation{v})
 	assert.Equal(t, ValidationOK, tx.MasterValidation().Validation().Status())

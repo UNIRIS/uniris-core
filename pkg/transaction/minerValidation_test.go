@@ -1,10 +1,6 @@
 package transaction
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"testing"
@@ -22,22 +18,20 @@ Scenario: Create a new miner validation
 */
 func TestNewMinerValidation(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pv, _ := x509.MarshalECPrivateKey(key)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
+	pub, pv := crypto.GenerateKeys()
 
 	b, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	sig, _ := crypto.Sign(string(b), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(b), pv)
 
-	v, err := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), sig)
+	v, err := NewMinerValidation(ValidationOK, time.Now(), pub, sig)
 	assert.Nil(t, err)
 	assert.Equal(t, ValidationOK, v.Status())
 	assert.Equal(t, time.Now().Unix(), v.Timestamp().Unix())
-	assert.Equal(t, hex.EncodeToString(pub), v.MinerPublicKey())
+	assert.Equal(t, pub, v.MinerPublicKey())
 	assert.Equal(t, sig, v.MinerSignature())
 }
 
@@ -77,18 +71,16 @@ Scenario: Create a new miner validation with invalid signature
 */
 func TestNewMinerValidationWithInvalidSignature(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pv, _ := x509.MarshalECPrivateKey(key)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
+	pub, pv := crypto.GenerateKeys()
 
-	_, err := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), "sig")
+	_, err := NewMinerValidation(ValidationOK, time.Now(), pub, "sig")
 	assert.EqualError(t, err, "miner validation: signature is not in hexadecimal format")
 
-	_, err = NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), hex.EncodeToString([]byte("sig")))
+	_, err = NewMinerValidation(ValidationOK, time.Now(), pub, hex.EncodeToString([]byte("sig")))
 	assert.EqualError(t, err, "miner validation: signature is not valid")
 
-	sig, _ := crypto.Sign("hello", hex.EncodeToString(pv))
-	_, err = NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), sig)
+	sig, _ := crypto.Sign("hello", pv)
+	_, err = NewMinerValidation(ValidationOK, time.Now(), pub, sig)
 	assert.EqualError(t, err, "miner validation: signature is invalid")
 }
 
@@ -99,13 +91,11 @@ Scenario: Create a new miner validation with an invalid status
 	Then I get an error
 */
 func TestNewMinerValidationWithInvalidStatus(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	sig, _ := crypto.Sign("hello", hex.EncodeToString(pv))
+	sig, _ := crypto.Sign("hello", pv)
 
-	_, err := NewMinerValidation(10, time.Now(), hex.EncodeToString(pub), sig)
+	_, err := NewMinerValidation(10, time.Now(), pub, sig)
 	assert.EqualError(t, err, "miner validation: status not allowed")
 }
 
@@ -116,21 +106,19 @@ Scenario: Create a new master validation
 	Then I get it
 */
 func TestNewMasterValidation(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pv, _ := x509.MarshalECPrivateKey(key)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
+	pub, pv := crypto.GenerateKeys()
 
 	b, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	sig, _ := crypto.Sign(string(b), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(b), pv)
 
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), sig)
-	mv, err := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, sig)
+	mv, err := NewMasterValidation(Pool{}, pub, v)
 	assert.Nil(t, err)
-	assert.Equal(t, hex.EncodeToString(pub), mv.ProofOfWork())
+	assert.Equal(t, pub, mv.ProofOfWork())
 	assert.Equal(t, v.MinerPublicKey(), mv.Validation().MinerPublicKey())
 	assert.Equal(t, v.Timestamp(), mv.Validation().Timestamp())
 	assert.Empty(t, mv.PreviousTransactionMiners())
@@ -160,8 +148,9 @@ Scenario: Create a master validation without miner validation
 	Then I get an error
 */
 func TestCreateMasterWithoutValidation(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	_, err := NewMasterValidation(Pool{}, hex.EncodeToString(pub), MinerValidation{})
+
+	pub, _ := crypto.GenerateKeys()
+
+	_, err := NewMasterValidation(Pool{}, pub, MinerValidation{})
 	assert.EqualError(t, err, "master validation: miner validation: public key is empty")
 }

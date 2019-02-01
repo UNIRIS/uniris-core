@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package api;
+
+message SharedKeyPair{
+    string encrypted_private_key = 1;
+    string public_key = 2;
+}

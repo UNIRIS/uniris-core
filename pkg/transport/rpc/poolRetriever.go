@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uniris/uniris-core/pkg/shared"
+
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/transaction"
@@ -15,19 +17,22 @@ import (
 )
 
 type poolRtrv struct {
-	sharedPubk string
-	sharedPvk  string
+	sharedSrv shared.Service
 }
 
 //NewPoolRetriever creates a new pool retriever as a GRPC client
-func NewPoolRetriever(sharedPubk string, sharedPvk string) transaction.PoolRetriever {
+func NewPoolRetriever(sharedSrv shared.Service) transaction.PoolRetriever {
 	return poolRtrv{
-		sharedPubk: sharedPubk,
-		sharedPvk:  sharedPvk,
+		sharedSrv: sharedSrv,
 	}
 }
 
 func (pr poolRtrv) RequestLastTransaction(pool transaction.Pool, txAddr string, txType transaction.Type) (*transaction.Transaction, error) {
+
+	lastMinersKeys, err := pr.sharedSrv.GetSharedMinerKeys()
+	if err != nil {
+		return nil, err
+	}
 
 	var wg sync.WaitGroup
 	wg.Add(len(pool))
@@ -41,7 +46,7 @@ func (pr poolRtrv) RequestLastTransaction(pool transaction.Pool, txAddr string, 
 	if err != nil {
 		return nil, err
 	}
-	sig, err := crypto.Sign(string(reqBytes), pr.sharedPvk)
+	sig, err := crypto.Sign(string(reqBytes), lastMinersKeys.PrivateKey())
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +83,7 @@ func (pr poolRtrv) RequestLastTransaction(pool transaction.Pool, txAddr string, 
 				fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 				return
 			}
-			if err := crypto.VerifySignature(string(resBytes), pr.sharedPubk, res.SignatureResponse); err != nil {
+			if err := crypto.VerifySignature(string(resBytes), lastMinersKeys.PublicKey(), res.SignatureResponse); err != nil {
 				fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 				return
 			}

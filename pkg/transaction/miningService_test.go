@@ -46,18 +46,16 @@ Scenario: Create a miner validation
 	Then I get a validation signed
 */
 func TestBuildMinerValidation(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
 	s := MiningService{
-		minerPubK: hex.EncodeToString(pub),
-		minerPvk:  hex.EncodeToString(pv),
+		minerPubK: pub,
+		minerPvk:  pv,
 	}
 
 	v, err := s.buildMinerValidation(ValidationOK)
 	assert.Nil(t, err)
-	assert.Equal(t, hex.EncodeToString(pub), v.MinerPublicKey())
+	assert.Equal(t, pub, v.MinerPublicKey())
 	assert.Nil(t, err)
 	assert.Equal(t, time.Now().Unix(), v.Timestamp().Unix())
 	assert.Equal(t, ValidationOK, v.Status())
@@ -72,21 +70,19 @@ Scenario: Validate an incoming transaction
 	Then I get a validation with status OK
 */
 func TestValidateTransaction(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
 
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -100,11 +96,11 @@ func TestValidateTransaction(t *testing.T) {
 		data:      data,
 		txType:    KeychainType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
 	tx.emSig = sig
 	tx.sig = sig
 	txBytes, _ := tx.MarshalHash()
@@ -112,8 +108,8 @@ func TestValidateTransaction(t *testing.T) {
 	tx.txHash = txHash
 
 	s := MiningService{
-		minerPubK: hex.EncodeToString(pub),
-		minerPvk:  hex.EncodeToString(pv),
+		minerPubK: pub,
+		minerPvk:  pv,
 	}
 	valid, err := s.ValidateTransaction(tx, mv)
 	assert.Nil(t, err)
@@ -127,21 +123,19 @@ Scenario: Validate an incoming transaction with invalid integrity
 	Then I get a validation with status KO
 */
 func TestValidateTransactionWithBadIntegrity(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
 
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -150,11 +144,11 @@ func TestValidateTransactionWithBadIntegrity(t *testing.T) {
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 	}
 
-	sig, _ := crypto.Sign("hello", hex.EncodeToString(pv))
-	tx, _ := New(crypto.HashString("addr"), IDType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, crypto.HashString("hash"))
+	sig, _ := crypto.Sign("hello", pv)
+	tx, _ := New(crypto.HashString("addr"), IDType, data, time.Now(), pub, sig, sig, prop, crypto.HashString("hash"))
 
 	s := MiningService{
-		minerPvk: hex.EncodeToString(pv),
+		minerPvk: pv,
 	}
 	valid, err := s.ValidateTransaction(tx, mv)
 	assert.Nil(t, err)
@@ -172,21 +166,19 @@ func TestRequestValidations(t *testing.T) {
 		poolR: &mockPoolRequester{},
 	}
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
 
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -200,12 +192,12 @@ func TestRequestValidations(t *testing.T) {
 		txType:    IDType,
 		data:      data,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	})
-	sig, _ := crypto.Sign(string(txBytes), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(txBytes), pv)
 
-	tx, _ := New(crypto.HashString("addr"), IDType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, crypto.HashBytes(txBytes))
+	tx, _ := New(crypto.HashString("addr"), IDType, data, time.Now(), pub, sig, sig, prop, crypto.HashBytes(txBytes))
 
 	valids, err := s.requestValidations(tx, mv, Pool{}, 1)
 	assert.Nil(t, err)
@@ -225,21 +217,19 @@ func TestRequestStorage(t *testing.T) {
 		poolR: poolR,
 	}
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
 
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -253,12 +243,12 @@ func TestRequestStorage(t *testing.T) {
 		txType:    IDType,
 		data:      data,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	})
-	sig, _ := crypto.Sign(string(txBytes), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(txBytes), pv)
 
-	tx, _ := New(crypto.HashString("addr"), IDType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, crypto.HashBytes(txBytes))
+	tx, _ := New(crypto.HashString("addr"), IDType, data, time.Now(), pub, sig, sig, prop, crypto.HashBytes(txBytes))
 	tx.AddMining(mv, []MinerValidation{v})
 
 	s.requestTransactionStorage(tx, Pool{})
@@ -287,14 +277,14 @@ func TestPerformPOW(t *testing.T) {
 
 	sharedRepo := &mockSharedRepo{}
 
-	emKP, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(emPub))
+	emKP, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(emPub))
 	sharedRepo.StoreSharedEmitterKeyPair(emKP)
 
 	s := MiningService{
 		sharedSrv: shared.NewService(sharedRepo),
 	}
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(propPub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(propPub))
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -349,7 +339,7 @@ func TestPreValidateTransaction(t *testing.T) {
 
 	sharedRepo := &mockSharedRepo{}
 
-	emKP, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(emPub))
+	emKP, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(emPub))
 	sharedRepo.StoreSharedEmitterKeyPair(emKP)
 
 	s := MiningService{
@@ -358,7 +348,7 @@ func TestPreValidateTransaction(t *testing.T) {
 		minerPvk:  hex.EncodeToString(minerPv),
 	}
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(propPub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(propPub))
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -418,7 +408,7 @@ func TestMineTransaction(t *testing.T) {
 
 	sharedRepo := &mockSharedRepo{}
 
-	emKP, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(emPub))
+	emKP, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(emPub))
 	sharedRepo.StoreSharedEmitterKeyPair(emKP)
 
 	s := MiningService{
@@ -428,7 +418,7 @@ func TestMineTransaction(t *testing.T) {
 		poolR:     &mockPoolRequester{},
 	}
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(propPub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(propPub))
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -485,7 +475,7 @@ func TestMineTransactionWithKO(t *testing.T) {
 
 	sharedRepo := &mockSharedRepo{}
 
-	emKP, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(emPub))
+	emKP, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(emPub))
 	sharedRepo.StoreSharedEmitterKeyPair(emKP)
 
 	s := MiningService{
@@ -495,7 +485,7 @@ func TestMineTransactionWithKO(t *testing.T) {
 		poolR:     &mockPoolRequesterKO{},
 	}
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(propPub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(propPub))
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -572,7 +562,7 @@ func TestLeadTransactionValidation(t *testing.T) {
 
 	sharedRepo := &mockSharedRepo{}
 
-	emKP, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(emPub))
+	emKP, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(emPub))
 	sharedRepo.StoreSharedEmitterKeyPair(emKP)
 
 	poolR := &mockPoolRequester{}
@@ -587,7 +577,7 @@ func TestLeadTransactionValidation(t *testing.T) {
 		},
 	}
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(propPub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(propPub))
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -633,17 +623,15 @@ func (pr mockPoolRequester) RequestTransactionUnlock(pool Pool, txLock Lock) err
 }
 
 func (pr mockPoolRequester) RequestTransactionValidations(pool Pool, tx Transaction, masterValid MasterValidation, validChan chan<- MinerValidation) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
 	v := MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	}
 	vBytes, _ := json.Marshal(v)
-	sig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(vBytes), pv)
 	v, _ = NewMinerValidation(v.status, v.timestamp, v.minerPubk, sig)
 
 	validChan <- v
@@ -667,17 +655,15 @@ func (pr mockPoolRequesterKO) RequestTransactionUnlock(pool Pool, txLock Lock) e
 }
 
 func (pr mockPoolRequesterKO) RequestTransactionValidations(pool Pool, tx Transaction, masterValid MasterValidation, validChan chan<- MinerValidation) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
 	v := MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationKO,
 		timestamp: time.Now(),
 	}
 	vBytes, _ := json.Marshal(v)
-	sig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(vBytes), pv)
 	v, _ = NewMinerValidation(v.status, v.timestamp, v.minerPubk, sig)
 
 	validChan <- v
@@ -687,13 +673,18 @@ func (pr *mockPoolRequesterKO) RequestTransactionStorage(pool Pool, tx Transacti
 }
 
 type mockSharedRepo struct {
-	emKeys []shared.KeyPair
+	emKeys    shared.EmitterKeys
+	minerKeys shared.MinerKeyPair
 }
 
-func (r mockSharedRepo) ListSharedEmitterKeyPairs() ([]shared.KeyPair, error) {
+func (r mockSharedRepo) ListSharedEmitterKeyPairs() (shared.EmitterKeys, error) {
 	return r.emKeys, nil
 }
-func (r *mockSharedRepo) StoreSharedEmitterKeyPair(kp shared.KeyPair) error {
+func (r *mockSharedRepo) StoreSharedEmitterKeyPair(kp shared.EmitterKeyPair) error {
 	r.emKeys = append(r.emKeys, kp)
 	return nil
+}
+
+func (r *mockSharedRepo) GetLastSharedMinersKeyPair() (shared.MinerKeyPair, error) {
+	return r.minerKeys, nil
 }

@@ -1,10 +1,6 @@
 package transaction
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
 	"encoding/hex"
 	"testing"
 
@@ -141,12 +137,12 @@ Scenario: Create loc
 func TestNewLock(t *testing.T) {
 	txHash := crypto.HashString("hello")
 	addr := crypto.HashString("addr")
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
 
-	lock, err := NewLock(txHash, addr, hex.EncodeToString(pub))
+	pub, _ := crypto.GenerateKeys()
+
+	lock, err := NewLock(txHash, addr, pub)
 	assert.Nil(t, err)
 	assert.Equal(t, txHash, lock.TransactionHash())
 	assert.Equal(t, addr, lock.Address())
-	assert.Equal(t, hex.EncodeToString(pub), lock.MasterRobotKey())
+	assert.Equal(t, pub, lock.MasterRobotKey())
 }

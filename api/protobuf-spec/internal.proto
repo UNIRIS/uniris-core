@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "transaction.proto";
+import "common.proto";
 
 package api;
 
@@ -8,6 +9,7 @@ service InternalService {
     rpc HandleTransaction(IncomingTransaction) returns(TransactionResult);
     rpc GetTransactionStatus(InternalTransactionStatusRequest) returns (TransactionStatusResponse);
     rpc GetAccount(GetAccountRequest) returns (GetAccountResponse);
+    rpc GetLastSharedKeys(LastSharedKeysRequest) returns(LastSharedKeys) {}
 }
 
 message IncomingTransaction {
@@ -37,4 +39,15 @@ message GetAccountResponse {
     string encrypted_aes_key = 2;
     int64 timestamp = 3;
     string signature_response = 4;
+}
+
+message LastSharedKeysRequest {
+    string emitter_public_key = 1;
+    int64 timestamp = 2;
+}
+
+message LastSharedKeys {
+    repeated SharedKeyPair emitter_keys = 1;
+    string miner_public_key = 2;
+    int64 timestamp = 3;
 }

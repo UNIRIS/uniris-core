@@ -68,7 +68,7 @@ func formatPeerDiscovered(p *api.PeerDiscovered) discovery.Peer {
 
 func formatTransaction(tx *api.Transaction) (transaction.Transaction, error) {
 
-	sharedKeys, err := shared.NewKeyPair(tx.Proposal.SharedEmitterKeys.EncryptedPrivateKey, tx.Proposal.SharedEmitterKeys.PublicKey)
+	sharedKeys, err := shared.NewEmitterKeyPair(tx.Proposal.SharedEmitterKeys.EncryptedPrivateKey, tx.Proposal.SharedEmitterKeys.PublicKey)
 	if err != nil {
 		return transaction.Transaction{}, err
 	}
@@ -163,7 +163,7 @@ func formatAPITransaction(tx transaction.Transaction) *api.Transaction {
 		Timestamp:        tx.Timestamp().Unix(),
 		TransactionHash:  tx.TransactionHash(),
 		Proposal: &api.TransactionProposal{
-			SharedEmitterKeys: &api.SharedKeys{
+			SharedEmitterKeys: &api.SharedKeyPair{
 				EncryptedPrivateKey: tx.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
 				PublicKey:           tx.Proposal().SharedEmitterKeyPair().PublicKey(),
 			},

@@ -1,10 +1,6 @@
 package transaction
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"sort"
@@ -25,12 +21,11 @@ Scenario: Get a keychain transaction by its type and hash
 func TestGetTransactionByHashAndTypeKeychain(t *testing.T) {
 	repo := &mockTxRepository{}
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
-	sig, _ := crypto.Sign("hello", hex.EncodeToString(pv))
+	pub, pv := crypto.GenerateKeys()
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sig, _ := crypto.Sign("hello", pv)
+
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -43,11 +38,11 @@ func TestGetTransactionByHashAndTypeKeychain(t *testing.T) {
 		data:      data,
 		txType:    KeychainType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ = crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ = crypto.Sign(string(txBytesBeforeSig), pv)
 	tx.emSig = sig
 	tx.sig = sig
 	txBytes, _ := tx.MarshalHash()
@@ -55,13 +50,13 @@ func TestGetTransactionByHashAndTypeKeychain(t *testing.T) {
 	tx.txHash = txHash
 
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 
 	tx.AddMining(mv, []MinerValidation{v})
 	keychain, err := NewKeychain(tx)
@@ -74,7 +69,7 @@ func TestGetTransactionByHashAndTypeKeychain(t *testing.T) {
 	txRes, err := s.getTransactionByHashAndType(tx.TransactionHash(), KeychainType)
 	assert.Nil(t, err)
 	assert.NotNil(t, txRes)
-	assert.Equal(t, hex.EncodeToString(pub), txRes.PublicKey())
+	assert.Equal(t, pub, txRes.PublicKey())
 	assert.Equal(t, KeychainType, txRes.Type())
 }
 
@@ -87,12 +82,11 @@ Scenario: Get a ID transaction by type and its hash
 func TestGetTransactionByHashAndTypeID(t *testing.T) {
 	repo := &mockTxRepository{}
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
-	sig, _ := crypto.Sign("hello", hex.EncodeToString(pv))
+	pub, pv := crypto.GenerateKeys()
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sig, _ := crypto.Sign("hello", pv)
+
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -106,11 +100,11 @@ func TestGetTransactionByHashAndTypeID(t *testing.T) {
 		data:      data,
 		txType:    IDType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ = crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ = crypto.Sign(string(txBytesBeforeSig), pv)
 	tx.emSig = sig
 	tx.sig = sig
 	txBytes, _ := tx.MarshalHash()
@@ -118,13 +112,13 @@ func TestGetTransactionByHashAndTypeID(t *testing.T) {
 	tx.txHash = txHash
 
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 
 	tx.AddMining(mv, []MinerValidation{v})
 	id, err := NewID(tx)
@@ -137,7 +131,7 @@ func TestGetTransactionByHashAndTypeID(t *testing.T) {
 	txRes, err := s.getTransactionByHashAndType(tx.TransactionHash(), IDType)
 	assert.Nil(t, err)
 	assert.NotNil(t, txRes)
-	assert.Equal(t, hex.EncodeToString(pub), txRes.PublicKey())
+	assert.Equal(t, pub, txRes.PublicKey())
 	assert.Equal(t, IDType, txRes.Type())
 }
 
@@ -180,12 +174,11 @@ Scenario: Get transaction keychain by its hash
 func TestGetKeychainTransactionByHash(t *testing.T) {
 	repo := &mockTxRepository{}
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
-	sig, _ := crypto.Sign("hello", hex.EncodeToString(pv))
+	pub, pv := crypto.GenerateKeys()
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sig, _ := crypto.Sign("hello", pv)
+
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -197,24 +190,24 @@ func TestGetKeychainTransactionByHash(t *testing.T) {
 		data:      data,
 		txType:    KeychainType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ = crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ = crypto.Sign(string(txBytesBeforeSig), pv)
 	tx.emSig = sig
 	tx.sig = sig
 	txBytes, _ := tx.MarshalHash()
 	txHash := crypto.HashBytes(txBytes)
 	tx.txHash = txHash
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 
 	tx.AddMining(mv, []MinerValidation{v})
 	keychain, _ := NewKeychain(tx)
@@ -227,7 +220,7 @@ func TestGetKeychainTransactionByHash(t *testing.T) {
 	txKeychain, err := s.getTransactionByHash(tx.TransactionHash())
 	assert.Nil(t, err)
 	assert.Equal(t, KeychainType, txKeychain.Type())
-	assert.Equal(t, hex.EncodeToString(pub), txKeychain.PublicKey())
+	assert.Equal(t, pub, txKeychain.PublicKey())
 }
 
 /*
@@ -239,12 +232,11 @@ Scenario: Get transaction ID by its hash
 func TestGetIDTransactionByHash(t *testing.T) {
 	repo := &mockTxRepository{}
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
-	sig, _ := crypto.Sign("hello", hex.EncodeToString(pv))
+	pub, pv := crypto.GenerateKeys()
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sig, _ := crypto.Sign("hello", pv)
+
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -258,24 +250,24 @@ func TestGetIDTransactionByHash(t *testing.T) {
 		data:      data,
 		txType:    IDType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ = crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ = crypto.Sign(string(txBytesBeforeSig), pv)
 	tx.emSig = sig
 	tx.sig = sig
 	txBytes, _ := tx.MarshalHash()
 	txHash := crypto.HashBytes(txBytes)
 	tx.txHash = txHash
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 
 	tx.AddMining(mv, []MinerValidation{v})
 	id, _ := NewID(tx)
@@ -288,7 +280,7 @@ func TestGetIDTransactionByHash(t *testing.T) {
 	txID, err := s.getTransactionByHash(tx.TransactionHash())
 	assert.Nil(t, err)
 	assert.Equal(t, IDType, txID.Type())
-	assert.Equal(t, hex.EncodeToString(pub), txID.PublicKey())
+	assert.Equal(t, pub, txID.PublicKey())
 }
 
 /*
@@ -381,12 +373,11 @@ Scenario: Get transaction status success
 func TestGetTransactionStatusSuccess(t *testing.T) {
 	repo := &mockTxRepository{}
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
-	sig, _ := crypto.Sign("hello", hex.EncodeToString(pv))
+	pub, pv := crypto.GenerateKeys()
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sig, _ := crypto.Sign("hello", pv)
+
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -400,24 +391,24 @@ func TestGetTransactionStatusSuccess(t *testing.T) {
 		data:      data,
 		txType:    IDType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ = crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ = crypto.Sign(string(txBytesBeforeSig), pv)
 	tx.emSig = sig
 	tx.sig = sig
 	txBytes, _ := tx.MarshalHash()
 	txHash := crypto.HashBytes(txBytes)
 	tx.txHash = txHash
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 
 	tx.AddMining(mv, []MinerValidation{v})
 	id, _ := NewID(tx)
@@ -469,12 +460,11 @@ func TestGetLastKeychainTransaction(t *testing.T) {
 		repo: repo,
 	}
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
-	sig, _ := crypto.Sign("hello", hex.EncodeToString(pv))
+	pub, pv := crypto.GenerateKeys()
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sig, _ := crypto.Sign("hello", pv)
+
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -487,11 +477,11 @@ func TestGetLastKeychainTransaction(t *testing.T) {
 		data:      data,
 		txType:    KeychainType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ = crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ = crypto.Sign(string(txBytesBeforeSig), pv)
 	tx.emSig = sig
 	tx.sig = sig
 	txBytes, _ := tx.MarshalHash()
@@ -499,13 +489,13 @@ func TestGetLastKeychainTransaction(t *testing.T) {
 	tx.txHash = txHash
 
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 
 	tx.AddMining(mv, []MinerValidation{v})
 	keychain1, _ := NewKeychain(tx)
@@ -519,11 +509,11 @@ func TestGetLastKeychainTransaction(t *testing.T) {
 		data:      data,
 		txType:    KeychainType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig2, _ := tx2.MarshalBeforeSignature()
-	sig2, _ := crypto.Sign(string(txBytesBeforeSig2), hex.EncodeToString(pv))
+	sig2, _ := crypto.Sign(string(txBytesBeforeSig2), pv)
 	tx2.emSig = sig2
 	tx2.sig = sig2
 	txBytes2, _ := tx2.MarshalHash()
@@ -556,12 +546,11 @@ func TestGetLastIDTransaction(t *testing.T) {
 		repo: repo,
 	}
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
-	sig, _ := crypto.Sign("hello", hex.EncodeToString(pv))
+	pub, pv := crypto.GenerateKeys()
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sig, _ := crypto.Sign("hello", pv)
+
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -575,11 +564,11 @@ func TestGetLastIDTransaction(t *testing.T) {
 		data:      data,
 		txType:    IDType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ = crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ = crypto.Sign(string(txBytesBeforeSig), pv)
 	tx.emSig = sig
 	tx.sig = sig
 	txBytes, _ := tx.MarshalHash()
@@ -587,13 +576,13 @@ func TestGetLastIDTransaction(t *testing.T) {
 	tx.txHash = txHash
 
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 
 	tx.AddMining(mv, []MinerValidation{v})
 	id1, _ := NewID(tx)
@@ -607,11 +596,11 @@ func TestGetLastIDTransaction(t *testing.T) {
 		data:      data,
 		txType:    IDType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig2, _ := tx.MarshalBeforeSignature()
-	sig2, _ := crypto.Sign(string(txBytesBeforeSig2), hex.EncodeToString(pv))
+	sig2, _ := crypto.Sign(string(txBytesBeforeSig2), pv)
 	tx2.emSig = sig2
 	tx2.sig = sig2
 	txBytes2, _ := tx2.MarshalHash()
@@ -649,11 +638,9 @@ func TestGetTransactionChain(t *testing.T) {
 		repo: repo,
 	}
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -666,11 +653,11 @@ func TestGetTransactionChain(t *testing.T) {
 		data:      data,
 		txType:    KeychainType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
 	tx.emSig = sig
 	tx.sig = sig
 	txBytes, _ := tx.MarshalHash()
@@ -678,13 +665,13 @@ func TestGetTransactionChain(t *testing.T) {
 	tx.txHash = txHash
 
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 
 	tx.AddMining(mv, []MinerValidation{v})
 	keychain1, _ := NewKeychain(tx)
@@ -698,11 +685,11 @@ func TestGetTransactionChain(t *testing.T) {
 		data:      data,
 		txType:    KeychainType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig2, _ := tx2.MarshalBeforeSignature()
-	sig2, _ := crypto.Sign(string(txBytesBeforeSig2), hex.EncodeToString(pv))
+	sig2, _ := crypto.Sign(string(txBytesBeforeSig2), pv)
 	tx2.emSig = sig2
 	tx2.sig = sig2
 	txBytes2, _ := tx2.MarshalHash()
@@ -731,11 +718,9 @@ Scenario: Check a valid transaction before store
 	Then I get not error
 */
 func TestCheckTransactionBeforeStore(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -748,11 +733,11 @@ func TestCheckTransactionBeforeStore(t *testing.T) {
 		data:      data,
 		txType:    KeychainType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
 	tx.emSig = sig
 	tx.sig = sig
 	txBytes, _ := tx.MarshalHash()
@@ -760,13 +745,13 @@ func TestCheckTransactionBeforeStore(t *testing.T) {
 	tx.txHash = txHash
 
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 	tx.AddMining(mv, []MinerValidation{v})
 
 	s := StorageService{}
@@ -781,11 +766,9 @@ Scenario: Check a transaction before store with misssing validations
 	Then I get an error
 */
 func TestCheckTransactionBeforeStoreWithMissingValidations(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -798,11 +781,11 @@ func TestCheckTransactionBeforeStoreWithMissingValidations(t *testing.T) {
 		data:      data,
 		txType:    KeychainType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
 	tx.emSig = sig
 	tx.sig = sig
 	txBytes, _ := tx.MarshalHash()
@@ -810,13 +793,13 @@ func TestCheckTransactionBeforeStoreWithMissingValidations(t *testing.T) {
 	tx.txHash = txHash
 
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 	tx.AddMining(mv, []MinerValidation{})
 
 	s := StorageService{}
@@ -834,28 +817,26 @@ func TestStoreKOTransaction(t *testing.T) {
 	repo := &mockTxRepository{}
 	s := StorageService{repo: repo}
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationKO,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationKO, time.Now(), hex.EncodeToString(pub), vSig)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationKO, time.Now(), pub, vSig)
 
 	vBytes2, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig2, _ := crypto.Sign(string(vBytes2), hex.EncodeToString(pv))
-	v2, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig2)
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	vSig2, _ := crypto.Sign(string(vBytes2), pv)
+	v2, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig2)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -868,11 +849,11 @@ func TestStoreKOTransaction(t *testing.T) {
 		data:      data,
 		txType:    KeychainType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
 	tx.emSig = sig
 	tx.sig = sig
 	txBytes, _ := tx.MarshalHash()
@@ -896,28 +877,26 @@ func TestStoreKeychainTransaction(t *testing.T) {
 	repo := &mockTxRepository{}
 	s := StorageService{repo: repo}
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
 
 	vBytes2, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig2, _ := crypto.Sign(string(vBytes2), hex.EncodeToString(pv))
-	v2, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig2)
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	vSig2, _ := crypto.Sign(string(vBytes2), pv)
+	v2, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig2)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -930,11 +909,11 @@ func TestStoreKeychainTransaction(t *testing.T) {
 		data:      data,
 		txType:    KeychainType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
 	tx.emSig = sig
 	tx.sig = sig
 	txBytes, _ := tx.MarshalHash()
@@ -958,28 +937,26 @@ func TestStoreIDTransaction(t *testing.T) {
 	repo := &mockTxRepository{}
 	s := StorageService{repo: repo}
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
 	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
 
 	vBytes2, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	vSig2, _ := crypto.Sign(string(vBytes2), hex.EncodeToString(pv))
-	v2, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), vSig2)
-	mv, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	vSig2, _ := crypto.Sign(string(vBytes2), pv)
+	v2, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig2)
+	mv, _ := NewMasterValidation(Pool{}, pub, v)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	prop, _ := NewProposal(sk)
 
 	data := map[string]string{
@@ -993,11 +970,11 @@ func TestStoreIDTransaction(t *testing.T) {
 		data:      data,
 		txType:    IDType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
 	tx.emSig = sig
 	tx.sig = sig
 	txBytes, _ := tx.MarshalHash()

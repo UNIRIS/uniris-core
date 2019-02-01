@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/uniris/uniris-core/pkg/shared"
 
 	"google.golang.org/grpc/status"
 
@@ -19,19 +22,22 @@ import (
 )
 
 type poolR struct {
-	sharedPubk string
-	sharedPvk  string
+	sharedService shared.Service
 }
 
 //NewPoolRequester creates a new pool requester as a GRPC client
-func NewPoolRequester(sharedPubk string, sharedPvk string) transaction.PoolRequester {
+func NewPoolRequester(sharedService shared.Service) transaction.PoolRequester {
 	return poolR{
-		sharedPubk: sharedPubk,
-		sharedPvk:  sharedPvk,
+		sharedService: sharedService,
 	}
 }
 
 func (pr poolR) RequestTransactionLock(pool transaction.Pool, lock transaction.Lock) error {
+
+	lastMinerKeys, err := pr.sharedService.GetSharedMinerKeys()
+	if err != nil {
+		return err
+	}
 
 	var wg sync.WaitGroup
 	wg.Add(len(pool))
@@ -48,7 +54,7 @@ func (pr poolR) RequestTransactionLock(pool transaction.Pool, lock transaction.L
 	if err != nil {
 		return err
 	}
-	sig, err := crypto.Sign(string(reqBytes), pr.sharedPvk)
+	sig, err := crypto.Sign(string(reqBytes), lastMinerKeys.PrivateKey())
 	if err != nil {
 		return err
 	}
@@ -83,7 +89,7 @@ func (pr poolR) RequestTransactionLock(pool transaction.Pool, lock transaction.L
 				fmt.Printf("LOCK TRANSACTION RESPONSE - ERROR: %s", err.Error())
 				return
 			}
-			if err := crypto.VerifySignature(string(resBytes), pr.sharedPubk, res.SignatureResponse); err != nil {
+			if err := crypto.VerifySignature(string(resBytes), lastMinerKeys.PublicKey(), res.SignatureResponse); err != nil {
 				fmt.Printf("LOCK TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 				return
 			}
@@ -105,6 +111,12 @@ func (pr poolR) RequestTransactionLock(pool transaction.Pool, lock transaction.L
 }
 
 func (pr poolR) RequestTransactionUnlock(pool transaction.Pool, lock transaction.Lock) error {
+
+	lastMinerKeys, err := pr.sharedService.GetSharedMinerKeys()
+	if err != nil {
+		return err
+	}
+
 	var wg sync.WaitGroup
 	wg.Add(len(pool))
 
@@ -120,7 +132,7 @@ func (pr poolR) RequestTransactionUnlock(pool transaction.Pool, lock transaction
 	if err != nil {
 		return err
 	}
-	sig, err := crypto.Sign(string(reqBytes), pr.sharedPvk)
+	sig, err := crypto.Sign(string(reqBytes), lastMinerKeys.PrivateKey())
 	if err != nil {
 		return err
 	}
@@ -155,7 +167,7 @@ func (pr poolR) RequestTransactionUnlock(pool transaction.Pool, lock transaction
 				fmt.Printf("UNLOCK TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 				return
 			}
-			if err := crypto.VerifySignature(string(resBytes), pr.sharedPubk, res.SignatureResponse); err != nil {
+			if err := crypto.VerifySignature(string(resBytes), lastMinerKeys.PublicKey(), res.SignatureResponse); err != nil {
 				fmt.Printf("UNLOCK TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 				return
 			}
@@ -178,6 +190,12 @@ func (pr poolR) RequestTransactionUnlock(pool transaction.Pool, lock transaction
 
 func (pr poolR) RequestTransactionValidations(pool transaction.Pool, tx transaction.Transaction, masterValid transaction.MasterValidation, validChan chan<- transaction.MinerValidation) {
 
+	lastMinerKeys, err := pr.sharedService.GetSharedMinerKeys()
+	if err != nil {
+		log.Printf("CONFIRM VALIDATION TRANSACTION REQUEST - ERROR: %s\n", err.Error())
+		return
+	}
+
 	req := &api.ConfirmValidationRequest{
 		MasterValidation: formatAPIMasterValidation(masterValid),
 		Transaction:      formatAPITransaction(tx),
@@ -188,7 +206,7 @@ func (pr poolR) RequestTransactionValidations(pool transaction.Pool, tx transact
 		fmt.Printf("CONFIRM VALIDATION TRANSACTION REQUEST - ERROR: %s\n", err.Error())
 		return
 	}
-	sig, err := crypto.Sign(string(reqBytes), pr.sharedPvk)
+	sig, err := crypto.Sign(string(reqBytes), lastMinerKeys.PrivateKey())
 	if err != nil {
 		fmt.Printf("CONFIRM VALIDATION TRANSACTION REQUEST - ERROR: %s\n", err.Error())
 		return
@@ -223,7 +241,7 @@ func (pr poolR) RequestTransactionValidations(pool transaction.Pool, tx transact
 			fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 			return
 		}
-		if err := crypto.VerifySignature(string(resBytes), pr.sharedPubk, res.SignatureResponse); err != nil {
+		if err := crypto.VerifySignature(string(resBytes), lastMinerKeys.PublicKey(), res.SignatureResponse); err != nil {
 			fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 			return
 		}
@@ -238,6 +256,13 @@ func (pr poolR) RequestTransactionValidations(pool transaction.Pool, tx transact
 }
 
 func (pr poolR) RequestTransactionStorage(pool transaction.Pool, tx transaction.Transaction, ackChan chan<- bool) {
+
+	lastMinerKeys, err := pr.sharedService.GetSharedMinerKeys()
+	if err != nil {
+		log.Printf("STORE TRANSACTION REQUEST - ERROR: %s\n", err.Error())
+		return
+	}
+
 	confValids := make([]*api.MinerValidation, 0)
 	for _, v := range tx.ConfirmationsValidations() {
 		confValids = append(confValids, formatAPIValidation(v))
@@ -257,7 +282,7 @@ func (pr poolR) RequestTransactionStorage(pool transaction.Pool, tx transaction.
 		fmt.Printf("STORE TRANSACTION REQUEST - ERROR: %s\n", err.Error())
 		return
 	}
-	sig, err := crypto.Sign(string(reqBytes), pr.sharedPvk)
+	sig, err := crypto.Sign(string(reqBytes), lastMinerKeys.PrivateKey())
 	if err != nil {
 		fmt.Printf("STORE TRANSACTION REQUEST - ERROR: %s\n", err.Error())
 		return
@@ -291,7 +316,7 @@ func (pr poolR) RequestTransactionStorage(pool transaction.Pool, tx transaction.
 			fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 			return
 		}
-		if err := crypto.VerifySignature(string(resBytes), pr.sharedPubk, res.SignatureResponse); err != nil {
+		if err := crypto.VerifySignature(string(resBytes), lastMinerKeys.PublicKey(), res.SignatureResponse); err != nil {
 			fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 			return
 		}

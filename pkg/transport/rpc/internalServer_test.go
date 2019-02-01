@@ -2,10 +2,6 @@ package rpc
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"net"
@@ -29,19 +25,14 @@ Scenario: Receive a get transaction status from the API
 */
 func TestHandleGetTransactionStatusInternal(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
 	txRepo := &mockTxRepository{}
-	lockSrv := transaction.NewLockService(&mockLockRepository{})
-	poolFindSrv := transaction.NewPoolFindingService(NewPoolRetriever(hex.EncodeToString(pub), hex.EncodeToString(pv)))
-	sharedService := shared.NewService(&mockSharedRepo{})
-	miningSrv := transaction.NewMiningService(&mockPoolRequester{}, poolFindSrv, sharedService, "127.0.0.1", hex.EncodeToString(pub), hex.EncodeToString(pv))
-	storeSrv := transaction.NewStorageService(txRepo, miningSrv)
+	lockRepo := &mockLockRepository{}
+	sharedRepo := &mockSharedRepo{}
 
-	txSrv := NewTransactionServer(storeSrv, lockSrv, miningSrv, hex.EncodeToString(pub), hex.EncodeToString(pv))
-	intSrv := NewInternalServer(poolFindSrv, miningSrv, hex.EncodeToString(pub), hex.EncodeToString(pv))
+	txSrv := newTransactionServer(txRepo, lockRepo, sharedRepo, pub, pv)
+	intSrv := newInternalServer(txRepo, lockRepo, sharedRepo, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":3545")
 	defer lis.Close()
@@ -62,7 +53,7 @@ func TestHandleGetTransactionStatusInternal(t *testing.T) {
 		Status:    res.Status,
 		Timestamp: res.Timestamp,
 	})
-	assert.Nil(t, crypto.VerifySignature(string(resBytes), hex.EncodeToString(pub), res.SignatureResponse))
+	assert.Nil(t, crypto.VerifySignature(string(resBytes), pub, res.SignatureResponse))
 
 }
 
@@ -73,25 +64,14 @@ Scenario: Forward an transaction request from the API to the master miner
 	Then I forward to the master miner and reply the transaction hash
 */
 func TestHandleIncomingTransaction(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
 	txRepo := &mockTxRepository{}
-	poolR := &mockPoolRequester{
-		repo: txRepo,
-	}
-	lockSrv := transaction.NewLockService(&mockLockRepository{})
-	poolFindSrv := transaction.NewPoolFindingService(NewPoolRetriever(hex.EncodeToString(pub), hex.EncodeToString(pv)))
-	sharedService := shared.NewService(&mockSharedRepo{})
-	miningSrv := transaction.NewMiningService(poolR, poolFindSrv, sharedService, "127.0.0.1", hex.EncodeToString(pub), hex.EncodeToString(pv))
-	storeSrv := transaction.NewStorageService(txRepo, miningSrv)
+	lockRepo := &mockLockRepository{}
+	sharedRepo := &mockSharedRepo{}
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvkey")), hex.EncodeToString(pub))
-	sharedService.StoreSharedEmitterKeyPair(sk)
-
-	txSrv := NewTransactionServer(storeSrv, lockSrv, miningSrv, hex.EncodeToString(pub), hex.EncodeToString(pv))
-	intSrv := NewInternalServer(poolFindSrv, miningSrv, hex.EncodeToString(pub), hex.EncodeToString(pv))
+	txSrv := newTransactionServer(txRepo, lockRepo, sharedRepo, pub, pv)
+	intSrv := newInternalServer(txRepo, lockRepo, sharedRepo, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":3545")
 	defer lis.Close()
@@ -107,21 +87,21 @@ func TestHandleIncomingTransaction(t *testing.T) {
 		},
 		"timestamp":  time.Now().Unix(),
 		"type":       int(transaction.KeychainType),
-		"public_key": hex.EncodeToString(pub),
+		"public_key": pub,
 		"proposal": map[string]interface{}{
 			"shared_emitter_keys": map[string]string{
 				"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
-				"public_key":            hex.EncodeToString(pub),
+				"public_key":            pub,
 			},
 		},
 	}
 	txBytes, _ := json.Marshal(tx)
-	sig, _ := crypto.Sign(string(txBytes), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(txBytes), pv)
 	tx["signature"] = sig
 	tx["em_signature"] = sig
 	txBytes, _ = json.Marshal(tx)
 
-	cipherTx, _ := crypto.Encrypt(string(txBytes), hex.EncodeToString(pub))
+	cipherTx, _ := crypto.Encrypt(string(txBytes), pub)
 	res, err := intSrv.HandleTransaction(context.TODO(), &api.IncomingTransaction{
 		EncryptedTransaction: cipherTx,
 		Timestamp:            time.Now().Unix(),
@@ -133,7 +113,7 @@ func TestHandleIncomingTransaction(t *testing.T) {
 		Timestamp:       res.Timestamp,
 		TransactionHash: res.TransactionHash,
 	})
-	assert.Nil(t, crypto.VerifySignature(string(resBytes), hex.EncodeToString(pub), res.Signature))
+	assert.Nil(t, crypto.VerifySignature(string(resBytes), pub, res.Signature))
 	assert.Equal(t, crypto.HashBytes(txBytes), res.TransactionHash)
 
 	time.Sleep(2 * time.Second)
@@ -150,25 +130,14 @@ Scenario: Get account created
 	Then I provide the ID hash and I get retrieve the encrypted wallet and the encrypted aes key
 */
 func TestHandleGetAccount(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
 	txRepo := &mockTxRepository{}
-	poolR := &mockPoolRequester{
-		repo: txRepo,
-	}
-	lockSrv := transaction.NewLockService(&mockLockRepository{})
-	poolFindSrv := transaction.NewPoolFindingService(NewPoolRetriever(hex.EncodeToString(pub), hex.EncodeToString(pv)))
-	sharedService := shared.NewService(&mockSharedRepo{})
-	miningSrv := transaction.NewMiningService(poolR, poolFindSrv, sharedService, "127.0.0.1", hex.EncodeToString(pub), hex.EncodeToString(pv))
-	storeSrv := transaction.NewStorageService(txRepo, miningSrv)
+	lockRepo := &mockLockRepository{}
+	sharedRepo := &mockSharedRepo{}
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvkey")), hex.EncodeToString(pub))
-	sharedService.StoreSharedEmitterKeyPair(sk)
-
-	txSrv := NewTransactionServer(storeSrv, lockSrv, miningSrv, hex.EncodeToString(pub), hex.EncodeToString(pv))
-	intSrv := NewInternalServer(poolFindSrv, miningSrv, hex.EncodeToString(pub), hex.EncodeToString(pv))
+	txSrv := newTransactionServer(txRepo, lockRepo, sharedRepo, pub, pv)
+	intSrv := newInternalServer(txRepo, lockRepo, sharedRepo, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":3545")
 	defer lis.Close()
@@ -176,7 +145,7 @@ func TestHandleGetAccount(t *testing.T) {
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
-	encAddr, _ := crypto.Encrypt(crypto.HashString("addr"), hex.EncodeToString(pub))
+	encAddr, _ := crypto.Encrypt(crypto.HashString("addr"), pub)
 
 	//First send the ID transaction
 	txID := map[string]interface{}{
@@ -188,21 +157,21 @@ func TestHandleGetAccount(t *testing.T) {
 		},
 		"timestamp":  time.Now().Unix(),
 		"type":       int(transaction.IDType),
-		"public_key": hex.EncodeToString(pub),
+		"public_key": pub,
 		"proposal": map[string]interface{}{
 			"shared_emitter_keys": map[string]string{
 				"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
-				"public_key":            hex.EncodeToString(pub),
+				"public_key":            pub,
 			},
 		},
 	}
 	txIDBytes, _ := json.Marshal(txID)
-	sigID, _ := crypto.Sign(string(txIDBytes), hex.EncodeToString(pv))
+	sigID, _ := crypto.Sign(string(txIDBytes), pv)
 	txID["signature"] = sigID
 	txID["em_signature"] = sigID
 	txIDBytes, _ = json.Marshal(txID)
 
-	cipherTx, _ := crypto.Encrypt(string(txIDBytes), hex.EncodeToString(pub))
+	cipherTx, _ := crypto.Encrypt(string(txIDBytes), pub)
 	res, err := intSrv.HandleTransaction(context.TODO(), &api.IncomingTransaction{
 		EncryptedTransaction: cipherTx,
 		Timestamp:            time.Now().Unix(),
@@ -222,21 +191,21 @@ func TestHandleGetAccount(t *testing.T) {
 		},
 		"timestamp":  time.Now().Unix(),
 		"type":       int(transaction.KeychainType),
-		"public_key": hex.EncodeToString(pub),
+		"public_key": pub,
 		"proposal": map[string]interface{}{
 			"shared_emitter_keys": map[string]string{
 				"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
-				"public_key":            hex.EncodeToString(pub),
+				"public_key":            pub,
 			},
 		},
 	}
 	txKeychainBytes, _ := json.Marshal(txKeychain)
-	sigKeychain, _ := crypto.Sign(string(txKeychainBytes), hex.EncodeToString(pv))
+	sigKeychain, _ := crypto.Sign(string(txKeychainBytes), pv)
 	txKeychain["signature"] = sigKeychain
 	txKeychain["em_signature"] = sigKeychain
 	txKeychainBytes, _ = json.Marshal(txKeychain)
 
-	cipherTx2, _ := crypto.Encrypt(string(txKeychainBytes), hex.EncodeToString(pub))
+	cipherTx2, _ := crypto.Encrypt(string(txKeychainBytes), pub)
 	res2, err := intSrv.HandleTransaction(context.TODO(), &api.IncomingTransaction{
 		EncryptedTransaction: cipherTx2,
 		Timestamp:            time.Now().Unix(),
@@ -247,7 +216,7 @@ func TestHandleGetAccount(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	assert.Equal(t, crypto.HashString("addr"), txRepo.keychains[0].Address())
 
-	encIDHash, _ := crypto.Encrypt(crypto.HashString("idHash"), hex.EncodeToString(pub))
+	encIDHash, _ := crypto.Encrypt(crypto.HashString("idHash"), pub)
 	req := &api.GetAccountRequest{
 		EncryptedIdAddress: encIDHash,
 		Timestamp:          time.Now().Unix(),
@@ -257,4 +226,52 @@ func TestHandleGetAccount(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, resGet.EncryptedAesKey)
 	assert.NotEmpty(t, resGet.EncryptedWallet)
+}
+
+/*
+Scenario: Get last shared keys
+	Given a emitter authorized and stored shared keys
+	When I want to get the lastshared keys
+	Then I get the last shared keys with encryption
+*/
+func TestGetLastSharedKeys(t *testing.T) {
+	pub, pv := crypto.GenerateKeys()
+
+	txRepo := &mockTxRepository{}
+	lockRepo := &mockLockRepository{}
+	sharedRepo := &mockSharedRepo{}
+
+	intSrv := newInternalServer(txRepo, lockRepo, sharedRepo, pub, pv)
+
+	res, err := intSrv.GetLastSharedKeys(context.TODO(), &api.LastSharedKeysRequest{
+		EmitterPublicKey: pub,
+		Timestamp:        time.Now().Unix(),
+	})
+	assert.Nil(t, err)
+	assert.Equal(t, pub, res.MinerPublicKey)
+	assert.Len(t, res.EmitterKeys, 1)
+	assert.Equal(t, pub, res.EmitterKeys[0].PublicKey)
+
+	emPv, _ := crypto.Decrypt(res.EmitterKeys[0].EncryptedPrivateKey, pv)
+	assert.Equal(t, pv, emPv)
+}
+
+func newInternalServer(txRepo *mockTxRepository, lockRepo *mockLockRepository, sharedRepo *mockSharedRepo, pub, pv string) api.InternalServiceServer {
+	encPv, _ := crypto.Encrypt(pv, pub)
+	minerKP, _ := shared.NewMinerKeyPair(pub, pv)
+	emKP, _ := shared.NewEmitterKeyPair(encPv, pub)
+
+	sharedRepo.emKeys = shared.EmitterKeys{emKP}
+	sharedRepo.minerKeys = minerKP
+
+	poolR := &mockPoolRequester{
+		repo: txRepo,
+	}
+	sharedSrv := shared.NewService(sharedRepo)
+
+	poolFindSrv := transaction.NewPoolFindingService(NewPoolRetriever(sharedSrv))
+	sharedService := shared.NewService(sharedRepo)
+	miningSrv := transaction.NewMiningService(poolR, poolFindSrv, sharedService, "127.0.0.1", pub, pv)
+
+	return NewInternalServer(poolFindSrv, miningSrv, sharedService)
 }

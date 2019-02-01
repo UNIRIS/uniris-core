@@ -23,7 +23,7 @@ func TestNewSharedKey(t *testing.T) {
 	pvKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	key, _ := x509.MarshalPKIXPublicKey(pvKey.Public())
 
-	sk, err := NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(key))
+	sk, err := NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(key))
 	assert.Nil(t, err)
 	assert.Equal(t, hex.EncodeToString([]byte("pvKey")), sk.EncryptedPrivateKey())
 	assert.Equal(t, hex.EncodeToString(key), sk.PublicKey())
@@ -36,8 +36,8 @@ Scenario: Create empty shared keypair
 	Then I get an error
 */
 func TestNewEmptySharedKey(t *testing.T) {
-	_, err := NewKeyPair("", "")
-	assert.EqualError(t, err, "shared keys encrypted private key: is empty")
+	_, err := NewEmitterKeyPair("", "")
+	assert.EqualError(t, err, "shared emitter keys encrypted private key: is empty")
 }
 
 /*
@@ -47,11 +47,11 @@ Scenario: Create shared keypair with not invalid public key
 	Then I get an error
 */
 func TestNewSharedKeyWithInvalidPublicKey(t *testing.T) {
-	_, err := NewKeyPair(hex.EncodeToString([]byte("pvKey")), "pubKey")
-	assert.EqualError(t, err, "shared keys: public key is not in hexadecimal format")
+	_, err := NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), "pubKey")
+	assert.EqualError(t, err, "shared emitter keys: public key is not in hexadecimal format")
 
-	_, err = NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString([]byte("pubKey")))
-	assert.EqualError(t, err, "shared keys: public key is not valid")
+	_, err = NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString([]byte("pubKey")))
+	assert.EqualError(t, err, "shared emitter keys: public key is not valid")
 }
 
 /*
@@ -61,8 +61,8 @@ Scenario: Create shared keypair with not hexadecimal encrypted private key
 	Then I get an error
 */
 func TestNewSharedKeyWithNotHexPvKey(t *testing.T) {
-	_, err := NewKeyPair("pvKey", "pvkey")
-	assert.EqualError(t, err, "shared keys encrypted private key: is not in hexadecimal format")
+	_, err := NewEmitterKeyPair("pvKey", "pvkey")
+	assert.EqualError(t, err, "shared emitter keys encrypted private key: is not in hexadecimal format")
 }
 
 /*
@@ -76,7 +76,7 @@ func TestMarshalSharedKeys(t *testing.T) {
 	pvKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	key, _ := x509.MarshalPKIXPublicKey(pvKey.Public())
 
-	kp, _ := NewKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(key))
+	kp, _ := NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(key))
 	b, err := json.Marshal(kp)
 	assert.Nil(t, err)
 	assert.Equal(t, fmt.Sprintf("{\"encrypted_private_key\":\"%s\",\"public_key\":\"%s\"}", hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(key)), string(b))

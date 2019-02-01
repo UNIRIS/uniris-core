@@ -1,10 +1,6 @@
 package transaction
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"testing"
@@ -24,24 +20,22 @@ Scenario: Create a new ID transaction
 */
 func TestNewID(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	kp, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(pub))
+	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 	prop, _ := NewProposal(kp)
 
 	addr := crypto.HashString("address")
 
 	hash := crypto.HashString("hash")
 
-	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
+	sig, _ := crypto.Sign("data", pv)
 
 	tx, err := New(addr, IDType, map[string]string{
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
 		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	id, err := NewID(tx)
@@ -61,24 +55,22 @@ Scenario: Create a new ID transaction with another type of transaction
 */
 func TestNewIDWithInvalidType(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	kp, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(pub))
+	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 	prop, _ := NewProposal(kp)
 
 	addr := crypto.HashString("address")
 
 	hash := crypto.HashString("hash")
 
-	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
+	sig, _ := crypto.Sign("data", pv)
 
 	tx, err := New(addr, KeychainType, map[string]string{
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
 		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	_, err = NewID(tx)
@@ -94,23 +86,21 @@ Scenario: Create a new ID transaction with missing data fields
 */
 func TestNewIDWithMissingDataFields(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	kp, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(pub))
+	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 	prop, _ := NewProposal(kp)
 
 	addr := crypto.HashString("address")
 
 	hash := crypto.HashString("hash")
 
-	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
+	sig, _ := crypto.Sign("data", pv)
 
 	tx, err := New(addr, IDType, map[string]string{
 		"encrypted_address_by_id": hex.EncodeToString([]byte("addr")),
 		"encrypted_aes_key":       hex.EncodeToString([]byte("aesKey")),
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	_, err = NewID(tx)
@@ -119,7 +109,7 @@ func TestNewIDWithMissingDataFields(t *testing.T) {
 	tx, err = New(addr, IDType, map[string]string{
 		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	_, err = NewID(tx)
@@ -128,7 +118,7 @@ func TestNewIDWithMissingDataFields(t *testing.T) {
 	tx, err = New(addr, IDType, map[string]string{
 		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	_, err = NewID(tx)
@@ -143,24 +133,22 @@ Scenario: Create a new ID transaction with data fields not in hex
 */
 func TestNewIDWithNotHexDataFields(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	kp, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(pub))
+	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 	prop, _ := NewProposal(kp)
 
 	addr := crypto.HashString("address")
 
 	hash := crypto.HashString("hash")
 
-	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
+	sig, _ := crypto.Sign("data", pv)
 
 	tx, _ := New(addr, IDType, map[string]string{
 		"encrypted_aes_key":          "aes key",
 		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	_, err := NewID(tx)
 	assert.EqualError(t, err, "transaction: id encrypted aes key is not in hexadecimal format")
 
@@ -168,7 +156,7 @@ func TestNewIDWithNotHexDataFields(t *testing.T) {
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
 		"encrypted_address_by_id":    "addr",
 		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	_, err = NewID(tx)
 	assert.EqualError(t, err, "transaction: id encrypted address for id is not in hexadecimal format")
 
@@ -176,7 +164,7 @@ func TestNewIDWithNotHexDataFields(t *testing.T) {
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_robot": "addr",
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	_, err = NewID(tx)
 	assert.EqualError(t, err, "transaction: id encrypted address for robot is not in hexadecimal format")
 }
@@ -188,24 +176,22 @@ Scenario: Convert back a ID to its parent Transaction
 	Then I get a transaction struct
 */
 func TestIDToTransaction(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	kp, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(pub))
+	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 	prop, _ := NewProposal(kp)
 
 	addr := crypto.HashString("address")
 
 	hash := crypto.HashString("hash")
 
-	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
+	sig, _ := crypto.Sign("data", pv)
 
 	tx, err := New(addr, IDType, map[string]string{
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
 		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
-	}, time.Now(), hex.EncodeToString(pub), sig, sig, prop, hash)
+	}, time.Now(), pub, sig, sig, prop, hash)
 	assert.Nil(t, err)
 
 	id, err := NewID(tx)
@@ -220,14 +206,14 @@ func TestIDToTransaction(t *testing.T) {
 	}, tx.Data())
 
 	b, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	sig, _ = crypto.Sign(string(b), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), sig)
+	sig, _ = crypto.Sign(string(b), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, sig)
 
-	masterValid, _ := NewMasterValidation(Pool{}, hex.EncodeToString(pub), v)
+	masterValid, _ := NewMasterValidation(Pool{}, pub, v)
 
 	tx.AddMining(masterValid, []MinerValidation{v})
 	assert.Equal(t, ValidationOK, tx.MasterValidation().Validation().Status())

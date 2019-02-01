@@ -1,11 +1,6 @@
 package rest
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -80,23 +75,30 @@ Scenario: Get transactions status with unknown transaction hash
 */
 func TestGetTransactionStatusUnknown(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pv, _ := x509.MarshalECPrivateKey(key)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
+	pub, pv := crypto.GenerateKeys()
 
 	txRepo := &mockTxRepository{}
 	lockRepo := &mockLockRepository{}
 	sharedRepo := &mockSharedRepo{}
-	poolR := &mockPoolRequester{}
 
-	poolingSrv := transaction.NewPoolFindingService(rpc.NewPoolRetriever(hex.EncodeToString(pub), hex.EncodeToString(pv)))
+	encPv, _ := crypto.Encrypt(pv, pub)
+	minerKP, _ := shared.NewMinerKeyPair(pub, pv)
+	emKP, _ := shared.NewEmitterKeyPair(encPv, pub)
+	sharedRepo.emKeys = []shared.EmitterKeyPair{emKP}
+	sharedRepo.minerKeys = minerKP
+
+	poolR := &mockPoolRequester{
+		repo: txRepo,
+	}
+
 	sharedSrv := shared.NewService(sharedRepo)
-	miningSrv := transaction.NewMiningService(poolR, poolingSrv, sharedSrv, "127.0.0.1", hex.EncodeToString(pub), hex.EncodeToString(pv))
+	poolingSrv := transaction.NewPoolFindingService(rpc.NewPoolRetriever(sharedSrv))
+	miningSrv := transaction.NewMiningService(poolR, poolingSrv, sharedSrv, "127.0.0.1", pub, pv)
 
 	storageSrv := transaction.NewStorageService(txRepo, miningSrv)
 	lockSrv := transaction.NewLockService(lockRepo)
 
-	txSrv := rpc.NewTransactionServer(storageSrv, lockSrv, miningSrv, hex.EncodeToString(pub), hex.EncodeToString(pv))
+	txSrv := rpc.NewTransactionServer(storageSrv, lockSrv, miningSrv, sharedSrv)
 
 	//Start transaction server
 	lisTx, _ := net.Listen("tcp", ":3545")
@@ -106,7 +108,7 @@ func TestGetTransactionStatusUnknown(t *testing.T) {
 	go grpcServer.Serve(lisTx)
 
 	//Start internal server
-	intSrv := rpc.NewInternalServer(poolingSrv, miningSrv, hex.EncodeToString(pub), hex.EncodeToString(pv))
+	intSrv := rpc.NewInternalServer(poolingSrv, miningSrv, sharedSrv)
 	lisInt, _ := net.Listen("tcp", ":1717")
 	defer lisInt.Close()
 	grpcServerInt := grpc.NewServer()

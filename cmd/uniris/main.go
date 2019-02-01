@@ -32,7 +32,7 @@ const (
 
 func main() {
 
-	conf := UnirisConf{}
+	conf := unirisConf{}
 
 	app := cli.NewApp()
 	app.Name = "uniris-miner"
@@ -68,9 +68,12 @@ func main() {
 		fmt.Printf("Network: %s\n", conf.networkType)
 		fmt.Printf("Network interface: %s\n", conf.networkInterface)
 
+		sharedRepo := memstorage.NewSharedDatabase()
+		sharedSrv := shared.NewService(sharedRepo)
+
 		go startDiscovery(conf)
-		go startDatamining(conf)
-		startAPI(conf)
+		go startDatamining(conf, sharedSrv)
+		startAPI(conf, sharedSrv)
 
 		return nil
 	}
@@ -79,7 +82,7 @@ func main() {
 	}
 }
 
-func getCliFlags(conf *UnirisConf) []cli.Flag {
+func getCliFlags(conf *unirisConf) []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
 			Name:   "conf",
@@ -196,7 +199,7 @@ func getCliFlags(conf *UnirisConf) []cli.Flag {
 	}
 }
 
-func startAPI(conf UnirisConf) {
+func startAPI(conf unirisConf, sharedSrv shared.Service) {
 	r := gin.Default()
 
 	staticDir, _ := filepath.Abs("../../web/static")
@@ -209,14 +212,15 @@ func startAPI(conf UnirisConf) {
 
 	apiRouter := r.Group("/api")
 	{
-		rest.NewAccountHandler(apiRouter, conf.services.datamining.internalPort, "")
+		rest.NewAccountHandler(apiRouter, conf.services.datamining.internalPort, sharedSrv)
 		rest.NewTransactionHandler(apiRouter, conf.services.datamining.internalPort)
+		rest.NewSharedHandler(apiRouter, conf.services.datamining.internalPort)
 	}
 
 	r.Run(fmt.Sprintf(":%d", conf.services.api.port))
 }
 
-func startDatamining(conf UnirisConf) {
+func startDatamining(conf unirisConf, sharedSrv shared.Service) {
 	var pInfo discovery.PeerInformer
 	if conf.networkType == "private" {
 		pInfo = system.NewPeerInformer(true, conf.networkInterface)
@@ -231,44 +235,37 @@ func startDatamining(conf UnirisConf) {
 
 	txDb := memstorage.NewTransactionDatabase()
 	lockDb := memstorage.NewLockDatabase()
-	sharedDb := memstorage.NewSharedDatabase()
 
-	poolReq := rpc.NewPoolRequester("", "")
-	poolRetr := rpc.NewPoolRetriever("", "")
+	poolReq := rpc.NewPoolRequester(sharedSrv)
+	poolRetr := rpc.NewPoolRetriever(sharedSrv)
 
-	sharedSrv := shared.NewService(sharedDb)
 	poolFinderSrv := transaction.NewPoolFindingService(poolRetr)
 	miningSrv := transaction.NewMiningService(poolReq, poolFinderSrv, sharedSrv, ip.String(), conf.publicKey, conf.privateKey)
 	storeSrv := transaction.NewStorageService(txDb, miningSrv)
 	lockSrv := transaction.NewLockService(lockDb)
 
-	go startDataminingInternalServer(conf, poolFinderSrv, miningSrv)
-	startDataminingExternalServer(conf, storeSrv, lockSrv, miningSrv)
-}
+	go func() {
+		lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", conf.services.datamining.internalPort))
+		if err != nil {
+			panic(err)
+		}
+		grpcServer := grpc.NewServer()
 
-func startDataminingInternalServer(conf UnirisConf, poolFinderSrv transaction.PoolFindingService, miningSrv transaction.MiningService) {
-	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", conf.services.datamining.internalPort))
-	if err != nil {
-		panic(err)
-	}
-	grpcServer := grpc.NewServer()
+		intSrv := rpc.NewInternalServer(poolFinderSrv, miningSrv, sharedSrv)
+		api.RegisterInternalServiceServer(grpcServer, intSrv)
+		log.Printf("Internal GRPC Server listening on %d", conf.services.datamining.internalPort)
+		if err := grpcServer.Serve(lis); err != nil {
+			panic(err)
+		}
+	}()
 
-	intSrv := rpc.NewInternalServer(poolFinderSrv, miningSrv, "", "")
-	api.RegisterInternalServiceServer(grpcServer, intSrv)
-	log.Printf("Internal GRPC Server listening on %d", conf.services.datamining.internalPort)
-	if err := grpcServer.Serve(lis); err != nil {
-		panic(err)
-	}
-}
-
-func startDataminingExternalServer(conf UnirisConf, storeSrv transaction.StorageService, lockSrv transaction.LockService, miningSrv transaction.MiningService) {
 	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", conf.services.datamining.externalPort))
 	if err != nil {
 		panic(err)
 	}
 	grpcServer := grpc.NewServer()
 
-	txSrv := rpc.NewTransactionServer(storeSrv, lockSrv, miningSrv, "", "")
+	txSrv := rpc.NewTransactionServer(storeSrv, lockSrv, miningSrv, sharedSrv)
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 
 	log.Printf("Transaction GRPC Server listening on %d", conf.services.datamining.externalPort)
@@ -277,7 +274,7 @@ func startDataminingExternalServer(conf UnirisConf, storeSrv transaction.Storage
 	}
 }
 
-func startDiscovery(conf UnirisConf) {
+func startDiscovery(conf unirisConf) {
 	log.Print("------------------------------")
 	log.Print("DISCOVERY SERVICE STARTING...")
 	log.Print("------------------------------")
@@ -308,7 +305,7 @@ func startDiscovery(conf UnirisConf) {
 	startGossip(peer, discoverySrv, conf)
 }
 
-func getSeeds(conf UnirisConf) (seeds []discovery.PeerIdentity) {
+func getSeeds(conf unirisConf) (seeds []discovery.PeerIdentity) {
 	seedsConf := strings.Split(conf.services.discovery.seeds, ";")
 	for _, s := range seedsConf {
 		seedItems := strings.Split(s, ":")
@@ -333,7 +330,7 @@ func startDiscoveryServer(discoverySrv discovery.Service, discoveryPort int) {
 	}
 }
 
-func startGossip(p discovery.Peer, discoverySrv discovery.Service, conf UnirisConf) {
+func startGossip(p discovery.Peer, discoverySrv discovery.Service, conf unirisConf) {
 	timer := time.NewTicker(time.Second * 3)
 	log.Print("Gossip running...")
 	seeds := getSeeds(conf)
@@ -347,13 +344,21 @@ func startGossip(p discovery.Peer, discoverySrv discovery.Service, conf UnirisCo
 	}
 }
 
-type UnirisConf struct {
+type unirisConf struct {
 	networkType      string
 	networkInterface string
 	publicKey        string
 	privateKey       string
 	version          string
-	services         struct {
+	sharedEmKey      struct { //TODO: to remove once the feature is implemented
+		encryptedPrivateKey string
+		publicKey           string
+	}
+	sharedMinerKey struct { //TODO: to remove once the feature is implemented
+		privateKey string
+		publicKey  string
+	}
+	services struct {
 		api struct {
 			port int
 		}

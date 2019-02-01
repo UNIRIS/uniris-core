@@ -25,17 +25,16 @@ func TestStoreLock(t *testing.T) {
 		repo: repo,
 	}
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
+	pub, _ := crypto.GenerateKeys()
 
-	lock, err := NewLock(crypto.HashString("hash"), crypto.HashString("addr"), hex.EncodeToString(pub))
+	lock, err := NewLock(crypto.HashString("hash"), crypto.HashString("addr"), pub)
 	assert.Nil(t, err)
 	assert.Nil(t, s.StoreLock(lock))
 
 	assert.Len(t, repo.locks, 1)
 	assert.Equal(t, crypto.HashString("hash"), repo.locks[0].TransactionHash())
 	assert.Equal(t, crypto.HashString("addr"), repo.locks[0].Address())
-	assert.Equal(t, hex.EncodeToString(pub), repo.locks[0].MasterRobotKey())
+	assert.Equal(t, pub, repo.locks[0].MasterRobotKey())
 }
 
 /*

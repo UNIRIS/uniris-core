@@ -1,21 +1,18 @@
 package rpc
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"net"
 	"testing"
 	"time"
 
+	"github.com/uniris/uniris-core/pkg/shared"
+
 	"github.com/stretchr/testify/assert"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/crypto"
-	"github.com/uniris/uniris-core/pkg/shared"
 	"github.com/uniris/uniris-core/pkg/transaction"
 	"google.golang.org/grpc"
 )
@@ -28,24 +25,12 @@ Scenario: Send request to get last transaction
 */
 func TestSendGetLastTransaction(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
+	lockRepo := &mockLockRepository{}
 	txRepo := &mockTxRepository{}
-	lockSrv := transaction.NewLockService(&mockLockRepository{})
-	poolFindSrv := transaction.NewPoolFindingService(NewPoolRetriever(hex.EncodeToString(pub), hex.EncodeToString(pv)))
-	sharedService := shared.NewService(&mockSharedRepo{})
-
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvkey")), hex.EncodeToString(pub))
-	sharedService.StoreSharedEmitterKeyPair(sk)
-
-	miningSrv := transaction.NewMiningService(&mockPoolRequester{
-		repo: txRepo,
-	}, poolFindSrv, sharedService, "127.0.0.1", hex.EncodeToString(pub), hex.EncodeToString(pv))
-	storeSrv := transaction.NewStorageService(txRepo, miningSrv)
-
-	txSrv := NewTransactionServer(storeSrv, lockSrv, miningSrv, hex.EncodeToString(pub), hex.EncodeToString(pv))
+	sharedRepo := &mockSharedRepo{}
+	txSrv := newTransactionServer(txRepo, lockRepo, sharedRepo, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":3545")
 	defer lis.Close()
@@ -58,54 +43,32 @@ func TestSendGetLastTransaction(t *testing.T) {
 		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
 	}
 
-	prop, _ := transaction.NewProposal(sk)
-	txRaw, _ := json.Marshal(struct {
-		Address   string               `json:"address"`
-		Data      map[string]string    `json:"data"`
-		Timestamp int64                `json:"timestamp"`
-		Type      transaction.Type     `json:"type"`
-		PublicKey string               `json:"public_key"`
-		Proposal  transaction.Proposal `json:"proposal"`
-	}{
-		Address:   crypto.HashString("addr"),
-		Type:      transaction.KeychainType,
-		Data:      data,
-		Timestamp: time.Now().Unix(),
-		PublicKey: hex.EncodeToString(pub),
-		Proposal:  prop,
-	})
+	propKP, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPV")), pub)
+	prop, _ := transaction.NewProposal(propKP)
+	txRaw := map[string]interface{}{
+		"address":    crypto.HashString("addr"),
+		"data":       data,
+		"timestamp":  time.Now().Unix(),
+		"type":       transaction.KeychainType,
+		"public_key": pub,
+		"proposal":   prop,
+	}
+	txBytes, _ := json.Marshal(txRaw)
+	sig, _ := crypto.Sign(string(txBytes), pv)
+	txRaw["signature"] = sig
+	txRaw["em_signature"] = sig
+	txBytes, _ = json.Marshal(txRaw)
 
-	sig, _ := crypto.Sign(string(txRaw), hex.EncodeToString(pv))
-
-	txSigned, _ := json.Marshal(struct {
-		Address          string               `json:"address"`
-		Data             map[string]string    `json:"data"`
-		Timestamp        int64                `json:"timestamp"`
-		Type             transaction.Type     `json:"type"`
-		PublicKey        string               `json:"public_key"`
-		Proposal         transaction.Proposal `json:"proposal"`
-		Signature        string               `json:"signature"`
-		EmitterSignature string               `json:"em_signature"`
-	}{
-		Address:          crypto.HashString("addr"),
-		Type:             transaction.KeychainType,
-		Data:             data,
-		Timestamp:        time.Now().Unix(),
-		PublicKey:        hex.EncodeToString(pub),
-		Proposal:         prop,
-		Signature:        sig,
-		EmitterSignature: sig,
-	})
-
-	tx, _ := transaction.New(crypto.HashString("addr"), transaction.KeychainType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, crypto.HashBytes(txSigned))
+	tx, _ := transaction.New(crypto.HashString("addr"), transaction.KeychainType, data, time.Now(), pub, sig, sig, prop, crypto.HashBytes(txBytes))
 	keychain, _ := transaction.NewKeychain(tx)
 	txRepo.StoreKeychain(keychain)
 
-	ret := NewPoolRetriever(hex.EncodeToString(pub), hex.EncodeToString(pv))
+	sharedSrv := shared.NewService(sharedRepo)
+	ret := NewPoolRetriever(sharedSrv)
 	txRes, err := ret.RequestLastTransaction(transaction.Pool{
 		transaction.NewPoolMember(net.ParseIP("127.0.0.1"), 3545),
 	}, crypto.HashString("addr"), transaction.KeychainType)
 	assert.Nil(t, err)
 	assert.Equal(t, transaction.KeychainType, txRes.Type())
-	assert.Equal(t, crypto.HashBytes(txSigned), txRes.TransactionHash())
+	assert.Equal(t, crypto.HashBytes(txBytes), txRes.TransactionHash())
 }

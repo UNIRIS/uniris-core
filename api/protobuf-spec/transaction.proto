@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "discovery.proto";
+import "common.proto";
 
 package api;
 
@@ -78,13 +79,9 @@ message Transaction {
 }
 
 message TransactionProposal {
-    SharedKeys shared_emitter_keys = 1;
+    SharedKeyPair shared_emitter_keys = 1;
 }
 
-message SharedKeys {
-    string encrypted_private_key = 1;
-    string public_key = 2;
-}
 
 message LeadMiningRequest {
     Transaction transaction = 1;

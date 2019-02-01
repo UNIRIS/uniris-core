@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/uniris/uniris-core/pkg/crypto"
@@ -77,6 +78,7 @@ func (v MinerValidation) IsValid() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	log.Print(string(vBytes))
 	if err := crypto.VerifySignature(string(vBytes), v.minerPubk, v.minerSig); err != nil {
 		if err == crypto.ErrInvalidSignature {
 			return false, errors.New("miner validation: signature is invalid")
@@ -88,14 +90,10 @@ func (v MinerValidation) IsValid() (bool, error) {
 
 //MarshalJSON serializes as JSON a miner validation
 func (v MinerValidation) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Status    ValidationStatus `json:"status"`
-		PublicKey string           `json:"public_key"`
-		Timestamp int64            `json:"timestamp"`
-	}{
-		Status:    v.status,
-		PublicKey: v.minerPubk,
-		Timestamp: v.timestamp.Unix(),
+	return json.Marshal(map[string]interface{}{
+		"status":     v.status,
+		"public_key": v.minerPubk,
+		"timestamp":  v.timestamp.Unix(),
 	})
 }
 

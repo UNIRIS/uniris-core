@@ -1,10 +1,6 @@
 package rpc
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"net"
@@ -30,15 +26,15 @@ Scenario: Request transction lock on a pool
 */
 func TestRequestTransactionLock(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
-
-	pr := NewPoolRequester(hex.EncodeToString(pub), hex.EncodeToString(pv))
+	pub, pv := crypto.GenerateKeys()
 
 	lockRepo := &mockLockRepository{}
-	lockSrv := transaction.NewLockService(lockRepo)
-	txSrv := NewTransactionServer(transaction.StorageService{}, lockSrv, transaction.MiningService{}, hex.EncodeToString(pub), hex.EncodeToString(pv))
+	txRepo := &mockTxRepository{}
+	sharedRepo := &mockSharedRepo{}
+	txSrv := newTransactionServer(txRepo, lockRepo, sharedRepo, pub, pv)
+
+	sharedSrv := shared.NewService(sharedRepo)
+	pr := NewPoolRequester(sharedSrv)
 
 	lis, _ := net.Listen("tcp", ":3545")
 	defer lis.Close()
@@ -46,7 +42,7 @@ func TestRequestTransactionLock(t *testing.T) {
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
-	lock, _ := transaction.NewLock(crypto.HashString("tx"), crypto.HashString("addr"), hex.EncodeToString(pub))
+	lock, _ := transaction.NewLock(crypto.HashString("tx"), crypto.HashString("addr"), pub)
 	pool := transaction.Pool{
 		transaction.NewPoolMember(net.ParseIP("127.0.0.1"), 3545),
 	}
@@ -64,15 +60,15 @@ Scenario: Request transction lock on a pool
 */
 func TestRequestTransactionUnlock(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
-
-	pr := NewPoolRequester(hex.EncodeToString(pub), hex.EncodeToString(pv))
+	pub, pv := crypto.GenerateKeys()
 
 	lockRepo := &mockLockRepository{}
-	lockSrv := transaction.NewLockService(lockRepo)
-	txSrv := NewTransactionServer(transaction.StorageService{}, lockSrv, transaction.MiningService{}, hex.EncodeToString(pub), hex.EncodeToString(pv))
+	txRepo := &mockTxRepository{}
+	sharedRepo := &mockSharedRepo{}
+	txSrv := newTransactionServer(txRepo, lockRepo, sharedRepo, pub, pv)
+
+	sharedSrv := shared.NewService(sharedRepo)
+	pr := NewPoolRequester(sharedSrv)
 
 	lis, _ := net.Listen("tcp", ":3545")
 	defer lis.Close()
@@ -80,7 +76,7 @@ func TestRequestTransactionUnlock(t *testing.T) {
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
-	lock, _ := transaction.NewLock(crypto.HashString("tx"), crypto.HashString("addr"), hex.EncodeToString(pub))
+	lock, _ := transaction.NewLock(crypto.HashString("tx"), crypto.HashString("addr"), pub)
 	pool := transaction.Pool{
 		transaction.NewPoolMember(net.ParseIP("127.0.0.1"), 3545),
 	}
@@ -101,22 +97,23 @@ Scenario: Request transaction validation confirmation
 */
 func TestRequestConfirmValidation(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
-	miningSrv := transaction.NewMiningService(nil, transaction.PoolFindingService{}, shared.Service{}, "127.0.0.1", hex.EncodeToString(pub), hex.EncodeToString(pv))
+	pub, pv := crypto.GenerateKeys()
 
-	txSrv := NewTransactionServer(transaction.StorageService{}, transaction.LockService{}, miningSrv, hex.EncodeToString(pub), hex.EncodeToString(pv))
+	lockRepo := &mockLockRepository{}
+	txRepo := &mockTxRepository{}
+	sharedRepo := &mockSharedRepo{}
+	txSrv := newTransactionServer(txRepo, lockRepo, sharedRepo, pub, pv)
+
 	lis, err := net.Listen("tcp", ":3545")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
-	pr := NewPoolRequester(hex.EncodeToString(pub), hex.EncodeToString(pv))
+	sharedSrv := shared.NewService(sharedRepo)
+	pr := NewPoolRequester(sharedSrv)
 
-	sharedSrv := shared.NewService(&mockSharedRepo{})
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvkey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
 	sharedSrv.StoreSharedEmitterKeyPair(sk)
 
 	data := map[string]string{
@@ -124,57 +121,29 @@ func TestRequestConfirmValidation(t *testing.T) {
 		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
 	}
 	prop, _ := transaction.NewProposal(sk)
-	txRaw, _ := json.Marshal(struct {
-		Address   string               `json:"address"`
-		Data      map[string]string    `json:"data"`
-		Timestamp int64                `json:"timestamp"`
-		Type      transaction.Type     `json:"type"`
-		PublicKey string               `json:"public_key"`
-		Proposal  transaction.Proposal `json:"proposal"`
-	}{
-		Address:   crypto.HashString("addr"),
-		Type:      transaction.KeychainType,
-		Data:      data,
-		Timestamp: time.Now().Unix(),
-		PublicKey: hex.EncodeToString(pub),
-		Proposal:  prop,
-	})
+	txRaw := map[string]interface{}{
+		"address":    crypto.HashString("addr"),
+		"data":       data,
+		"type":       transaction.KeychainType,
+		"timestamp":  time.Now().Unix(),
+		"public_key": pub,
+		"proposal":   prop,
+	}
+	txBytes, _ := json.Marshal(txRaw)
+	sig, _ := crypto.Sign(string(txBytes), pv)
+	txRaw["signature"] = sig
+	txRaw["em_signature"] = sig
+	txBytes, _ = json.Marshal(txRaw)
 
-	sig, _ := crypto.Sign(string(txRaw), hex.EncodeToString(pv))
-
-	txSigned, _ := json.Marshal(struct {
-		Address          string               `json:"address"`
-		Data             map[string]string    `json:"data"`
-		Timestamp        int64                `json:"timestamp"`
-		Type             transaction.Type     `json:"type"`
-		PublicKey        string               `json:"public_key"`
-		Proposal         transaction.Proposal `json:"proposal"`
-		Signature        string               `json:"signature"`
-		EmitterSignature string               `json:"em_signature"`
-	}{
-		Address:          crypto.HashString("addr"),
-		Type:             transaction.KeychainType,
-		Data:             data,
-		Timestamp:        time.Now().Unix(),
-		PublicKey:        hex.EncodeToString(pub),
-		Proposal:         prop,
-		Signature:        sig,
-		EmitterSignature: sig,
+	tx, _ := transaction.New(crypto.HashString("addr"), transaction.KeychainType, data, time.Now(), pub, sig, sig, prop, crypto.HashBytes(txBytes))
+	vBytes, _ := json.Marshal(map[string]interface{}{
+		"status":     transaction.ValidationOK,
+		"public_key": pub,
+		"timestamp":  time.Now().Unix(),
 	})
-
-	tx, _ := transaction.New(crypto.HashString("addr"), transaction.KeychainType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, crypto.HashBytes(txSigned))
-	vBytes, _ := json.Marshal(struct {
-		Status         transaction.ValidationStatus `json:"status"`
-		MinerPublicKey string                       `json:"public_key"`
-		Timestamp      int64                        `json:"timestamp"`
-	}{
-		Status:         transaction.ValidationOK,
-		MinerPublicKey: hex.EncodeToString(pub),
-		Timestamp:      time.Now().Unix(),
-	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := transaction.NewMinerValidation(transaction.ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
-	mv, _ := transaction.NewMasterValidation(transaction.Pool{}, hex.EncodeToString(pub), v)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := transaction.NewMinerValidation(transaction.ValidationOK, time.Now(), pub, vSig)
+	mv, _ := transaction.NewMasterValidation(transaction.Pool{}, pub, v)
 
 	vChan := make(chan transaction.MinerValidation)
 
@@ -184,7 +153,7 @@ func TestRequestConfirmValidation(t *testing.T) {
 	go pr.RequestTransactionValidations(pool, tx, mv, vChan)
 
 	valid := <-vChan
-	assert.Equal(t, hex.EncodeToString(pub), valid.MinerPublicKey())
+	assert.Equal(t, pub, valid.MinerPublicKey())
 	assert.Equal(t, transaction.ValidationOK, valid.Status())
 	ok, err := valid.IsValid()
 	assert.Nil(t, err)
@@ -199,24 +168,23 @@ Scenario: Request transaction store
 */
 func TestRequestStorage(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
-	miningSrv := transaction.NewMiningService(nil, transaction.PoolFindingService{}, shared.Service{}, "127.0.0.1", hex.EncodeToString(pub), hex.EncodeToString(pv))
-	txRepo := &mockTxRepository{}
-	storeSrv := transaction.NewStorageService(txRepo, miningSrv)
+	pub, pv := crypto.GenerateKeys()
 
-	txSrv := NewTransactionServer(storeSrv, transaction.LockService{}, miningSrv, hex.EncodeToString(pub), hex.EncodeToString(pv))
+	lockRepo := &mockLockRepository{}
+	txRepo := &mockTxRepository{}
+	sharedRepo := &mockSharedRepo{}
+	txSrv := newTransactionServer(txRepo, lockRepo, sharedRepo, pub, pv)
+
 	lis, _ := net.Listen("tcp", ":3545")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
-	pr := NewPoolRequester(hex.EncodeToString(pub), hex.EncodeToString(pv))
+	sharedSrv := shared.NewService(sharedRepo)
+	pr := NewPoolRequester(sharedSrv)
 
-	sharedSrv := shared.NewService(&mockSharedRepo{})
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("pvkey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
 	sharedSrv.StoreSharedEmitterKeyPair(sk)
 
 	data := map[string]string{
@@ -224,57 +192,29 @@ func TestRequestStorage(t *testing.T) {
 		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
 	}
 	prop, _ := transaction.NewProposal(sk)
-	txRaw, _ := json.Marshal(struct {
-		Address   string               `json:"address"`
-		Data      map[string]string    `json:"data"`
-		Timestamp int64                `json:"timestamp"`
-		Type      transaction.Type     `json:"type"`
-		PublicKey string               `json:"public_key"`
-		Proposal  transaction.Proposal `json:"proposal"`
-	}{
-		Address:   crypto.HashString("addr"),
-		Type:      transaction.KeychainType,
-		Data:      data,
-		Timestamp: time.Now().Unix(),
-		PublicKey: hex.EncodeToString(pub),
-		Proposal:  prop,
-	})
+	txRaw := map[string]interface{}{
+		"address":    crypto.HashString("addr"),
+		"data":       data,
+		"type":       transaction.KeychainType,
+		"timestamp":  time.Now().Unix(),
+		"public_key": pub,
+		"proposal":   prop,
+	}
+	txBytes, _ := json.Marshal(txRaw)
+	sig, _ := crypto.Sign(string(txBytes), pv)
+	txRaw["signature"] = sig
+	txRaw["em_signature"] = sig
+	txBytes, _ = json.Marshal(txRaw)
 
-	sig, _ := crypto.Sign(string(txRaw), hex.EncodeToString(pv))
-
-	txSigned, _ := json.Marshal(struct {
-		Address          string               `json:"address"`
-		Data             map[string]string    `json:"data"`
-		Timestamp        int64                `json:"timestamp"`
-		Type             transaction.Type     `json:"type"`
-		PublicKey        string               `json:"public_key"`
-		Proposal         transaction.Proposal `json:"proposal"`
-		Signature        string               `json:"signature"`
-		EmitterSignature string               `json:"em_signature"`
-	}{
-		Address:          crypto.HashString("addr"),
-		Type:             transaction.KeychainType,
-		Data:             data,
-		Timestamp:        time.Now().Unix(),
-		PublicKey:        hex.EncodeToString(pub),
-		Proposal:         prop,
-		Signature:        sig,
-		EmitterSignature: sig,
+	tx, _ := transaction.New(crypto.HashString("addr"), transaction.KeychainType, data, time.Now(), pub, sig, sig, prop, crypto.HashBytes(txBytes))
+	vBytes, _ := json.Marshal(map[string]interface{}{
+		"status":     transaction.ValidationOK,
+		"public_key": pub,
+		"timestamp":  time.Now().Unix(),
 	})
-
-	tx, _ := transaction.New(crypto.HashString("addr"), transaction.KeychainType, data, time.Now(), hex.EncodeToString(pub), sig, sig, prop, crypto.HashBytes(txSigned))
-	vBytes, _ := json.Marshal(struct {
-		Status         transaction.ValidationStatus `json:"status"`
-		MinerPublicKey string                       `json:"public_key"`
-		Timestamp      int64                        `json:"timestamp"`
-	}{
-		Status:         transaction.ValidationOK,
-		MinerPublicKey: hex.EncodeToString(pub),
-		Timestamp:      time.Now().Unix(),
-	})
-	vSig, _ := crypto.Sign(string(vBytes), hex.EncodeToString(pv))
-	v, _ := transaction.NewMinerValidation(transaction.ValidationOK, time.Now(), hex.EncodeToString(pub), vSig)
-	mv, _ := transaction.NewMasterValidation(transaction.Pool{}, hex.EncodeToString(pub), v)
+	vSig, _ := crypto.Sign(string(vBytes), pv)
+	v, _ := transaction.NewMinerValidation(transaction.ValidationOK, time.Now(), pub, vSig)
+	mv, _ := transaction.NewMasterValidation(transaction.Pool{}, pub, v)
 
 	ackChan := make(chan bool)
 
@@ -287,5 +227,5 @@ func TestRequestStorage(t *testing.T) {
 	<-ackChan
 
 	assert.Len(t, txRepo.keychains, 1)
-	assert.Equal(t, crypto.HashBytes(txSigned), txRepo.keychains[0].TransactionHash())
+	assert.Equal(t, crypto.HashBytes(txBytes), txRepo.keychains[0].TransactionHash())
 }

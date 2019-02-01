@@ -54,24 +54,19 @@ paths:
           schema:
             $ref: "#/definitions/Error"
 
-  /sharedkeys/{publicKey}:
+  /sharedkeys:
     get:
       tags:
         - Shared
       summary: Get the latest shared keys
-      description: Retrieve the last shared keys
+      description: Retrieve the last shared keys for miners and emitter
       operationId: getSharedKeys
       parameters:
-        - name: publicKey
-          in: path
-          required: true
-          description: Emitter public key
-          type: string
-        - name: signature
+        - name: emitter_public_key
           in: query
-          required: false
+          required: true
+          description: Emitter public key to check if the emitter is authorized to get the shared keys
           type: string
-          description: Signature of the public key
       responses:
         "200":
           description: Shared keys
@@ -219,11 +214,11 @@ definitions:
   SharedKeysResponse:
     required:
       - shared_emitter_keys
-      - shared_robot_pubkey
+      - shared_miner_public_key
     properties:
-      shared_robot_pubkey:
+      shared_miner_public_key:
         type: string
-        description: Robot shared public key
+        description: Miner shared public key
       shared_emitter_keys:
         description: List of the shared keys for the emitters
         type: array

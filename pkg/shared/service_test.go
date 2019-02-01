@@ -25,7 +25,7 @@ func TestStoreSharedEmitterKeys(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
 
-	kp, err := NewKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	kp, err := NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
 	assert.Nil(t, err)
 	assert.Nil(t, s.StoreSharedEmitterKeyPair(kp))
 	assert.Len(t, repo.emKeys, 1)
@@ -43,10 +43,10 @@ func TestListSharedEmitterKeys(t *testing.T) {
 	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
 
-	kp, err := NewKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	kp, err := NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
 
 	repo := &mockRepo{
-		emKeys: []KeyPair{kp},
+		emKeys: EmitterKeys{kp},
 	}
 	s := NewService(repo)
 
@@ -59,13 +59,18 @@ func TestListSharedEmitterKeys(t *testing.T) {
 }
 
 type mockRepo struct {
-	emKeys []KeyPair
+	emKeys    EmitterKeys
+	minerKeys MinerKeyPair
 }
 
-func (r mockRepo) ListSharedEmitterKeyPairs() ([]KeyPair, error) {
+func (r mockRepo) ListSharedEmitterKeyPairs() (EmitterKeys, error) {
 	return r.emKeys, nil
 }
-func (r *mockRepo) StoreSharedEmitterKeyPair(kp KeyPair) error {
+func (r *mockRepo) StoreSharedEmitterKeyPair(kp EmitterKeyPair) error {
 	r.emKeys = append(r.emKeys, kp)
 	return nil
+}
+
+func (r *mockRepo) GetLastSharedMinersKeyPair() (MinerKeyPair, error) {
+	return r.minerKeys, nil
 }

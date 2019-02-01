@@ -24,14 +24,13 @@ Scenario: Create a new transaction proposal
 	Then I get a proposal and I can retrieve the shared keys
 */
 func TestNewProposal(t *testing.T) {
-	pvKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	key, _ := x509.MarshalPKIXPublicKey(pvKey.Public())
+	pub, _ := crypto.GenerateKeys()
 
-	kp, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(key))
+	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 	prop, err := NewProposal(kp)
 	assert.Nil(t, err)
 	assert.Equal(t, hex.EncodeToString([]byte("encPvKey")), prop.SharedEmitterKeyPair().EncryptedPrivateKey())
-	assert.Equal(t, hex.EncodeToString(key), prop.SharedEmitterKeyPair().PublicKey())
+	assert.Equal(t, pub, prop.SharedEmitterKeyPair().PublicKey())
 }
 
 /*
@@ -41,8 +40,8 @@ Scenario: Create a new transction proposal with an empty shared keypair
 	Then I get an error
 */
 func TestNewEmptyProposal(t *testing.T) {
-	_, err := NewProposal(shared.KeyPair{})
-	assert.Error(t, err, "transaction proposal: missing shared keys")
+	_, err := NewProposal(shared.EmitterKeyPair{})
+	assert.Error(t, err, "transaction proposal: missing shared emitter keys")
 }
 
 /*
@@ -52,14 +51,13 @@ Scenario: Marshal into a JSON a transaction proposal
 	Then I get a valid JSON
 */
 func TestMarshalProposal(t *testing.T) {
-	pvKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	key, _ := x509.MarshalPKIXPublicKey(pvKey.Public())
+	pub, _ := crypto.GenerateKeys()
 
-	kp, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(key))
+	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 	prop, _ := NewProposal(kp)
 	b, err := json.Marshal(prop)
 	assert.Nil(t, err)
-	assert.Equal(t, fmt.Sprintf("{\"shared_emitter_keys\":{\"encrypted_private_key\":\"%s\",\"public_key\":\"%s\"}}", hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(key)), string(b))
+	assert.Equal(t, fmt.Sprintf("{\"shared_emitter_keys\":{\"encrypted_private_key\":\"%s\",\"public_key\":\"%s\"}}", hex.EncodeToString([]byte("encPvKey")), pub), string(b))
 }
 
 /*
@@ -73,7 +71,7 @@ func TestNew(t *testing.T) {
 	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
 	pv, _ := x509.MarshalECPrivateKey(key)
 
-	kp, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(pub))
+	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(kp)
 
 	addr := crypto.HashString("address")
@@ -103,13 +101,13 @@ Scenario: Create a new transaction with an invalid address
 */
 func TestNewWithInvalidAddress(t *testing.T) {
 	_, err := New("", KeychainType, map[string]string{}, time.Now(), "", "", "", Proposal{}, "")
-	assert.EqualError(t, err, "transaction: hash is empty")
+	assert.EqualError(t, err, "transaction: address hash is empty")
 
 	_, err = New("abc", KeychainType, map[string]string{}, time.Now(), "", "", "", Proposal{}, "")
-	assert.EqualError(t, err, "transaction: hash is not in hexadecimal format")
+	assert.EqualError(t, err, "transaction: address hash is not in hexadecimal format")
 
 	_, err = New(hex.EncodeToString([]byte("abc")), KeychainType, map[string]string{}, time.Now(), "", "", "", Proposal{}, "")
-	assert.EqualError(t, err, "transaction: hash is not valid")
+	assert.EqualError(t, err, "transaction: address hash is not valid")
 }
 
 /*
@@ -262,7 +260,7 @@ func TestCheckTransactionIntegrity(t *testing.T) {
 	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
 	pv, _ := x509.MarshalECPrivateKey(key)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(sk)
 
 	txRaw := Transaction{
@@ -299,7 +297,7 @@ func TestCheckTransactionIntegrityWithInvalidHash(t *testing.T) {
 	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
 	pv, _ := x509.MarshalECPrivateKey(key)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(sk)
 
 	raw, _ := json.Marshal(Transaction{
@@ -334,7 +332,7 @@ func TestCheckTransactionIntegrityWithInvalidSignature(t *testing.T) {
 	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
 	pv, _ := x509.MarshalECPrivateKey(key)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(sk)
 
 	txRaw := Transaction{
@@ -374,7 +372,7 @@ func TestAddMining(t *testing.T) {
 	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
 	pv, _ := x509.MarshalECPrivateKey(key)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(sk)
 
 	raw, _ := json.Marshal(Transaction{
@@ -421,7 +419,7 @@ func TestAddMiningWithoutConfirmations(t *testing.T) {
 	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
 	pv, _ := x509.MarshalECPrivateKey(key)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(sk)
 
 	raw, _ := json.Marshal(Transaction{
@@ -465,7 +463,7 @@ func TestCheckChainIntegrity(t *testing.T) {
 	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
 	pv, _ := x509.MarshalECPrivateKey(key)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(sk)
 
 	tx1 := Transaction{
@@ -541,7 +539,7 @@ func TestCheckChainIntegrityWithInvalidTime(t *testing.T) {
 	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
 	pv, _ := x509.MarshalECPrivateKey(key)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(sk)
 
 	tx0 := Transaction{
@@ -590,7 +588,7 @@ func TestChainTransaction(t *testing.T) {
 	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
 	pv, _ := x509.MarshalECPrivateKey(key)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(sk)
 
 	tx1 := Transaction{
@@ -650,7 +648,7 @@ func TestChainTransactionWithInvalidTimestamp(t *testing.T) {
 	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
 	pv, _ := x509.MarshalECPrivateKey(key)
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(sk)
 
 	txTime1 := time.Now()
@@ -716,7 +714,7 @@ func TestCheckMasterValidation(t *testing.T) {
 	sig, _ := crypto.Sign(string(b), hex.EncodeToString(pv))
 	v.minerSig = sig
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(sk)
 
 	tx := Transaction{
@@ -769,7 +767,7 @@ func TestCheckMasterValidationWithInvalidPOW(t *testing.T) {
 	sig, _ := crypto.Sign(string(b), hex.EncodeToString(pv))
 	v.minerSig = sig
 
-	sk, _ := shared.NewKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	sk, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
 	prop, _ := NewProposal(sk)
 
 	raw, _ := json.Marshal(Transaction{

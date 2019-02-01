@@ -2,6 +2,8 @@ package crypto
 
 import (
 	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/x509"
 	"encoding/hex"
 	"errors"
@@ -46,4 +48,13 @@ func IsPrivateKey(pvKey string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+//GenerateKeys (TEST PURPOSE)
+func GenerateKeys() (string, string) {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
+	pv, _ := x509.MarshalECPrivateKey(key)
+
+	return hex.EncodeToString(pub), hex.EncodeToString(pv)
 }

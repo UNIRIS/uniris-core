@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-//NewTransactionHandler creates a new transaction HTTP handler
+//NewTransactionHandler creates a new HTTP handler for the transaction endpoints
 func NewTransactionHandler(r *gin.RouterGroup, internalPort int) {
 	r.GET("/transaction/:addr/status/:hash", getTransactionStatus(internalPort))
 }

@@ -5,8 +5,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
+
+	"github.com/uniris/uniris-core/pkg/shared"
 
 	"github.com/gin-gonic/gin"
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
@@ -14,13 +17,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-//NewAccountHandler creates a new account HTTP handler
-func NewAccountHandler(apiGroup *gin.RouterGroup, intServerPort int, sharedPubk string) {
-	apiGroup.GET("/account/:hash", getAccount(intServerPort, sharedPubk))
-	apiGroup.POST("/account", createAccount(intServerPort, sharedPubk))
+//NewAccountHandler creates a new HTTP handler for the account endpoints
+func NewAccountHandler(apiGroup *gin.RouterGroup, intServerPort int, sharedSrv shared.Service) {
+	apiGroup.GET("/account/:hash", getAccount(intServerPort, sharedSrv))
+	apiGroup.POST("/account", createAccount(intServerPort, sharedSrv))
 }
 
-func getAccount(intServerPort int, sharedPubk string) func(c *gin.Context) {
+func getAccount(intServerPort int, sharedSrv shared.Service) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		hash := c.Param("hash")
 		if _, err := hex.DecodeString(hash); err != nil {
@@ -34,7 +37,12 @@ func getAccount(intServerPort int, sharedPubk string) func(c *gin.Context) {
 			return
 		}
 
-		if err := crypto.VerifySignature(hash, sharedPubk, sig); err != nil {
+		emKeys, err := sharedSrv.ListSharedEmitterKeyPairs()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+
+		if err := crypto.VerifySignature(hash, emKeys.RequestKey(), sig); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("request signature: %s", err.Error())})
 			return
 		}
@@ -65,7 +73,7 @@ func getAccount(intServerPort int, sharedPubk string) func(c *gin.Context) {
 	}
 }
 
-func createAccount(intServerPort int, sharedPubk string) func(c *gin.Context) {
+func createAccount(intServerPort int, sharedSrv shared.Service) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		var form struct {
@@ -93,11 +101,18 @@ func createAccount(intServerPort int, sharedPubk string) func(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("signature request: %s", err.Error())})
 			return
 		}
+
+		lastMinerKeys, err := sharedSrv.GetSharedMinerKeys()
+		log.Print(err)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+
 		formBytes, _ := json.Marshal(map[string]string{
 			"encrypted_id":       form.EncryptedID,
 			"encrypted_keychain": form.EncryptedKeychain,
 		})
-		if err := crypto.VerifySignature(string(formBytes), sharedPubk, form.Signature); err != nil {
+		if err := crypto.VerifySignature(string(formBytes), lastMinerKeys.PublicKey(), form.Signature); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("signature request: %s", err.Error())})
 			return
 		}
