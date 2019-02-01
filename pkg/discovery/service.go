@@ -22,7 +22,7 @@ type Repository interface {
 //Service handle the gossip spread and discovery of the network
 type Service struct {
 	repo  Repository
-	pInfo PeerInformer
+	mon   PeerMonitor
 	pNet  PeerNetworker
 	cli   Client
 	notif Notifier
@@ -36,12 +36,12 @@ type Notifier interface {
 }
 
 //NewService creates the gossip handler
-func NewService(repo Repository, cli Client, notif Notifier, pNet PeerNetworker, pInfo PeerInformer) Service {
+func NewService(repo Repository, cli Client, notif Notifier, pNet PeerNetworker, mon PeerMonitor) Service {
 	return Service{
 		repo:  repo,
 		cli:   cli,
 		notif: notif,
-		pInfo: pInfo,
+		mon:   mon,
 		pNet:  pNet,
 	}
 }
@@ -86,7 +86,7 @@ func (s Service) Gossip(localPeer Peer, seeds []PeerIdentity, ticker *time.Ticke
 
 //StoreLocalPeer gets peer info and store it as owned peer
 func (s Service) StoreLocalPeer(pbKey string, port int, ver string) (p Peer, err error) {
-	lon, lat, ip, _, _, err := getPeerSystemInfo(s.pInfo)
+	lon, lat, ip, _, _, err := getPeerSystemInfo(s.mon)
 	if err != nil {
 		return
 	}
@@ -152,7 +152,7 @@ func (s Service) refreshLocalPeer(p Peer, sp []PeerIdentity) error {
 		return err
 	}
 
-	_, _, _, cpu, space, err := getPeerSystemInfo(s.pInfo)
+	_, _, _, cpu, space, err := getPeerSystemInfo(s.mon)
 	if err != nil {
 		return err
 	}

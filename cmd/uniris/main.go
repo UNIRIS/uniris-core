@@ -11,11 +11,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uniris/uniris-core/pkg/transport/amqp"
+
 	"github.com/gin-gonic/gin"
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/discovery"
 	"github.com/uniris/uniris-core/pkg/shared"
 	memstorage "github.com/uniris/uniris-core/pkg/storage/mem"
+	"github.com/uniris/uniris-core/pkg/storage/redis"
 	"github.com/uniris/uniris-core/pkg/system"
 	"github.com/uniris/uniris-core/pkg/transaction"
 	memtransport "github.com/uniris/uniris-core/pkg/transport/mem"
@@ -129,6 +132,13 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 			Destination: &conf.services.discovery.seeds,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
+			Name:        "discovery-db-type",
+			EnvVar:      "UNIRIS_DISCOVERY_DB_TYPE",
+			Value:       "mem",
+			Usage:       "Database instance type",
+			Destination: &conf.services.discovery.db.dbType,
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
 			Name:        "discovery-db-host",
 			EnvVar:      "UNIRIS_DISCOVERY_DB_PORT",
 			Value:       "localhost",
@@ -139,42 +149,49 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 			Name:        "discovery-db-port",
 			Value:       6379,
 			EnvVar:      "UNIRIS_DISCOVERY_DB_PORT",
-			Usage:       "Redis instance port",
+			Usage:       "Database instance port",
 			Destination: &conf.services.discovery.db.port,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
 			Name:        "discovery-db-password",
 			EnvVar:      "UNIRIS_DISCOVERY_DB_PWD",
-			Usage:       "Redis instance password",
+			Usage:       "Database instance password",
 			Destination: &conf.services.discovery.db.pwd,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
-			Name:        "discovery-amqp-host",
-			EnvVar:      "UNIRIS_DISCOVERY_AMQP_HOST",
+			Name:        "discovery-notif-type",
+			EnvVar:      "UNIRIS_DISCOVERY_NOTIF_TYPE",
+			Value:       "mem",
+			Usage:       "Notifier instance type",
+			Destination: &conf.services.discovery.notif.notifType,
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:        "discovery-notif-host",
+			EnvVar:      "UNIRIS_DISCOVERY_NOTIF_HOST",
 			Value:       "localhost",
-			Usage:       "AMQP instance hostname",
-			Destination: &conf.services.discovery.amqp.host,
+			Usage:       "Notifier instance hostname",
+			Destination: &conf.services.discovery.notif.host,
 		}),
 		altsrc.NewIntFlag(cli.IntFlag{
-			Name:        "discovery-amqp-port",
-			EnvVar:      "UNIRIS_DISCOVERY_AMQP_PORT",
+			Name:        "discovery-notif-port",
+			EnvVar:      "UNIRIS_DISCOVERY_NOTIF_PORT",
 			Value:       5672,
-			Usage:       "AMQP instance port",
-			Destination: &conf.services.discovery.amqp.port,
+			Usage:       "Notifier instance port",
+			Destination: &conf.services.discovery.notif.port,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
-			Name:        "discovery-amqp-user",
-			EnvVar:      "UNIRIS_DISCOVERY_AMQP_USER",
+			Name:        "discovery-notif-user",
+			EnvVar:      "UNIRIS_DISCOVERY_NOTIF_USER",
 			Value:       "guest",
-			Usage:       "AMQP instance user",
-			Destination: &conf.services.discovery.amqp.user,
+			Usage:       "Notifier instance user",
+			Destination: &conf.services.discovery.notif.user,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
-			Name:        "discovery-amqp-password",
-			EnvVar:      "UNIRIS_DISCOVERY_AMQP_PWD",
+			Name:        "discovery-notif-password",
+			EnvVar:      "UNIRIS_DISCOVERY_NOTIF_PWD",
 			Value:       "guest",
-			Usage:       "AMQP instance password",
-			Destination: &conf.services.discovery.amqp.password,
+			Usage:       "Notifier instance password",
+			Destination: &conf.services.discovery.notif.password,
 		}),
 		altsrc.NewIntFlag(cli.IntFlag{
 			Name:        "datamining-port",
@@ -221,11 +238,11 @@ func startAPI(conf unirisConf, sharedSrv shared.Service) {
 }
 
 func startDatamining(conf unirisConf, sharedSrv shared.Service) {
-	var pInfo discovery.PeerInformer
+	var pInfo discovery.PeerMonitor
 	if conf.networkType == "private" {
-		pInfo = system.NewPeerInformer(true, conf.networkInterface)
+		pInfo = system.NewPeerMonitor(true, conf.networkInterface)
 	} else {
-		pInfo = system.NewPeerInformer(false, "")
+		pInfo = system.NewPeerMonitor(false, "")
 	}
 
 	ip, err := pInfo.IP()
@@ -280,19 +297,35 @@ func startDiscovery(conf unirisConf) {
 	log.Print("------------------------------")
 	log.Printf("Port: %d", conf.services.discovery.port)
 
-	db := memstorage.NewDiscoveryDatabase()
+	var db discovery.Repository
+	if conf.services.discovery.db.dbType == "redis" {
+		redisDB, err := redis.NewDiscoveryDatabase(conf.services.discovery.db.host, conf.services.discovery.db.port, conf.services.discovery.db.pwd)
+		if err != nil {
+			panic(err)
+		}
+		db = redisDB
+	} else {
+		db = memstorage.NewDiscoveryDatabase()
+	}
+
+	var notif discovery.Notifier
+	if conf.services.discovery.notif.notifType == "amqp" {
+		notif = amqp.NewDiscoveryNotifier(conf.services.discovery.notif.host, conf.services.discovery.notif.user, conf.services.discovery.notif.password, conf.services.discovery.notif.port)
+	} else {
+		notif = memtransport.NewGossipNotifier()
+	}
+
 	pnet := system.NewPeerNetworker()
 
-	var pInfo discovery.PeerInformer
+	var mon discovery.PeerMonitor
 	if conf.networkType == "private" {
-		pInfo = system.NewPeerInformer(true, conf.networkInterface)
+		mon = system.NewPeerMonitor(true, conf.networkInterface)
 	} else {
-		pInfo = system.NewPeerInformer(false, "")
+		mon = system.NewPeerMonitor(false, "")
 	}
 
 	cli := rpc.NewDiscoveryClient()
-	notif := memtransport.NewGossipNotifier()
-	discoverySrv := discovery.NewService(db, cli, notif, pnet, pInfo)
+	discoverySrv := discovery.NewService(db, cli, notif, pnet, mon)
 
 	go startDiscoveryServer(discoverySrv, conf.services.discovery.port)
 
@@ -366,15 +399,17 @@ type unirisConf struct {
 			port  int
 			seeds string
 			db    struct {
-				host string
-				port int
-				pwd  string
+				dbType string
+				host   string
+				port   int
+				pwd    string
 			}
-			amqp struct {
-				host     string
-				port     int
-				user     string
-				password string
+			notif struct {
+				notifType string
+				host      string
+				port      int
+				user      string
+				password  string
 			}
 		}
 		datamining struct {

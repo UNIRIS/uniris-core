@@ -11,13 +11,13 @@ var ErrNTPFailure = errors.New("Could not get reply from ntp servers")
 //BootstrapingMinTime is the necessary minimum time on seconds to finish learning about the network
 const BootstrapingMinTime = 1800
 
-//PeerNetworker is the interface that provides methods to get the peer network information
+//PeerNetworker is the interface that provides methods to get the peer network monrmation
 type PeerNetworker interface {
 	CheckNtpState() error
 	CheckInternetState() error
 }
 
-type PeerInformer interface {
+type PeerMonitor interface {
 
 	//GeoPosition retrieves the peer's geographic position
 	GeoPosition() (lon float64, lat float64, err error)
@@ -31,23 +31,23 @@ type PeerInformer interface {
 	IP() (net.IP, error)
 }
 
-func getPeerSystemInfo(info PeerInformer) (lon float64, lat float64, ip net.IP, cpu string, space float64, err error) {
-	lon, lat, err = info.GeoPosition()
+func getPeerSystemInfo(mon PeerMonitor) (lon float64, lat float64, ip net.IP, cpu string, space float64, err error) {
+	lon, lat, err = mon.GeoPosition()
 	if err != nil {
 		return
 	}
 
-	ip, err = info.IP()
+	ip, err = mon.IP()
 	if err != nil {
 		return
 	}
 
-	cpu, err = info.CPULoad()
+	cpu, err = mon.CPULoad()
 	if err != nil {
 		return
 	}
 
-	space, err = info.FreeDiskSpace()
+	space, err = mon.FreeDiskSpace()
 	if err != nil {
 		return
 	}

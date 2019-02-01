@@ -252,21 +252,3 @@ func (m mockClient) SendSyn(target PeerIdentity, known []Peer) (unknown []Peer, 
 func (m mockClient) SendAck(target PeerIdentity, requested []Peer) error {
 	return nil
 }
-
-type mockPeerInfo struct{}
-
-func (i mockPeerInfo) GeoPosition() (lon float64, lat float64, err error) {
-	return 10.0, 30.0, nil
-}
-
-func (i mockPeerInfo) FreeDiskSpace() (float64, error) {
-	return 200, nil
-}
-
-func (i mockPeerInfo) CPULoad() (string, error) {
-	return "", nil
-}
-
-func (i mockPeerInfo) IP() (net.IP, error) {
-	return net.ParseIP("127.0.0.1"), nil
-}

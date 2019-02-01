@@ -19,8 +19,8 @@ Scenario: Store local peer
 func TestStoreLocalPeer(t *testing.T) {
 	repo := &mockRepository{}
 	s := Service{
-		repo:  repo,
-		pInfo: mockPeerInfo{},
+		repo: repo,
+		mon:  mockPeerMonitor{},
 	}
 
 	p, err := s.StoreLocalPeer("key", 3001, "1.0")
@@ -226,7 +226,7 @@ func TestHandlingCycleReachesAfterUnreach(t *testing.T) {
 func TestSpreadGossip(t *testing.T) {
 	repo := &mockRepository{}
 	notif := &mockNotifier{}
-	s := NewService(repo, mockClient{}, notif, mockPeerNetworker{}, mockPeerInfo{})
+	s := NewService(repo, mockClient{}, notif, mockPeerNetworker{}, mockPeerMonitor{})
 
 	ownPeer := NewLocalPeer("key", net.ParseIP("127.0.0.1"), 3000, "", 30.0, 10.0)
 	seeds := []PeerIdentity{
@@ -532,4 +532,22 @@ func (pn mockPeerNetworker) CheckNtpState() error {
 
 func (pn mockPeerNetworker) CheckInternetState() error {
 	return nil
+}
+
+type mockPeerMonitor struct{}
+
+func (i mockPeerMonitor) GeoPosition() (lon float64, lat float64, err error) {
+	return 10.0, 30.0, nil
+}
+
+func (i mockPeerMonitor) FreeDiskSpace() (float64, error) {
+	return 200, nil
+}
+
+func (i mockPeerMonitor) CPULoad() (string, error) {
+	return "", nil
+}
+
+func (i mockPeerMonitor) IP() (net.IP, error) {
+	return net.ParseIP("127.0.0.1"), nil
 }
