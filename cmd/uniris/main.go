@@ -135,12 +135,12 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 			Name:        "discovery-db-type",
 			EnvVar:      "UNIRIS_DISCOVERY_DB_TYPE",
 			Value:       "mem",
-			Usage:       "Database instance type",
+			Usage:       "Database instance type (mem or redis)",
 			Destination: &conf.services.discovery.db.dbType,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
 			Name:        "discovery-db-host",
-			EnvVar:      "UNIRIS_DISCOVERY_DB_PORT",
+			EnvVar:      "UNIRIS_DISCOVERY_DB_HOST",
 			Value:       "localhost",
 			Usage:       "Database instance hostname",
 			Destination: &conf.services.discovery.db.host,
@@ -162,7 +162,7 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 			Name:        "discovery-notif-type",
 			EnvVar:      "UNIRIS_DISCOVERY_NOTIF_TYPE",
 			Value:       "mem",
-			Usage:       "Notifier instance type",
+			Usage:       "Notifier instance type (mem or amqp)",
 			Destination: &conf.services.discovery.notif.notifType,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
