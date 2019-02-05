@@ -11,16 +11,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uniris/uniris-core/pkg/consensus"
+
+	"github.com/uniris/uniris-core/pkg/shared"
+
 	"github.com/uniris/uniris-core/pkg/transport/amqp"
 
 	"github.com/gin-gonic/gin"
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/discovery"
-	"github.com/uniris/uniris-core/pkg/shared"
 	memstorage "github.com/uniris/uniris-core/pkg/storage/mem"
 	"github.com/uniris/uniris-core/pkg/storage/redis"
 	"github.com/uniris/uniris-core/pkg/system"
-	"github.com/uniris/uniris-core/pkg/transaction"
 	memtransport "github.com/uniris/uniris-core/pkg/transport/mem"
 	"github.com/uniris/uniris-core/pkg/transport/rest"
 	"github.com/uniris/uniris-core/pkg/transport/rpc"
@@ -71,12 +73,12 @@ func main() {
 		fmt.Printf("Network: %s\n", conf.networkType)
 		fmt.Printf("Network interface: %s\n", conf.networkInterface)
 
-		sharedRepo := memstorage.NewSharedDatabase()
-		sharedSrv := shared.NewService(sharedRepo)
+		techDB := memstorage.NewTechDatabase()
+		poolR := rpc.NewPoolRequester(techDB)
 
-		go startDiscovery(conf)
-		go startDatamining(conf, sharedSrv)
-		startAPI(conf, sharedSrv)
+		go startInternalServer(conf, techDB, poolR)
+		go startExternalServer(conf, techDB, poolR)
+		startAPI(conf, techDB)
 
 		return nil
 	}
@@ -118,105 +120,99 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 			Usage:       "Name of the network interface when type of network is private",
 			Destination: &conf.networkInterface,
 		}),
-		altsrc.NewIntFlag(cli.IntFlag{
-			Name:        "discovery-port",
-			EnvVar:      "UNIRIS_DISCOVERY_PORT",
-			Value:       4000,
-			Usage:       "Discovery service port",
-			Destination: &conf.services.discovery.port,
-		}),
 		altsrc.NewStringFlag(cli.StringFlag{
 			Name:        "discovery-seeds",
 			EnvVar:      "UNIRIS_DISCOVERY_SEEDS",
 			Usage:       "List of the seeds peers to bootstrap the miner `IP:PORT:PUBLIC_KEY;IP:PORT:PUBLIC_KEY`",
-			Destination: &conf.services.discovery.seeds,
+			Destination: &conf.discoverySeeds,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
 			Name:        "discovery-db-type",
 			EnvVar:      "UNIRIS_DISCOVERY_DB_TYPE",
 			Value:       "mem",
-			Usage:       "Database instance type (mem or redis)",
-			Destination: &conf.services.discovery.db.dbType,
+			Usage:       "Discovery database instance type (mem or redis)",
+			Destination: &conf.discoveryDatabase.dbType,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
 			Name:        "discovery-db-host",
 			EnvVar:      "UNIRIS_DISCOVERY_DB_HOST",
 			Value:       "localhost",
-			Usage:       "Database instance hostname",
-			Destination: &conf.services.discovery.db.host,
+			Usage:       "Discovery database instance hostname",
+			Destination: &conf.discoveryDatabase.host,
 		}),
 		altsrc.NewIntFlag(cli.IntFlag{
 			Name:        "discovery-db-port",
 			Value:       6379,
 			EnvVar:      "UNIRIS_DISCOVERY_DB_PORT",
-			Usage:       "Database instance port",
-			Destination: &conf.services.discovery.db.port,
+			Usage:       "Discovery database instance port",
+			Destination: &conf.discoveryDatabase.port,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
 			Name:        "discovery-db-password",
 			EnvVar:      "UNIRIS_DISCOVERY_DB_PWD",
-			Usage:       "Database instance password",
-			Destination: &conf.services.discovery.db.pwd,
+			Usage:       "Discovery database instance password",
+			Destination: &conf.discoveryDatabase.pwd,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
-			Name:        "discovery-notif-type",
-			EnvVar:      "UNIRIS_DISCOVERY_NOTIF_TYPE",
+			Name:        "bus-type",
+			EnvVar:      "UNIRIS_BUS_TYPE",
 			Value:       "mem",
-			Usage:       "Notifier instance type (mem or amqp)",
-			Destination: &conf.services.discovery.notif.notifType,
+			Usage:       "Bus instance type (mem or amqp)",
+			Destination: &conf.bus.busType,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
-			Name:        "discovery-notif-host",
-			EnvVar:      "UNIRIS_DISCOVERY_NOTIF_HOST",
+			Name:        "bus-host",
+			EnvVar:      "UNIRIS_BUS_HOST",
 			Value:       "localhost",
-			Usage:       "Notifier instance hostname",
-			Destination: &conf.services.discovery.notif.host,
+			Usage:       "BUS instance hostname",
+			Destination: &conf.bus.host,
 		}),
 		altsrc.NewIntFlag(cli.IntFlag{
-			Name:        "discovery-notif-port",
-			EnvVar:      "UNIRIS_DISCOVERY_NOTIF_PORT",
+			Name:        "bus-port",
+			EnvVar:      "UNIRIS_BUS_PORT",
 			Value:       5672,
-			Usage:       "Notifier instance port",
-			Destination: &conf.services.discovery.notif.port,
+			Usage:       "Bus instance port",
+			Destination: &conf.bus.port,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
-			Name:        "discovery-notif-user",
-			EnvVar:      "UNIRIS_DISCOVERY_NOTIF_USER",
+			Name:        "bus-user",
+			EnvVar:      "UNIRIS_BUS_USER",
 			Value:       "guest",
-			Usage:       "Notifier instance user",
-			Destination: &conf.services.discovery.notif.user,
+			Usage:       "Bus instance user",
+			Destination: &conf.bus.user,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
-			Name:        "discovery-notif-password",
-			EnvVar:      "UNIRIS_DISCOVERY_NOTIF_PWD",
+			Name:        "bus-password",
+			EnvVar:      "UNIRIS_BUS_PWD",
 			Value:       "guest",
-			Usage:       "Notifier instance password",
-			Destination: &conf.services.discovery.notif.password,
+			Usage:       "Bus instance password",
+			Destination: &conf.bus.password,
 		}),
 		altsrc.NewIntFlag(cli.IntFlag{
-			Name:        "datamining-port",
-			EnvVar:      "UNIRIS_DATAMINING_PORT",
+			Name:        "external-grpc-port",
+			EnvVar:      "UNIRIS_EXT_GRPC_PORT",
 			Value:       5000,
-			Usage:       "Datamining port",
-			Destination: &conf.services.datamining.externalPort,
+			Usage:       "External GRPC port to communicate with other miners",
+			Destination: &conf.grpcExternalPort,
 		}),
 		altsrc.NewIntFlag(cli.IntFlag{
-			Name:        "datamining-internal-port",
+			Name:        "internal-grpc-port",
+			EnvVar:      "UNIRIS_INT_GRPC_PORT",
 			Value:       3009,
-			Usage:       "Datamining internal port",
+			Usage:       "Internal GRPC port",
 			Hidden:      true,
-			Destination: &conf.services.datamining.internalPort,
+			Destination: &conf.grpcInternalPort,
 		}),
 		altsrc.NewIntFlag(cli.IntFlag{
-			Name:        "api-port",
+			Name:        "http-port",
 			Value:       8080,
-			Usage:       "API port",
-			Destination: &conf.services.api.port,
+			Usage:       "HTTP port for the API",
+			Destination: &conf.httpPort,
 		}),
 	}
 }
 
-func startAPI(conf unirisConf, sharedSrv shared.Service) {
+func startAPI(conf unirisConf, techDB shared.TechDatabaseReader) {
 	r := gin.Default()
 
 	staticDir, _ := filepath.Abs("../../web/static")
@@ -229,117 +225,115 @@ func startAPI(conf unirisConf, sharedSrv shared.Service) {
 
 	apiRouter := r.Group("/api")
 	{
-		rest.NewAccountHandler(apiRouter, conf.services.datamining.internalPort, sharedSrv)
-		rest.NewTransactionHandler(apiRouter, conf.services.datamining.internalPort)
-		rest.NewSharedHandler(apiRouter, conf.services.datamining.internalPort)
+		rest.NewAccountHandler(apiRouter, conf.grpcInternalPort, techDB)
+		rest.NewTransactionHandler(apiRouter, conf.grpcInternalPort)
+		rest.NewSharedHandler(apiRouter, conf.grpcInternalPort)
 	}
 
-	r.Run(fmt.Sprintf(":%d", conf.services.api.port))
+	r.Run(fmt.Sprintf(":%d", conf.httpPort))
 }
 
-func startDatamining(conf unirisConf, sharedSrv shared.Service) {
-	var pInfo discovery.PeerMonitor
-	if conf.networkType == "private" {
-		pInfo = system.NewPeerMonitor(true, conf.networkInterface)
-	} else {
-		pInfo = system.NewPeerMonitor(false, "")
-	}
-
-	ip, err := pInfo.IP()
-	if err != nil {
-		panic(err)
-	}
-
-	txDb := memstorage.NewTransactionDatabase()
-	lockDb := memstorage.NewLockDatabase()
-
-	poolReq := rpc.NewPoolRequester(sharedSrv)
-	poolRetr := rpc.NewPoolRetriever(sharedSrv)
-
-	poolFinderSrv := transaction.NewPoolFindingService(poolRetr)
-	miningSrv := transaction.NewMiningService(poolReq, poolFinderSrv, sharedSrv, ip.String(), conf.publicKey, conf.privateKey)
-	storeSrv := transaction.NewStorageService(txDb, miningSrv)
-	lockSrv := transaction.NewLockService(lockDb)
-
-	go func() {
-		lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", conf.services.datamining.internalPort))
-		if err != nil {
-			panic(err)
-		}
-		grpcServer := grpc.NewServer()
-
-		intSrv := rpc.NewInternalServer(poolFinderSrv, miningSrv, sharedSrv)
-		api.RegisterInternalServiceServer(grpcServer, intSrv)
-		log.Printf("Internal GRPC Server listening on %d", conf.services.datamining.internalPort)
-		if err := grpcServer.Serve(lis); err != nil {
-			panic(err)
-		}
-	}()
-
-	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", conf.services.datamining.externalPort))
+func startInternalServer(conf unirisConf, techDB shared.TechDatabaseReader, poolR consensus.PoolRequester) {
+	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", conf.grpcInternalPort))
 	if err != nil {
 		panic(err)
 	}
 	grpcServer := grpc.NewServer()
 
-	txSrv := rpc.NewTransactionServer(storeSrv, lockSrv, miningSrv, sharedSrv)
-	api.RegisterTransactionServiceServer(grpcServer, txSrv)
-
-	log.Printf("Transaction GRPC Server listening on %d", conf.services.datamining.externalPort)
+	srv := rpc.NewInternalServer(techDB, poolR)
+	api.RegisterInternalServiceServer(grpcServer, srv)
+	fmt.Printf("Internal service listening on %d\n", conf.grpcInternalPort)
 	if err := grpcServer.Serve(lis); err != nil {
 		panic(err)
 	}
 }
 
-func startDiscovery(conf unirisConf) {
-	log.Print("------------------------------")
-	log.Print("DISCOVERY SERVICE STARTING...")
-	log.Print("------------------------------")
-	log.Printf("Port: %d", conf.services.discovery.port)
-
-	var db discovery.Repository
-	if conf.services.discovery.db.dbType == "redis" {
-		redisDB, err := redis.NewDiscoveryDatabase(conf.services.discovery.db.host, conf.services.discovery.db.port, conf.services.discovery.db.pwd)
-		if err != nil {
-			panic(err)
-		}
-		db = redisDB
-	} else {
-		db = memstorage.NewDiscoveryDatabase()
-	}
-
-	var notif discovery.Notifier
-	if conf.services.discovery.notif.notifType == "amqp" {
-		notif = amqp.NewDiscoveryNotifier(conf.services.discovery.notif.host, conf.services.discovery.notif.user, conf.services.discovery.notif.password, conf.services.discovery.notif.port)
-	} else {
-		notif = memtransport.NewGossipNotifier()
-	}
-
-	pnet := system.NewPeerNetworker()
-
-	var mon discovery.PeerMonitor
-	if conf.networkType == "private" {
-		mon = system.NewPeerMonitor(true, conf.networkInterface)
-	} else {
-		mon = system.NewPeerMonitor(false, "")
-	}
-
-	cli := rpc.NewDiscoveryClient()
-	discoverySrv := discovery.NewService(db, cli, notif, pnet, mon)
-
-	go startDiscoveryServer(discoverySrv, conf.services.discovery.port)
-
-	peer, err := discoverySrv.StoreLocalPeer(conf.publicKey, conf.services.discovery.port, conf.version)
+func startExternalServer(conf unirisConf, techDB shared.TechDatabaseReader, poolR consensus.PoolRequester) {
+	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", conf.grpcExternalPort))
 	if err != nil {
 		panic(err)
 	}
-	log.Print("Local peer stored")
+	grpcServer := grpc.NewServer()
 
-	startGossip(peer, discoverySrv, conf)
+	chainDB := memstorage.NewchainDatabase()
+	lockDB := memstorage.NewLockDatabase()
+
+	api.RegisterChainServiceServer(grpcServer, rpc.NewChainServer(chainDB, techDB, poolR))
+	api.RegisterMiningServiceServer(grpcServer, rpc.NewMiningServer(techDB, poolR, conf.publicKey, conf.privateKey))
+	api.RegisterLockServiceServer(grpcServer, rpc.NewLockServer(lockDB, techDB))
+
+	var discoveryDB discovery.Database
+	if conf.discoveryDatabase.dbType == "redis" {
+		redisDB, err := redis.NewDiscoveryDatabase(conf.discoveryDatabase.host, conf.discoveryDatabase.port, conf.discoveryDatabase.pwd)
+		if err != nil {
+			panic(err)
+		}
+		discoveryDB = redisDB
+	} else {
+		discoveryDB = memstorage.NewDiscoveryDatabase()
+	}
+
+	var notif discovery.Notifier
+	if conf.bus.busType == "amqp" {
+		notif = amqp.NewDiscoveryNotifier(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port)
+	} else {
+		notif = &memtransport.DiscoveryNotifier{}
+	}
+	api.RegisterDiscoveryServiceServer(grpcServer, rpc.NewDiscoveryServer(discoveryDB, notif))
+	go startDiscovery(conf, discoveryDB, notif)
+
+	fmt.Printf("External service listening on %d\n", conf.grpcExternalPort)
+	if err := grpcServer.Serve(lis); err != nil {
+		panic(err)
+	}
+}
+
+func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Notifier) {
+
+	netCheck := system.NewNetworkChecker(conf.grpcInternalPort, conf.grpcExternalPort)
+
+	var systemReader discovery.SystemReader
+	if conf.networkType == "private" {
+		systemReader = system.NewReader(true, conf.networkInterface)
+	} else {
+		systemReader = system.NewReader(false, "")
+	}
+
+	roundMessenger := rpc.NewGossipRoundMessenger()
+	ip, err := systemReader.IP()
+	if err != nil {
+		panic(err)
+	}
+	lon, lat, err := systemReader.GeoPosition()
+	if err != nil {
+		panic(err)
+	}
+
+	selfPeer := discovery.NewSelfPeer(conf.publicKey, ip, conf.grpcExternalPort, conf.version, lon, lat)
+
+	timer := time.NewTicker(time.Second * 3)
+	log.Print("Gossip running...")
+	seeds := getSeeds(conf)
+	for range timer.C {
+		c, err := discovery.Gossip(selfPeer, seeds, db, netCheck, systemReader, roundMessenger, notif)
+		if err != nil {
+			timer.Stop()
+			panic(err)
+		}
+		for _, p := range c.Discoveries {
+			log.Printf("New peer discovered: %s", p.String())
+		}
+		for _, pID := range c.Reaches {
+			log.Printf("New peer reached: %s", pID.Endpoint())
+		}
+		for _, pID := range c.Unreaches {
+			log.Printf("Peer unreachable: %s", pID.Endpoint())
+		}
+	}
 }
 
 func getSeeds(conf unirisConf) (seeds []discovery.PeerIdentity) {
-	seedsConf := strings.Split(conf.services.discovery.seeds, ";")
+	seedsConf := strings.Split(conf.discoverySeeds, ";")
 	for _, s := range seedsConf {
 		seedItems := strings.Split(s, ":")
 		ip := net.ParseIP(seedItems[0])
@@ -348,33 +342,6 @@ func getSeeds(conf unirisConf) (seeds []discovery.PeerIdentity) {
 		seeds = append(seeds, discovery.NewPeerIdentity(ip, port, key))
 	}
 	return
-}
-
-func startDiscoveryServer(discoverySrv discovery.Service, discoveryPort int) {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", discoveryPort))
-	if err != nil {
-		panic(err)
-	}
-	grpcServer := grpc.NewServer()
-	api.RegisterDiscoveryServiceServer(grpcServer, rpc.NewDiscoveryServer(discoverySrv))
-	log.Printf("Discovery GRPC server listening on %d", discoveryPort)
-	if err := grpcServer.Serve(lis); err != nil {
-		panic(err)
-	}
-}
-
-func startGossip(p discovery.Peer, discoverySrv discovery.Service, conf unirisConf) {
-	timer := time.NewTicker(time.Second * 3)
-	log.Print("Gossip running...")
-	seeds := getSeeds(conf)
-	abortChan, err := discoverySrv.Gossip(p, seeds, timer)
-	if err != nil {
-		panic(err)
-	}
-
-	for err := range abortChan {
-		log.Fatalf("Gossip aborted - Error: %s", err.Error())
-	}
 }
 
 type unirisConf struct {
@@ -391,30 +358,21 @@ type unirisConf struct {
 		privateKey string
 		publicKey  string
 	}
-	services struct {
-		api struct {
-			port int
-		}
-		discovery struct {
-			port  int
-			seeds string
-			db    struct {
-				dbType string
-				host   string
-				port   int
-				pwd    string
-			}
-			notif struct {
-				notifType string
-				host      string
-				port      int
-				user      string
-				password  string
-			}
-		}
-		datamining struct {
-			internalPort int
-			externalPort int
-		}
+	grpcInternalPort int
+	grpcExternalPort int
+	httpPort         int
+	bus              struct {
+		busType  string
+		host     string
+		port     int
+		user     string
+		password string
+	}
+	discoverySeeds    string
+	discoveryDatabase struct {
+		dbType string
+		host   string
+		port   int
+		pwd    string
 	}
 }
