@@ -14,7 +14,6 @@ import (
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/shared"
-	"github.com/uniris/uniris-core/pkg/transaction"
 	"github.com/uniris/uniris-core/pkg/transport/rpc"
 	"google.golang.org/grpc"
 )
@@ -77,38 +76,25 @@ func TestGetTransactionStatusUnknown(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	txRepo := &mockTxRepository{}
-	lockRepo := &mockLockRepository{}
-	sharedRepo := &mockSharedRepo{}
+	techDB := &mockTechDB{}
+	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
+	techDB.minerKeys = append(techDB.minerKeys, minerKey)
 
-	encPv, _ := crypto.Encrypt(pv, pub)
-	minerKP, _ := shared.NewMinerKeyPair(pub, pv)
-	emKP, _ := shared.NewEmitterKeyPair(encPv, pub)
-	sharedRepo.emKeys = []shared.EmitterKeyPair{emKP}
-	sharedRepo.minerKeys = minerKP
+	chainDB := &mockChainDB{}
 
-	poolR := &mockPoolRequester{
-		repo: txRepo,
-	}
+	pr := rpc.NewPoolRequester(techDB)
 
-	sharedSrv := shared.NewService(sharedRepo)
-	poolingSrv := transaction.NewPoolFindingService(rpc.NewPoolRetriever(sharedSrv))
-	miningSrv := transaction.NewMiningService(poolR, poolingSrv, sharedSrv, "127.0.0.1", pub, pv)
-
-	storageSrv := transaction.NewStorageService(txRepo, miningSrv)
-	lockSrv := transaction.NewLockService(lockRepo)
-
-	txSrv := rpc.NewTransactionServer(storageSrv, lockSrv, miningSrv, sharedSrv)
+	chainSrv := rpc.NewChainServer(chainDB, techDB, pr)
+	intSrv := rpc.NewInternalServer(techDB, pr)
 
 	//Start transaction server
 	lisTx, _ := net.Listen("tcp", ":3545")
 	defer lisTx.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterTransactionServiceServer(grpcServer, txSrv)
+	api.RegisterChainServiceServer(grpcServer, chainSrv)
 	go grpcServer.Serve(lisTx)
 
 	//Start internal server
-	intSrv := rpc.NewInternalServer(poolingSrv, miningSrv, sharedSrv)
 	lisInt, _ := net.Listen("tcp", ":1717")
 	defer lisInt.Close()
 	grpcServerInt := grpc.NewServer()

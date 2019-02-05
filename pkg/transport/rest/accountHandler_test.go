@@ -14,6 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uniris/uniris-core/pkg/chain"
+	"github.com/uniris/uniris-core/pkg/consensus"
+
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/shared"
 	"google.golang.org/grpc"
@@ -21,7 +24,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/uniris/uniris-core/pkg/crypto"
-	"github.com/uniris/uniris-core/pkg/transaction"
 	"github.com/uniris/uniris-core/pkg/transport/rpc"
 )
 
@@ -34,7 +36,7 @@ Scenario: Get account request with an ID hash not a valid hash
 func TestGetAccountWhenInvalidHash(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 3545, shared.Service{})
+	NewAccountHandler(apiGroup, 3545, &mockTechDB{})
 
 	path := fmt.Sprintf("http://localhost:3000/api/account/abc")
 	req, _ := http.NewRequest("GET", path, nil)
@@ -57,7 +59,7 @@ Scenario: Get account request with an invalid idSignature
 func TestGetAccountWhenInvalidSignature(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 3545, shared.Service{})
+	NewAccountHandler(apiGroup, 3545, &mockTechDB{})
 
 	path1 := fmt.Sprintf("http://localhost:3000/api/account/%s", crypto.HashString("abc"))
 	req1, _ := http.NewRequest("GET", path1, nil)
@@ -100,33 +102,26 @@ func TestGetAccountWhenIDNotExist(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	encPv, _ := crypto.Encrypt(pv, pub)
-	minerKP, _ := shared.NewMinerKeyPair(pub, pv)
-	emKP, _ := shared.NewEmitterKeyPair(encPv, pub)
+	techDB := &mockTechDB{}
+	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
+	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("ov")), pub)
+	techDB.emKeys = append(techDB.emKeys, emKey)
 
-	txRepo := &mockTxRepository{}
-	lockRepo := &mockLockRepository{}
-	sharedRepo := &mockSharedRepo{}
-	sharedRepo.emKeys = []shared.EmitterKeyPair{emKP}
-	sharedRepo.minerKeys = minerKP
-	poolR := &mockPoolRequester{}
+	chainDB := &mockChainDB{}
+	pr := &mockPoolRequester{
+		repo: chainDB,
+	}
 
-	sharedSrv := shared.NewService(sharedRepo)
-	poolingSrv := transaction.NewPoolFindingService(rpc.NewPoolRetriever(sharedSrv))
-	miningSrv := transaction.NewMiningService(poolR, poolingSrv, sharedSrv, "127.0.0.1", pub, pv)
-
-	storageSrv := transaction.NewStorageService(txRepo, miningSrv)
-	lockSrv := transaction.NewLockService(lockRepo)
-
-	txSrv := rpc.NewTransactionServer(storageSrv, lockSrv, miningSrv, sharedSrv)
+	chainSrv := rpc.NewChainServer(chainDB, techDB, pr)
+	intSrv := rpc.NewInternalServer(techDB, pr)
 
 	lisTx, _ := net.Listen("tcp", ":3545")
 	defer lisTx.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterTransactionServiceServer(grpcServer, txSrv)
+	api.RegisterChainServiceServer(grpcServer, chainSrv)
 	go grpcServer.Serve(lisTx)
 
-	intSrv := rpc.NewInternalServer(poolingSrv, miningSrv, sharedSrv)
 	lisInt, _ := net.Listen("tcp", ":1717")
 	defer lisInt.Close()
 	grpcServerInt := grpc.NewServer()
@@ -135,7 +130,7 @@ func TestGetAccountWhenIDNotExist(t *testing.T) {
 
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 1717, sharedSrv)
+	NewAccountHandler(apiGroup, 1717, techDB)
 
 	idHash := crypto.HashString("abc")
 	encIDHash, _ := crypto.Encrypt(idHash, pub)
@@ -163,34 +158,26 @@ Scenario: Get account request with a Keychain not existing
 func TestGetAccountWhenKeychainNotExist(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	txRepo := &mockTxRepository{}
-	lockRepo := &mockLockRepository{}
-	poolR := &mockPoolRequester{}
+	chainDB := &mockChainDB{}
+	techDB := &mockTechDB{}
+	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
+	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("ov")), pub)
+	techDB.emKeys = append(techDB.emKeys, emKey)
 
-	sharedRepo := &mockSharedRepo{}
-	encPv, _ := crypto.Encrypt(pv, pub)
-	minerKP, _ := shared.NewMinerKeyPair(pub, pv)
-	emKP, _ := shared.NewEmitterKeyPair(encPv, pub)
-	sharedRepo.emKeys = []shared.EmitterKeyPair{emKP}
-	sharedRepo.minerKeys = minerKP
+	pr := rpc.NewPoolRequester(techDB)
 
-	sharedSrv := shared.NewService(sharedRepo)
-	poolingSrv := transaction.NewPoolFindingService(rpc.NewPoolRetriever(sharedSrv))
-	miningSrv := transaction.NewMiningService(poolR, poolingSrv, sharedSrv, "127.0.0.1", pub, pv)
+	chainSrv := rpc.NewChainServer(chainDB, techDB, pr)
+	intSrv := rpc.NewInternalServer(techDB, pr)
 
-	storageSrv := transaction.NewStorageService(txRepo, miningSrv)
-	lockSrv := transaction.NewLockService(lockRepo)
-
-	txSrv := rpc.NewTransactionServer(storageSrv, lockSrv, miningSrv, sharedSrv)
 	//Start transaction server
 	lisTx, _ := net.Listen("tcp", ":3545")
 	defer lisTx.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterTransactionServiceServer(grpcServer, txSrv)
+	api.RegisterChainServiceServer(grpcServer, chainSrv)
 	go grpcServer.Serve(lisTx)
 
 	//Start internal server
-	intSrv := rpc.NewInternalServer(poolingSrv, miningSrv, sharedSrv)
 	lisInt, _ := net.Listen("tcp", ":1717")
 	defer lisInt.Close()
 	grpcServerInt := grpc.NewServer()
@@ -200,7 +187,7 @@ func TestGetAccountWhenKeychainNotExist(t *testing.T) {
 	//Start API
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 1717, sharedSrv)
+	NewAccountHandler(apiGroup, 1717, techDB)
 
 	//Create transactions
 	encAddr, _ := crypto.Encrypt(hex.EncodeToString([]byte("addr")), pub)
@@ -210,43 +197,25 @@ func TestGetAccountWhenKeychainNotExist(t *testing.T) {
 		"encrypted_address_by_id":    encAddr,
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aes_key")),
 	}
+	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPV")), pub)
 	idHash := crypto.HashString("abc")
-	txIDRaw, _ := json.Marshal(txRaw{
-		Address: crypto.HashString("idHash"),
-		Data:    idData,
-		Proposal: txProp{
-			SharedEmitterKeys: txSharedKeys{
-				EncryptedPrivateKey: hex.EncodeToString([]byte("encPV")),
-				PublicKey:           pub,
-			},
-		},
-		Timestamp: time.Now().Unix(),
-		Type:      int(transaction.IDType),
-		PublicKey: pub,
-	})
-	idSig, _ := crypto.Sign(string(txIDRaw), pv)
-	txIDSigned, _ := json.Marshal(txSigned{
-		Address: crypto.HashString("idHash"),
-		Data:    idData,
-		Proposal: txProp{
-			SharedEmitterKeys: txSharedKeys{
-				EncryptedPrivateKey: hex.EncodeToString([]byte("encPV")),
-				PublicKey:           pub,
-			},
-		},
-		Timestamp:        time.Now().Unix(),
-		Type:             int(transaction.IDType),
-		PublicKey:        pub,
-		EmitterSignature: idSig,
-		Signature:        idSig,
-	})
+	idTxRaw := map[string]interface{}{
+		"address":                 idHash,
+		"data":                    idData,
+		"timestamp":               time.Now().Unix(),
+		"type":                    chain.IDTransactionType,
+		"public_key":              pub,
+		"em_shared_keys_proposal": prop,
+	}
+	idtxBytes, _ := json.Marshal(idTxRaw)
+	idSig, _ := crypto.Sign(string(idtxBytes), pv)
+	idTxRaw["signature"] = idSig
+	idTxRaw["em_signature"] = idSig
+	idtxBytes, _ = json.Marshal(idTxRaw)
 
-	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPV")), pub)
-	prop, _ := transaction.NewProposal(kp)
-
-	idTx, _ := transaction.New(idHash, transaction.IDType, idData, time.Now(), pub, idSig, idSig, prop, crypto.HashBytes(txIDSigned))
-	id, _ := transaction.NewID(idTx)
-	txRepo.StoreID(id)
+	idTx, _ := chain.NewTransaction(idHash, chain.IDTransactionType, idData, time.Now(), pub, prop, idSig, idSig, crypto.HashBytes(idtxBytes))
+	id, _ := chain.NewID(idTx)
+	chainDB.WriteID(id)
 
 	encIDHash, _ := crypto.Encrypt(idHash, pub)
 	sig, _ := crypto.Sign(encIDHash, pv)
@@ -273,35 +242,26 @@ Scenario: Get an account after its creation
 func TestGetAccount(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	txRepo := &mockTxRepository{}
-	lockRepo := &mockLockRepository{}
-	poolR := &mockPoolRequester{}
+	chainDB := &mockChainDB{}
+	techDB := &mockTechDB{}
+	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
+	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("ov")), pub)
+	techDB.emKeys = append(techDB.emKeys, emKey)
 
-	sharedRepo := &mockSharedRepo{}
-	encPv, _ := crypto.Encrypt(pv, pub)
-	minerKP, _ := shared.NewMinerKeyPair(pub, pv)
-	emKP, _ := shared.NewEmitterKeyPair(encPv, pub)
-	sharedRepo.emKeys = []shared.EmitterKeyPair{emKP}
-	sharedRepo.minerKeys = minerKP
+	pr := rpc.NewPoolRequester(techDB)
 
-	sharedSrv := shared.NewService(sharedRepo)
-	poolingSrv := transaction.NewPoolFindingService(rpc.NewPoolRetriever(sharedSrv))
-	miningSrv := transaction.NewMiningService(poolR, poolingSrv, sharedSrv, "127.0.0.1", pub, pv)
-
-	storageSrv := transaction.NewStorageService(txRepo, miningSrv)
-	lockSrv := transaction.NewLockService(lockRepo)
-
-	txSrv := rpc.NewTransactionServer(storageSrv, lockSrv, miningSrv, sharedSrv)
+	chainSrv := rpc.NewChainServer(chainDB, techDB, pr)
+	intSrv := rpc.NewInternalServer(techDB, pr)
 
 	//Start transaction server
 	lisTx, _ := net.Listen("tcp", ":3545")
 	defer lisTx.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterTransactionServiceServer(grpcServer, txSrv)
+	api.RegisterChainServiceServer(grpcServer, chainSrv)
 	go grpcServer.Serve(lisTx)
 
 	//Start internal server
-	intSrv := rpc.NewInternalServer(poolingSrv, miningSrv, sharedSrv)
 	lisInt, _ := net.Listen("tcp", ":1717")
 	defer lisInt.Close()
 	grpcServerInt := grpc.NewServer()
@@ -311,7 +271,7 @@ func TestGetAccount(t *testing.T) {
 	//Start API
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 1717, sharedSrv)
+	NewAccountHandler(apiGroup, 1717, techDB)
 
 	//Create transactions
 	addr := crypto.HashString("addr")
@@ -322,82 +282,48 @@ func TestGetAccount(t *testing.T) {
 		"encrypted_address_by_id":    encAddr,
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aes_key")),
 	}
+	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPV")), pub)
+
 	idHash := crypto.HashString("abc")
-	txIDRaw, _ := json.Marshal(txRaw{
-		Address: idHash,
-		Data:    idData,
-		Proposal: txProp{
-			SharedEmitterKeys: txSharedKeys{
-				EncryptedPrivateKey: hex.EncodeToString([]byte("encPV")),
-				PublicKey:           pub,
-			},
-		},
-		Timestamp: time.Now().Unix(),
-		Type:      int(transaction.IDType),
-		PublicKey: pub,
-	})
-	idSig, _ := crypto.Sign(string(txIDRaw), pv)
-	txIDSigned, _ := json.Marshal(txSigned{
-		Address: idHash,
-		Data:    idData,
-		Proposal: txProp{
-			SharedEmitterKeys: txSharedKeys{
-				EncryptedPrivateKey: hex.EncodeToString([]byte("encPV")),
-				PublicKey:           pub,
-			},
-		},
-		Timestamp:        time.Now().Unix(),
-		Type:             int(transaction.IDType),
-		PublicKey:        pub,
-		EmitterSignature: idSig,
-		Signature:        idSig,
-	})
+	idTxRaw := map[string]interface{}{
+		"addr":                    idHash,
+		"data":                    idData,
+		"timestamp":               time.Now().Unix(),
+		"type":                    chain.IDTransactionType,
+		"public_key":              pub,
+		"em_shared_keys_proposal": prop,
+	}
+	idtxBytes, _ := json.Marshal(idTxRaw)
+	idSig, _ := crypto.Sign(string(idtxBytes), pv)
+	idTxRaw["signature"] = idSig
+	idTxRaw["em_signature"] = idSig
+	idtxBytes, _ = json.Marshal(idTxRaw)
 
-	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPV")), pub)
-	prop, _ := transaction.NewProposal(kp)
-
-	idTx, _ := transaction.New(idHash, transaction.IDType, idData, time.Now(), pub, idSig, idSig, prop, crypto.HashBytes(txIDSigned))
-	id, _ := transaction.NewID(idTx)
-	txRepo.StoreID(id)
+	idTx, _ := chain.NewTransaction(idHash, chain.IDTransactionType, idData, time.Now(), pub, prop, idSig, idSig, crypto.HashBytes(idtxBytes))
+	id, _ := chain.NewID(idTx)
+	chainDB.WriteID(id)
 
 	keychainData := map[string]string{
 		"encrypted_address": encAddr,
 		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
 	}
 
-	txKeychainRaw, _ := json.Marshal(txRaw{
-		Address: addr,
-		Data:    keychainData,
-		Proposal: txProp{
-			SharedEmitterKeys: txSharedKeys{
-				EncryptedPrivateKey: hex.EncodeToString([]byte("encPV")),
-				PublicKey:           pub,
-			},
-		},
-		Timestamp: time.Now().Unix(),
-		Type:      int(transaction.KeychainType),
-		PublicKey: pub,
-	})
-	keychainSig, _ := crypto.Sign(string(txKeychainRaw), pv)
-	txKeychainSigned, _ := json.Marshal(txSigned{
-		Address: addr,
-		Data:    keychainData,
-		Proposal: txProp{
-			SharedEmitterKeys: txSharedKeys{
-				EncryptedPrivateKey: hex.EncodeToString([]byte("encPV")),
-				PublicKey:           pub,
-			},
-		},
-		Timestamp:        time.Now().Unix(),
-		Type:             int(transaction.KeychainType),
-		PublicKey:        pub,
-		EmitterSignature: keychainSig,
-		Signature:        keychainSig,
-	})
-
-	keychainTx, _ := transaction.New(addr, transaction.KeychainType, keychainData, time.Now(), pub, keychainSig, keychainSig, prop, crypto.HashBytes(txKeychainSigned))
-	keychain, _ := transaction.NewKeychain(keychainTx)
-	txRepo.StoreKeychain(keychain)
+	keychainTxRaw := map[string]interface{}{
+		"addr":                    crypto.HashString("addr"),
+		"data":                    keychainData,
+		"timestamp":               time.Now().Unix(),
+		"type":                    chain.KeychainTransactionType,
+		"public_key":              pub,
+		"em_shared_keys_proposal": prop,
+	}
+	txKeychainBytes, _ := json.Marshal(keychainTxRaw)
+	keychainSig, _ := crypto.Sign(string(txKeychainBytes), pv)
+	keychainTxRaw["signature"] = keychainSig
+	keychainTxRaw["em_signature"] = keychainSig
+	txKeychainBytes, _ = json.Marshal(keychainTxRaw)
+	keychainTx, _ := chain.NewTransaction(addr, chain.KeychainTransactionType, keychainData, time.Now(), pub, prop, keychainSig, keychainSig, crypto.HashBytes(txKeychainBytes))
+	keychain, _ := chain.NewKeychain(keychainTx)
+	chainDB.WriteKeychain(keychain)
 
 	encIDHash, _ := crypto.Encrypt(idHash, pub)
 	sig, _ := crypto.Sign(encIDHash, pv)
@@ -426,7 +352,7 @@ Scenario: Create account request with an invalid encrypted ID
 func TestCreationAccountWhenInvalidID(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 3545, shared.Service{})
+	NewAccountHandler(apiGroup, 3545, &mockTechDB{})
 
 	form, _ := json.Marshal(map[string]string{
 		"encrypted_id":       "abc",
@@ -456,7 +382,7 @@ Scenario: Create account request with an invalid encrypted Keychain
 func TestCreationAccountWhenKeychainInvalid(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 3545, shared.Service{})
+	NewAccountHandler(apiGroup, 3545, &mockTechDB{})
 
 	form, _ := json.Marshal(map[string]string{
 		"encrypted_id":       hex.EncodeToString([]byte("id")),
@@ -488,17 +414,13 @@ func TestCreationAccountWhenSignatureInvalid(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	sharedRepo := &mockSharedRepo{}
-	encPv, _ := crypto.Encrypt(pv, pub)
-	minerKP, _ := shared.NewMinerKeyPair(pub, pv)
-	emKP, _ := shared.NewEmitterKeyPair(encPv, pub)
-	sharedRepo.emKeys = []shared.EmitterKeyPair{emKP}
-	sharedRepo.minerKeys = minerKP
+	techDB := &mockTechDB{}
+	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
+	techDB.minerKeys = append(techDB.minerKeys, minerKey)
 
-	sharedSrv := shared.NewService(sharedRepo)
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 3545, sharedSrv)
+	NewAccountHandler(apiGroup, 3545, techDB)
 
 	form, _ := json.Marshal(map[string]string{
 		"encrypted_id":       hex.EncodeToString([]byte("id")),
@@ -563,39 +485,34 @@ Scenario: Create an account including ID and keychain transaction
 func TestCreateAccount(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	txRepo := &mockTxRepository{}
-	lockRepo := &mockLockRepository{}
+	chainDB := &mockChainDB{}
+	techDB := &mockTechDB{}
 
-	sharedRepo := &mockSharedRepo{}
-	encPv, _ := crypto.Encrypt(pv, pub)
-	minerKP, _ := shared.NewMinerKeyPair(pub, pv)
-	emKP, _ := shared.NewEmitterKeyPair(encPv, pub)
-	sharedRepo.emKeys = []shared.EmitterKeyPair{emKP}
-	sharedRepo.minerKeys = minerKP
+	encKey, _ := crypto.Encrypt(pv, pub)
+	emKey, _ := shared.NewEmitterKeyPair(encKey, pub)
+	techDB.emKeys = append(techDB.emKeys, emKey)
 
-	poolR := &mockPoolRequester{
-		repo: txRepo,
-	}
+	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
+	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	lockDB := &mockLockDB{}
 
-	sharedSrv := shared.NewService(sharedRepo)
-	poolingSrv := transaction.NewPoolFindingService(rpc.NewPoolRetriever(sharedSrv))
+	pr := rpc.NewPoolRequester(techDB)
 
-	miningSrv := transaction.NewMiningService(poolR, poolingSrv, sharedSrv, "127.0.0.1", pub, pv)
-
-	storageSrv := transaction.NewStorageService(txRepo, miningSrv)
-	lockSrv := transaction.NewLockService(lockRepo)
-
-	txSrv := rpc.NewTransactionServer(storageSrv, lockSrv, miningSrv, sharedSrv)
+	chainSrv := rpc.NewChainServer(chainDB, techDB, pr)
+	intSrv := rpc.NewInternalServer(techDB, pr)
+	miningSrv := rpc.NewMiningServer(techDB, pr, pub, pv)
+	lockSrv := rpc.NewLockServer(lockDB, techDB)
 
 	//Start transaction server
 	lisTx, _ := net.Listen("tcp", ":3545")
 	defer lisTx.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterTransactionServiceServer(grpcServer, txSrv)
+	api.RegisterChainServiceServer(grpcServer, chainSrv)
+	api.RegisterMiningServiceServer(grpcServer, miningSrv)
+	api.RegisterLockServiceServer(grpcServer, lockSrv)
 	go grpcServer.Serve(lisTx)
 
 	//Start internal server
-	intSrv := rpc.NewInternalServer(poolingSrv, miningSrv, sharedSrv)
 	lisInt, _ := net.Listen("tcp", ":1717")
 	defer lisInt.Close()
 	grpcServerInt := grpc.NewServer()
@@ -605,27 +522,25 @@ func TestCreateAccount(t *testing.T) {
 	//Start API
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 1717, sharedSrv)
+	NewAccountHandler(apiGroup, 1717, techDB)
 
 	//Create transactions
 	addr := crypto.HashString("addr")
 	encAddr, _ := crypto.Encrypt(addr, pub)
 
 	idTx := map[string]interface{}{
-		"address": crypto.HashString("abc"),
+		"addr": crypto.HashString("abc"),
 		"data": map[string]string{
 			"encrypted_address_by_robot": encAddr,
 			"encrypted_address_by_id":    encAddr,
 			"encrypted_aes_key":          hex.EncodeToString([]byte("aes_key")),
 		},
 		"timestamp":  time.Now().Unix(),
-		"type":       int(transaction.IDType),
+		"type":       int(chain.IDTransactionType),
 		"public_key": pub,
-		"proposal": map[string]interface{}{
-			"shared_emitter_keys": map[string]string{
-				"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
-				"public_key":            pub,
-			},
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
+			"public_key":            pub,
 		},
 	}
 
@@ -635,19 +550,17 @@ func TestCreateAccount(t *testing.T) {
 	idTx["em_signature"] = idSig
 
 	keychainTx := map[string]interface{}{
-		"address": addr,
+		"addr": addr,
 		"data": map[string]string{
 			"encrypted_address": encAddr,
 			"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
 		},
 		"timestamp":  time.Now().Unix(),
-		"type":       int(transaction.KeychainType),
+		"type":       int(chain.KeychainTransactionType),
 		"public_key": pub,
-		"proposal": map[string]interface{}{
-			"shared_emitter_keys": map[string]string{
-				"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
-				"public_key":            pub,
-			},
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
+			"public_key":            pub,
 		},
 	}
 
@@ -696,80 +609,67 @@ func TestCreateAccount(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	assert.Len(t, txRepo.keychains, 1)
-	assert.Equal(t, addr, txRepo.keychains[0].Address())
-	assert.Len(t, txRepo.ids, 1)
-	assert.Equal(t, crypto.HashString("abc"), txRepo.ids[0].Address())
+	assert.Len(t, chainDB.keychains, 1)
+	assert.Equal(t, addr, chainDB.keychains[0].Address())
+	assert.Len(t, chainDB.ids, 1)
+	assert.Equal(t, crypto.HashString("abc"), chainDB.ids[0].Address())
 
-}
-
-type mockSharedRepo struct {
-	emKeys    shared.EmitterKeys
-	minerKeys shared.MinerKeyPair
-}
-
-func (r mockSharedRepo) ListSharedEmitterKeyPairs() (shared.EmitterKeys, error) {
-	return r.emKeys, nil
-}
-func (r *mockSharedRepo) StoreSharedEmitterKeyPair(kp shared.EmitterKeyPair) error {
-	r.emKeys = append(r.emKeys, kp)
-	return nil
-}
-
-func (r *mockSharedRepo) GetLastSharedMinersKeyPair() (shared.MinerKeyPair, error) {
-	return r.minerKeys, nil
 }
 
 type mockPoolRequester struct {
-	stores []transaction.Transaction
-	repo   *mockTxRepository
+	stores []chain.Transaction
+	repo   *mockChainDB
 }
 
-func (pr mockPoolRequester) RequestTransactionLock(pool transaction.Pool, txLock transaction.Lock) error {
+func (pr mockPoolRequester) RequestLastTransaction(pool consensus.Pool, txAddr string, txType chain.TransactionType) (*chain.Transaction, error) {
+	return nil, nil
+}
+
+func (pr mockPoolRequester) RequestTransactionLock(pool consensus.Pool, txHash string, txAddr string) error {
 	return nil
 }
 
-func (pr mockPoolRequester) RequestTransactionUnlock(pool transaction.Pool, txLock transaction.Lock) error {
+func (pr mockPoolRequester) RequestTransactionUnlock(pool consensus.Pool, txHash string, txAddr string) error {
 	return nil
 }
 
-func (pr mockPoolRequester) RequestTransactionValidations(pool transaction.Pool, tx transaction.Transaction, masterValid transaction.MasterValidation, validChan chan<- transaction.MinerValidation) {
+func (pr mockPoolRequester) RequestTransactionValidations(pool consensus.Pool, tx chain.Transaction, minValids int, masterValid chain.MasterValidation) ([]chain.MinerValidation, error) {
 	pub, pv := crypto.GenerateKeys()
 
-	v := transaction.MinerValidation{}
 	vRaw := map[string]interface{}{
-		"status":     transaction.ValidationOK,
+		"status":     chain.ValidationOK,
 		"public_key": pub,
 		"timestamp":  time.Now().Unix(),
 	}
 	vBytes, _ := json.Marshal(vRaw)
 	sig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ = transaction.NewMinerValidation(transaction.ValidationOK, time.Now(), pub, sig)
+	v, _ := chain.NewMinerValidation(chain.ValidationOK, time.Now(), pub, sig)
 
-	validChan <- v
+	return []chain.MinerValidation{v}, nil
 }
 
-func (pr *mockPoolRequester) RequestTransactionStorage(pool transaction.Pool, tx transaction.Transaction, ackChan chan<- bool) {
+func (pr *mockPoolRequester) RequestTransactionStorage(pool consensus.Pool, minReplicas int, tx chain.Transaction) error {
 	pr.stores = append(pr.stores, tx)
-	if tx.Type() == transaction.KeychainType {
-		k, _ := transaction.NewKeychain(tx)
+	if tx.TransactionType() == chain.KeychainTransactionType {
+		k, _ := chain.NewKeychain(tx)
 		pr.repo.keychains = append(pr.repo.keychains, k)
 	}
-	if tx.Type() == transaction.IDType {
-		id, _ := transaction.NewID(tx)
+	if tx.TransactionType() == chain.IDTransactionType {
+		id, err := chain.NewID(tx)
+		log.Print(err)
 		pr.repo.ids = append(pr.repo.ids, id)
 	}
-	ackChan <- true
+	return nil
 }
 
-type mockTxRepository struct {
-	pendings  []transaction.Transaction
-	kos       []transaction.Transaction
-	keychains []transaction.Keychain
-	ids       []transaction.ID
+type mockChainDB struct {
+	pendings  []chain.Transaction
+	kos       []chain.Transaction
+	keychains []chain.Keychain
+	ids       []chain.ID
 }
 
-func (r mockTxRepository) FindPendingTransaction(txHash string) (*transaction.Transaction, error) {
+func (r mockChainDB) PendingByHash(txHash string) (*chain.Transaction, error) {
 	for _, tx := range r.pendings {
 		if tx.TransactionHash() == txHash {
 			return &tx, nil
@@ -778,7 +678,7 @@ func (r mockTxRepository) FindPendingTransaction(txHash string) (*transaction.Tr
 	return nil, nil
 }
 
-func (r mockTxRepository) GetKeychain(txAddr string) (*transaction.Keychain, error) {
+func (r mockChainDB) LastKeychain(txAddr string) (*chain.Keychain, error) {
 	sort.Slice(r.keychains, func(i, j int) bool {
 		return r.keychains[i].Timestamp().Unix() > r.keychains[j].Timestamp().Unix()
 	})
@@ -789,30 +689,27 @@ func (r mockTxRepository) GetKeychain(txAddr string) (*transaction.Keychain, err
 	return nil, nil
 }
 
-func (r mockTxRepository) FindKeychainByHash(txHash string) (*transaction.Keychain, error) {
-	for _, tx := range r.keychains {
-		if tx.TransactionHash() == txHash {
-			return &tx, nil
-		}
-	}
-	return nil, nil
-}
-
-func (r mockTxRepository) FindLastKeychain(addr string) (*transaction.Keychain, error) {
-
+func (r mockChainDB) FullKeychain(txAddr string) (*chain.Keychain, error) {
 	sort.Slice(r.keychains, func(i, j int) bool {
 		return r.keychains[i].Timestamp().Unix() > r.keychains[j].Timestamp().Unix()
 	})
 
+	if len(r.keychains) > 0 {
+		return &r.keychains[0], nil
+	}
+	return nil, nil
+}
+
+func (r mockChainDB) KeychainByHash(txHash string) (*chain.Keychain, error) {
 	for _, tx := range r.keychains {
-		if tx.Address() == addr {
+		if tx.TransactionHash() == txHash {
 			return &tx, nil
 		}
 	}
 	return nil, nil
 }
 
-func (r mockTxRepository) FindIDByHash(txHash string) (*transaction.ID, error) {
+func (r mockChainDB) IDByHash(txHash string) (*chain.ID, error) {
 	for _, tx := range r.ids {
 		if tx.TransactionHash() == txHash {
 			return &tx, nil
@@ -821,7 +718,7 @@ func (r mockTxRepository) FindIDByHash(txHash string) (*transaction.ID, error) {
 	return nil, nil
 }
 
-func (r mockTxRepository) FindIDByAddress(addr string) (*transaction.ID, error) {
+func (r mockChainDB) ID(addr string) (*chain.ID, error) {
 	for _, tx := range r.ids {
 		if tx.Address() == addr {
 			return &tx, nil
@@ -830,7 +727,7 @@ func (r mockTxRepository) FindIDByAddress(addr string) (*transaction.ID, error) 
 	return nil, nil
 }
 
-func (r mockTxRepository) FindKOTransaction(txHash string) (*transaction.Transaction, error) {
+func (r mockChainDB) KOByHash(txHash string) (*chain.Transaction, error) {
 	for _, tx := range r.kos {
 		if tx.TransactionHash() == txHash {
 			return &tx, nil
@@ -839,45 +736,51 @@ func (r mockTxRepository) FindKOTransaction(txHash string) (*transaction.Transac
 	return nil, nil
 }
 
-func (r *mockTxRepository) StoreKeychain(kc transaction.Keychain) error {
+func (r *mockChainDB) WriteKeychain(kc chain.Keychain) error {
 	r.keychains = append(r.keychains, kc)
 	return nil
 }
 
-func (r *mockTxRepository) StoreID(id transaction.ID) error {
+func (r *mockChainDB) WriteID(id chain.ID) error {
 	r.ids = append(r.ids, id)
 	return nil
 }
 
-func (r *mockTxRepository) StoreKO(tx transaction.Transaction) error {
+func (r *mockChainDB) WriteKO(tx chain.Transaction) error {
 	r.kos = append(r.kos, tx)
 	return nil
 }
 
-type mockLockRepository struct {
-	locks []transaction.Lock
-}
-
-func (r *mockLockRepository) StoreLock(l transaction.Lock) error {
-	r.locks = append(r.locks, l)
+func (r *mockChainDB) WritePending(tx chain.Transaction) error {
+	r.pendings = append(r.pendings, tx)
 	return nil
 }
 
-func (r *mockLockRepository) RemoveLock(l transaction.Lock) error {
-	pos := r.findLockPosition(l)
+type mockLockDB struct {
+	locks []map[string]string
+}
+
+func (l *mockLockDB) WriteLock(txHash string, txAddr string) error {
+	l.locks = append(l.locks, map[string]string{
+		"transaction_address": txAddr,
+		"transaction_hash":    txHash,
+	})
+	return nil
+}
+func (l *mockLockDB) RemoveLock(txHash string, txAddr string) error {
+	pos := l.findLockPosition(txHash, txAddr)
 	if pos > -1 {
-		r.locks = append(r.locks[:pos], r.locks[pos+1:]...)
+		l.locks = append(l.locks[:pos], l.locks[pos+1:]...)
 	}
 	return nil
 }
-
-func (r mockLockRepository) ContainsLock(l transaction.Lock) (bool, error) {
-	return r.findLockPosition(l) > -1, nil
+func (l mockLockDB) ContainsLock(txHash string, txAddr string) (bool, error) {
+	return l.findLockPosition(txHash, txAddr) > -1, nil
 }
 
-func (r mockLockRepository) findLockPosition(l transaction.Lock) int {
-	for i, lock := range r.locks {
-		if lock.TransactionHash() == l.TransactionHash() && l.MasterRobotKey() == lock.MasterRobotKey() {
+func (l mockLockDB) findLockPosition(txHash string, txAddr string) int {
+	for i, lock := range l.locks {
+		if lock["transaction_hash"] == txHash && lock["transaction_address"] == txAddr {
 			return i
 		}
 	}
@@ -885,27 +788,23 @@ func (r mockLockRepository) findLockPosition(l transaction.Lock) int {
 }
 
 type txSigned struct {
-	Address          string            `json:"address"`
-	Data             map[string]string `json:"data"`
-	Timestamp        int64             `json:"timestamp"`
-	Type             int               `json:"type"`
-	PublicKey        string            `json:"public_key"`
-	Proposal         txProp            `json:"proposal"`
-	Signature        string            `json:"idSignature"`
-	EmitterSignature string            `json:"em_idSignature"`
+	Address                   string            `json:"address"`
+	Data                      map[string]string `json:"data"`
+	Timestamp                 int64             `json:"timestamp"`
+	Type                      int               `json:"type"`
+	PublicKey                 string            `json:"public_key"`
+	SharedKeysEmitterProposal txSharedKeys      `json:"em_shared_keys_proposal"`
+	Signature                 string            `json:"idSignature"`
+	EmitterSignature          string            `json:"em_idSignature"`
 }
 
 type txRaw struct {
-	Address   string            `json:"address"`
-	Data      map[string]string `json:"data"`
-	Timestamp int64             `json:"timestamp"`
-	Type      int               `json:"type"`
-	PublicKey string            `json:"public_key"`
-	Proposal  txProp            `json:"proposal"`
-}
-
-type txProp struct {
-	SharedEmitterKeys txSharedKeys `json:"shared_emitter_keys"`
+	Address                   string            `json:"address"`
+	Data                      map[string]string `json:"data"`
+	Timestamp                 int64             `json:"timestamp"`
+	Type                      int               `json:"type"`
+	PublicKey                 string            `json:"public_key"`
+	SharedKeysEmitterProposal txSharedKeys      `json:"em_shared_keys_proposal"`
 }
 
 type txSharedKeys struct {
@@ -925,11 +824,9 @@ func formatLeadMiningRequest(tx txSigned, txHash string, minValidations int) *ap
 			PublicKey:        tx.PublicKey,
 			Signature:        tx.Signature,
 			EmitterSignature: tx.EmitterSignature,
-			Proposal: &api.TransactionProposal{
-				SharedEmitterKeys: &api.SharedKeyPair{
-					EncryptedPrivateKey: tx.Proposal.SharedEmitterKeys.EncryptedPrivateKey,
-					PublicKey:           tx.Proposal.SharedEmitterKeys.PublicKey,
-				},
+			SharedKeysEmitterProposal: &api.SharedKeyPair{
+				EncryptedPrivateKey: tx.SharedKeysEmitterProposal.EncryptedPrivateKey,
+				PublicKey:           tx.SharedKeysEmitterProposal.PublicKey,
 			},
 			TransactionHash: txHash,
 		},

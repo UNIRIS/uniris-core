@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -14,27 +13,109 @@ import (
 
 	"google.golang.org/grpc/status"
 
-	"github.com/uniris/uniris-core/pkg/transaction"
-
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
+	"github.com/uniris/uniris-core/pkg/chain"
+	"github.com/uniris/uniris-core/pkg/consensus"
 	"github.com/uniris/uniris-core/pkg/crypto"
 	"google.golang.org/grpc"
 )
 
-type poolR struct {
-	sharedService shared.Service
+type poolRequester struct {
+	techDB shared.TechDatabaseReader
 }
 
-//NewPoolRequester creates a new pool requester as a GRPC client
-func NewPoolRequester(sharedService shared.Service) transaction.PoolRequester {
-	return poolR{
-		sharedService: sharedService,
+//NewPoolRequester creates a new pool requester as GRPC client
+func NewPoolRequester(tDB shared.TechDatabaseReader) consensus.PoolRequester {
+	return poolRequester{
+		techDB: tDB,
 	}
 }
 
-func (pr poolR) RequestTransactionLock(pool transaction.Pool, lock transaction.Lock) error {
+func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr string, txType chain.TransactionType) (*chain.Transaction, error) {
 
-	lastMinerKeys, err := pr.sharedService.GetSharedMinerKeys()
+	lastMinersKeys, err := pr.techDB.LastMinerKeys()
+	if err != nil {
+		return nil, err
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(pool))
+
+	req := &api.LastTransactionRequest{
+		TransactionAddress: txAddr,
+		Type:               api.TransactionType(txType),
+		Timestamp:          time.Now().Unix(),
+	}
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	sig, err := crypto.Sign(string(reqBytes), lastMinersKeys.PrivateKey())
+	if err != nil {
+		return nil, err
+	}
+	req.SignatureRequest = sig
+
+	txRes := make([]chain.Transaction, 0)
+
+	for _, p := range pool {
+		go func(p consensus.PoolMember) {
+			defer wg.Done()
+
+			serverAddr := fmt.Sprintf("%s:%d", p.IP(), p.Port())
+			conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+			if err != nil {
+				fmt.Printf("GET LAST TRANSACTION - ERROR: %s\n", err.Error())
+				return
+			}
+			defer conn.Close()
+			cli := api.NewChainServiceClient(conn)
+			res, err := cli.GetLastTransaction(context.Background(), req)
+			if err != nil {
+				grpcErr, _ := status.FromError(err)
+				fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s\n", grpcErr.Message())
+				return
+			}
+
+			fmt.Printf("GET LAST TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+
+			resBytes, err := json.Marshal(&api.LastTransactionResponse{
+				Timestamp:   res.Timestamp,
+				Transaction: res.Transaction,
+			})
+			if err != nil {
+				fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
+				return
+			}
+			if err := crypto.VerifySignature(string(resBytes), lastMinersKeys.PublicKey(), res.SignatureResponse); err != nil {
+				fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
+				return
+			}
+
+			if res.Transaction != nil {
+				tx, err := formatTransaction(res.Transaction)
+				if err != nil {
+					fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
+					return
+				}
+				txRes = append(txRes, tx)
+			}
+		}(p)
+	}
+
+	wg.Wait()
+
+	if len(txRes) == 0 {
+		return nil, nil
+	}
+
+	//TODO: consensus to implement to get the right result
+	return &txRes[0], nil
+}
+
+func (pr poolRequester) RequestTransactionLock(pool consensus.Pool, txHash string, txAddress string) error {
+
+	lastMinerKeys, err := pr.techDB.LastMinerKeys()
 	if err != nil {
 		return err
 	}
@@ -45,10 +126,9 @@ func (pr poolR) RequestTransactionLock(pool transaction.Pool, lock transaction.L
 	var ackUnlock int32
 
 	req := &api.LockRequest{
-		Address:             lock.Address(),
-		TransactionHash:     lock.TransactionHash(),
-		MasterPeerPublicKey: lock.MasterRobotKey(),
-		Timestamp:           time.Now().Unix(),
+		Address:         txAddress,
+		TransactionHash: txHash,
+		Timestamp:       time.Now().Unix(),
 	}
 	reqBytes, err := json.Marshal(req)
 	if err != nil {
@@ -61,7 +141,7 @@ func (pr poolR) RequestTransactionLock(pool transaction.Pool, lock transaction.L
 	req.SignatureRequest = sig
 
 	for _, p := range pool {
-		go func(p transaction.PoolMember) {
+		go func(p consensus.PoolMember) {
 			defer wg.Done()
 
 			serverAddr := fmt.Sprintf("%s:%d", p.IP(), p.Port())
@@ -72,7 +152,7 @@ func (pr poolR) RequestTransactionLock(pool transaction.Pool, lock transaction.L
 				return
 			}
 			defer conn.Close()
-			cli := api.NewTransactionServiceClient(conn)
+			cli := api.NewLockServiceClient(conn)
 			res, err := cli.LockTransaction(context.Background(), req)
 			if err != nil {
 				grpcErr, _ := status.FromError(err)
@@ -110,9 +190,9 @@ func (pr poolR) RequestTransactionLock(pool transaction.Pool, lock transaction.L
 	return nil
 }
 
-func (pr poolR) RequestTransactionUnlock(pool transaction.Pool, lock transaction.Lock) error {
+func (pr poolRequester) RequestTransactionUnlock(pool consensus.Pool, txHash string, txAddress string) error {
 
-	lastMinerKeys, err := pr.sharedService.GetSharedMinerKeys()
+	lastMinerKeys, err := pr.techDB.LastMinerKeys()
 	if err != nil {
 		return err
 	}
@@ -123,10 +203,9 @@ func (pr poolR) RequestTransactionUnlock(pool transaction.Pool, lock transaction
 	var ackUnlock int32
 
 	req := &api.LockRequest{
-		Address:             lock.Address(),
-		TransactionHash:     lock.TransactionHash(),
-		MasterPeerPublicKey: lock.MasterRobotKey(),
-		Timestamp:           time.Now().Unix(),
+		Address:         txAddress,
+		TransactionHash: txHash,
+		Timestamp:       time.Now().Unix(),
 	}
 	reqBytes, err := json.Marshal(req)
 	if err != nil {
@@ -139,7 +218,7 @@ func (pr poolR) RequestTransactionUnlock(pool transaction.Pool, lock transaction
 	req.SignatureRequest = sig
 
 	for _, p := range pool {
-		go func(p transaction.PoolMember) {
+		go func(p consensus.PoolMember) {
 			defer wg.Done()
 
 			serverAddr := fmt.Sprintf("%s:%d", p.IP(), p.Port())
@@ -150,7 +229,7 @@ func (pr poolR) RequestTransactionUnlock(pool transaction.Pool, lock transaction
 				return
 			}
 			defer conn.Close()
-			cli := api.NewTransactionServiceClient(conn)
+			cli := api.NewLockServiceClient(conn)
 			res, err := cli.UnlockTransaction(context.Background(), req)
 			if err != nil {
 				grpcErr, _ := status.FromError(err)
@@ -188,12 +267,11 @@ func (pr poolR) RequestTransactionUnlock(pool transaction.Pool, lock transaction
 	return nil
 }
 
-func (pr poolR) RequestTransactionValidations(pool transaction.Pool, tx transaction.Transaction, masterValid transaction.MasterValidation, validChan chan<- transaction.MinerValidation) {
+func (pr poolRequester) RequestTransactionValidations(pool consensus.Pool, tx chain.Transaction, minValids int, masterValid chain.MasterValidation) ([]chain.MinerValidation, error) {
 
-	lastMinerKeys, err := pr.sharedService.GetSharedMinerKeys()
+	lastMinerKeys, err := pr.techDB.LastMinerKeys()
 	if err != nil {
-		log.Printf("CONFIRM VALIDATION TRANSACTION REQUEST - ERROR: %s\n", err.Error())
-		return
+		return nil, fmt.Errorf("confirm validation request error: %s", err.Error())
 	}
 
 	req := &api.ConfirmValidationRequest{
@@ -203,64 +281,73 @@ func (pr poolR) RequestTransactionValidations(pool transaction.Pool, tx transact
 	}
 	reqBytes, err := json.Marshal(req)
 	if err != nil {
-		fmt.Printf("CONFIRM VALIDATION TRANSACTION REQUEST - ERROR: %s\n", err.Error())
-		return
+		return nil, fmt.Errorf("confirm validation request error: %s", err.Error())
 	}
 	sig, err := crypto.Sign(string(reqBytes), lastMinerKeys.PrivateKey())
 	if err != nil {
-		fmt.Printf("CONFIRM VALIDATION TRANSACTION REQUEST - ERROR: %s\n", err.Error())
-		return
+		return nil, fmt.Errorf("confirm validation request error: %s", err.Error())
 	}
 	req.SignatureRequest = sig
 
+	var wg sync.WaitGroup
+	wg.Add(minValids)
+
+	validations := make([]chain.MinerValidation, 0)
+
 	for _, p := range pool {
 
-		serverAddr := fmt.Sprintf("%s:%d", p.IP().String(), p.Port())
-		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
-		if err != nil {
-			grpcErr, _ := status.FromError(err)
-			fmt.Printf("CONFIRM VALIDATION TRANSACTION REQUEST - ERROR: %s\n", grpcErr.Message())
-			return
-		}
-		defer conn.Close()
-		cli := api.NewTransactionServiceClient(conn)
-		res, err := cli.ConfirmTransactionValidation(context.Background(), req)
-		if err != nil {
-			grpcErr, _ := status.FromError(err)
-			fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s\n", grpcErr.Message())
-			return
-		}
+		go func(p consensus.PoolMember) {
+			defer wg.Done()
 
-		fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+			serverAddr := fmt.Sprintf("%s:%d", p.IP().String(), p.Port())
+			conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+			if err != nil {
+				grpcErr, _ := status.FromError(err)
+				fmt.Printf("CONFIRM VALIDATION TRANSACTION REQUEST - ERROR: %s\n", grpcErr.Message())
+				return
+			}
+			defer conn.Close()
+			cli := api.NewMiningServiceClient(conn)
+			res, err := cli.ConfirmTransactionValidation(context.Background(), req)
+			if err != nil {
+				grpcErr, _ := status.FromError(err)
+				fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s\n", grpcErr.Message())
+				return
+			}
 
-		resBytes, err := json.Marshal(&api.ConfirmValidationResponse{
-			Timestamp:  res.Timestamp,
-			Validation: res.Validation,
-		})
-		if err != nil {
-			fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
-			return
-		}
-		if err := crypto.VerifySignature(string(resBytes), lastMinerKeys.PublicKey(), res.SignatureResponse); err != nil {
-			fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
-			return
-		}
+			fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
-		v, err := transaction.NewMinerValidation(transaction.ValidationStatus(res.Validation.Status), time.Unix(res.Timestamp, 0), res.Validation.PublicKey, res.Validation.Signature)
-		if err != nil {
-			return
-		}
-		validChan <- v
+			resBytes, err := json.Marshal(&api.ConfirmValidationResponse{
+				Timestamp:  res.Timestamp,
+				Validation: res.Validation,
+			})
+			if err != nil {
+				fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
+				return
+			}
+			if err := crypto.VerifySignature(string(resBytes), lastMinerKeys.PublicKey(), res.SignatureResponse); err != nil {
+				fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
+				return
+			}
+
+			v, err := chain.NewMinerValidation(chain.ValidationStatus(res.Validation.Status), time.Unix(res.Timestamp, 0), res.Validation.PublicKey, res.Validation.Signature)
+			if err != nil {
+				return
+			}
+			validations = append(validations, v)
+		}(p)
 	}
 
+	wg.Wait()
+
+	return validations, nil
 }
 
-func (pr poolR) RequestTransactionStorage(pool transaction.Pool, tx transaction.Transaction, ackChan chan<- bool) {
+func (pr poolRequester) RequestTransactionStorage(pool consensus.Pool, minStorage int, tx chain.Transaction) error {
 
-	lastMinerKeys, err := pr.sharedService.GetSharedMinerKeys()
+	lastMinerKeys, err := pr.techDB.LastMinerKeys()
 	if err != nil {
-		log.Printf("STORE TRANSACTION REQUEST - ERROR: %s\n", err.Error())
-		return
+		return fmt.Errorf("store transaction request error: %s", err.Error())
 	}
 
 	confValids := make([]*api.MinerValidation, 0)
@@ -279,48 +366,57 @@ func (pr poolR) RequestTransactionStorage(pool transaction.Pool, tx transaction.
 
 	reqBytes, err := json.Marshal(req)
 	if err != nil {
-		fmt.Printf("STORE TRANSACTION REQUEST - ERROR: %s\n", err.Error())
-		return
+		return fmt.Errorf("store transaction request error: %s", err.Error())
 	}
 	sig, err := crypto.Sign(string(reqBytes), lastMinerKeys.PrivateKey())
 	if err != nil {
-		fmt.Printf("STORE TRANSACTION REQUEST - ERROR: %s\n", err.Error())
-		return
+		return fmt.Errorf("store transaction request error: %s", err.Error())
 	}
 
 	req.SignatureRequest = sig
 
+	var wg sync.WaitGroup
+	wg.Add(minStorage)
+
 	for _, p := range pool {
-		serverAddr := fmt.Sprintf("%s:%d", p.IP().String(), p.Port())
-		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
-		if err != nil {
-			grpcErr, _ := status.FromError(err)
-			fmt.Printf("STORE TRANSACTION REQUEST - ERROR: %s\n", grpcErr.Message())
-			return
-		}
-		defer conn.Close()
-		cli := api.NewTransactionServiceClient(conn)
-		res, err := cli.StoreTransaction(context.Background(), req)
-		if err != nil {
-			grpcErr, _ := status.FromError(err)
-			fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s\n", grpcErr.Message())
-			return
-		}
+		go func(p consensus.PoolMember) {
 
-		fmt.Printf("STORE TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+			defer wg.Done()
 
-		resBytes, err := json.Marshal(&api.StoreResponse{
-			Timestamp: res.Timestamp,
-		})
-		if err != nil {
-			fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
-			return
-		}
-		if err := crypto.VerifySignature(string(resBytes), lastMinerKeys.PublicKey(), res.SignatureResponse); err != nil {
-			fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
-			return
-		}
+			serverAddr := fmt.Sprintf("%s:%d", p.IP().String(), p.Port())
+			conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
+			if err != nil {
+				grpcErr, _ := status.FromError(err)
+				fmt.Printf("STORE TRANSACTION REQUEST - ERROR: %s\n", grpcErr.Message())
+				return
+			}
+			defer conn.Close()
+			cli := api.NewChainServiceClient(conn)
+			res, err := cli.StoreTransaction(context.Background(), req)
+			if err != nil {
+				grpcErr, _ := status.FromError(err)
+				fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s\n", grpcErr.Message())
+				return
+			}
 
-		ackChan <- true
+			fmt.Printf("STORE TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+
+			resBytes, err := json.Marshal(&api.StoreResponse{
+				Timestamp: res.Timestamp,
+			})
+			if err != nil {
+				fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
+				return
+			}
+			if err := crypto.VerifySignature(string(resBytes), lastMinerKeys.PublicKey(), res.SignatureResponse); err != nil {
+				fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
+				return
+			}
+
+		}(p)
 	}
+
+	wg.Wait()
+
+	return nil
 }

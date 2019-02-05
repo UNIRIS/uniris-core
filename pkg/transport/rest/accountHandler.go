@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -18,12 +17,12 @@ import (
 )
 
 //NewAccountHandler creates a new HTTP handler for the account endpoints
-func NewAccountHandler(apiGroup *gin.RouterGroup, intServerPort int, sharedSrv shared.Service) {
-	apiGroup.GET("/account/:hash", getAccount(intServerPort, sharedSrv))
-	apiGroup.POST("/account", createAccount(intServerPort, sharedSrv))
+func NewAccountHandler(apiGroup *gin.RouterGroup, intServerPort int, techDB shared.TechDatabaseReader) {
+	apiGroup.GET("/account/:hash", getAccount(intServerPort, techDB))
+	apiGroup.POST("/account", createAccount(intServerPort, techDB))
 }
 
-func getAccount(intServerPort int, sharedSrv shared.Service) func(c *gin.Context) {
+func getAccount(intServerPort int, techDB shared.TechDatabaseReader) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		hash := c.Param("hash")
 		if _, err := hex.DecodeString(hash); err != nil {
@@ -37,7 +36,7 @@ func getAccount(intServerPort int, sharedSrv shared.Service) func(c *gin.Context
 			return
 		}
 
-		emKeys, err := sharedSrv.ListSharedEmitterKeyPairs()
+		emKeys, err := techDB.EmitterKeys()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
@@ -73,7 +72,7 @@ func getAccount(intServerPort int, sharedSrv shared.Service) func(c *gin.Context
 	}
 }
 
-func createAccount(intServerPort int, sharedSrv shared.Service) func(c *gin.Context) {
+func createAccount(intServerPort int, techDB shared.TechDatabaseReader) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		var form struct {
@@ -102,8 +101,7 @@ func createAccount(intServerPort int, sharedSrv shared.Service) func(c *gin.Cont
 			return
 		}
 
-		lastMinerKeys, err := sharedSrv.GetSharedMinerKeys()
-		log.Print(err)
+		lastMinerKeys, err := techDB.LastMinerKeys()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}

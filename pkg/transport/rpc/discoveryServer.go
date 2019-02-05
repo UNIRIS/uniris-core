@@ -12,36 +12,37 @@ import (
 )
 
 type discoverySrv struct {
-	srv discovery.Service
+	db    discovery.Database
+	notif discovery.Notifier
 }
 
-//NewDiscoveryServer creates a new GRPC discovery server
-func NewDiscoveryServer(s discovery.Service) api.DiscoveryServiceServer {
-	return discoverySrv{
-		srv: s,
+//NewDiscoveryServer creates a new GRPC server for the discovery service
+func NewDiscoveryServer(db discovery.Database, n discovery.Notifier) api.DiscoveryServiceServer {
+	return &discoverySrv{
+		db:    db,
+		notif: n,
 	}
 }
 
 func (s discoverySrv) Synchronize(ctx context.Context, req *api.SynRequest) (*api.SynResponse, error) {
 	fmt.Printf("SYN REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	reqP := make([]discovery.Peer, 0)
+	receivedPeers := make([]discovery.Peer, 0)
 	for _, p := range req.KnownPeers {
-		reqP = append(reqP, formatPeerDigest(p))
+		receivedPeers = append(receivedPeers, formatPeerDigest(p))
 	}
 
-	unknown, new, err := s.srv.ComparePeers(reqP)
+	discoveredPeers, err := s.db.DiscoveredPeers()
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-
 	unknownPeers := make([]*api.PeerDigest, 0)
-	for _, p := range unknown {
+	for _, p := range discovery.GetUnknownPeers(discoveredPeers, receivedPeers) {
 		unknownPeers = append(unknownPeers, formatPeerDigestAPI(p))
 	}
 
 	newPeers := make([]*api.PeerDiscovered, 0)
-	for _, p := range new {
+	for _, p := range discovery.GetNewPeers(discoveredPeers, receivedPeers) {
 		newPeers = append(newPeers, formatPeerDiscoveredAPI(p))
 	}
 
@@ -60,8 +61,13 @@ func (s discoverySrv) Acknowledge(ctx context.Context, req *api.AckRequest) (*ap
 		newPeers = append(newPeers, formatPeerDiscovered(p))
 	}
 
-	if err := s.srv.AcknowledgeNewPeers(newPeers); err != nil {
-		return nil, status.New(codes.Internal, err.Error()).Err()
+	for _, p := range newPeers {
+		if err := s.db.WriteDiscoveredPeer(p); err != nil {
+			return nil, status.New(codes.Internal, err.Error()).Err()
+		}
+		if err := s.notif.NotifyDiscovery(p); err != nil {
+			return nil, status.New(codes.Internal, err.Error()).Err()
+		}
 	}
 
 	return &api.AckResponse{

@@ -18,6 +18,55 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+type TransactionType int32
+
+const (
+	TransactionType_KEYCHAIN          TransactionType = 0
+	TransactionType_ID                TransactionType = 1
+	TransactionType_CONTRACT_CREATION TransactionType = 2
+)
+
+var TransactionType_name = map[int32]string{
+	0: "KEYCHAIN",
+	1: "ID",
+	2: "CONTRACT_CREATION",
+}
+var TransactionType_value = map[string]int32{
+	"KEYCHAIN":          0,
+	"ID":                1,
+	"CONTRACT_CREATION": 2,
+}
+
+func (x TransactionType) String() string {
+	return proto.EnumName(TransactionType_name, int32(x))
+}
+func (TransactionType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_common_2d6f4bb982dae8a8, []int{0}
+}
+
+type MinerValidation_ValidationStatus int32
+
+const (
+	MinerValidation_NO MinerValidation_ValidationStatus = 0
+	MinerValidation_OK MinerValidation_ValidationStatus = 1
+)
+
+var MinerValidation_ValidationStatus_name = map[int32]string{
+	0: "NO",
+	1: "OK",
+}
+var MinerValidation_ValidationStatus_value = map[string]int32{
+	"NO": 0,
+	"OK": 1,
+}
+
+func (x MinerValidation_ValidationStatus) String() string {
+	return proto.EnumName(MinerValidation_ValidationStatus_name, int32(x))
+}
+func (MinerValidation_ValidationStatus) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_common_2d6f4bb982dae8a8, []int{3, 0}
+}
+
 type SharedKeyPair struct {
 	EncryptedPrivateKey  string   `protobuf:"bytes,1,opt,name=encrypted_private_key,json=encryptedPrivateKey,proto3" json:"encrypted_private_key,omitempty"`
 	PublicKey            string   `protobuf:"bytes,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
@@ -30,7 +79,7 @@ func (m *SharedKeyPair) Reset()         { *m = SharedKeyPair{} }
 func (m *SharedKeyPair) String() string { return proto.CompactTextString(m) }
 func (*SharedKeyPair) ProtoMessage()    {}
 func (*SharedKeyPair) Descriptor() ([]byte, []int) {
-	return fileDescriptor_common_76408af446f36f92, []int{0}
+	return fileDescriptor_common_2d6f4bb982dae8a8, []int{0}
 }
 func (m *SharedKeyPair) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SharedKeyPair.Unmarshal(m, b)
@@ -64,20 +113,330 @@ func (m *SharedKeyPair) GetPublicKey() string {
 	return ""
 }
 
-func init() {
-	proto.RegisterType((*SharedKeyPair)(nil), "api.SharedKeyPair")
+type Transaction struct {
+	Address                   string            `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	Type                      TransactionType   `protobuf:"varint,2,opt,name=type,proto3,enum=api.TransactionType" json:"type,omitempty"`
+	Data                      map[string]string `protobuf:"bytes,3,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Timestamp                 int64             `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	PublicKey                 string            `protobuf:"bytes,5,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	Signature                 string            `protobuf:"bytes,6,opt,name=signature,proto3" json:"signature,omitempty"`
+	EmitterSignature          string            `protobuf:"bytes,7,opt,name=emitter_signature,json=emitterSignature,proto3" json:"emitter_signature,omitempty"`
+	SharedKeysEmitterProposal *SharedKeyPair    `protobuf:"bytes,8,opt,name=shared_keys_emitter_proposal,json=sharedKeysEmitterProposal,proto3" json:"shared_keys_emitter_proposal,omitempty"`
+	TransactionHash           string            `protobuf:"bytes,9,opt,name=transaction_hash,json=transactionHash,proto3" json:"transaction_hash,omitempty"`
+	XXX_NoUnkeyedLiteral      struct{}          `json:"-"`
+	XXX_unrecognized          []byte            `json:"-"`
+	XXX_sizecache             int32             `json:"-"`
 }
 
-func init() { proto.RegisterFile("common.proto", fileDescriptor_common_76408af446f36f92) }
+func (m *Transaction) Reset()         { *m = Transaction{} }
+func (m *Transaction) String() string { return proto.CompactTextString(m) }
+func (*Transaction) ProtoMessage()    {}
+func (*Transaction) Descriptor() ([]byte, []int) {
+	return fileDescriptor_common_2d6f4bb982dae8a8, []int{1}
+}
+func (m *Transaction) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Transaction.Unmarshal(m, b)
+}
+func (m *Transaction) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Transaction.Marshal(b, m, deterministic)
+}
+func (dst *Transaction) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Transaction.Merge(dst, src)
+}
+func (m *Transaction) XXX_Size() int {
+	return xxx_messageInfo_Transaction.Size(m)
+}
+func (m *Transaction) XXX_DiscardUnknown() {
+	xxx_messageInfo_Transaction.DiscardUnknown(m)
+}
 
-var fileDescriptor_common_76408af446f36f92 = []byte{
-	// 127 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x49, 0xce, 0xcf, 0xcd,
-	0xcd, 0xcf, 0xd3, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x4e, 0x2c, 0xc8, 0x54, 0x4a, 0xe2,
-	0xe2, 0x0d, 0xce, 0x48, 0x2c, 0x4a, 0x4d, 0xf1, 0x4e, 0xad, 0x0c, 0x48, 0xcc, 0x2c, 0x12, 0x32,
-	0xe2, 0x12, 0x4d, 0xcd, 0x4b, 0x2e, 0xaa, 0x2c, 0x28, 0x49, 0x4d, 0x89, 0x2f, 0x28, 0xca, 0x2c,
-	0x4b, 0x2c, 0x49, 0x8d, 0xcf, 0x4e, 0xad, 0x94, 0x60, 0x54, 0x60, 0xd4, 0xe0, 0x0c, 0x12, 0x86,
-	0x4b, 0x06, 0x40, 0xe4, 0xbc, 0x53, 0x2b, 0x85, 0x64, 0xb9, 0xb8, 0x0a, 0x4a, 0x93, 0x72, 0x32,
-	0x93, 0xc1, 0x0a, 0x99, 0xc0, 0x0a, 0x39, 0x21, 0x22, 0xde, 0xa9, 0x95, 0x49, 0x6c, 0x60, 0xfb,
-	0x8c, 0x01, 0x01, 0x00, 0x00, 0xff, 0xff, 0x6f, 0x00, 0xf3, 0x0c, 0x7f, 0x00, 0x00, 0x00,
+var xxx_messageInfo_Transaction proto.InternalMessageInfo
+
+func (m *Transaction) GetAddress() string {
+	if m != nil {
+		return m.Address
+	}
+	return ""
+}
+
+func (m *Transaction) GetType() TransactionType {
+	if m != nil {
+		return m.Type
+	}
+	return TransactionType_KEYCHAIN
+}
+
+func (m *Transaction) GetData() map[string]string {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+func (m *Transaction) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
+func (m *Transaction) GetPublicKey() string {
+	if m != nil {
+		return m.PublicKey
+	}
+	return ""
+}
+
+func (m *Transaction) GetSignature() string {
+	if m != nil {
+		return m.Signature
+	}
+	return ""
+}
+
+func (m *Transaction) GetEmitterSignature() string {
+	if m != nil {
+		return m.EmitterSignature
+	}
+	return ""
+}
+
+func (m *Transaction) GetSharedKeysEmitterProposal() *SharedKeyPair {
+	if m != nil {
+		return m.SharedKeysEmitterProposal
+	}
+	return nil
+}
+
+func (m *Transaction) GetTransactionHash() string {
+	if m != nil {
+		return m.TransactionHash
+	}
+	return ""
+}
+
+type MasterValidation struct {
+	PreviousTransactionMiners []string         `protobuf:"bytes,1,rep,name=previous_transaction_miners,json=previousTransactionMiners,proto3" json:"previous_transaction_miners,omitempty"`
+	ProofOfWork               string           `protobuf:"bytes,2,opt,name=proof_of_work,json=proofOfWork,proto3" json:"proof_of_work,omitempty"`
+	PreValidation             *MinerValidation `protobuf:"bytes,3,opt,name=pre_validation,json=preValidation,proto3" json:"pre_validation,omitempty"`
+	XXX_NoUnkeyedLiteral      struct{}         `json:"-"`
+	XXX_unrecognized          []byte           `json:"-"`
+	XXX_sizecache             int32            `json:"-"`
+}
+
+func (m *MasterValidation) Reset()         { *m = MasterValidation{} }
+func (m *MasterValidation) String() string { return proto.CompactTextString(m) }
+func (*MasterValidation) ProtoMessage()    {}
+func (*MasterValidation) Descriptor() ([]byte, []int) {
+	return fileDescriptor_common_2d6f4bb982dae8a8, []int{2}
+}
+func (m *MasterValidation) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_MasterValidation.Unmarshal(m, b)
+}
+func (m *MasterValidation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_MasterValidation.Marshal(b, m, deterministic)
+}
+func (dst *MasterValidation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MasterValidation.Merge(dst, src)
+}
+func (m *MasterValidation) XXX_Size() int {
+	return xxx_messageInfo_MasterValidation.Size(m)
+}
+func (m *MasterValidation) XXX_DiscardUnknown() {
+	xxx_messageInfo_MasterValidation.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MasterValidation proto.InternalMessageInfo
+
+func (m *MasterValidation) GetPreviousTransactionMiners() []string {
+	if m != nil {
+		return m.PreviousTransactionMiners
+	}
+	return nil
+}
+
+func (m *MasterValidation) GetProofOfWork() string {
+	if m != nil {
+		return m.ProofOfWork
+	}
+	return ""
+}
+
+func (m *MasterValidation) GetPreValidation() *MinerValidation {
+	if m != nil {
+		return m.PreValidation
+	}
+	return nil
+}
+
+type MinerValidation struct {
+	PublicKey            string                           `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	Status               MinerValidation_ValidationStatus `protobuf:"varint,2,opt,name=status,proto3,enum=api.MinerValidation_ValidationStatus" json:"status,omitempty"`
+	Timestamp            int64                            `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Signature            string                           `protobuf:"bytes,4,opt,name=signature,proto3" json:"signature,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                         `json:"-"`
+	XXX_unrecognized     []byte                           `json:"-"`
+	XXX_sizecache        int32                            `json:"-"`
+}
+
+func (m *MinerValidation) Reset()         { *m = MinerValidation{} }
+func (m *MinerValidation) String() string { return proto.CompactTextString(m) }
+func (*MinerValidation) ProtoMessage()    {}
+func (*MinerValidation) Descriptor() ([]byte, []int) {
+	return fileDescriptor_common_2d6f4bb982dae8a8, []int{3}
+}
+func (m *MinerValidation) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_MinerValidation.Unmarshal(m, b)
+}
+func (m *MinerValidation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_MinerValidation.Marshal(b, m, deterministic)
+}
+func (dst *MinerValidation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MinerValidation.Merge(dst, src)
+}
+func (m *MinerValidation) XXX_Size() int {
+	return xxx_messageInfo_MinerValidation.Size(m)
+}
+func (m *MinerValidation) XXX_DiscardUnknown() {
+	xxx_messageInfo_MinerValidation.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MinerValidation proto.InternalMessageInfo
+
+func (m *MinerValidation) GetPublicKey() string {
+	if m != nil {
+		return m.PublicKey
+	}
+	return ""
+}
+
+func (m *MinerValidation) GetStatus() MinerValidation_ValidationStatus {
+	if m != nil {
+		return m.Status
+	}
+	return MinerValidation_NO
+}
+
+func (m *MinerValidation) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
+func (m *MinerValidation) GetSignature() string {
+	if m != nil {
+		return m.Signature
+	}
+	return ""
+}
+
+type MinedTransaction struct {
+	Transaction          *Transaction       `protobuf:"bytes,1,opt,name=transaction,proto3" json:"transaction,omitempty"`
+	MasterValidation     *MasterValidation  `protobuf:"bytes,2,opt,name=master_validation,json=masterValidation,proto3" json:"master_validation,omitempty"`
+	ConfirmValidations   []*MinerValidation `protobuf:"bytes,3,rep,name=confirm_validations,json=confirmValidations,proto3" json:"confirm_validations,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
+	XXX_unrecognized     []byte             `json:"-"`
+	XXX_sizecache        int32              `json:"-"`
+}
+
+func (m *MinedTransaction) Reset()         { *m = MinedTransaction{} }
+func (m *MinedTransaction) String() string { return proto.CompactTextString(m) }
+func (*MinedTransaction) ProtoMessage()    {}
+func (*MinedTransaction) Descriptor() ([]byte, []int) {
+	return fileDescriptor_common_2d6f4bb982dae8a8, []int{4}
+}
+func (m *MinedTransaction) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_MinedTransaction.Unmarshal(m, b)
+}
+func (m *MinedTransaction) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_MinedTransaction.Marshal(b, m, deterministic)
+}
+func (dst *MinedTransaction) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MinedTransaction.Merge(dst, src)
+}
+func (m *MinedTransaction) XXX_Size() int {
+	return xxx_messageInfo_MinedTransaction.Size(m)
+}
+func (m *MinedTransaction) XXX_DiscardUnknown() {
+	xxx_messageInfo_MinedTransaction.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MinedTransaction proto.InternalMessageInfo
+
+func (m *MinedTransaction) GetTransaction() *Transaction {
+	if m != nil {
+		return m.Transaction
+	}
+	return nil
+}
+
+func (m *MinedTransaction) GetMasterValidation() *MasterValidation {
+	if m != nil {
+		return m.MasterValidation
+	}
+	return nil
+}
+
+func (m *MinedTransaction) GetConfirmValidations() []*MinerValidation {
+	if m != nil {
+		return m.ConfirmValidations
+	}
+	return nil
+}
+
+func init() {
+	proto.RegisterType((*SharedKeyPair)(nil), "api.SharedKeyPair")
+	proto.RegisterType((*Transaction)(nil), "api.Transaction")
+	proto.RegisterMapType((map[string]string)(nil), "api.Transaction.DataEntry")
+	proto.RegisterType((*MasterValidation)(nil), "api.MasterValidation")
+	proto.RegisterType((*MinerValidation)(nil), "api.MinerValidation")
+	proto.RegisterType((*MinedTransaction)(nil), "api.MinedTransaction")
+	proto.RegisterEnum("api.TransactionType", TransactionType_name, TransactionType_value)
+	proto.RegisterEnum("api.MinerValidation_ValidationStatus", MinerValidation_ValidationStatus_name, MinerValidation_ValidationStatus_value)
+}
+
+func init() { proto.RegisterFile("common.proto", fileDescriptor_common_2d6f4bb982dae8a8) }
+
+var fileDescriptor_common_2d6f4bb982dae8a8 = []byte{
+	// 621 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x54, 0xef, 0x6a, 0x1a, 0x41,
+	0x10, 0xef, 0x79, 0xc6, 0xc4, 0x31, 0x7f, 0x2e, 0x9b, 0x04, 0x2e, 0x69, 0x0a, 0x72, 0x50, 0xb0,
+	0x2d, 0xf8, 0xc1, 0x7e, 0x68, 0x69, 0x69, 0x20, 0x35, 0x42, 0x82, 0x44, 0xc3, 0x2a, 0x2d, 0xfd,
+	0x74, 0x6c, 0xbc, 0xb5, 0x2e, 0xf1, 0x6e, 0x97, 0xdd, 0xd5, 0x72, 0xcf, 0xd5, 0x37, 0xe8, 0x0b,
+	0x94, 0xbe, 0x51, 0x71, 0xef, 0xf4, 0xce, 0x25, 0x9f, 0xbc, 0x99, 0xf9, 0xfd, 0x66, 0x76, 0xe6,
+	0x37, 0x23, 0xec, 0x4f, 0x78, 0x1c, 0xf3, 0xa4, 0x2d, 0x24, 0xd7, 0x1c, 0xb9, 0x44, 0xb0, 0xe0,
+	0x11, 0x0e, 0x46, 0x33, 0x22, 0x69, 0xd4, 0xa7, 0xe9, 0x03, 0x61, 0x12, 0x75, 0xe0, 0x8c, 0x26,
+	0x13, 0x99, 0x0a, 0x4d, 0xa3, 0x50, 0x48, 0xb6, 0x24, 0x9a, 0x86, 0x4f, 0x34, 0xf5, 0x9d, 0xa6,
+	0xd3, 0xaa, 0xe3, 0x93, 0x4d, 0xf0, 0x21, 0x8b, 0xf5, 0x69, 0x8a, 0x5e, 0x01, 0x88, 0xc5, 0xe3,
+	0x9c, 0x4d, 0x0c, 0xb0, 0x62, 0x80, 0xf5, 0xcc, 0xd3, 0xa7, 0x69, 0xf0, 0xc7, 0x85, 0xc6, 0x58,
+	0x92, 0x44, 0x91, 0x89, 0x66, 0x3c, 0x41, 0x3e, 0xec, 0x92, 0x28, 0x92, 0x54, 0xa9, 0x3c, 0xe9,
+	0xda, 0x44, 0x2d, 0xa8, 0xea, 0x54, 0x50, 0x93, 0xe2, 0xb0, 0x73, 0xda, 0x26, 0x82, 0xb5, 0x4b,
+	0xcc, 0x71, 0x2a, 0x28, 0x36, 0x08, 0xd4, 0x86, 0x6a, 0x44, 0x34, 0xf1, 0xdd, 0xa6, 0xdb, 0x6a,
+	0x74, 0x2e, 0x6c, 0x64, 0xfb, 0x86, 0x68, 0xd2, 0x4b, 0xb4, 0x4c, 0xb1, 0xc1, 0xa1, 0x4b, 0xa8,
+	0x6b, 0x16, 0x53, 0xa5, 0x49, 0x2c, 0xfc, 0x6a, 0xd3, 0x69, 0xb9, 0xb8, 0x70, 0x58, 0x0d, 0xec,
+	0x58, 0x0d, 0xac, 0xc8, 0x8a, 0xfd, 0x4c, 0x88, 0x5e, 0x48, 0xea, 0xd7, 0xb2, 0xe8, 0xc6, 0x81,
+	0xde, 0xc1, 0x31, 0x8d, 0x99, 0xd6, 0x54, 0x86, 0x05, 0x6a, 0xd7, 0xa0, 0xbc, 0x3c, 0x30, 0xda,
+	0x80, 0x47, 0x70, 0xa9, 0xcc, 0xbc, 0x57, 0x95, 0x54, 0xb8, 0x26, 0x0a, 0xc9, 0x05, 0x57, 0x64,
+	0xee, 0xef, 0x35, 0x9d, 0x56, 0xa3, 0x83, 0x4c, 0x3f, 0x5b, 0xc2, 0xe0, 0x73, 0xb5, 0x36, 0x55,
+	0x2f, 0x63, 0x3d, 0xe4, 0x24, 0xf4, 0x06, 0x3c, 0x5d, 0xf4, 0x1e, 0xce, 0x88, 0x9a, 0xf9, 0x75,
+	0xf3, 0x80, 0xa3, 0x92, 0xff, 0x96, 0xa8, 0xd9, 0xc5, 0x07, 0xa8, 0x6f, 0x46, 0x83, 0x3c, 0x70,
+	0x0b, 0x65, 0x57, 0x9f, 0xe8, 0x14, 0x76, 0x96, 0x64, 0xbe, 0xa0, 0xb9, 0x88, 0x99, 0xf1, 0xa9,
+	0xf2, 0xd1, 0x09, 0x7e, 0x3b, 0xe0, 0xdd, 0x13, 0xa5, 0xa9, 0xfc, 0x46, 0xe6, 0x2c, 0x22, 0x46,
+	0xc9, 0x2b, 0x78, 0x29, 0x24, 0x5d, 0x32, 0xbe, 0x50, 0x61, 0xf9, 0x05, 0x31, 0x4b, 0xa8, 0x5c,
+	0xa9, 0xeb, 0xb6, 0xea, 0xf8, 0x7c, 0x0d, 0x29, 0xe9, 0x73, 0x6f, 0x00, 0x28, 0x80, 0x03, 0x21,
+	0x39, 0x9f, 0x86, 0x7c, 0x1a, 0xfe, 0xe2, 0xf2, 0x29, 0x2f, 0xdb, 0x30, 0xce, 0xe1, 0xf4, 0x3b,
+	0x97, 0x4f, 0xe8, 0x33, 0x1c, 0x0a, 0x49, 0xc3, 0xe5, 0xa6, 0xaa, 0xef, 0x9a, 0x19, 0x65, 0xdb,
+	0x61, 0x12, 0x15, 0x2f, 0xc2, 0x07, 0x42, 0xd2, 0xc2, 0x0c, 0xfe, 0x3a, 0x70, 0x64, 0x41, 0x2c,
+	0xb1, 0x1d, 0x5b, 0xec, 0x2f, 0x50, 0x53, 0x9a, 0xe8, 0x85, 0xca, 0xb7, 0xf0, 0xf5, 0x73, 0x75,
+	0xda, 0xc5, 0xe7, 0xc8, 0x80, 0x71, 0x4e, 0xda, 0x5e, 0x34, 0xd7, 0x5e, 0xb4, 0xad, 0x4d, 0xaa,
+	0x5a, 0x9b, 0x14, 0x04, 0xe0, 0xd9, 0x79, 0x51, 0x0d, 0x2a, 0x83, 0xa1, 0xf7, 0x62, 0xf5, 0x3b,
+	0xec, 0x7b, 0x4e, 0xf0, 0x6f, 0xa5, 0x03, 0x4b, 0x68, 0x54, 0xbe, 0xa8, 0x0e, 0x34, 0x4a, 0xe3,
+	0x37, 0x3d, 0x35, 0x3a, 0x9e, 0x7d, 0x14, 0xb8, 0x0c, 0x42, 0x5f, 0xe1, 0x38, 0x36, 0x7a, 0x96,
+	0x47, 0x5b, 0x31, 0xcc, 0xb3, 0xac, 0x65, 0x4b, 0x6d, 0xec, 0xc5, 0xb6, 0xfe, 0x3d, 0x38, 0x99,
+	0xf0, 0x64, 0xca, 0x64, 0x5c, 0x4a, 0xa2, 0xf2, 0xa3, 0x7c, 0x5e, 0x20, 0x94, 0x13, 0x0a, 0x97,
+	0x7a, 0x7b, 0x05, 0x47, 0xd6, 0x95, 0xa3, 0x7d, 0xd8, 0xeb, 0xf7, 0x7e, 0x74, 0x6f, 0xaf, 0xef,
+	0x06, 0x59, 0xf3, 0x77, 0x37, 0x9e, 0x83, 0xce, 0xe0, 0xb8, 0x3b, 0x1c, 0x8c, 0xf1, 0x75, 0x77,
+	0x1c, 0x76, 0x71, 0xef, 0x7a, 0x7c, 0x37, 0x1c, 0x78, 0x95, 0xc7, 0x9a, 0xf9, 0x43, 0x7b, 0xff,
+	0x3f, 0x00, 0x00, 0xff, 0xff, 0x28, 0x43, 0xd4, 0x97, 0xe0, 0x04, 0x00, 0x00,
 }

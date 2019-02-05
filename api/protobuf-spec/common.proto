@@ -6,3 +6,45 @@ message SharedKeyPair{
     string encrypted_private_key = 1;
     string public_key = 2;
 }
+
+enum TransactionType {
+    KEYCHAIN = 0;
+    ID = 1;
+    CONTRACT_CREATION = 2;
+}
+
+message Transaction {
+    string address = 1;
+    TransactionType type = 2;
+    map<string, string> data = 3;
+    int64 timestamp = 4;
+    string public_key = 5;
+    string signature = 6;
+    string emitter_signature = 7;
+    SharedKeyPair shared_keys_emitter_proposal = 8;
+    string transaction_hash = 9;
+}
+
+message MasterValidation {
+    repeated string previous_transaction_miners = 1;
+    string proof_of_work = 2;
+    MinerValidation pre_validation = 3;
+}
+
+message MinerValidation {
+    enum ValidationStatus {
+        NO = 0;
+        OK = 1;
+    }
+    
+    string public_key = 1;
+    ValidationStatus status = 2;
+    int64 timestamp = 3;
+    string signature = 4;
+}
+
+message MinedTransaction {
+    Transaction transaction = 1;
+    MasterValidation master_validation = 2;
+    repeated MinerValidation confirm_validations = 3;
+}

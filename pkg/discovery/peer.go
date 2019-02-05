@@ -51,11 +51,11 @@ type Peer struct {
 	identity PeerIdentity
 	hbState  PeerHeartbeatState
 	appState PeerAppState
-	isLocal  bool
+	isSelf   bool
 }
 
-//NewLocalPeer creates a new peer started on the miner's machine (aka local peer)
-func NewLocalPeer(pbKey string, ip net.IP, port int, version string, lon float64, lat float64) Peer {
+//NewSelfPeer creates a new peer started on the miner's machine (aka local peer)
+func NewSelfPeer(pbKey string, ip net.IP, port int, version string, lon float64, lat float64) Peer {
 	return Peer{
 		identity: PeerIdentity{
 			ip:        ip,
@@ -74,7 +74,7 @@ func NewLocalPeer(pbKey string, ip net.IP, port int, version string, lon float64
 		hbState: PeerHeartbeatState{
 			generationTime: time.Now(),
 		},
-		isLocal: true,
+		isSelf: true,
 	}
 }
 
@@ -84,7 +84,7 @@ func NewDiscoveredPeer(identity PeerIdentity, hbS PeerHeartbeatState, aS PeerApp
 		identity: identity,
 		hbState:  hbS,
 		appState: aS,
-		isLocal:  false,
+		isSelf:   false,
 	}
 }
 
@@ -111,14 +111,14 @@ func (p Peer) AppState() PeerAppState {
 	return p.appState
 }
 
-//IsLocal determinates if the peer has been created locally (by startup on this computer)
-func (p Peer) IsLocal() bool {
-	return p.isLocal
+//Self determinates if the peer has been created locally (by startup on this computer)
+func (p Peer) Self() bool {
+	return p.isSelf
 }
 
-//Refresh a peer with metrics and updates the elapsed heartbeats
-func (p *Peer) Refresh(status PeerStatus, disk float64, cpu string, p2pFactor int, discoveryPeersNb int) {
-	if !p.isLocal {
+//SelfRefresh refresh the self peer with metrics and updates the elapsed heartbeats
+func (p *Peer) SelfRefresh(status PeerStatus, disk float64, cpu string, p2pFactor int, discoveryPeersNb int) {
+	if !p.isSelf {
 		return
 	}
 
@@ -129,7 +129,7 @@ func (p *Peer) Refresh(status PeerStatus, disk float64, cpu string, p2pFactor in
 func (p Peer) String() string {
 	return fmt.Sprintf("Endpoint: %s, Local: %t, %s, %s",
 		p.Identity().Endpoint(),
-		p.IsLocal(),
+		p.Self(),
 		p.HeartbeatState().String(),
 		p.AppState().String(),
 	)
@@ -215,9 +215,8 @@ func (s PeerStatus) String() string {
 		return "Bootstraping"
 	} else if s == FaultyPeer {
 		return "Faulty"
-	} else {
-		return "StorageOnly"
 	}
+	return "StorageOnly"
 }
 
 //PeerPosition wraps the geo coordinates of a peer
@@ -226,16 +225,19 @@ type PeerPosition struct {
 	lon float64
 }
 
+//Latitude returns the latitude coordinates of the peer
 func (p PeerPosition) Latitude() float64 {
 	return p.lat
 }
 
+//Longitude returns the longitude coorindate of the peer
 func (p PeerPosition) Longitude() float64 {
 	return p.lon
 }
 
-func (pos PeerPosition) String() string {
-	return fmt.Sprintf("Lat: %f, Lon: %f", pos.lat, pos.lon)
+//String returns a string representation of the peer's position
+func (p PeerPosition) String() string {
+	return fmt.Sprintf("Lat: %f, Lon: %f", p.lat, p.lon)
 }
 
 //PeerAppState describes the state of peer and its metrics
@@ -249,31 +251,37 @@ type PeerAppState struct {
 	discoveredPeersNumber int
 }
 
+//Status returns the status of the peer
 func (a PeerAppState) Status() PeerStatus {
 	return a.status
 }
 
+//CPULoad returns the load on the CPU peer
 func (a PeerAppState) CPULoad() string {
 	return a.cpuLoad
 }
 
+//FreeDiskSpace returns the free space on the peer disk
 func (a PeerAppState) FreeDiskSpace() float64 {
 	return a.freeDiskSpace
 }
 
+//Version returns the miner software version
 func (a PeerAppState) Version() string {
 	return a.version
 }
 
+//P2PFactor returns the computed P2P factor
 func (a PeerAppState) P2PFactor() int {
 	return a.p2pFactor
 }
 
+//GeoPosition returns the peer coordinates
 func (a PeerAppState) GeoPosition() PeerPosition {
 	return a.geoPosition
 }
 
-//DiscoveredPeersNumber returns the number of discovered peers
+//DiscoveredPeersNumber returns the number of peers has been discovered
 func (a PeerAppState) DiscoveredPeersNumber() int {
 	return a.discoveredPeersNumber
 }

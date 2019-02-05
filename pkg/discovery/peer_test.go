@@ -9,13 +9,13 @@ import (
 )
 
 /*
-Scenario: Create a local peer
+Scenario: Create a self peer
 	Given some inputs parameters
 	When we create a peer that startup
 	Then we get a new peer with the status bootstraping and specified as owned
 */
-func TestNewPeer(t *testing.T) {
-	p := NewLocalPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", 3.0, 50.0)
+func TestNewSelfPeer(t *testing.T) {
+	p := NewSelfPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", 3.0, 50.0)
 	assert.NotNil(t, p)
 	assert.Equal(t, "key", p.Identity().PublicKey())
 	assert.Equal(t, "127.0.0.1", p.Identity().IP().String())
@@ -24,7 +24,7 @@ func TestNewPeer(t *testing.T) {
 	assert.Equal(t, 50.0, p.AppState().GeoPosition().Latitude())
 	assert.Equal(t, 3.0, p.AppState().GeoPosition().Longitude())
 	assert.Equal(t, 0, p.AppState().P2PFactor())
-	assert.True(t, p.IsLocal())
+	assert.True(t, p.Self())
 	assert.Equal(t, BootstrapingPeer, p.AppState().Status())
 }
 
@@ -35,8 +35,8 @@ Scenario: Refreshes a peer
 	Then the new info are stored
 */
 func TestRefreshPeer(t *testing.T) {
-	p := NewLocalPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", 3.0, 50.0)
-	p.Refresh(OkPeerStatus, 600.10, "300.200.100", 50.0, 1)
+	p := NewSelfPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", 3.0, 50.0)
+	p.SelfRefresh(OkPeerStatus, 600.10, "300.200.100", 50.0, 1)
 	assert.Equal(t, OkPeerStatus, p.AppState().Status())
 	assert.Equal(t, 600.10, p.AppState().FreeDiskSpace())
 	assert.Equal(t, "300.200.100", p.AppState().CPULoad())
@@ -83,7 +83,7 @@ func TestCreateDiscoveredPeer(t *testing.T) {
 	assert.Equal(t, BootstrapingPeer, p.AppState().Status())
 	assert.Equal(t, "1.0.0", p.AppState().Version())
 	assert.Equal(t, 10, p.AppState().DiscoveredPeersNumber())
-	assert.False(t, p.IsLocal())
+	assert.False(t, p.Self())
 }
 
 /*

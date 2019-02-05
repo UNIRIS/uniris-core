@@ -14,7 +14,6 @@ import (
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/shared"
-	"github.com/uniris/uniris-core/pkg/transaction"
 	"github.com/uniris/uniris-core/pkg/transport/rpc"
 	"google.golang.org/grpc"
 )
@@ -78,20 +77,16 @@ func TestGetSharedKeys(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
+	techDB := &mockTechDB{}
 	encPv, _ := crypto.Encrypt(pv, pub)
-	minerKP, _ := shared.NewMinerKeyPair(pub, pv)
 	emKP, _ := shared.NewEmitterKeyPair(encPv, pub)
+	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
+	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	techDB.emKeys = append(techDB.emKeys, emKP)
 
-	sharedRepo := &mockSharedRepo{}
-	sharedRepo.emKeys = []shared.EmitterKeyPair{emKP}
-	sharedRepo.minerKeys = minerKP
-	poolR := &mockPoolRequester{}
+	pr := rpc.NewPoolRequester(techDB)
 
-	sharedSrv := shared.NewService(sharedRepo)
-	poolingSrv := transaction.NewPoolFindingService(rpc.NewPoolRetriever(sharedSrv))
-	miningSrv := transaction.NewMiningService(poolR, poolingSrv, sharedSrv, "127.0.0.1", pub, pv)
-
-	intSrv := rpc.NewInternalServer(poolingSrv, miningSrv, sharedSrv)
+	intSrv := rpc.NewInternalServer(techDB, pr)
 	lisInt, _ := net.Listen("tcp", ":1717")
 	defer lisInt.Close()
 	grpcServerInt := grpc.NewServer()
@@ -119,4 +114,17 @@ func TestGetSharedKeys(t *testing.T) {
 
 	emPvKey, _ := crypto.Decrypt(emKey0["encrypted_private_key"].(string), pv)
 	assert.Equal(t, pv, emPvKey)
+}
+
+type mockTechDB struct {
+	emKeys    shared.EmitterKeys
+	minerKeys []shared.MinerKeyPair
+}
+
+func (db mockTechDB) EmitterKeys() (shared.EmitterKeys, error) {
+	return db.emKeys, nil
+}
+
+func (db mockTechDB) LastMinerKeys() (shared.MinerKeyPair, error) {
+	return db.minerKeys[len(db.minerKeys)-1], nil
 }

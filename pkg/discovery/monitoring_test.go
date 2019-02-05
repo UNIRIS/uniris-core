@@ -20,7 +20,7 @@ func TestPeerStatusWithNoDiscoveries(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
 
-	status, err := getPeerStatus(p, 0, mockPeerNetworker{})
+	status, err := localStatus(p, 0, mockNetworkChecker{})
 	assert.Nil(t, err)
 	assert.Equal(t, BootstrapingPeer, status)
 }
@@ -35,7 +35,7 @@ func TestPeerStatusWithNotInternet(t *testing.T) {
 	p := NewPeerDigest(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
-	status, _ := getPeerStatus(p, 1, mockFailInternetNetworker{})
+	status, _ := localStatus(p, 1, mockFailInternetNetworker{})
 	assert.Equal(t, FaultyPeer, status)
 }
 
@@ -49,8 +49,22 @@ func TestPeerStatusWithBadNTP(t *testing.T) {
 	p := NewPeerDigest(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
-	status, _ := getPeerStatus(p, 1, mockFailNTPNetworker{})
+	status, _ := localStatus(p, 1, mockFailNTPNetworker{})
 	assert.Equal(t, StorageOnlyPeer, status)
+}
+
+/*
+Scenario: Gets peer status when no GRPC are reached
+	Given a peer without GRPC server running
+	When we checks its status
+	Then we get a faulty status
+*/
+func TestPeerStatusWithNoGRPC(t *testing.T) {
+	p := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
+		NewPeerHeartbeatState(time.Now(), 0))
+	status, _ := localStatus(p, 1, mockFailGRPCServersNetworker{})
+	assert.Equal(t, FaultyPeer, status)
 }
 
 /*
@@ -64,7 +78,7 @@ func TestPeerStatusWithElapsedTimeLowerBootstrapingTime(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
 
-	status, _ := getPeerStatus(p, 1, mockPeerNetworker{})
+	status, _ := localStatus(p, 1, mockNetworkChecker{})
 	assert.Equal(t, BootstrapingPeer, status)
 }
 
@@ -80,7 +94,7 @@ func TestPeerStatusWithAvgDiscoveriesGreaterThanPeerDiscovery(t *testing.T) {
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", BootstrapingPeer, 30.0, 10.0, "", 100, 1, 1))
 
-	status, _ := getPeerStatus(p, 5, mockPeerNetworker{})
+	status, _ := localStatus(p, 5, mockNetworkChecker{})
 	assert.Equal(t, BootstrapingPeer, status)
 }
 
@@ -96,7 +110,7 @@ func TestPeerStatusWithAvgDiscoveriesLessThanPeerDiscovery(t *testing.T) {
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", BootstrapingPeer, 30.0, 10.0, "", 100, 1, 5))
 
-	status, _ := getPeerStatus(p, 1, mockPeerNetworker{})
+	status, _ := localStatus(p, 1, mockNetworkChecker{})
 	assert.Equal(t, OkPeerStatus, status)
 }
 
@@ -112,7 +126,7 @@ func TestPeerStatusWithLongTTL(t *testing.T) {
 		NewPeerHeartbeatState(time.Now(), 5000),
 		NewPeerAppState("1.0", BootstrapingPeer, 30.0, 10.0, "", 100, 1, 5))
 
-	status, _ := getPeerStatus(p, 1, mockPeerNetworker{})
+	status, _ := localStatus(p, 1, mockNetworkChecker{})
 	assert.Equal(t, OkPeerStatus, status)
 }
 
@@ -120,7 +134,7 @@ func TestGetP2PFactor(t *testing.T) {
 
 	peers := []Peer{}
 
-	assert.Equal(t, 1, getP2PFactor(peers))
+	assert.Equal(t, 1, p2pFactor(peers))
 }
 
 /*
@@ -153,7 +167,7 @@ func TestAvergageDiscoveriesWithOnlySeeds(t *testing.T) {
 		NewPeerAppState("0.0", OkPeerStatus, 10.0, 3.0, "0.0.0", 0.0, 0, 7),
 	)
 
-	avg := getSeedDiscoveryAverage([]PeerIdentity{seed1, seed2, seed3}, []Peer{p1, p2, p3})
+	avg := seedDiscoveryAverage([]PeerIdentity{seed1, seed2, seed3}, []Peer{p1, p2, p3})
 	assert.Equal(t, 6, avg)
 }
 
@@ -193,26 +207,48 @@ func TestAvergageDiscoveriesWithSeedAndDiscoveries(t *testing.T) {
 		NewPeerAppState("0.0", OkPeerStatus, 40.0, 3.0, "0.0.0", 0.0, 0, 5),
 	)
 
-	avg := getSeedDiscoveryAverage([]PeerIdentity{seed1, seed2, seed3}, []Peer{p1, p2, p3, p4})
+	avg := seedDiscoveryAverage([]PeerIdentity{seed1, seed2, seed3}, []Peer{p1, p2, p3, p4})
 	assert.Equal(t, 5, avg)
 }
 
 type mockFailInternetNetworker struct{}
 
-func (pn mockFailInternetNetworker) CheckNtpState() error {
+func (n mockFailInternetNetworker) CheckNtpState() error {
 	return nil
 }
 
-func (pn mockFailInternetNetworker) CheckInternetState() error {
+func (n mockFailInternetNetworker) CheckInternetState() error {
 	return errors.New("Unexpected")
+}
+
+func (n mockFailInternetNetworker) CheckGRPCServers() error {
+	return nil
 }
 
 type mockFailNTPNetworker struct{}
 
-func (pn mockFailNTPNetworker) CheckNtpState() error {
+func (n mockFailNTPNetworker) CheckNtpState() error {
 	return ErrNTPFailure
 }
 
-func (pn mockFailNTPNetworker) CheckInternetState() error {
+func (n mockFailNTPNetworker) CheckInternetState() error {
 	return nil
+}
+
+func (n mockFailNTPNetworker) CheckGRPCServers() error {
+	return nil
+}
+
+type mockFailGRPCServersNetworker struct{}
+
+func (n mockFailGRPCServersNetworker) CheckNtpState() error {
+	return nil
+}
+
+func (n mockFailGRPCServersNetworker) CheckInternetState() error {
+	return nil
+}
+
+func (n mockFailGRPCServersNetworker) CheckGRPCServers() error {
+	return ErrGRPCServer
 }

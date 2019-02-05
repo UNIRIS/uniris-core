@@ -2,22 +2,31 @@ package discovery
 
 import (
 	"errors"
+	"fmt"
 	"net"
 )
 
+//ErrNTPShift is returned when the NTP clock drift to much
 var ErrNTPShift = errors.New("System Clock have a big Offset check the ntp configuration of the system")
+
+//ErrNTPFailure is returned when the NTP server cannot be reached
 var ErrNTPFailure = errors.New("Could not get reply from ntp servers")
+
+//ErrGRPCServer is returned when the GRPC servers cannot be reached
+var ErrGRPCServer = errors.New("GRPC servers are not running")
 
 //BootstrapingMinTime is the necessary minimum time on seconds to finish learning about the network
 const BootstrapingMinTime = 1800
 
-//PeerNetworker is the interface that provides methods to get the peer network monrmation
-type PeerNetworker interface {
+//NetworkChecker is the interface that provides methods to get the peer network monrmation
+type NetworkChecker interface {
 	CheckNtpState() error
 	CheckInternetState() error
+	CheckGRPCServers() error
 }
 
-type PeerMonitor interface {
+//SystemReader retrieve local system information
+type SystemReader interface {
 
 	//GeoPosition retrieves the peer's geographic position
 	GeoPosition() (lon float64, lat float64, err error)
@@ -31,23 +40,23 @@ type PeerMonitor interface {
 	IP() (net.IP, error)
 }
 
-func getPeerSystemInfo(mon PeerMonitor) (lon float64, lat float64, ip net.IP, cpu string, space float64, err error) {
-	lon, lat, err = mon.GeoPosition()
+func systemInfo(sr SystemReader) (lon float64, lat float64, ip net.IP, cpu string, space float64, err error) {
+	lon, lat, err = sr.GeoPosition()
 	if err != nil {
 		return
 	}
 
-	ip, err = mon.IP()
+	ip, err = sr.IP()
 	if err != nil {
 		return
 	}
 
-	cpu, err = mon.CPULoad()
+	cpu, err = sr.CPULoad()
 	if err != nil {
 		return
 	}
 
-	space, err = mon.FreeDiskSpace()
+	space, err = sr.FreeDiskSpace()
 	if err != nil {
 		return
 	}
@@ -55,14 +64,23 @@ func getPeerSystemInfo(mon PeerMonitor) (lon float64, lat float64, ip net.IP, cp
 	return
 }
 
-func getPeerStatus(p Peer, seedAvgDiscovery int, pn PeerNetworker) (PeerStatus, error) {
-	if err := pn.CheckInternetState(); err != nil {
+func localStatus(p Peer, seedAvgDiscovery int, nv NetworkChecker) (PeerStatus, error) {
+	if err := nv.CheckInternetState(); err != nil {
 		return FaultyPeer, err
 	}
 
-	if err := pn.CheckNtpState(); err != nil {
+	if err := nv.CheckNtpState(); err != nil {
 		if err == ErrNTPShift || err == ErrNTPFailure {
+			fmt.Printf("networking error: %s\n", err.Error())
 			return StorageOnlyPeer, nil
+		}
+		return FaultyPeer, err
+	}
+
+	if err := nv.CheckGRPCServers(); err != nil {
+		if err == ErrGRPCServer {
+			fmt.Printf("networking error: %s\n", err.Error())
+			return FaultyPeer, nil
 		}
 		return FaultyPeer, err
 	}
@@ -80,11 +98,11 @@ func getPeerStatus(p Peer, seedAvgDiscovery int, pn PeerNetworker) (PeerStatus, 
 	}
 }
 
-func getP2PFactor(peers []Peer) int {
+func p2pFactor(peers []Peer) int {
 	return 1
 }
 
-func getSeedDiscoveryAverage(seeds []PeerIdentity, knownPeers []Peer) int {
+func seedDiscoveryAverage(seeds []PeerIdentity, knownPeers []Peer) int {
 	avg := 0
 	for i := 0; i < len(seeds); i++ {
 		ipseed := seeds[i].IP()

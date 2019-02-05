@@ -4,11 +4,12 @@ import (
 	"net"
 	"time"
 
-	"github.com/uniris/uniris-core/pkg/discovery"
+	"github.com/uniris/uniris-core/pkg/chain"
 	"github.com/uniris/uniris-core/pkg/shared"
 
+	"github.com/uniris/uniris-core/pkg/discovery"
+
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
-	"github.com/uniris/uniris-core/pkg/transaction"
 )
 
 func formatPeerDigest(p *api.PeerDigest) discovery.Peer {
@@ -66,16 +67,11 @@ func formatPeerDiscovered(p *api.PeerDiscovered) discovery.Peer {
 	)
 }
 
-func formatTransaction(tx *api.Transaction) (transaction.Transaction, error) {
+func formatTransaction(tx *api.Transaction) (chain.Transaction, error) {
 
-	sharedKeys, err := shared.NewEmitterKeyPair(tx.Proposal.SharedEmitterKeys.EncryptedPrivateKey, tx.Proposal.SharedEmitterKeys.PublicKey)
+	propSharedKeys, err := shared.NewEmitterKeyPair(tx.SharedKeysEmitterProposal.EncryptedPrivateKey, tx.SharedKeysEmitterProposal.PublicKey)
 	if err != nil {
-		return transaction.Transaction{}, err
-	}
-
-	prop, err := transaction.NewProposal(sharedKeys)
-	if err != nil {
-		return transaction.Transaction{}, err
+		return chain.Transaction{}, err
 	}
 
 	data := make(map[string]string, 0)
@@ -83,63 +79,58 @@ func formatTransaction(tx *api.Transaction) (transaction.Transaction, error) {
 		data[k] = v
 	}
 
-	return transaction.New(tx.Address, transaction.Type(tx.Type), data,
+	return chain.NewTransaction(tx.Address, chain.TransactionType(tx.Type), data,
 		time.Unix(tx.Timestamp, 0),
 		tx.PublicKey,
+		propSharedKeys,
 		tx.Signature,
 		tx.EmitterSignature,
-		prop,
 		tx.TransactionHash)
 }
 
-func formatMinedTransaction(t *api.Transaction, mv *api.MasterValidation, valids []*api.MinerValidation) (transaction.Transaction, error) {
+func formatMinedTransaction(t *api.Transaction, mv *api.MasterValidation, valids []*api.MinerValidation) (chain.Transaction, error) {
 
 	masterValid, err := formatMasterValidation(mv)
 	if err != nil {
-		return transaction.Transaction{}, err
+		return chain.Transaction{}, err
 	}
 
-	confValids := make([]transaction.MinerValidation, 0)
+	confValids := make([]chain.MinerValidation, 0)
 	for _, v := range valids {
 		txValid, err := formatValidation(v)
 		if err != nil {
-			return transaction.Transaction{}, err
+			return chain.Transaction{}, err
 		}
 		confValids = append(confValids, txValid)
 	}
 
 	txRoot, err := formatTransaction(t)
 	if err != nil {
-		return transaction.Transaction{}, err
+		return chain.Transaction{}, err
 	}
-	tx, err := transaction.New(txRoot.Address(), txRoot.Type(), txRoot.Data(), txRoot.Timestamp(), txRoot.PublicKey(), txRoot.Signature(), txRoot.EmitterSignature(), txRoot.Proposal(), txRoot.TransactionHash())
+	tx, err := chain.NewTransaction(txRoot.Address(), txRoot.TransactionType(), txRoot.Data(), txRoot.Timestamp(), txRoot.PublicKey(), txRoot.EmitterSharedKeyProposal(), txRoot.Signature(), txRoot.EmitterSignature(), txRoot.TransactionHash())
 	if err != nil {
-		return transaction.Transaction{}, err
+		return chain.Transaction{}, err
 	}
 
-	if err := tx.AddMining(masterValid, confValids); err != nil {
-		return transaction.Transaction{}, err
+	if err := tx.Mined(masterValid, confValids); err != nil {
+		return chain.Transaction{}, err
 	}
 
 	return tx, nil
 }
 
-func formatMasterValidation(mv *api.MasterValidation) (transaction.MasterValidation, error) {
-	prevMiners := make([]transaction.PoolMember, 0)
-	for _, m := range mv.PreviousTransactionMiners {
-		prevMiners = append(prevMiners, transaction.NewPoolMember(net.ParseIP(m.Ip), int(m.Port)))
-	}
-
+func formatMasterValidation(mv *api.MasterValidation) (chain.MasterValidation, error) {
 	preValid, err := formatValidation(mv.PreValidation)
 	if err != nil {
-		return transaction.MasterValidation{}, err
+		return chain.MasterValidation{}, err
 	}
 
-	masterValidation, err := transaction.NewMasterValidation(prevMiners, mv.ProofOfWork, preValid)
+	masterValidation, err := chain.NewMasterValidation(mv.PreviousTransactionMiners, mv.ProofOfWork, preValid)
 	return masterValidation, err
 }
 
-func formatAPIValidation(v transaction.MinerValidation) *api.MinerValidation {
+func formatAPIValidation(v chain.MinerValidation) *api.MinerValidation {
 	return &api.MinerValidation{
 		PublicKey: v.MinerPublicKey(),
 		Signature: v.MinerSignature(),
@@ -148,42 +139,31 @@ func formatAPIValidation(v transaction.MinerValidation) *api.MinerValidation {
 	}
 }
 
-func formatValidation(v *api.MinerValidation) (transaction.MinerValidation, error) {
-	return transaction.NewMinerValidation(transaction.ValidationStatus(v.Status), time.Unix(v.Timestamp, 0), v.PublicKey, v.Signature)
+func formatValidation(v *api.MinerValidation) (chain.MinerValidation, error) {
+	return chain.NewMinerValidation(chain.ValidationStatus(v.Status), time.Unix(v.Timestamp, 0), v.PublicKey, v.Signature)
 }
 
-func formatAPITransaction(tx transaction.Transaction) *api.Transaction {
+func formatAPITransaction(tx chain.Transaction) *api.Transaction {
 	return &api.Transaction{
 		Address:          tx.Address(),
 		Data:             tx.Data(),
-		Type:             api.TransactionType(tx.Type()),
+		Type:             api.TransactionType(tx.TransactionType()),
 		PublicKey:        tx.PublicKey(),
 		Signature:        tx.Signature(),
 		EmitterSignature: tx.EmitterSignature(),
 		Timestamp:        tx.Timestamp().Unix(),
 		TransactionHash:  tx.TransactionHash(),
-		Proposal: &api.TransactionProposal{
-			SharedEmitterKeys: &api.SharedKeyPair{
-				EncryptedPrivateKey: tx.Proposal().SharedEmitterKeyPair().EncryptedPrivateKey(),
-				PublicKey:           tx.Proposal().SharedEmitterKeyPair().PublicKey(),
-			},
+		SharedKeysEmitterProposal: &api.SharedKeyPair{
+			EncryptedPrivateKey: tx.EmitterSharedKeyProposal().EncryptedPrivateKey(),
+			PublicKey:           tx.EmitterSharedKeyProposal().PublicKey(),
 		},
 	}
 }
 
-func formatAPIMasterValidation(masterValid transaction.MasterValidation) *api.MasterValidation {
-
-	prevMiners := make([]*api.PoolMember, 0)
-	for _, m := range masterValid.PreviousTransactionMiners() {
-		prevMiners = append(prevMiners, &api.PoolMember{
-			Ip:   m.IP().String(),
-			Port: int32(m.Port()),
-		})
-	}
-
+func formatAPIMasterValidation(masterValid chain.MasterValidation) *api.MasterValidation {
 	return &api.MasterValidation{
 		ProofOfWork:               masterValid.ProofOfWork(),
-		PreviousTransactionMiners: prevMiners,
+		PreviousTransactionMiners: masterValid.PreviousTransactionMiners(),
 		PreValidation:             formatAPIValidation(masterValid.Validation()),
 	}
 }

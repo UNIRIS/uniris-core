@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "transaction.proto";
+import "chain.proto";
 import "common.proto";
 
 package api;

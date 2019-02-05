@@ -8,35 +8,33 @@ import (
 
 	"github.com/uniris/uniris-core/pkg/shared"
 
+	"github.com/uniris/uniris-core/pkg/chain"
+
 	"google.golang.org/grpc/codes"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
+	"github.com/uniris/uniris-core/pkg/consensus"
 	"github.com/uniris/uniris-core/pkg/crypto"
-	"github.com/uniris/uniris-core/pkg/transaction"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 )
 
-type internalSrv struct {
-	sharedPubKey string
-	sharedPvKey  string
-	poolFinding  transaction.PoolFindingService
-	miningSrv    transaction.MiningService
-	sharedSrv    shared.Service
+type intSrv struct {
+	techDB shared.TechDatabaseReader
+	poolR  consensus.PoolRequester
 }
 
-//NewInternalServer creates a new GRPC internal server
-func NewInternalServer(poolFinding transaction.PoolFindingService, miningSrv transaction.MiningService, sharedSrv shared.Service) api.InternalServiceServer {
-	return internalSrv{
-		poolFinding: poolFinding,
-		miningSrv:   miningSrv,
-		sharedSrv:   sharedSrv,
+//NewInternalServer creates a new GRPC server for internal communication
+func NewInternalServer(tDB shared.TechDatabaseReader, pr consensus.PoolRequester) api.InternalServiceServer {
+	return &intSrv{
+		techDB: tDB,
+		poolR:  pr,
 	}
 }
 
-func (s internalSrv) GetTransactionStatus(ctx context.Context, req *api.InternalTransactionStatusRequest) (*api.TransactionStatusResponse, error) {
+func (s intSrv) GetTransactionStatus(ctx context.Context, req *api.InternalTransactionStatusRequest) (*api.TransactionStatusResponse, error) {
 
-	pool, err := s.poolFinding.FindStoragePool(req.TransactionAddress)
+	pool, err := consensus.FindStoragePool(req.TransactionAddress)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -49,7 +47,7 @@ func (s internalSrv) GetTransactionStatus(ctx context.Context, req *api.Internal
 	}
 	defer conn.Close()
 
-	cli := api.NewTransactionServiceClient(conn)
+	cli := api.NewChainServiceClient(conn)
 
 	reqStatus := &api.TransactionStatusRequest{
 		TransactionHash: req.TransactionHash,
@@ -60,7 +58,7 @@ func (s internalSrv) GetTransactionStatus(ctx context.Context, req *api.Internal
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	lastMinersKeys, err := s.sharedSrv.GetSharedMinerKeys()
+	lastMinersKeys, err := s.techDB.LastMinerKeys()
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -92,10 +90,10 @@ func (s internalSrv) GetTransactionStatus(ctx context.Context, req *api.Internal
 	return res, nil
 }
 
-func (s internalSrv) HandleTransaction(ctx context.Context, req *api.IncomingTransaction) (*api.TransactionResult, error) {
+func (s intSrv) HandleTransaction(ctx context.Context, req *api.IncomingTransaction) (*api.TransactionResult, error) {
 	fmt.Printf("HANDLING TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	lastMinersKeys, err := s.sharedSrv.GetSharedMinerKeys()
+	lastMinersKeys, err := s.techDB.LastMinerKeys()
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -111,8 +109,11 @@ func (s internalSrv) HandleTransaction(ctx context.Context, req *api.IncomingTra
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	masterPeerIP, masterPeerPort := s.poolFinding.FindTransactionMasterPeer(txHash)
-	minValidations := s.miningSrv.GetMinimumTransactionValidation(txHash)
+	masterPeers, err := consensus.FindMasterPeers(txHash)
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	minValidations := consensus.GetMinimumValidation(txHash)
 
 	//Building the request to the master miner
 	leadReq := formatLeadMiningRequest(tx, txHash, minValidations)
@@ -126,14 +127,16 @@ func (s internalSrv) HandleTransaction(ctx context.Context, req *api.IncomingTra
 	}
 	leadReq.SignatureRequest = reqSig
 
+	//TODO: send to all the elected master peers
+
 	//Send the request
-	serverAddr := fmt.Sprintf("%s:%d", masterPeerIP, masterPeerPort)
+	serverAddr := fmt.Sprintf("%s:%d", masterPeers[0].IP(), masterPeers[0].Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 	defer conn.Close()
-	cli := api.NewTransactionServiceClient(conn)
+	cli := api.NewMiningServiceClient(conn)
 	res, err := cli.LeadTransactionMining(context.Background(), leadReq)
 	if err != nil {
 		statusCodes, _ := status.FromError(err)
@@ -156,12 +159,13 @@ func (s internalSrv) HandleTransaction(ctx context.Context, req *api.IncomingTra
 
 	txRes.Signature = sig
 	return txRes, nil
+
 }
 
-func (s internalSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest) (*api.GetAccountResponse, error) {
+func (s intSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest) (*api.GetAccountResponse, error) {
 	fmt.Printf("GET ACCOUNT REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	lastMinersKeys, err := s.sharedSrv.GetSharedMinerKeys()
+	lastMinersKeys, err := s.techDB.LastMinerKeys()
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -170,7 +174,13 @@ func (s internalSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest)
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
-	idTx, err := s.poolFinding.RequestLastTransaction(idAddr, transaction.IDType)
+
+	idPool, err := consensus.FindStoragePool(idAddr)
+	if err != nil {
+		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
+	}
+
+	idTx, err := s.poolR.RequestLastTransaction(idPool, idAddr, chain.IDTransactionType)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -178,7 +188,7 @@ func (s internalSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest)
 		return nil, status.New(codes.NotFound, "ID does not exist").Err()
 	}
 
-	id, err := transaction.NewID(*idTx)
+	id, err := chain.NewID(*idTx)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -187,14 +197,20 @@ func (s internalSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	keychainTx, err := s.poolFinding.RequestLastTransaction(keychainAddr, transaction.KeychainType)
+
+	keychainPool, err := consensus.FindStoragePool(keychainAddr)
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+
+	keychainTx, err := s.poolR.RequestLastTransaction(keychainPool, keychainAddr, chain.KeychainTransactionType)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 	if keychainTx == nil {
 		return nil, status.New(codes.NotFound, "Keychain does not exist").Err()
 	}
-	keychain, err := transaction.NewKeychain(*keychainTx)
+	keychain, err := chain.NewKeychain(*keychainTx)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -217,14 +233,18 @@ func (s internalSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest)
 	return res, nil
 }
 
-func (s internalSrv) GetLastSharedKeys(ctx context.Context, req *api.LastSharedKeysRequest) (*api.LastSharedKeys, error) {
+func (s intSrv) GetLastSharedKeys(ctx context.Context, req *api.LastSharedKeysRequest) (*api.LastSharedKeys, error) {
 	fmt.Printf("GET LAST SHARED KEYS REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	if _, err := s.sharedSrv.IsEmitterKeyAuthorized(req.EmitterPublicKey); err != nil {
-		return nil, status.New(codes.PermissionDenied, err.Error()).Err()
+	authorized, err := shared.IsEmitterKeyAuthorized(req.EmitterPublicKey)
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	if !authorized {
+		return nil, status.New(codes.PermissionDenied, "emitter not authorized").Err()
 	}
 
-	emKeys, err := s.sharedSrv.ListSharedEmitterKeyPairs()
+	emKeys, err := s.techDB.EmitterKeys()
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -237,7 +257,7 @@ func (s internalSrv) GetLastSharedKeys(ctx context.Context, req *api.LastSharedK
 		})
 	}
 
-	lastMinersKeys, err := s.sharedSrv.GetSharedMinerKeys()
+	lastMinersKeys, err := s.techDB.LastMinerKeys()
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -250,27 +270,23 @@ func (s internalSrv) GetLastSharedKeys(ctx context.Context, req *api.LastSharedK
 }
 
 type txSigned struct {
-	Address          string            `json:"address"`
-	Data             map[string]string `json:"data"`
-	Timestamp        int64             `json:"timestamp"`
-	Type             int               `json:"type"`
-	PublicKey        string            `json:"public_key"`
-	Proposal         txProp            `json:"proposal"`
-	Signature        string            `json:"signature"`
-	EmitterSignature string            `json:"em_signature"`
+	Address                   string            `json:"addr"`
+	Data                      map[string]string `json:"data"`
+	Timestamp                 int64             `json:"timestamp"`
+	Type                      int               `json:"type"`
+	PublicKey                 string            `json:"public_key"`
+	SharedKeysEmitterProposal txSharedKeys      `json:"em_shared_keys_proposal"`
+	Signature                 string            `json:"signature"`
+	EmitterSignature          string            `json:"em_signature"`
 }
 
 type txRaw struct {
-	Address   string            `json:"address"`
-	Data      map[string]string `json:"data"`
-	Timestamp int64             `json:"timestamp"`
-	Type      int               `json:"type"`
-	PublicKey string            `json:"public_key"`
-	Proposal  txProp            `json:"proposal"`
-}
-
-type txProp struct {
-	SharedEmitterKeys txSharedKeys `json:"shared_emitter_keys"`
+	Address                   string            `json:"address"`
+	Data                      map[string]string `json:"data"`
+	Timestamp                 int64             `json:"timestamp"`
+	Type                      int               `json:"type"`
+	PublicKey                 string            `json:"public_key"`
+	SharedKeysEmitterProposal txSharedKeys      `json:"em_shared_keys_proposal"`
 }
 
 type txSharedKeys struct {
@@ -290,11 +306,9 @@ func formatLeadMiningRequest(tx txSigned, txHash string, minValidations int) *ap
 			PublicKey:        tx.PublicKey,
 			Signature:        tx.Signature,
 			EmitterSignature: tx.EmitterSignature,
-			Proposal: &api.TransactionProposal{
-				SharedEmitterKeys: &api.SharedKeyPair{
-					EncryptedPrivateKey: tx.Proposal.SharedEmitterKeys.EncryptedPrivateKey,
-					PublicKey:           tx.Proposal.SharedEmitterKeys.PublicKey,
-				},
+			SharedKeysEmitterProposal: &api.SharedKeyPair{
+				EncryptedPrivateKey: tx.SharedKeysEmitterProposal.EncryptedPrivateKey,
+				PublicKey:           tx.SharedKeysEmitterProposal.PublicKey,
 			},
 			TransactionHash: txHash,
 		},

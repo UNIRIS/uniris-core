@@ -14,8 +14,8 @@ import (
 
 type rndMsg struct{}
 
-//NewDiscoveryClient creates a new discovery client with GRPC
-func NewDiscoveryClient() discovery.Client {
+//NewGossipRoundMessenger creates a new round messenger with GRPC
+func NewGossipRoundMessenger() discovery.RoundMessenger {
 	return rndMsg{}
 }
 

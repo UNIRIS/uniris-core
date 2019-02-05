@@ -8,13 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uniris/uniris-core/pkg/shared"
+
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
+	"github.com/uniris/uniris-core/pkg/chain"
 	"github.com/uniris/uniris-core/pkg/crypto"
-	"github.com/uniris/uniris-core/pkg/shared"
-	"github.com/uniris/uniris-core/pkg/transaction"
 )
 
 /*
@@ -27,17 +28,20 @@ func TestHandleGetTransactionStatusInternal(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	txRepo := &mockTxRepository{}
-	lockRepo := &mockLockRepository{}
-	sharedRepo := &mockSharedRepo{}
+	chainDB := &mockChainDB{}
+	techDB := &mockTechDB{}
+	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
+	techDB.minerKeys = append(techDB.minerKeys, minerKey)
 
-	txSrv := newTransactionServer(txRepo, lockRepo, sharedRepo, pub, pv)
-	intSrv := newInternalServer(txRepo, lockRepo, sharedRepo, pub, pv)
+	pr := NewPoolRequester(techDB)
+
+	chainSrv := NewChainServer(chainDB, techDB, pr)
+	intSrv := NewInternalServer(techDB, pr)
 
 	lis, _ := net.Listen("tcp", ":3545")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterTransactionServiceServer(grpcServer, txSrv)
+	api.RegisterChainServiceServer(grpcServer, chainSrv)
 	go grpcServer.Serve(lis)
 
 	req := &api.InternalTransactionStatusRequest{
@@ -66,33 +70,41 @@ Scenario: Forward an transaction request from the API to the master miner
 func TestHandleIncomingTransaction(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	txRepo := &mockTxRepository{}
-	lockRepo := &mockLockRepository{}
-	sharedRepo := &mockSharedRepo{}
+	chainDB := &mockChainDB{}
+	techDB := &mockTechDB{}
 
-	txSrv := newTransactionServer(txRepo, lockRepo, sharedRepo, pub, pv)
-	intSrv := newInternalServer(txRepo, lockRepo, sharedRepo, pub, pv)
+	encKey, _ := crypto.Encrypt(pv, pub)
+	emKey, _ := shared.NewEmitterKeyPair(encKey, pub)
+	techDB.emKeys = append(techDB.emKeys, emKey)
+
+	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
+	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+
+	pr := NewPoolRequester(techDB)
+
+	chainSrv := NewChainServer(chainDB, techDB, pr)
+	intSrv := NewInternalServer(techDB, pr)
+	miningSrv := NewMiningServer(techDB, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":3545")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterTransactionServiceServer(grpcServer, txSrv)
+	api.RegisterChainServiceServer(grpcServer, chainSrv)
+	api.RegisterMiningServiceServer(grpcServer, miningSrv)
 	go grpcServer.Serve(lis)
 
 	tx := map[string]interface{}{
-		"address": crypto.HashString("addr"),
+		"addr": crypto.HashString("addr"),
 		"data": map[string]string{
 			"encrypted_address": hex.EncodeToString([]byte("addr")),
 			"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
 		},
 		"timestamp":  time.Now().Unix(),
-		"type":       int(transaction.KeychainType),
+		"type":       int(chain.KeychainTransactionType),
 		"public_key": pub,
-		"proposal": map[string]interface{}{
-			"shared_emitter_keys": map[string]string{
-				"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
-				"public_key":            pub,
-			},
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
+			"public_key":            pub,
 		},
 	}
 	txBytes, _ := json.Marshal(tx)
@@ -118,8 +130,8 @@ func TestHandleIncomingTransaction(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	assert.Len(t, txRepo.keychains, 1)
-	assert.Equal(t, res.TransactionHash, txRepo.keychains[0].TransactionHash())
+	assert.Len(t, chainDB.keychains, 1)
+	assert.Equal(t, res.TransactionHash, chainDB.keychains[0].TransactionHash())
 
 }
 
@@ -132,37 +144,42 @@ Scenario: Get account created
 func TestHandleGetAccount(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	txRepo := &mockTxRepository{}
-	lockRepo := &mockLockRepository{}
-	sharedRepo := &mockSharedRepo{}
+	chainDB := &mockChainDB{}
+	techDB := &mockTechDB{}
+	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
+	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pv")), pub)
+	techDB.emKeys = append(techDB.emKeys, emKey)
 
-	txSrv := newTransactionServer(txRepo, lockRepo, sharedRepo, pub, pv)
-	intSrv := newInternalServer(txRepo, lockRepo, sharedRepo, pub, pv)
+	pr := NewPoolRequester(techDB)
+
+	chainSrv := NewChainServer(chainDB, techDB, pr)
+	miningSrv := NewMiningServer(techDB, pr, pub, pv)
+	intSrv := NewInternalServer(techDB, pr)
 
 	lis, _ := net.Listen("tcp", ":3545")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterTransactionServiceServer(grpcServer, txSrv)
+	api.RegisterChainServiceServer(grpcServer, chainSrv)
+	api.RegisterMiningServiceServer(grpcServer, miningSrv)
 	go grpcServer.Serve(lis)
 
 	encAddr, _ := crypto.Encrypt(crypto.HashString("addr"), pub)
 
 	//First send the ID transaction
 	txID := map[string]interface{}{
-		"address": crypto.HashString("idHash"),
+		"addr": crypto.HashString("idHash"),
 		"data": map[string]string{
 			"encrypted_address_by_id":    encAddr,
 			"encrypted_address_by_robot": encAddr,
 			"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
 		},
 		"timestamp":  time.Now().Unix(),
-		"type":       int(transaction.IDType),
+		"type":       int(chain.IDTransactionType),
 		"public_key": pub,
-		"proposal": map[string]interface{}{
-			"shared_emitter_keys": map[string]string{
-				"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
-				"public_key":            pub,
-			},
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
+			"public_key":            pub,
 		},
 	}
 	txIDBytes, _ := json.Marshal(txID)
@@ -180,23 +197,21 @@ func TestHandleGetAccount(t *testing.T) {
 	assert.NotEmpty(t, res.TransactionHash)
 
 	time.Sleep(1 * time.Second)
-	assert.Equal(t, crypto.HashString("idHash"), txRepo.ids[0].Address())
+	assert.Equal(t, crypto.HashString("idHash"), chainDB.ids[0].Address())
 
 	//Then send the keychain transaction
 	txKeychain := map[string]interface{}{
-		"address": crypto.HashString("addr"),
+		"addr": crypto.HashString("addr"),
 		"data": map[string]string{
 			"encrypted_address": hex.EncodeToString([]byte("addr")),
 			"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
 		},
 		"timestamp":  time.Now().Unix(),
-		"type":       int(transaction.KeychainType),
+		"type":       int(chain.KeychainTransactionType),
 		"public_key": pub,
-		"proposal": map[string]interface{}{
-			"shared_emitter_keys": map[string]string{
-				"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
-				"public_key":            pub,
-			},
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
+			"public_key":            pub,
 		},
 	}
 	txKeychainBytes, _ := json.Marshal(txKeychain)
@@ -214,7 +229,7 @@ func TestHandleGetAccount(t *testing.T) {
 	assert.NotEmpty(t, res2.TransactionHash)
 
 	time.Sleep(1 * time.Second)
-	assert.Equal(t, crypto.HashString("addr"), txRepo.keychains[0].Address())
+	assert.Equal(t, crypto.HashString("addr"), chainDB.keychains[0].Address())
 
 	encIDHash, _ := crypto.Encrypt(crypto.HashString("idHash"), pub)
 	req := &api.GetAccountRequest{
@@ -237,11 +252,19 @@ Scenario: Get last shared keys
 func TestGetLastSharedKeys(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	txRepo := &mockTxRepository{}
-	lockRepo := &mockLockRepository{}
-	sharedRepo := &mockSharedRepo{}
+	techDB := &mockTechDB{}
+	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
+	techDB.minerKeys = append(techDB.minerKeys, minerKey)
 
-	intSrv := newInternalServer(txRepo, lockRepo, sharedRepo, pub, pv)
+	encKey, _ := crypto.Encrypt(pv, pub)
+	emKey, _ := shared.NewEmitterKeyPair(encKey, pub)
+
+	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	techDB.emKeys = append(techDB.emKeys, emKey)
+
+	pr := NewPoolRequester(techDB)
+
+	intSrv := NewInternalServer(techDB, pr)
 
 	res, err := intSrv.GetLastSharedKeys(context.TODO(), &api.LastSharedKeysRequest{
 		EmitterPublicKey: pub,
@@ -256,22 +279,15 @@ func TestGetLastSharedKeys(t *testing.T) {
 	assert.Equal(t, pv, emPv)
 }
 
-func newInternalServer(txRepo *mockTxRepository, lockRepo *mockLockRepository, sharedRepo *mockSharedRepo, pub, pv string) api.InternalServiceServer {
-	encPv, _ := crypto.Encrypt(pv, pub)
-	minerKP, _ := shared.NewMinerKeyPair(pub, pv)
-	emKP, _ := shared.NewEmitterKeyPair(encPv, pub)
+type mockTechDB struct {
+	emKeys    shared.EmitterKeys
+	minerKeys []shared.MinerKeyPair
+}
 
-	sharedRepo.emKeys = shared.EmitterKeys{emKP}
-	sharedRepo.minerKeys = minerKP
+func (db mockTechDB) EmitterKeys() (shared.EmitterKeys, error) {
+	return db.emKeys, nil
+}
 
-	poolR := &mockPoolRequester{
-		repo: txRepo,
-	}
-	sharedSrv := shared.NewService(sharedRepo)
-
-	poolFindSrv := transaction.NewPoolFindingService(NewPoolRetriever(sharedSrv))
-	sharedService := shared.NewService(sharedRepo)
-	miningSrv := transaction.NewMiningService(poolR, poolFindSrv, sharedService, "127.0.0.1", pub, pv)
-
-	return NewInternalServer(poolFindSrv, miningSrv, sharedService)
+func (db mockTechDB) LastMinerKeys() (shared.MinerKeyPair, error) {
+	return db.minerKeys[len(db.minerKeys)-1], nil
 }

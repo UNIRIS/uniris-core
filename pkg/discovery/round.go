@@ -7,37 +7,27 @@ import (
 //ErrUnreachablePeer is returns when no owned peers has been stored
 var ErrUnreachablePeer = errors.New("Unreachable Peer")
 
-//Client is the interface that provides methods to send gossip requests
-type Client interface {
+//RoundMessenger is the interface that provides methods to send gossip requests
+type RoundMessenger interface {
 	SendSyn(target PeerIdentity, known []Peer) (unknown []Peer, new []Peer, err error)
 	SendAck(target PeerIdentity, requested []Peer) error
 }
 
 type round struct {
 	target PeerIdentity
-	cli    Client
+	peers  []Peer
 }
 
 //run starts the gossip round by messenging with the target peer
-func (r round) run(kp []Peer, discovP chan<- Peer, reachP chan<- PeerIdentity, unreachP chan<- PeerIdentity) error {
-	unknowns, news, err := r.cli.SendSyn(r.target, kp)
+func (r round) run(msg RoundMessenger) ([]Peer, error) {
+	unknowns, news, err := msg.SendSyn(r.target, r.peers)
 	if err != nil {
-		//We do not throw an error when the peer is unreachable
-		//Gossip must continue
-		if err.Error() == ErrUnreachablePeer.Error() {
-			unreachP <- r.target
-			return nil
-		}
-
-		return err
+		return nil, err
 	}
-
-	//Notifies the peer's response
-	reachP <- r.target
 
 	if len(unknowns) > 0 {
 		reqPeers := make([]Peer, 0)
-		mapPeers := r.mapPeers(kp)
+		mapPeers := r.mapPeers()
 		for _, p := range unknowns {
 			if k, exist := mapPeers[p.Identity().PublicKey()]; exist {
 				reqPeers = append(reqPeers, k)
@@ -45,28 +35,19 @@ func (r round) run(kp []Peer, discovP chan<- Peer, reachP chan<- PeerIdentity, u
 		}
 
 		//Send to the SYN receiver an ACK with the peer detailed requested
-		if err := r.cli.SendAck(r.target, reqPeers); err != nil {
-			//We do not throw an error when the peer is unreachable
-			//Gossip must continue
-			//We catch the unreachable peer, store somewhere
-			if err.Error() == ErrUnreachablePeer.Error() {
-				unreachP <- r.target
-				return nil
-			}
-			return err
+		if err := msg.SendAck(r.target, reqPeers); err != nil {
+			return nil, err
 		}
 
-		for _, p := range news {
-			discovP <- p
-		}
+		return news, nil
 	}
 
-	return nil
+	return nil, nil
 }
 
-func (r round) mapPeers(pp []Peer) map[string]Peer {
+func (r round) mapPeers() map[string]Peer {
 	mPeers := make(map[string]Peer, 0)
-	for _, p := range pp {
+	for _, p := range r.peers {
 		mPeers[p.Identity().PublicKey()] = p
 	}
 	return mPeers

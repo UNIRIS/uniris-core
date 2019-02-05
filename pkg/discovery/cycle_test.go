@@ -1,9 +1,7 @@
 package discovery
 
 import (
-	"log"
 	"net"
-	"sync"
 	"testing"
 	"time"
 
@@ -11,56 +9,23 @@ import (
 )
 
 /*
-Scenario: Select peers without seeds
-	Given no seeds
-	When we i want select peers
-	Then we get an error
-*/
-func TestSelectPeersWithoutSeeds(t *testing.T) {
-	c := cycle{}
-	_, err := c.selectRandomPeers(nil, nil, nil)
-	assert.Error(t, err, ErrEmptySeed)
-}
-
-/*
 Scenario: Picks a random peer from an only list of seeds
 	Given a list of seeds
 	When we want to pick a random seed
 	Then we get a random seed
 */
-func TestSelectPeersWithOnlyPeers(t *testing.T) {
+func TestSelectPeersWithOnlySeeds(t *testing.T) {
 	seeds := []PeerIdentity{
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
 	}
 
-	c := cycle{
-		initator: NewLocalPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0),
-	}
-	pp, err := c.selectRandomPeers(seeds, []PeerIdentity{}, []PeerIdentity{})
+	c := Cycle{}
+	self := NewSelfPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0)
+	pp, err := c.selectRandomPeers(self, seeds, []PeerIdentity{}, []PeerIdentity{})
 	assert.Nil(t, err)
 	assert.NotNil(t, pp)
 	assert.Equal(t, 1, len(pp))
 	assert.Equal(t, "127.0.0.1", pp[0].IP().String())
-}
-
-/*
-Scenario: Picks a random peer from an only list of seeds excluding ourself
-	Given a list of seeds including ourself
-	When we want to pick a random seed
-	Then we get a random seed
-*/
-func TestSelectPeersWithOnlyPeersExcludingOurself(t *testing.T) {
-	seeds := []PeerIdentity{
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
-	}
-
-	c := cycle{
-		initator: NewLocalPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", 30.0, 12.0),
-	}
-	pp, err := c.selectRandomPeers(seeds, []PeerIdentity{}, []PeerIdentity{})
-	assert.Nil(t, err)
-	assert.NotNil(t, pp)
-	assert.Empty(t, pp)
 }
 
 /*
@@ -74,13 +39,13 @@ func TestSelectPeerWithSomeReachablePeers(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
 	}
 
-	c := cycle{
-		initator: NewLocalPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0),
-	}
+	self := NewSelfPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0)
+
+	c := Cycle{}
 
 	reachP := []PeerIdentity{NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key")}
 
-	pp, err := c.selectRandomPeers(seeds, reachP, []PeerIdentity{})
+	pp, err := c.selectRandomPeers(self, seeds, reachP, []PeerIdentity{})
 	assert.Nil(t, err)
 	assert.NotNil(t, pp)
 	assert.Equal(t, 2, len(pp))
@@ -99,15 +64,13 @@ func TestSelectPeerWithOurselfAsReachable(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
 	}
 
-	me := NewLocalPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0)
+	me := NewSelfPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0)
 
-	c := cycle{
-		initator: me,
-	}
+	c := Cycle{}
 
 	reachP := []PeerIdentity{me.Identity()}
 
-	pp, err := c.selectRandomPeers(seeds, reachP, []PeerIdentity{})
+	pp, err := c.selectRandomPeers(me, seeds, reachP, []PeerIdentity{})
 	assert.Nil(t, err)
 	assert.NotNil(t, pp)
 	assert.Equal(t, 1, len(pp))
@@ -129,13 +92,13 @@ func TestSelectPeerWithSomeUnReachablePeers(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key"),
 		NewPeerHeartbeatState(time.Now(), 0))
 
-	c := cycle{
-		initator: NewLocalPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0),
-	}
+	selfator := NewSelfPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0)
+
+	c := Cycle{}
 
 	unreachP := []PeerIdentity{p1.Identity()}
 
-	pp, err := c.selectRandomPeers(seeds, []PeerIdentity{}, unreachP)
+	pp, err := c.selectRandomPeers(selfator, seeds, []PeerIdentity{}, unreachP)
 	assert.Nil(t, err)
 	assert.NotNil(t, pp)
 	assert.Equal(t, 2, len(pp))
@@ -159,14 +122,13 @@ func TestSelectPeersFully(t *testing.T) {
 	p3 := NewPeerIdentity(net.ParseIP("22.0.0.1"), 3000, "key")
 	p4 := NewPeerIdentity(net.ParseIP("23.0.0.1"), 3000, "key")
 
-	c := cycle{
-		initator: NewLocalPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0),
-	}
+	selfator := NewSelfPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0)
+	c := Cycle{}
 
 	reachP := []PeerIdentity{p1, p2}
 	unreachP := []PeerIdentity{p3, p4}
 
-	pp, err := c.selectRandomPeers(seeds, reachP, unreachP)
+	pp, err := c.selectRandomPeers(selfator, seeds, reachP, unreachP)
 	assert.Nil(t, err)
 	assert.NotNil(t, pp)
 	assert.Equal(t, 3, len(pp))
@@ -178,12 +140,12 @@ func TestSelectPeersFully(t *testing.T) {
 
 /*
 Scenario: Run a gossip cycle
-	Given a initator and a target
+	Given a selfator and a target
 	When we create a round associated to a cycle
 	Then we run it and get some discovered peers
 */
 func TestRun(t *testing.T) {
-	init := NewLocalPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0)
+	self := NewSelfPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0)
 
 	kp1 := NewPeerDigest(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key2"),
@@ -193,48 +155,24 @@ func TestRun(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key3"),
 	}
 
-	c := newCycle(init, mockClient{}, []PeerIdentity{kp1.Identity()}, []PeerIdentity{})
+	c := Cycle{}
 
-	var wg sync.WaitGroup
-	wg.Add(4)
+	assert.Nil(t, c.run(self, mockClient{}, seeds, []Peer{kp1}, []PeerIdentity{kp1.Identity()}, []PeerIdentity{}))
 
-	go c.run(init, seeds, []Peer{kp1})
-
-	newP := make([]Peer, 0)
-	go func() {
-		for p := range c.discoveryChan {
-			log.Print(p.Identity().PublicKey())
-			newP = append(newP, p)
-			wg.Done()
-		}
-	}()
-
-	go func() {
-		for range c.reachChan {
-			wg.Done()
-		}
-	}()
-
-	wg.Wait()
-	close(c.discoveryChan)
-	close(c.unreachChan)
-	close(c.errChan)
-	close(c.reachChan)
-
-	assert.NotEmpty(t, newP)
-	assert.Equal(t, 2, len(newP))
+	assert.Len(t, c.Discoveries, 2)
+	assert.Len(t, c.Reaches, 2)
 
 	//Peer retrieved from the kp1
-	assert.Equal(t, "dKey1", newP[0].Identity().PublicKey())
+	assert.Equal(t, "dKey1", c.Discoveries[0].Identity().PublicKey())
 
 	//Peer retreived from the seed1
-	assert.Equal(t, "dKey1", newP[1].Identity().PublicKey())
+	assert.Equal(t, "dKey1", c.Discoveries[1].Identity().PublicKey())
 }
 
 type mockClient struct{}
 
 func (m mockClient) SendSyn(target PeerIdentity, known []Peer) (unknown []Peer, new []Peer, err error) {
-	tar := NewLocalPeer("uKey1", net.ParseIP("200.18.186.39"), 3000, "1.1", 40.4, 2.50)
+	tar := NewSelfPeer("uKey1", net.ParseIP("200.18.186.39"), 3000, "1.1", 40.4, 2.50)
 
 	hb := NewPeerHeartbeatState(time.Now(), 0)
 	as := NewPeerAppState("1.0", OkPeerStatus, 50.1, 22.1, "", 0, 1, 0)

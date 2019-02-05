@@ -19,12 +19,11 @@ Scenario: Receive a synchronize request without knowing any peers
 	Then I when I make diff , I return the sended peer as unknown
 */
 func TestHandleSynchronizeRequestWithoutKnownPeers(t *testing.T) {
-	repo := &mockDiscoveryRepo{}
+	db := &mockDiscoveryDB{}
 
-	service := discovery.NewService(repo, nil, &mockDiscoveryNotifier{}, mockPeerNetworker{}, mockPeerInfo{})
-	srv := NewDiscoveryServer(service)
+	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{})
 
-	res, err := srv.Synchronize(context.TODO(), &api.SynRequest{
+	res, err := discoverySrv.Synchronize(context.TODO(), &api.SynRequest{
 		KnownPeers: []*api.PeerDigest{
 			&api.PeerDigest{
 				HeartbeatState: &api.PeerHeartbeatState{
@@ -51,8 +50,8 @@ Scenario: Receive a synchronize request with knowing any peers
 	Then I when I make diff , I return the a peer the sender does not known
 */
 func TestHandleSynchronizeRequestByKnowingPeer(t *testing.T) {
-	repo := &mockDiscoveryRepo{
-		knownPeers: []discovery.Peer{
+	db := &mockDiscoveryDB{
+		discoveredPeers: []discovery.Peer{
 			discovery.NewDiscoveredPeer(
 				discovery.NewPeerIdentity(net.ParseIP("10.0.0.1"), 3000, "pubkey000"),
 				discovery.NewPeerHeartbeatState(time.Now(), 1000),
@@ -61,10 +60,9 @@ func TestHandleSynchronizeRequestByKnowingPeer(t *testing.T) {
 		},
 	}
 
-	service := discovery.NewService(repo, nil, &mockDiscoveryNotifier{}, mockPeerNetworker{}, mockPeerInfo{})
-	srv := NewDiscoveryServer(service)
+	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{})
 
-	res, err := srv.Synchronize(context.TODO(), &api.SynRequest{
+	res, err := discoverySrv.Synchronize(context.TODO(), &api.SynRequest{
 		KnownPeers: []*api.PeerDigest{
 			&api.PeerDigest{
 				HeartbeatState: &api.PeerHeartbeatState{
@@ -93,12 +91,11 @@ Scenario: Receive an acknowledgement request with the details for the requested 
 	Then I store inside the db the discovered peers
 */
 func TestHandleAcknowledgeRequest(t *testing.T) {
-	repo := &mockDiscoveryRepo{}
+	db := &mockDiscoveryDB{}
 
-	service := discovery.NewService(repo, nil, &mockDiscoveryNotifier{}, mockPeerNetworker{}, mockPeerInfo{})
-	srv := NewDiscoveryServer(service)
+	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{})
 
-	_, err := srv.Acknowledge(context.TODO(), &api.AckRequest{
+	_, err := discoverySrv.Acknowledge(context.TODO(), &api.AckRequest{
 		RequestedPeers: []*api.PeerDiscovered{
 			&api.PeerDiscovered{
 				Identity: &api.PeerIdentity{
@@ -127,109 +124,65 @@ func TestHandleAcknowledgeRequest(t *testing.T) {
 	})
 
 	assert.Nil(t, err)
-	assert.Len(t, repo.knownPeers, 1)
-	assert.Equal(t, "pubkey", repo.knownPeers[0].Identity().PublicKey())
+	assert.Len(t, db.discoveredPeers, 1)
+	assert.Equal(t, "pubkey", db.discoveredPeers[0].Identity().PublicKey())
 }
 
-type mockDiscoveryRepo struct {
-	seedPeers        []discovery.PeerIdentity
-	knownPeers       []discovery.Peer
-	unreachablePeers []string
+type mockDiscoveryDB struct {
+	discoveredPeers  []discovery.Peer
+	unreachablePeers []discovery.PeerIdentity
 }
 
-func (r *mockDiscoveryRepo) CountKnownPeers() (int, error) {
-	return len(r.knownPeers), nil
+func (db mockDiscoveryDB) DiscoveredPeers() ([]discovery.Peer, error) {
+	return db.discoveredPeers, nil
 }
 
-func (r *mockDiscoveryRepo) ListSeedPeers() ([]discovery.PeerIdentity, error) {
-	return r.seedPeers, nil
-}
-
-func (r *mockDiscoveryRepo) ListKnownPeers() ([]discovery.Peer, error) {
-	return r.knownPeers, nil
-}
-
-func (r *mockDiscoveryRepo) StoreKnownPeer(peer discovery.Peer) error {
-	if r.containsPeer(peer) {
-		for _, p := range r.knownPeers {
-			if p.Identity().PublicKey() == peer.Identity().PublicKey() {
-				p = peer
-				break
-			}
+func (db *mockDiscoveryDB) WriteDiscoveredPeer(peer discovery.Peer) error {
+	for i, p := range db.discoveredPeers {
+		if p.Identity().PublicKey() == peer.Identity().PublicKey() {
+			db.discoveredPeers[i] = peer
+			return nil
 		}
-	} else {
-		r.knownPeers = append(r.knownPeers, peer)
 	}
+	db.discoveredPeers = append(db.discoveredPeers, peer)
 	return nil
 }
 
-func (r *mockDiscoveryRepo) ListReachablePeers() ([]discovery.PeerIdentity, error) {
+func (db mockDiscoveryDB) UnreachablePeers() ([]discovery.PeerIdentity, error) {
 	pp := make([]discovery.PeerIdentity, 0)
-	for i := 0; i < len(r.knownPeers); i++ {
-		if !r.ContainsUnreachablePeer(r.knownPeers[i].Identity().PublicKey()) {
-			pp = append(pp, r.knownPeers[i].Identity())
+	for i := 0; i < len(db.discoveredPeers); i++ {
+		if exist, _ := db.ContainsUnreachablePeer(db.discoveredPeers[i].Identity()); exist {
+			pp = append(pp, db.discoveredPeers[i].Identity())
 		}
 	}
 	return pp, nil
 }
 
-func (r *mockDiscoveryRepo) ListUnreachablePeers() ([]discovery.PeerIdentity, error) {
-	pp := make([]discovery.PeerIdentity, 0)
-
-	for i := 0; i < len(r.seedPeers); i++ {
-		if r.ContainsUnreachablePeer(r.seedPeers[i].PublicKey()) {
-			pp = append(pp, r.seedPeers[i])
-		}
-	}
-
-	for i := 0; i < len(r.knownPeers); i++ {
-		if r.ContainsUnreachablePeer(r.knownPeers[i].Identity().PublicKey()) {
-			pp = append(pp, r.knownPeers[i].Identity())
-		}
-	}
-	return pp, nil
-}
-
-func (r *mockDiscoveryRepo) StoreSeedPeer(s discovery.PeerIdentity) error {
-	r.seedPeers = append(r.seedPeers, s)
-	return nil
-}
-
-func (r *mockDiscoveryRepo) StoreUnreachablePeer(pk string) error {
-	if !r.ContainsUnreachablePeer(pk) {
-		r.unreachablePeers = append(r.unreachablePeers, pk)
+func (db *mockDiscoveryDB) WriteUnreachablePeer(p discovery.PeerIdentity) error {
+	if exist, _ := db.ContainsUnreachablePeer(p); !exist {
+		db.unreachablePeers = append(db.unreachablePeers, p)
 	}
 	return nil
 }
 
-func (r *mockDiscoveryRepo) RemoveUnreachablePeer(pk string) error {
-	if r.ContainsUnreachablePeer(pk) {
-		for i := 0; i < len(r.unreachablePeers); i++ {
-			if r.unreachablePeers[i] == pk {
-				r.unreachablePeers = r.unreachablePeers[:i+copy(r.unreachablePeers[i:], r.unreachablePeers[i+1:])]
+func (db *mockDiscoveryDB) RemoveUnreachablePeer(p discovery.PeerIdentity) error {
+	if exist, _ := db.ContainsUnreachablePeer(p); exist {
+		for i := 0; i < len(db.unreachablePeers); i++ {
+			if db.unreachablePeers[i].PublicKey() == p.PublicKey() {
+				db.unreachablePeers = db.unreachablePeers[:i+copy(db.unreachablePeers[i:], db.unreachablePeers[i+1:])]
 			}
 		}
 	}
 	return nil
 }
 
-func (r *mockDiscoveryRepo) ContainsUnreachablePeer(peerPubk string) bool {
-	for _, up := range r.unreachablePeers {
-		if up == peerPubk {
-			return true
+func (db mockDiscoveryDB) ContainsUnreachablePeer(peerPubK discovery.PeerIdentity) (bool, error) {
+	for _, up := range db.unreachablePeers {
+		if up.PublicKey() == peerPubK.PublicKey() {
+			return true, nil
 		}
 	}
-	return false
-}
-
-func (r *mockDiscoveryRepo) containsPeer(p discovery.Peer) bool {
-	mdiscoveredPeers := make(map[string]discovery.Peer, 0)
-	for _, p := range r.knownPeers {
-		mdiscoveredPeers[p.Identity().PublicKey()] = p
-	}
-
-	_, exist := mdiscoveredPeers[p.Identity().PublicKey()]
-	return exist
+	return false, nil
 }
 
 type mockDiscoveryNotifier struct {

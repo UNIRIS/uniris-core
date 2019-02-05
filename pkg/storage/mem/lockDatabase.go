@@ -1,39 +1,39 @@
 package memstorage
 
-import "github.com/uniris/uniris-core/pkg/transaction"
+import (
+	"github.com/uniris/uniris-core/pkg/consensus"
+)
 
-//LockDatabase is the transaction memory database
-type LockDatabase interface {
-	transaction.LockRepository
+type lockDB struct {
+	locks []map[string]string
 }
 
-type lockDb struct {
-	locks []transaction.Lock
+//NewLockDatabase creates a lock database in memory
+func NewLockDatabase() consensus.LockDatabase {
+	return &lockDB{}
 }
 
-//NewLockDatabase creates a new memory locks database
-func NewLockDatabase() LockDatabase {
-	return &lockDb{}
-}
-
-func (d *lockDb) StoreLock(l transaction.Lock) error {
-	d.locks = append(d.locks, l)
+func (l *lockDB) WriteLock(txHash string, txAddr string) error {
+	l.locks = append(l.locks, map[string]string{
+		"transaction_address": txAddr,
+		"transaction_hash":    txHash,
+	})
 	return nil
 }
-func (d *lockDb) RemoveLock(l transaction.Lock) error {
-	pos := d.findLockPosition(l)
+func (l *lockDB) RemoveLock(txHash string, txAddr string) error {
+	pos := l.findLockPosition(txHash, txAddr)
 	if pos > -1 {
-		d.locks = append(d.locks[:pos], d.locks[pos+1:]...)
+		l.locks = append(l.locks[:pos], l.locks[pos+1:]...)
 	}
 	return nil
 }
-func (d *lockDb) ContainsLock(l transaction.Lock) (bool, error) {
-	return d.findLockPosition(l) > -1, nil
+func (l *lockDB) ContainsLock(txHash string, txAddr string) (bool, error) {
+	return l.findLockPosition(txHash, txAddr) > -1, nil
 }
 
-func (d lockDb) findLockPosition(txLock transaction.Lock) int {
-	for i, lock := range d.locks {
-		if lock.TransactionHash() == txLock.TransactionHash() && txLock.MasterRobotKey() == lock.MasterRobotKey() {
+func (l lockDB) findLockPosition(txHash string, txAddr string) int {
+	for i, lock := range l.locks {
+		if lock["transaction_hash"] == txHash && lock["transaction_address"] == txAddr {
 			return i
 		}
 	}
