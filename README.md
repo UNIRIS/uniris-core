@@ -31,11 +31,14 @@ UNIRIS project comes with several executables found in the `cmd` directory
 
 UNIRIS miner software uses a separation of concerns designed by running multiple processes with a microservice philosophy.
 
-| Service name  | Description |
-| ------------  | ----------- |
-| API           | Provide HTTP/REST endpoints for clients and SDKs
-| Discovery     | Peer to peer discovery using a built-in Gossip protocol
-| Datamining    | Transaction mining and storage including sharding computation and replication
+| Service name  | Public | Description |
+| ------------  | -------| ----------- |
+| API           | Yes | Gateway providing endpoints for clients
+| Discovery     | Yes | Peer to peer discovery using a built-in Gossip protocol
+| Mining        | Yes | Transaction mining (proof of work) and validation confirmations
+| Lock          | Yes | Transaction lock and unlock to avoid double spending
+| Chain         | Yes | Transaction storage and queries 
+| Internal |  No | Forward transaction to other miners (mining, pool requesting) and retrieve shared data between miners
 
 ## Running UNIRIS
 
@@ -47,24 +50,22 @@ Supported flags:
 
 | Name | Description | Value |
 | ---- | ----------- | ---- |
-| conf | Load a configuration file | File location. default: `cmd/uniris/conf.yaml` |
-| private-key| Define the miner private key | Hexadecimal ECDSA private key
-| public-key | Define the miner public key | Hexadecimal ECDSA public key
-| network-type | Define which can of network to use | `public` (default) or `private` |
-|network-interface | Define the network interface to pick when the network type is `private` | network interface name
-| discovery-port | Define the port of the discovery service | default: `4000`
-| discovery-seeds | Define the peer list to seed the gossip discovery | example: `IP:PORT:PUBLICKEY;IP:PORT:PUBLICKEY` |
-| discovery-db-type| Define the type of discovery database | `mem` (default), `redis` |
-| discovery-db-host| Define the hostname of the discovery database | default: `localhost` |
-| discovery-db-port | Define the port of the discovery database | default: `6379` (Redis) |
-| discovery-db-password | Define the database password | default: `''`
-| discovery-notif-type| Define the type of discovery notifier | `mem` (default), `amqp` |
-| discovery-notif-host | Define the hostname discovery notifier | default: `localhost`|
-| discovery-notif-user | Define the user of the discovery notifier | default: `guest` (RabbitMQ) |
-| discovery-notif-password | Define the password of the discovery notifier | default: `guest` (AMQP) |
-| datamining-port | Define the port to the datamining GPRC service | default: `5000`|
-| datamining-internal-port | Define the internal port to the datamining service to make other service able to call it | default: `3009`|
-| api-port | Define the API port | default: `8080`| 
+| conf | Configuration file | File location. default: `cmd/uniris/conf.yaml` |
+| private-key| Miner private key | Hexadecimal ECDSA private key
+| public-key | Miner public key | Hexadecimal ECDSA public key
+| network-type | Type of network | `public` (default) or `private` |
+|network-interface | Name of the network interface when network type is `private` | network interface name
+| discovery-db-type|Discovery database instance type | `mem` (default), `redis` |
+| discovery-db-host| Discovery database instance hostname | default: `localhost` |
+| discovery-db-port | Discovery database instance port | default: `6379` (Redis) |
+| discovery-db-password | Discovery database instance password | default: `''`
+| bus-type| Bus messenging instance type | `mem` (default), `amqp` |
+| bus-host | Bus messenging instance host | default: `localhost`|
+| discovery-notif-user | Bus messenging instance user | default: `guest` (AMQP) |
+| bus-password | Bus messenging instance password | default: `guest` (AMQP) |
+| external-grpc-port | External GRPC port | default: `5000`|
+| internal-grpc-port | Internal GRPC port  | default: `3009`|
+| http-port | HTTP port the API | default: `8080`| 
 
 Supported YAML configuration
 
@@ -78,20 +79,19 @@ public-key: 3059301306072a8648ce3d020106082a8648ce3d0301070342000459c8b568df6679
 private-key: 307702010104201432f00062c0229d19e24c070a713d900da4883788ce3f8bd3fede4c10a36a79a00a06082a8648ce3d030107a1440342000459c8b568df66798d7f876d94fb0afc516502893d996610632c40f70b830aebf39e0cbee311af4450ec56859d2b8f59ec09a44c7e303d030899aee551de61af2e
 
 #SERVICES CONFIGURATION
-api-port: 8080
-discovery-port: 4000
-discovery-seeds: 127.0.0.1:4000:3059301306072a8648ce3d020106082a8648ce3d0301070342000459c8b568df66798d7f876d94fb0afc516502893d996610632c40f70b830aebf39e0cbee311af4450ec56859d2b8f59ec09a44c7e303d030899aee551de61af2e
+http-port: 8080
+external-grpc-port: 5000
+internal-grpc-port: 3009
+discovery-seeds: 127.0.0.1:5000:3059301306072a8648ce3d020106082a8648ce3d0301070342000459c8b568df66798d7f876d94fb0afc516502893d996610632c40f70b830aebf39e0cbee311af4450ec56859d2b8f59ec09a44c7e303d030899aee551de61af2e
 discovery-db-type: mem
 discovery-db-host: localhost
 discovery-db-port: 6379
 discovery-db-password: ""
-discovery-notif-type: mem
-discovery-notif-host: localhost
-discovery-notif-port: 5672
-discovery-notif-user: guest
-discovery-notif-password: guest
-datamining-port: 5000
-datamining-internal-port: 3009
+bus-type: mem
+bus-host: localhost
+bus-port: 5672
+bus-user: guest
+bus-password: guest
 ```
 
 ## Contribution
@@ -103,7 +103,6 @@ If you want to contribute to UNIRIS, we are using GitFlow approach. So please to
 
 Please make sure your contributions adhere to our coding guidelines:
 - Code must adhere to the official Go guidelines (https://github.com/golang/go/wiki/CodeReviewComments, https://golang.org/doc/effective_go.html)
-- Code must use the `domain driven design`  and `hexagonal architecture` approaches (aka Clean architecture)
 - Pull request need to be based on the `develop` branch
 
 ## Licence

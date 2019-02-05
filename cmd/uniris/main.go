@@ -45,7 +45,15 @@ func main() {
 	app.Version = "0.0.1"
 	app.Flags = getCliFlags(&conf)
 
-	app.Before = altsrc.InitInputSourceWithContext(app.Flags, altsrc.NewYamlSourceFromFlagFunc("conf"))
+	app.Before = altsrc.InitInputSourceWithContext(app.Flags, func(c *cli.Context) (altsrc.InputSourceContext, error) {
+		context, err := altsrc.NewYamlSourceFromFile("conf")
+		if err != nil {
+			fmt.Println("Load configuration by environment variables")
+			return &altsrc.MapInputSource{}, nil
+		}
+		fmt.Println("Load configuration by file")
+		return context, nil
+	})
 	app.Action = func(c *cli.Context) error {
 
 		if c.String("private-key") == "" {
@@ -111,7 +119,7 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 			Name:        "network-type",
 			EnvVar:      "UNIRIS_NETWORK_TYPE",
 			Value:       "public",
-			Usage:       "Type of the blockchain network (public or private) - Help to identify the IP address",
+			Usage:       "Type of the network (public or private)",
 			Destination: &conf.networkType,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
@@ -200,7 +208,6 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 			EnvVar:      "UNIRIS_INT_GRPC_PORT",
 			Value:       3009,
 			Usage:       "Internal GRPC port",
-			Hidden:      true,
 			Destination: &conf.grpcInternalPort,
 		}),
 		altsrc.NewIntFlag(cli.IntFlag{
