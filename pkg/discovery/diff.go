@@ -1,46 +1,20 @@
 package discovery
 
-//GetUnknownPeers compare local peers and incoming peers.
-//It returns the peers not included inside the incoming list.
-func GetUnknownPeers(localPeers []Peer, comparePP []Peer) []Peer {
-	mPeers := mapPeers(localPeers)
+//ExcludedOrRecent compares a source of peers with an other list of peers
+//and returns the peers that are not included inside the source or
+func ExcludedOrRecent(source []Peer, comparees []Peer) []Peer {
+	mapSource := mapPeers(source)
 
 	diff := make([]Peer, 0)
 
-	for _, p := range comparePP {
+	for _, p := range comparees {
 
-		//Checks if the compared peer is include inside the repository
-		kp, exist := mPeers[p.Identity().PublicKey()]
-
+		//Add it to the list if the compared peer is include inside the source
+		sp, exist := mapSource[p.Identity().PublicKey()]
 		if !exist {
-			//Adds to the list if the peer is unknown
 			diff = append(diff, p)
-		} else if p.HeartbeatState().MoreRecentThan(kp.HeartbeatState()) {
-			//Adds to the list if the peer is more recent
-			diff = append(diff, p)
-		}
-	}
-
-	return diff
-}
-
-//GetNewPeers compare local peers and incoming peers.
-//It returns the peers not included inside the local list.
-func GetNewPeers(localPeers []Peer, comparePP []Peer) []Peer {
-	mPeers := mapPeers(comparePP)
-
-	diff := make([]Peer, 0)
-
-	for _, p := range localPeers {
-
-		//Checks if the known peer is include inside the list of compared peer
-		c, exist := mPeers[p.Identity().PublicKey()]
-
-		if !exist {
-			//Adds to the list if the peer is unknown
-			diff = append(diff, p)
-		} else if p.HeartbeatState().MoreRecentThan(c.HeartbeatState()) {
-			//Adds to the list if the peer is more recent
+		} else if p.HeartbeatState().MoreRecentThan(sp.HeartbeatState()) {
+			//Add it to the list if the comparee peer is more recent than the founded peer in the source
 			diff = append(diff, p)
 		}
 	}

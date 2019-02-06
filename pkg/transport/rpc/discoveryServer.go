@@ -32,24 +32,27 @@ func (s discoverySrv) Synchronize(ctx context.Context, req *api.SynRequest) (*ap
 		receivedPeers = append(receivedPeers, formatPeerDigest(p))
 	}
 
-	discoveredPeers, err := s.db.DiscoveredPeers()
+	localPeers, err := s.db.DiscoveredPeers()
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	unknownPeers := make([]*api.PeerDigest, 0)
-	for _, p := range discovery.GetUnknownPeers(discoveredPeers, receivedPeers) {
-		unknownPeers = append(unknownPeers, formatPeerDigestAPI(p))
+
+	//Get the unknowns peers or more recent than the local peers
+	localDiscoveries := make([]*api.PeerDigest, 0)
+	for _, p := range discovery.ExcludedOrRecent(localPeers, receivedPeers) {
+		localDiscoveries = append(localDiscoveries, formatPeerDigestAPI(p))
 	}
 
-	newPeers := make([]*api.PeerDiscovered, 0)
-	for _, p := range discovery.GetNewPeers(discoveredPeers, receivedPeers) {
-		newPeers = append(newPeers, formatPeerDiscoveredAPI(p))
+	//get the unknown peers or more recent than the received peers
+	remoteDiscoveries := make([]*api.PeerDiscovered, 0)
+	for _, p := range discovery.ExcludedOrRecent(receivedPeers, localPeers) {
+		remoteDiscoveries = append(remoteDiscoveries, formatPeerDiscoveredAPI(p))
 	}
 
 	return &api.SynResponse{
-		UnknownPeers: unknownPeers,
-		NewPeers:     newPeers,
-		Timestamp:    time.Now().Unix(),
+		LocalDiscoveries: localDiscoveries,
+		RemoteDiscoveris: remoteDiscoveries,
+		Timestamp:        time.Now().Unix(),
 	}, nil
 }
 

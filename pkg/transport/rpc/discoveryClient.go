@@ -19,7 +19,7 @@ func NewGossipRoundMessenger() discovery.RoundMessenger {
 	return rndMsg{}
 }
 
-func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (unknown []discovery.Peer, new []discovery.Peer, err error) {
+func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (localDiscoveries []discovery.Peer, remoteDiscoveries []discovery.Peer, err error) {
 	serverAddr := fmt.Sprintf("%s:%d", target.IP().String(), target.Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
@@ -48,11 +48,11 @@ func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (
 
 	fmt.Printf("SYNC RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
-	for _, p := range res.NewPeers {
-		new = append(new, formatPeerDiscovered(p))
+	for _, p := range res.RemoteDiscoveris {
+		remoteDiscoveries = append(remoteDiscoveries, formatPeerDiscovered(p))
 	}
-	for _, p := range res.UnknownPeers {
-		unknown = append(unknown, formatPeerDigest(p))
+	for _, p := range res.LocalDiscoveries {
+		localDiscoveries = append(localDiscoveries, formatPeerDigest(p))
 	}
 
 	return

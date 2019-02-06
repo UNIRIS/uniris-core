@@ -1,8 +1,5 @@
 #!/bin/sh
 
-# echo "Create network"
-# echo "###################"
-# docker network create --gateway 172.16.0.1 --subnet 172.16.0.0/24 uniris
 
 echo "Build UNIRIS binary"
 echo "###################"

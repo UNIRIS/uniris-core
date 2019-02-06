@@ -2,4 +2,4 @@
 **/dump.rdb
 .vscode
 dump.rdb
-autodiscovery/tests/bench.docker-compose.yml
+deployments/*.yml

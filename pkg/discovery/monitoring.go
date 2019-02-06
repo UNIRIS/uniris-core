@@ -66,7 +66,8 @@ func systemInfo(sr SystemReader) (lon float64, lat float64, ip net.IP, cpu strin
 
 func localStatus(p Peer, seedAvgDiscovery int, nv NetworkChecker) (PeerStatus, error) {
 	if err := nv.CheckInternetState(); err != nil {
-		return FaultyPeer, err
+		fmt.Printf("networking error: %s\n", err.Error())
+		return FaultyPeer, nil
 	}
 
 	if err := nv.CheckNtpState(); err != nil {

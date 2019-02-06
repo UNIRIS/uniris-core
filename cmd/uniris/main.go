@@ -256,10 +256,7 @@ func startInternalServer(conf unirisConf, techDB shared.TechDatabaseReader, pool
 }
 
 func startExternalServer(conf unirisConf, techDB shared.TechDatabaseReader, poolR consensus.PoolRequester) {
-	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", conf.grpcExternalPort))
-	if err != nil {
-		panic(err)
-	}
+
 	grpcServer := grpc.NewServer()
 
 	chainDB := memstorage.NewchainDatabase()
@@ -289,6 +286,10 @@ func startExternalServer(conf unirisConf, techDB shared.TechDatabaseReader, pool
 	api.RegisterDiscoveryServiceServer(grpcServer, rpc.NewDiscoveryServer(discoveryDB, notif))
 	go startDiscovery(conf, discoveryDB, notif)
 
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", conf.grpcExternalPort))
+	if err != nil {
+		panic(err)
+	}
 	fmt.Printf("External service listening on %d\n", conf.grpcExternalPort)
 	if err := grpcServer.Serve(lis); err != nil {
 		panic(err)
@@ -322,20 +323,22 @@ func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Noti
 	log.Print("Gossip running...")
 	seeds := getSeeds(conf)
 	for range timer.C {
-		c, err := discovery.Gossip(selfPeer, seeds, db, netCheck, systemReader, roundMessenger, notif)
-		if err != nil {
-			timer.Stop()
-			panic(err)
-		}
-		for _, p := range c.Discoveries {
-			log.Printf("New peer discovered: %s", p.String())
-		}
-		for _, pID := range c.Reaches {
-			log.Printf("New peer reached: %s", pID.Endpoint())
-		}
-		for _, pID := range c.Unreaches {
-			log.Printf("Peer unreachable: %s", pID.Endpoint())
-		}
+		go func() {
+			c, err := discovery.Gossip(selfPeer, seeds, db, netCheck, systemReader, roundMessenger, notif)
+			if err != nil {
+				timer.Stop()
+				panic(err)
+			}
+			for _, p := range c.Discoveries {
+				log.Printf("New peer discovered: %s", p.String())
+			}
+			for _, pID := range c.Reaches {
+				log.Printf("New peer reached: %s", pID.Endpoint())
+			}
+			for _, pID := range c.Unreaches {
+				log.Printf("Peer unreachable: %s", pID.Endpoint())
+			}
+		}()
 	}
 }
 
