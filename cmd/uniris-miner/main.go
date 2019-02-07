@@ -210,12 +210,6 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 			Usage:       "Internal GRPC port",
 			Destination: &conf.grpcInternalPort,
 		}),
-		altsrc.NewIntFlag(cli.IntFlag{
-			Name:        "http-port",
-			Value:       8080,
-			Usage:       "HTTP port for the API",
-			Destination: &conf.httpPort,
-		}),
 	}
 }
 
@@ -237,7 +231,7 @@ func startAPI(conf unirisConf, techDB shared.TechDatabaseReader) {
 		rest.NewSharedHandler(apiRouter, conf.grpcInternalPort)
 	}
 
-	r.Run(fmt.Sprintf(":%d", conf.httpPort))
+	r.Run(":4000")
 }
 
 func startInternalServer(conf unirisConf, techDB shared.TechDatabaseReader, poolR consensus.PoolRequester) {
@@ -370,7 +364,6 @@ type unirisConf struct {
 	}
 	grpcInternalPort int
 	grpcExternalPort int
-	httpPort         int
 	bus              struct {
 		busType  string
 		host     string
