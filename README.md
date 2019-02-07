@@ -42,6 +42,10 @@ UNIRIS miner software uses a separation of concerns designed by running multiple
 
 ## Running UNIRIS
 
+### API Access
+
+The OpenAPI is available on the port `4000`
+
 ### Configuration
 
 UNIRIS executable support few command line flags in its scope also configurable with a YAML file
@@ -65,7 +69,6 @@ Supported flags:
 | bus-password | Bus messenging instance password | default: `guest` (AMQP) |
 | external-grpc-port | External GRPC port | default: `5000`|
 | internal-grpc-port | Internal GRPC port  | default: `3009`|
-| http-port | HTTP port the API | default: `8080`| 
 
 Supported YAML configuration
 
@@ -79,7 +82,6 @@ public-key: 3059301306072a8648ce3d020106082a8648ce3d0301070342000459c8b568df6679
 private-key: 307702010104201432f00062c0229d19e24c070a713d900da4883788ce3f8bd3fede4c10a36a79a00a06082a8648ce3d030107a1440342000459c8b568df66798d7f876d94fb0afc516502893d996610632c40f70b830aebf39e0cbee311af4450ec56859d2b8f59ec09a44c7e303d030899aee551de61af2e
 
 #SERVICES CONFIGURATION
-http-port: 8080
 external-grpc-port: 5000
 internal-grpc-port: 3009
 discovery-seeds: 127.0.0.1:5000:3059301306072a8648ce3d020106082a8648ce3d0301070342000459c8b568df66798d7f876d94fb0afc516502893d996610632c40f70b830aebf39e0cbee311af4450ec56859d2b8f59ec09a44c7e303d030899aee551de61af2e

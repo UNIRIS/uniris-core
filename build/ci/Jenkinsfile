@@ -18,7 +18,7 @@ pipeline {
 
         stage('Build'){
             echo 'Building Executable'
-            sh 'cd $GOPATH/src/github.com/uniris/uniris-core/cmd/uniris && go build'
+            sh 'cd $GOPATH/src/github.com/uniris/uniris-core/cmd/uniris-miner && go build'
         }
     }
 }

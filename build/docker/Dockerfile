@@ -17,7 +17,7 @@ RUN sed -i  '/NODE_IP_ADDRESS/ s/^#NODE_IP_ADDRESS/NODE_IP_ADDRESS/g' /etc/rabbi
 RUN rabbitmq-plugins enable rabbitmq_management;
 
 # Copy the binary
-COPY uniris ./root
+COPY uniris-miner ./root
 
 # Configure the app
 ENV UNIRIS_PUBLIC_KEY=3059301306072a8648ce3d020106082a8648ce3d0301070342000459c8b568df66798d7f876d94fb0afc516502893d996610632c40f70b830aebf39e0cbee311af4450ec56859d2b8f59ec09a44c7e303d030899aee551de61af2e
@@ -36,10 +36,9 @@ ENV UNIRIS_BUS_USER=guest
 ENV UNIRIS_BUS_PWD=guest
 ENV UNIRIS_INT_GRPC_PORT=3009
 ENV UNIRIS_EXT_GRPC_PORT=5000
-ENV UNIRIS_HTTP_PORT=80
 
 # Expose Public services
-EXPOSE $UNIRIS_HTTP_PORT
+EXPOSE 4000
 EXPOSE $UNIRIS_EXT_GRPC_PORT
 
 #Expose Rabitmq management console
@@ -53,4 +52,4 @@ CMD /etc/init.d/redis-server start ; \
     rabbitmqctl add_user uniris uniris; \
     rabbitmqctl set_user_tags uniris administrator; \
     rabbitmqctl set_permissions -p / uniris ".*" ".*" ".*"; \
-    ./uniris
+    ./uniris-miner
