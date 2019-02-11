@@ -9,9 +9,7 @@ import (
 	"strings"
 
 	"github.com/uniris/uniris-core/pkg/interpreter"
-
-	uniris "github.com/uniris/uniris-interpreter/pkg"
-	"github.com/urfave/cli"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 func main() {
@@ -38,7 +36,7 @@ func main() {
 			if err != nil {
 				return err
 			}
-			res, err := uniris.Interpret(string(code), nil)
+			res, err := interpreter.Execute(string(code), nil)
 			if err != nil {
 				fmt.Printf("Error: %s\n", err)
 			}

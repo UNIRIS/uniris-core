@@ -42,8 +42,8 @@
   version = "1.2.0"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/streadway/amqp"
+  version="0.9.1"
 
 [[constraint]]
   name = "github.com/stretchr/testify"
