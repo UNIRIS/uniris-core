@@ -46,7 +46,8 @@ func main() {
 	app.Flags = getCliFlags(&conf)
 
 	app.Before = altsrc.InitInputSourceWithContext(app.Flags, func(c *cli.Context) (altsrc.InputSourceContext, error) {
-		context, err := altsrc.NewYamlSourceFromFile("conf")
+		confFile := c.String("conf")
+		context, err := altsrc.NewYamlSourceFromFile(confFile)
 		if err != nil {
 			fmt.Println("Load configuration by environment variables")
 			return &altsrc.MapInputSource{}, nil
