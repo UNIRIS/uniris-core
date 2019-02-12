@@ -43,7 +43,7 @@
 
 [[constraint]]
   name = "github.com/streadway/amqp"
-  version="0.9.1"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/stretchr/testify"
