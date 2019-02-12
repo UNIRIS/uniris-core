@@ -1,13 +1,31 @@
 #!/bin/sh
 
+unameOut="$(uname -s)"
+case "${unameOut}" in
+    Linux*)     machine=Linux;;
+    Darwin*)    machine=Mac;;
+    *)          machine="UNKNOWN:${unameOut}"
+esac
+
 echo "Create network"
 echo "###################"
-docker network create --gateway 172.16.0.1 --subnet 172.16.0.0/24 uniris
+if [ $machine = "Linux" ]
+then
+    sudo docker network create --gateway 172.16.0.1 --subnet 172.16.0.0/24 uniris
+else
+    docker network create --gateway 172.16.0.1 --subnet 172.16.0.0/24 uniris
+fi
 
 echo "Create image"
 echo "################"
 CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o uniris-miner ../cmd/uniris-miner
-docker build -t uniris:latest -f ../build/docker/Dockerfile .
+if [ $machine = "Linux" ]
+then
+    sudo docker build -t uniris:latest -f ../build/docker/Dockerfile .
+else
+    docker build -t uniris:latest -f ../build/docker/Dockerfile .
+fi
+
 rm uniris-miner
 
 nb=$1
@@ -46,4 +64,9 @@ done
 
 } > "docker-compose-with-$nb-peers.yml"
 
-docker-compose -f "docker-compose-with-$nb-peers.yml" up --build
+if [ $machine = "Linux" ]
+then
+    sudo docker-compose -f "docker-compose-with-$nb-peers.yml" up --build
+else
+    docker-compose -f "docker-compose-with-$nb-peers.yml" up --build
+fi
