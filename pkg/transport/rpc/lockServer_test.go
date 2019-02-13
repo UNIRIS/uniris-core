@@ -111,10 +111,11 @@ type mockLockDb struct {
 	locks []map[string]string
 }
 
-func (l *mockLockDb) WriteLock(txHash string, txAddr string) error {
+func (l *mockLockDb) WriteLock(txHash string, txAddr string, masterPubKey string) error {
 	l.locks = append(l.locks, map[string]string{
 		"transaction_address": txAddr,
 		"transaction_hash":    txHash,
+		"master_public_key":   masterPubKey,
 	})
 	return nil
 }

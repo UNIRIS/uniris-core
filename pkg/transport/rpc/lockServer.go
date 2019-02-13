@@ -45,7 +45,7 @@ func (s lockSrv) LockTransaction(ctx context.Context, req *api.LockRequest) (*ap
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	if err := consensus.LockTransaction(s.db, req.TransactionHash, req.Address); err != nil {
+	if err := consensus.LockTransaction(s.db, req.TransactionHash, req.Address, req.MasterPeerPublicKey); err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 

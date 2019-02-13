@@ -11,7 +11,7 @@ import (
 type LockDatabase interface {
 
 	//WriteLock creates a new lock from the given transaction hash and transaction address
-	WriteLock(txHash string, txAddr string) error
+	WriteLock(txHash string, txAddr string, masterPublicKey string) error
 
 	//RemoveLock remove the written lock for the given transaction
 	RemoveLock(txHash string, txAddr string) error
@@ -21,13 +21,17 @@ type LockDatabase interface {
 }
 
 //LockTransaction stores the lock in the locker system. If a lock exists already an error is returned
-func LockTransaction(db LockDatabase, txHash string, txAddr string) error {
+func LockTransaction(db LockDatabase, txHash string, txAddr string, masterPubk string) error {
 	if _, err := crypto.IsHash(txHash); err != nil {
 		return fmt.Errorf("lock transaction hash: %s", err.Error())
 	}
 
 	if _, err := crypto.IsHash(txAddr); err != nil {
 		return fmt.Errorf("lock transaction address: %s", err.Error())
+	}
+
+	if _, err := crypto.IsPublicKey(masterPubk); err != nil {
+		return fmt.Errorf("lock transaction public key: %s", err.Error())
 	}
 
 	exist, err := db.ContainsLock(txHash, txAddr)
@@ -37,7 +41,7 @@ func LockTransaction(db LockDatabase, txHash string, txAddr string) error {
 	if exist {
 		return errors.New("a lock already exist for this transaction")
 	}
-	return db.WriteLock(txHash, txAddr)
+	return db.WriteLock(txHash, txAddr, masterPubk)
 }
 
 //UnlockTransaction deletes a transaction from the locker

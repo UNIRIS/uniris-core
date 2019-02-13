@@ -13,10 +13,11 @@ func NewLockDatabase() consensus.LockDatabase {
 	return &lockDB{}
 }
 
-func (l *lockDB) WriteLock(txHash string, txAddr string) error {
+func (l *lockDB) WriteLock(txHash string, txAddr string, masterPubk string) error {
 	l.locks = append(l.locks, map[string]string{
 		"transaction_address": txAddr,
 		"transaction_hash":    txHash,
+		"master_public_key":   masterPubk,
 	})
 	return nil
 }

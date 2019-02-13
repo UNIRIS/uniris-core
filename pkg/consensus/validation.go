@@ -38,7 +38,7 @@ func LeadMining(tx chain.Transaction, minValids int, poolR PoolRequester, pub, p
 
 	//TODO: ask storage pool to store in pending
 
-	if err := lockTransaction(tx, lastVPool, poolR); err != nil {
+	if err := lockTransaction(tx, lastVPool, poolR, pub); err != nil {
 		return err
 	}
 
@@ -61,10 +61,10 @@ func LeadMining(tx chain.Transaction, minValids int, poolR PoolRequester, pub, p
 	return nil
 }
 
-func lockTransaction(tx chain.Transaction, lastVPool Pool, poolR PoolRequester) error {
+func lockTransaction(tx chain.Transaction, lastVPool Pool, poolR PoolRequester, masterPublicKey string) error {
 	//TODO: find a solution when no last validation pool (example for the first transaction)
 	if lastVPool != nil {
-		if err := poolR.RequestTransactionLock(lastVPool, tx.TransactionHash(), tx.Address()); err != nil {
+		if err := poolR.RequestTransactionLock(lastVPool, tx.TransactionHash(), tx.Address(), masterPublicKey); err != nil {
 			return fmt.Errorf("transaction lock failed: %s", err.Error())
 		}
 

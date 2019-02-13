@@ -16,7 +16,9 @@ Scenario: Create transaction lock
 func TestStoreLock(t *testing.T) {
 	lockDB := &mockDB{}
 
-	assert.Nil(t, LockTransaction(lockDB, crypto.HashString("hash"), crypto.HashString("addr")))
+	pub, _ := crypto.GenerateKeys()
+
+	assert.Nil(t, LockTransaction(lockDB, crypto.HashString("hash"), crypto.HashString("addr"), pub))
 	assert.Len(t, lockDB.locks, 1)
 	assert.Equal(t, crypto.HashString("hash"), lockDB.locks[0]["transaction_hash"])
 	assert.Equal(t, crypto.HashString("addr"), lockDB.locks[0]["transaction_address"])
@@ -30,8 +32,9 @@ Scenario: Create two lock identicals
 */
 func TestCreatedExistingLock(t *testing.T) {
 	lockDB := &mockDB{}
-	assert.Nil(t, LockTransaction(lockDB, crypto.HashString("hash"), crypto.HashString("addr")))
-	assert.EqualError(t, LockTransaction(lockDB, crypto.HashString("hash"), crypto.HashString("addr")), "a lock already exist for this transaction")
+	pub, _ := crypto.GenerateKeys()
+	assert.Nil(t, LockTransaction(lockDB, crypto.HashString("hash"), crypto.HashString("addr"), pub))
+	assert.EqualError(t, LockTransaction(lockDB, crypto.HashString("hash"), crypto.HashString("addr"), pub), "a lock already exist for this transaction")
 }
 
 /*
@@ -43,7 +46,8 @@ Scenario: Remove a lock
 func TestRemoveLock(t *testing.T) {
 	lockDB := &mockDB{}
 
-	LockTransaction(lockDB, crypto.HashString("hash"), crypto.HashString("addr"))
+	pub, _ := crypto.GenerateKeys()
+	LockTransaction(lockDB, crypto.HashString("hash"), crypto.HashString("addr"), pub)
 	assert.Nil(t, UnlockTransaction(lockDB, crypto.HashString("hash"), crypto.HashString("addr")))
 	assert.Len(t, lockDB.locks, 0)
 }
@@ -52,10 +56,11 @@ type mockDB struct {
 	locks []map[string]interface{}
 }
 
-func (r *mockDB) WriteLock(txHash string, txAddr string) error {
+func (r *mockDB) WriteLock(txHash string, txAddr string, masterPubk string) error {
 	r.locks = append(r.locks, map[string]interface{}{
 		"transaction_hash":    txHash,
 		"transaction_address": txAddr,
+		"master_public_key":   masterPubk,
 	})
 	return nil
 }

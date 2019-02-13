@@ -9,7 +9,7 @@ import (
 //PoolRequester handles the request to perform on a pool during the mining
 type PoolRequester interface {
 	//RequestTransactionLock asks a pool to lock a transaction using the address related
-	RequestTransactionLock(pool Pool, txHash string, txAddr string) error
+	RequestTransactionLock(pool Pool, txHash string, txAddr string, masterPublicKey string) error
 
 	//RequestTransactionUnlock asks a pool to unlock a transaction using the address related
 	RequestTransactionUnlock(pool Pool, txHash string, txAddr string) error

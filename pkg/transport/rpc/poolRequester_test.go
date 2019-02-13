@@ -45,7 +45,7 @@ func TestRequestTransactionLock(t *testing.T) {
 	go grpcServer.Serve(lis)
 
 	pool, _ := consensus.FindStoragePool("addr")
-	assert.Nil(t, pr.RequestTransactionLock(pool, crypto.HashString("tx"), crypto.HashString("addr")))
+	assert.Nil(t, pr.RequestTransactionLock(pool, crypto.HashString("tx"), crypto.HashString("addr"), pub))
 
 	assert.Len(t, lockDB.locks, 1)
 	assert.Equal(t, crypto.HashString("addr"), lockDB.locks[0]["transaction_address"])

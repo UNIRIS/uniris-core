@@ -625,7 +625,7 @@ func (pr mockPoolRequester) RequestLastTransaction(pool consensus.Pool, txAddr s
 	return nil, nil
 }
 
-func (pr mockPoolRequester) RequestTransactionLock(pool consensus.Pool, txHash string, txAddr string) error {
+func (pr mockPoolRequester) RequestTransactionLock(pool consensus.Pool, txHash string, txAddr string, masterPublicKey string) error {
 	return nil
 }
 
@@ -663,14 +663,14 @@ func (pr *mockPoolRequester) RequestTransactionStorage(pool consensus.Pool, minR
 }
 
 type mockChainDB struct {
-	pendings  []chain.Transaction
-	kos       []chain.Transaction
-	keychains []chain.Keychain
-	ids       []chain.ID
+	inprogress []chain.Transaction
+	kos        []chain.Transaction
+	keychains  []chain.Keychain
+	ids        []chain.ID
 }
 
-func (r mockChainDB) PendingByHash(txHash string) (*chain.Transaction, error) {
-	for _, tx := range r.pendings {
+func (r mockChainDB) InProgressByHash(txHash string) (*chain.Transaction, error) {
+	for _, tx := range r.inprogress {
 		if tx.TransactionHash() == txHash {
 			return &tx, nil
 		}
@@ -751,8 +751,8 @@ func (r *mockChainDB) WriteKO(tx chain.Transaction) error {
 	return nil
 }
 
-func (r *mockChainDB) WritePending(tx chain.Transaction) error {
-	r.pendings = append(r.pendings, tx)
+func (r *mockChainDB) WriteInProgress(tx chain.Transaction) error {
+	r.inprogress = append(r.inprogress, tx)
 	return nil
 }
 
@@ -760,10 +760,11 @@ type mockLockDB struct {
 	locks []map[string]string
 }
 
-func (l *mockLockDB) WriteLock(txHash string, txAddr string) error {
+func (l *mockLockDB) WriteLock(txHash string, txAddr string, masterPublicKey string) error {
 	l.locks = append(l.locks, map[string]string{
 		"transaction_address": txAddr,
 		"transaction_hash":    txHash,
+		"master_public_key":   masterPublicKey,
 	})
 	return nil
 }

@@ -322,7 +322,7 @@ func (pr mockPoolRequester) RequestLastTransaction(pool Pool, txAddr string, txT
 	return nil, nil
 }
 
-func (pr mockPoolRequester) RequestTransactionLock(pool Pool, txHash string, txAddr string) error {
+func (pr mockPoolRequester) RequestTransactionLock(pool Pool, txHash string, txAddr string, masterPublicKey string) error {
 	return nil
 }
 

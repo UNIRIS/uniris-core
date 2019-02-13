@@ -113,7 +113,7 @@ func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr strin
 	return &txRes[0], nil
 }
 
-func (pr poolRequester) RequestTransactionLock(pool consensus.Pool, txHash string, txAddress string) error {
+func (pr poolRequester) RequestTransactionLock(pool consensus.Pool, txHash string, txAddress string, masterPublicKey string) error {
 
 	lastMinerKeys, err := pr.techDB.LastMinerKeys()
 	if err != nil {
@@ -126,9 +126,10 @@ func (pr poolRequester) RequestTransactionLock(pool consensus.Pool, txHash strin
 	var ackUnlock int32
 
 	req := &api.LockRequest{
-		Address:         txAddress,
-		TransactionHash: txHash,
-		Timestamp:       time.Now().Unix(),
+		Address:             txAddress,
+		TransactionHash:     txHash,
+		MasterPeerPublicKey: masterPublicKey,
+		Timestamp:           time.Now().Unix(),
 	}
 	reqBytes, err := json.Marshal(req)
 	if err != nil {
