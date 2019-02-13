@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package api;
+
+service LockService {
+    rpc LockTransaction(LockRequest) returns (LockResponse);
+    rpc UnlockTransaction(LockRequest) returns (LockResponse);
+}
+
+message LockRequest {
+    string transaction_hash = 1;
+    string address = 2;
+    string master_peer_public_key = 3;
+    int64 timestamp = 4;
+    string signature_request = 5;
+}
+
+message LockResponse {
+    int64 timestamp = 1;
+    string signature_response = 2;
+}
+
+
+
+

@@ -1,0 +1,24 @@
+pipeline {
+    agent { docker { image 'golang' } }
+
+    stages {
+        stage('PreTest') {
+            echo 'Pulling Dependencies'
+            sh 'go version'
+            sh 'go get -u github.com/golang/dep/cmd/dep'
+            sh 'go get -u github.com/axw/gocov/gocov'
+            sh 'cd $GOPATH/src/github.com/uniris/uniris-core && dep ensure'
+        }
+
+        stage('Test') {
+            echo 'Execute tests'
+            sh 'go test ./... -cover'
+            sh 'gocov test ./... | gocov report > coverage.report'
+        }
+
+        stage('Build'){
+            echo 'Building Executable'
+            sh 'cd $GOPATH/src/github.com/uniris/uniris-core/cmd/uniris-miner && go build'
+        }
+    }
+}

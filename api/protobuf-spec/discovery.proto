@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package api;
+
+service DiscoveryService {
+    rpc Synchronize (SynRequest) returns (SynResponse) {}
+    rpc Acknowledge(AckRequest) returns(AckResponse) {}
+}
+
+message SynRequest {
+    repeated PeerDigest known_peers = 1;
+    int64 timestamp = 2;
+}
+
+message SynResponse {
+    repeated PeerDiscovered remote_discoveris = 1;
+    repeated PeerDigest local_discoveries = 2;
+    int64 timestamp = 3;
+}
+
+message AckRequest {
+    repeated PeerDiscovered requested_peers = 1;
+    int64 timestamp = 2;
+}
+
+message AckResponse {
+    int64 timestamp = 1;
+}
+
+
+message PeerDigest {
+    PeerIdentity identity = 1;
+    PeerHeartbeatState heartbeat_state = 2;
+}
+
+message PeerDiscovered {
+    PeerIdentity identity = 1;
+    PeerHeartbeatState heartbeat_state = 2;
+    PeerAppState app_state = 3; 
+}
+
+message PeerIdentity {
+    string public_key = 1;
+    string ip = 2;
+    int32 port = 3;
+}
+
+message PeerHeartbeatState {
+    int64 generation_time  = 1;
+    int64 elapsed_heartbeats = 2;
+}
+
+message PeerAppState {
+    enum PeerStatus {
+        BOOTSTRAPING = 0;
+        OK = 1;
+        FAULTY = 2;
+        STORAGE_ONLY = 3;
+    };
+
+    PeerStatus status = 1;
+    string cpu_load = 2;
+    float free_disk_space = 3;
+    string version = 4;
+    GeoCoordinates geo_position = 5;
+    int32 p2p_factor = 6;
+    int32 discovered_peers_number = 7;
+
+    message GeoCoordinates {
+        float latitude = 1;
+        float longitude = 2;
+    };
+}

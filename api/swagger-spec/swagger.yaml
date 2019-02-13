@@ -1,0 +1,251 @@
+swagger: "2.0"
+
+basePath: /api
+
+info:
+  description: |
+    This is the endpoints provided by the UNIRIS robot.
+    This API is documented in **OpenAPI format**
+    You can find out more about the robot code here [http://github.com/uniris/uniris-core](http://github.com/uniris/uniris-core)
+  version: 1.0
+  title: UNIRIS API
+  contact:
+    name: UNIRIS Support
+    email: dev@uniris.io
+
+produces:
+  - application/json
+
+tags:
+  - name: Account
+    description: Manage accounts
+  - name: Shared
+    description: About shared information
+  - name: Transaction
+    description: Transaction information
+
+paths:
+
+  /transaction/{addr}/status/{hash}:
+    get:
+      tags:
+        - Transaction
+      summary: Get the transaction status
+      description: Retrieve the status of a transaction
+      operationId: getTransactionStatus
+      parameters:
+        - name: addr
+          in: path
+          required: true
+          description: Encrypted address (account, smart contract)
+          type: string
+        - name: hash
+          in: path
+          required: true
+          description: Transaction hash
+          type: string
+      responses:
+        "200":
+          description: Transaction status
+          schema:
+            $ref: "#/definitions/TransactionStatus"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/Error"
+
+  /sharedkeys:
+    get:
+      tags:
+        - Shared
+      summary: Get the latest shared keys
+      description: Retrieve the last shared keys for miners and emitter
+      operationId: getSharedKeys
+      parameters:
+        - name: emitter_public_key
+          in: query
+          required: true
+          description: Emitter public key to check if the emitter is authorized to get the shared keys
+          type: string
+      responses:
+        "200":
+          description: Shared keys
+          schema:
+            $ref: "#/definitions/SharedKeysResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/Error"
+
+  /account:
+    post:
+      tags:
+        - Account
+      summary: Enroll a new user
+      description: Creates a new wallet
+      operationId: createAccount
+      parameters:
+        - name: account
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/AccountCreationRequest"
+          description: Account creation request
+      responses:
+        "201":  
+          description: Account creation response
+          schema:
+            $ref: "#/definitions/AccountCreationResult"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/Error"
+          
+  /account/{hash}:
+      get:
+        tags:
+        - Account
+        summary: Get account's details
+        description: |
+          Retrieve account details by requesting the data service of the UNIRIS robot.
+          All the data are encrypted and need to be decrypted by the emitter using ID keys.
+        operationId: getAccount
+        parameters:
+          - name: hash
+            in: path
+            required: true
+            type: string
+            description: Encrypted hash of the ID 's public key
+          - name: signature
+            in: query
+            required: true
+            type: string
+            description: Signature of the encrypted hash by the shared emitter private key
+        responses:
+          "200":
+            description: Encrypted account details
+            schema:
+              $ref: "#/definitions/AccountDetails"
+          "404":
+            description: "Error"
+            schema:
+              $ref: "#/definitions/Error"
+          default:
+            description: Error
+            schema:
+              $ref: "#/definitions/Error"
+
+definitions:
+  Error:
+    type: object
+    required:
+      - error
+    properties:
+      error:
+        type: string
+        description: Error message
+  AccountDetails:
+    required:
+      - encrypted_wallet
+      - encrypted_aes_key
+      - signature
+    properties:
+      encrypted_wallet:
+        description: Encrypted Wallet details
+        type: string
+      encrypted_aes_key:
+        description: Encrypted key which encrypt the wallet
+        type: string
+      signature:
+        description: Request signature
+        type: string
+  AccountCreationRequest:
+    required:
+      - encrypted_id
+      - encrypted_keychain
+      - signature
+    properties:
+      encrypted_id:
+        description: Encrypted ID
+        type: string
+      encrypted_keychain:
+        descrpition: Encrypted Keychain
+        type: string
+      signature:
+        description: Request signature
+        type: string
+
+  AccountCreationResult:
+    required:
+      - id_transaction
+      - keychain_transaction
+      - signature
+    properties:
+      id_transaction:
+        description: ID transaction result
+        type: object
+        schema:
+          $ref: "#/definitions/TransactionResult"
+      keychain_transaction:
+        description: Keychain transaction result
+        type: object
+        schema:
+          $ref: "#/definitions/TransactionResult"
+      signature:
+        type: string
+        description: Response signature
+
+  TransactionResult:
+    required:
+      - transaction_hash
+      - timestamp
+      - signature
+    properties:
+      transaction_hash:
+        type: string
+        description: Transaction hash
+      timestamp:
+        type: integer
+        description: Response time from the miner
+      signature:
+        type: string
+        description: Signature of the transaction response
+
+  SharedKeysResponse:
+    required:
+      - shared_emitter_keys
+      - shared_miner_public_key
+    properties:
+      shared_miner_public_key:
+        type: string
+        description: Miner shared public key
+      shared_emitter_keys:
+        description: List of the shared keys for the emitters
+        type: array
+        items:
+          type: object
+          required:
+            - public_key
+            - encrypted_private_key
+          properties:
+            public_key:
+              type: string
+              description: Emitter shared public key
+            encrypted_private_key:
+              type: string
+              description: Encrypted shared emitter private key
+
+  
+
+  TransactionStatus:
+    required:
+      - status
+    properties:
+      status:
+        description: Status of the transaction
+        type: string
+        enum:
+          - UNKNOWN
+          - IN_PROGRESS
+          - SUCCESS
+          - FAILURE

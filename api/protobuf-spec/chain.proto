@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+import "common.proto";
+
+package api;
+
+service ChainService {
+    rpc GetLastTransaction(LastTransactionRequest) returns (LastTransactionResponse);
+    rpc GetTransactionStatus(TransactionStatusRequest) returns (TransactionStatusResponse);
+    rpc StoreTransaction(StoreRequest) returns (StoreResponse);
+}
+
+message LastTransactionRequest{
+    string transaction_address = 1;
+    TransactionType type = 2;
+    int64 timestamp = 3;
+    string signature_request = 4;
+}
+
+message LastTransactionResponse {
+    Transaction transaction = 1;
+    int64 timestamp = 2;
+    string signature_response = 3;
+}
+
+message TransactionStatusRequest {
+    string transaction_hash = 1;
+    int64 timestamp = 2;
+    string signature_request = 3;
+}
+
+message TransactionStatusResponse {
+    enum TransactionStatus {
+        UNKNOWN = 0;
+        IN_PROGRESS = 1;
+        SUCCESS = 2;
+        FAILURE = 3;
+    }
+
+    TransactionStatus status = 1;
+    int64 timestamp = 2;
+    string signature_response = 3;
+}
+
+message StoreRequest {
+    MinedTransaction mined_transaction = 1;
+    int32 minimum_validations = 2;
+    int64 timestamp = 3;
+    string signature_request = 4;
+}
+
+message StoreResponse {
+    int64 timestamp = 1;
+    string signature_response = 2;
+}
