@@ -134,12 +134,12 @@ func TestGetUnknodbnTransactionByHash(t *testing.T) {
 }
 
 /*
-Scenario: Get transaction status pending
-	Given a transaction stored in pending
+Scenario: Get transaction status in progress
+	Given a transaction stored in in progress
 	When I dbant to get its status
-	Then I get pending
+	Then I get in progress
 */
-func TestGetTransactionStatusPending(t *testing.T) {
+func TestGetTransactionStatusInProgress(t *testing.T) {
 	chainDB := &mockChainDB{
 		inprogress: []Transaction{
 			Transaction{
@@ -150,7 +150,7 @@ func TestGetTransactionStatusPending(t *testing.T) {
 
 	status, err := GetTransactionStatus(chainDB, crypto.HashString("hash"))
 	assert.Nil(t, err)
-	assert.Equal(t, TransactionStatusPending, status)
+	assert.Equal(t, TransactionStatusInProgress, status)
 }
 
 /*

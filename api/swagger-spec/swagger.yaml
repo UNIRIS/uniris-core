@@ -246,6 +246,6 @@ definitions:
         type: string
         enum:
           - UNKNOWN
-          - PENDING
+          - IN_PROGRESS
           - SUCCESS
           - FAILURE

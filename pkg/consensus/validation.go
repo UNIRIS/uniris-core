@@ -24,7 +24,7 @@ import (
 // - Requests storage
 // - Unlocks the transaction
 func LeadMining(tx chain.Transaction, minValids int, poolR PoolRequester, pub, pv string, emR shared.EmitterDatabaseReader) error {
-	log.Printf("transaction %s is pending\n", tx.TransactionHash())
+	log.Printf("transaction %s is in progress\n", tx.TransactionHash())
 
 	lastVPool, err := findLastValidationPool(tx.Address(), tx.TransactionType(), poolR)
 	if err != nil {
@@ -36,7 +36,7 @@ func LeadMining(tx chain.Transaction, minValids int, poolR PoolRequester, pub, p
 		return err
 	}
 
-	//TODO: ask storage pool to store in pending
+	//TODO: ask storage pool to store in in progress
 
 	if err := lockTransaction(tx, lastVPool, poolR, pub); err != nil {
 		return err

@@ -51,7 +51,7 @@ type DatabaseWriter interface {
 	WriteID(id ID) error
 }
 
-//ErrUnknownTransaction is returned when the transaction is not found in all the ledgers (pending, ko, keychain, id, contracts)
+//ErrUnknownTransaction is returned when the transaction is not found in all the ledgers (in progress, ko, keychain, id, contracts)
 var ErrUnknownTransaction = errors.New("unknown transaction")
 
 //WriteTransaction stores the transaction
@@ -160,14 +160,14 @@ func LastTransaction(db DatabaseReader, txAddr string, txType TransactionType) (
 }
 
 //GetTransactionStatus gets the status of a transaction
-//It lookups on Pending DB, KO DB, Keychain, ID, Smart contracts
+//It lookups on In Progress DB, KO DB, Keychain, ID, Smart contracts
 func GetTransactionStatus(db DatabaseReader, txHash string) (TransactionStatus, error) {
 	tx, err := db.InProgressByHash(txHash)
 	if err != nil {
 		return TransactionStatusSuccess, err
 	}
 	if tx != nil {
-		return TransactionStatusPending, nil
+		return TransactionStatusInProgress, nil
 	}
 
 	tx, err = db.KOByHash(txHash)

@@ -18,8 +18,8 @@ const (
 	//TransactionStatusUnknown define a transaction as unknown (the transaction hash is invalid)
 	TransactionStatusUnknown TransactionStatus = 0
 
-	//TransactionStatusPending define a transaction in pending. (mining has not been finished)
-	TransactionStatusPending TransactionStatus = 2
+	//TransactionStatusInProgress define a transaction in in progress. (mining has not been finished)
+	TransactionStatusInProgress TransactionStatus = 2
 
 	//TransactionStatusSuccess define a transaction in success (mining and storage succeed)
 	TransactionStatusSuccess TransactionStatus = 1
