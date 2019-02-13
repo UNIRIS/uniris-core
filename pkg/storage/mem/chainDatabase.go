@@ -7,10 +7,10 @@ import (
 )
 
 type chainDB struct {
-	keychains  []chain.Keychain
-	ids        []chain.ID
-	koTxs      []chain.Transaction
-	pendingTxs []chain.Transaction
+	keychains    []chain.Keychain
+	ids          []chain.ID
+	koTxs        []chain.Transaction
+	inProgressTx []chain.Transaction
 }
 
 //NewchainDatabase creates a new chain database in memory
@@ -18,8 +18,8 @@ func NewchainDatabase() chain.Database {
 	return &chainDB{}
 }
 
-func (db chainDB) PendingByHash(txHash string) (*chain.Transaction, error) {
-	for _, tx := range db.pendingTxs {
+func (db chainDB) InProgressByHash(txHash string) (*chain.Transaction, error) {
+	for _, tx := range db.inProgressTx {
 		if tx.TransactionHash() == txHash {
 			return &tx, nil
 		}
@@ -112,7 +112,7 @@ func (db *chainDB) WriteKO(tx chain.Transaction) error {
 	return nil
 }
 
-func (db *chainDB) WritePending(tx chain.Transaction) error {
-	db.pendingTxs = append(db.pendingTxs, tx)
+func (db *chainDB) WriteInProgress(tx chain.Transaction) error {
+	db.inProgressTx = append(db.inProgressTx, tx)
 	return nil
 }

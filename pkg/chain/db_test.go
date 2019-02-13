@@ -141,7 +141,7 @@ Scenario: Get transaction status pending
 */
 func TestGetTransactionStatusPending(t *testing.T) {
 	chainDB := &mockChainDB{
-		pendings: []Transaction{
+		inprogress: []Transaction{
 			Transaction{
 				hash: crypto.HashString("hash"),
 			},
@@ -762,10 +762,10 @@ func TestStoreIDTransaction(t *testing.T) {
 }
 
 type mockChainDB struct {
-	pendings  []Transaction
-	kos       []Transaction
-	keychains []Keychain
-	ids       []ID
+	inprogress []Transaction
+	kos        []Transaction
+	keychains  []Keychain
+	ids        []ID
 }
 
 func (db *mockChainDB) WriteKeychain(kc Keychain) error {
@@ -783,13 +783,13 @@ func (db *mockChainDB) WriteKO(tx Transaction) error {
 	return nil
 }
 
-func (db *mockChainDB) WritePending(tx Transaction) error {
-	db.pendings = append(db.pendings, tx)
+func (db *mockChainDB) WriteInProgress(tx Transaction) error {
+	db.inprogress = append(db.inprogress, tx)
 	return nil
 }
 
-func (db mockChainDB) PendingByHash(hash string) (*Transaction, error) {
-	for _, tx := range db.pendings {
+func (db mockChainDB) InProgressByHash(hash string) (*Transaction, error) {
+	for _, tx := range db.inprogress {
 		if tx.hash == hash {
 			return &tx, nil
 		}

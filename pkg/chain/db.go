@@ -14,8 +14,8 @@ type Database interface {
 //DatabaseReader handles transaction chain queries to retreive a transaction from its related database
 type DatabaseReader interface {
 
-	//PendingByHash retrieves a transaction from the pending database by hash
-	PendingByHash(txHash string) (*Transaction, error)
+	//InProgressByHash retrieves a transaction from the in progress database by hash
+	InProgressByHash(txHash string) (*Transaction, error)
 
 	//KOByHash retrieves a transactionfrom the KO database by hash
 	KOByHash(txHash string) (*Transaction, error)
@@ -38,8 +38,8 @@ type DatabaseReader interface {
 
 //DatabaseWriter handles transaction persistence by writing in the right database the related transaction
 type DatabaseWriter interface {
-	//WritePending stores the transaction in the pending storage
-	WritePending(tx Transaction) error
+	//WriteInProgress stores the transaction in the in progress storage
+	WriteInProgress(tx Transaction) error
 
 	//WriteKO stores the transaction in the KO storage
 	WriteKO(tx Transaction) error
@@ -162,7 +162,7 @@ func LastTransaction(db DatabaseReader, txAddr string, txType TransactionType) (
 //GetTransactionStatus gets the status of a transaction
 //It lookups on Pending DB, KO DB, Keychain, ID, Smart contracts
 func GetTransactionStatus(db DatabaseReader, txHash string) (TransactionStatus, error) {
-	tx, err := db.PendingByHash(txHash)
+	tx, err := db.InProgressByHash(txHash)
 	if err != nil {
 		return TransactionStatusSuccess, err
 	}
