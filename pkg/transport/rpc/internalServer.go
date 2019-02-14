@@ -145,8 +145,8 @@ func (s intSrv) HandleTransaction(ctx context.Context, req *api.IncomingTransact
 	fmt.Printf("PRE VALIDATE TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
 	txRes := &api.TransactionResult{
-		Timestamp:       time.Now().Unix(),
-		TransactionHash: txHash,
+		Timestamp:          time.Now().Unix(),
+		TransactionReceipt: tx.Address + txHash,
 	}
 	txResBytes, err := json.Marshal(txRes)
 	if err != nil {

@@ -26,7 +26,7 @@ tags:
 
 paths:
 
-  /transaction/{addr}/status/{hash}:
+  /transaction/{tx_receipt}/status:
     get:
       tags:
         - Transaction
@@ -34,16 +34,11 @@ paths:
       description: Retrieve the status of a transaction
       operationId: getTransactionStatus
       parameters:
-        - name: addr
+        - name: tx_receipt
           in: path
           required: true
-          description: Encrypted address (account, smart contract)
-          type: string
-        - name: hash
-          in: path
-          required: true
-          description: Transaction hash
-          type: string
+          description: Transaction receipt received from a processed transaction
+          type: string 
       responses:
         "200":
           description: Transaction status
@@ -197,13 +192,13 @@ definitions:
 
   TransactionResult:
     required:
-      - transaction_hash
+      - transaction_receipt
       - timestamp
       - signature
     properties:
-      transaction_hash:
+      transaction_receipt:
         type: string
-        description: Transaction hash
+        description: Transaction receipt
       timestamp:
         type: integer
         description: Response time from the miner

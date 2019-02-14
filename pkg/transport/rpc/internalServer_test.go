@@ -119,19 +119,25 @@ func TestHandleIncomingTransaction(t *testing.T) {
 		Timestamp:            time.Now().Unix(),
 	})
 	assert.Nil(t, err)
-	assert.NotEmpty(t, res.TransactionHash)
+	assert.NotEmpty(t, res.TransactionReceipt)
 
 	resBytes, _ := json.Marshal(&api.TransactionResult{
-		Timestamp:       res.Timestamp,
-		TransactionHash: res.TransactionHash,
+		Timestamp:          res.Timestamp,
+		TransactionReceipt: res.TransactionReceipt,
 	})
 	assert.Nil(t, crypto.VerifySignature(string(resBytes), pub, res.Signature))
-	assert.Equal(t, crypto.HashBytes(txBytes), res.TransactionHash)
 
 	time.Sleep(2 * time.Second)
 
 	assert.Len(t, chainDB.keychains, 1)
-	assert.Equal(t, res.TransactionHash, chainDB.keychains[0].TransactionHash())
+
+	txAddr := res.TransactionReceipt[:64]
+	txHash := res.TransactionReceipt[64:]
+
+	assert.Equal(t, crypto.HashBytes(txBytes), txHash)
+	assert.Equal(t, crypto.HashString("addr"), txAddr)
+	assert.Equal(t, txAddr, chainDB.keychains[0].Address())
+	assert.Equal(t, txHash, chainDB.keychains[0].TransactionHash())
 
 }
 
@@ -194,7 +200,7 @@ func TestHandleGetAccount(t *testing.T) {
 		Timestamp:            time.Now().Unix(),
 	})
 	assert.Nil(t, err)
-	assert.NotEmpty(t, res.TransactionHash)
+	assert.NotEmpty(t, res.TransactionReceipt)
 
 	time.Sleep(1 * time.Second)
 	assert.Equal(t, crypto.HashString("idHash"), chainDB.ids[0].Address())
@@ -226,7 +232,7 @@ func TestHandleGetAccount(t *testing.T) {
 		Timestamp:            time.Now().Unix(),
 	})
 	assert.Nil(t, err)
-	assert.NotEmpty(t, res2.TransactionHash)
+	assert.NotEmpty(t, res2.TransactionReceipt)
 
 	time.Sleep(1 * time.Second)
 	assert.Equal(t, crypto.HashString("addr"), chainDB.keychains[0].Address())

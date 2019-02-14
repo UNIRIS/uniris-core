@@ -24,7 +24,7 @@ message InternalTransactionStatusRequest {
 }
 
 message TransactionResult {
-    string transaction_hash = 1;
+    string transaction_receipt = 1;
     int64 timestamp = 3;
     string signature = 4;
 }

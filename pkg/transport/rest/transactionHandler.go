@@ -2,6 +2,8 @@ package rest
 
 import (
 	"context"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -14,20 +16,15 @@ import (
 
 //NewTransactionHandler creates a new HTTP handler for the transaction endpoints
 func NewTransactionHandler(r *gin.RouterGroup, internalPort int) {
-	r.GET("/transaction/:addr/status/:hash", getTransactionStatus(internalPort))
+	r.GET("/transaction/:txReceipt/status", getTransactionStatus(internalPort))
 }
 
 func getTransactionStatus(internalPort int) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		txAddress := c.Param("addr")
-		if _, err := crypto.IsHash(txAddress); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("address: %s", err.Error())})
-			return
-		}
-
-		txHash := c.Param("hash")
-		if _, err := crypto.IsHash(txHash); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("hash: %s", err.Error())})
+		txReceipt := c.Param("txReceipt")
+		txAddress, txHash, err := decodeTxReceipt(txReceipt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("tx receipt decoding: %s", err.Error())})
 			return
 		}
 
@@ -56,4 +53,29 @@ func getTransactionStatus(internalPort int) func(c *gin.Context) {
 			"signature": res.SignatureResponse,
 		})
 	}
+}
+
+func decodeTxReceipt(receipt string) (addr, hash string, err error) {
+	if _, err = hex.DecodeString(receipt); err != nil {
+		err = errors.New("must be hexadecimal")
+		return
+	}
+
+	if len(receipt) != 128 {
+		err = errors.New("invalid length")
+		return
+	}
+
+	addr = receipt[:64]
+	hash = receipt[64:]
+
+	if _, err = crypto.IsHash(addr); err != nil {
+		return
+	}
+
+	if _, err = crypto.IsHash(hash); err != nil {
+		return
+	}
+
+	return
 }

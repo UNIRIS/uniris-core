@@ -598,12 +598,12 @@ func TestCreateAccount(t *testing.T) {
 	json.Unmarshal(resBytes, &resTx)
 
 	idTxRes := resTx["id_transaction"].(map[string]interface{})
-	assert.NotEmpty(t, idTxRes["transaction_hash"])
+	assert.NotEmpty(t, idTxRes["transaction_receipt"])
 	assert.NotEmpty(t, idTxRes["timestamp"])
 	assert.NotEmpty(t, idTxRes["signature"])
 
 	keychainTxRes := resTx["keychain_transaction"].(map[string]interface{})
-	assert.NotEmpty(t, keychainTxRes["transaction_hash"])
+	assert.NotEmpty(t, keychainTxRes["transaction_receipt"])
 	assert.NotEmpty(t, keychainTxRes["timestamp"])
 	assert.NotEmpty(t, keychainTxRes["signature"])
 

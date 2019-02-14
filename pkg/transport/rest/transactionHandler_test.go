@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -19,17 +20,17 @@ import (
 )
 
 /*
-Scenario: Get transactions status with invalid address
-	Given an invalid address (not hexa or not hash)
+Scenario: Get transactions status with receipt non hexadecimal
+	Given an invalid receipt no hexadecimal
 	When I want to get the transaction status
 	Then I get an error
 */
-func TestGetTransactionStatusWithInvalidAddress(t *testing.T) {
+func TestGetTransactionStatusWithNoHexaReceipt(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
 	NewTransactionHandler(apiGroup, 3545)
 
-	path := fmt.Sprintf("http://localhost:3000/api/transaction/abc/status/abc")
+	path := fmt.Sprintf("http://localhost:3000/api/transaction/abc/status")
 	req, _ := http.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -38,23 +39,21 @@ func TestGetTransactionStatusWithInvalidAddress(t *testing.T) {
 	resBytes, _ := ioutil.ReadAll(w.Body)
 	var errorRes map[string]string
 	json.Unmarshal(resBytes, &errorRes)
-	assert.Equal(t, errorRes["error"], "address: hash is not in hexadecimal format")
-
+	assert.Equal(t, errorRes["error"], "tx receipt decoding: must be hexadecimal")
 }
 
 /*
-Scenario: Get transactions status with invalid transaction hash
-	Given an invalid transaction hash (not hexa or not hash)
+Scenario: Get transactions status with receipt bad length
+	Given an invalid receipt no hexadecimal
 	When I want to get the transaction status
 	Then I get an error
 */
-func TestGetTransactionStatusWithInvalidTxHash(t *testing.T) {
+func TestGetTransactionStatusWithBadReceiptLength(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
 	NewTransactionHandler(apiGroup, 3545)
 
-	addr := crypto.HashString("abc")
-	path := fmt.Sprintf("http://localhost:3000/api/transaction/%s/status/abc", addr)
+	path := fmt.Sprintf("http://localhost:3000/api/transaction/%s/status", hex.EncodeToString([]byte("abc")))
 	req, _ := http.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -63,7 +62,7 @@ func TestGetTransactionStatusWithInvalidTxHash(t *testing.T) {
 	resBytes, _ := ioutil.ReadAll(w.Body)
 	var errorRes map[string]string
 	json.Unmarshal(resBytes, &errorRes)
-	assert.Equal(t, errorRes["error"], "hash: hash is not in hexadecimal format")
+	assert.Equal(t, errorRes["error"], "tx receipt decoding: invalid length")
 }
 
 /*
@@ -106,10 +105,9 @@ func TestGetTransactionStatusUnknown(t *testing.T) {
 	apiGroup := r.Group("/api")
 	NewTransactionHandler(apiGroup, 1717)
 
-	addr := crypto.HashString("abc")
-	txHash := crypto.HashString("hash")
+	txReceipt := fmt.Sprintf("%s%s", crypto.HashString("hash"), crypto.HashString("abc"))
 
-	path := fmt.Sprintf("http://localhost:3000/api/transaction/%s/status/%s", addr, txHash)
+	path := fmt.Sprintf("http://localhost:3000/api/transaction/%s/status", txReceipt)
 	req, _ := http.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
