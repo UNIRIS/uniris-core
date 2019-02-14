@@ -144,14 +144,14 @@ func createAccount(intServerPort int, techDB shared.TechDatabaseReader) func(c *
 
 		c.JSON(http.StatusCreated, map[string]interface{}{
 			"id_transaction": map[string]interface{}{
-				"transaction_hash": resID.TransactionHash,
-				"timestamp":        resID.Timestamp,
-				"signature":        resID.Signature,
+				"transaction_receipt": resID.TransactionReceipt,
+				"timestamp":           resID.Timestamp,
+				"signature":           resID.Signature,
 			},
 			"keychain_transaction": map[string]interface{}{
-				"transaction_hash": resKeychain.TransactionHash,
-				"timestamp":        resKeychain.Timestamp,
-				"signature":        resKeychain.Signature,
+				"transaction_receipt": resKeychain.TransactionReceipt,
+				"timestamp":           resKeychain.Timestamp,
+				"signature":           resKeychain.Signature,
 			},
 		})
 	}
