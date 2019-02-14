@@ -37,7 +37,7 @@ paths:
         - name: tx_receipt
           in: path
           required: true
-          description: Transaction receipt received from a processed transaction
+          description: Transaction receipt received for a processed transaction
           type: string 
       responses:
         "200":

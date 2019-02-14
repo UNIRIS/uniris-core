@@ -61,6 +61,11 @@ func decodeTxReceipt(receipt string) (addr, hash string, err error) {
 		return
 	}
 
+	/*
+		Length from sha256 hash is 64 bytes.
+		a transaction receipt is a set of the hash of the address and the hash of the transaction
+		So a transaction receipt is 128 bytes
+	*/
 	if len(receipt) != 128 {
 		err = errors.New("invalid length")
 		return
