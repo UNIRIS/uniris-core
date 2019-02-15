@@ -31,7 +31,7 @@ func TestNewID(t *testing.T) {
 
 	tx, err := NewTransaction(addr, IDTransactionType, map[string]string{
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
@@ -40,7 +40,7 @@ func TestNewID(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, hex.EncodeToString([]byte("aesKey")), id.EncryptedAESKey())
-	assert.Equal(t, hex.EncodeToString([]byte("addr")), id.EncryptedAddrByRobot())
+	assert.Equal(t, hex.EncodeToString([]byte("addr")), id.EncryptedAddrByMiner())
 	assert.Equal(t, hex.EncodeToString([]byte("addr")), id.EncryptedAddrByID())
 
 }
@@ -65,7 +65,7 @@ func TestNewIDWithInvalidType(t *testing.T) {
 
 	tx, err := NewTransaction(addr, KeychainTransactionType, map[string]string{
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
@@ -100,10 +100,10 @@ func TestNewIDWithMissingDataFields(t *testing.T) {
 	assert.Nil(t, err)
 
 	_, err = NewID(tx)
-	assert.EqualError(t, err, "transaction: missing data ID 'encrypted_address_by_robot'")
+	assert.EqualError(t, err, "transaction: missing data ID 'encrypted_address_by_miner'")
 
 	tx, err = NewTransaction(addr, IDTransactionType, map[string]string{
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
@@ -112,7 +112,7 @@ func TestNewIDWithMissingDataFields(t *testing.T) {
 	assert.EqualError(t, err, "transaction: missing data ID 'encrypted_address_by_id'")
 
 	tx, err = NewTransaction(addr, IDTransactionType, map[string]string{
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
@@ -141,7 +141,7 @@ func TestNewIDWithNotHexDataFields(t *testing.T) {
 
 	tx, _ := NewTransaction(addr, IDTransactionType, map[string]string{
 		"encrypted_aes_key":          "aes key",
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	_, err := NewID(tx)
@@ -150,7 +150,7 @@ func TestNewIDWithNotHexDataFields(t *testing.T) {
 	tx, _ = NewTransaction(addr, IDTransactionType, map[string]string{
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
 		"encrypted_address_by_id":    "addr",
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	_, err = NewID(tx)
 	assert.EqualError(t, err, "transaction: id encrypted address for id is not in hexadecimal format")
@@ -158,8 +158,8 @@ func TestNewIDWithNotHexDataFields(t *testing.T) {
 	tx, _ = NewTransaction(addr, IDTransactionType, map[string]string{
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_robot": "addr",
+		"encrypted_address_by_miner": "addr",
 	}, time.Now(), pub, prop, sig, sig, hash)
 	_, err = NewID(tx)
-	assert.EqualError(t, err, "transaction: id encrypted address for robot is not in hexadecimal format")
+	assert.EqualError(t, err, "transaction: id encrypted address for miner is not in hexadecimal format")
 }

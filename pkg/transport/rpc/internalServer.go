@@ -140,7 +140,7 @@ func (s intSrv) HandleTransaction(ctx context.Context, req *api.IncomingTransact
 	res, err := cli.LeadTransactionMining(context.Background(), leadReq)
 	if err != nil {
 		statusCodes, _ := status.FromError(err)
-		return nil, status.New(statusCodes.Code(), err.Error()).Err()
+		return nil, status.New(statusCodes.Code(), statusCodes.Message()).Err()
 	}
 	fmt.Printf("PRE VALIDATE TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
@@ -193,7 +193,7 @@ func (s intSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest) (*ap
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	keychainAddr, err := crypto.Decrypt(id.EncryptedAddrByRobot(), lastMinersKeys.PrivateKey())
+	keychainAddr, err := crypto.Decrypt(id.EncryptedAddrByMiner(), lastMinersKeys.PrivateKey())
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}

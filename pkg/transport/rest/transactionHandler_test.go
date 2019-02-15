@@ -87,7 +87,7 @@ func TestGetTransactionStatusUnknown(t *testing.T) {
 	intSrv := rpc.NewInternalServer(techDB, pr)
 
 	//Start transaction server
-	lisTx, _ := net.Listen("tcp", ":3545")
+	lisTx, _ := net.Listen("tcp", ":5000")
 	defer lisTx.Close()
 	grpcServer := grpc.NewServer()
 	api.RegisterChainServiceServer(grpcServer, chainSrv)

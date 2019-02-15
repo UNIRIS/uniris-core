@@ -30,7 +30,7 @@ func FindMasterPeers(txHash string) (Pool, error) {
 	return Pool{
 		PoolMember{
 			ip:   net.ParseIP("127.0.0.1"),
-			port: 3545,
+			port: 5000,
 		},
 	}, nil
 }
@@ -41,7 +41,7 @@ func FindStoragePool(address string) (Pool, error) {
 	return Pool{
 		PoolMember{
 			ip:   net.ParseIP("127.0.0.1"),
-			port: 3545,
+			port: 5000,
 		},
 	}, nil
 }
@@ -52,7 +52,7 @@ func FindValidationPool(tx chain.Transaction) (Pool, error) {
 	return Pool{
 		PoolMember{
 			ip:   net.ParseIP("127.0.0.1"),
-			port: 3545,
+			port: 5000,
 		},
 	}, nil
 }

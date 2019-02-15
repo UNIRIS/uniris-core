@@ -67,5 +67,5 @@ func TestFindMasterValidationPeer(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Len(t, masterPeers, 1)
 	assert.Equal(t, "127.0.0.1", masterPeers[0].IP().String())
-	assert.Equal(t, 3545, masterPeers[0].Port())
+	assert.Equal(t, 5000, masterPeers[0].Port())
 }

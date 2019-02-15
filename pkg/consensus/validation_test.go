@@ -30,21 +30,40 @@ func TestRequestValidations(t *testing.T) {
 
 	data := map[string]string{
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 	}
 
-	txBytes, _ := json.Marshal(map[string]interface{}{
+	txRaw, _ := json.Marshal(map[string]interface{}{
 		"addr":                    crypto.HashString("addr"),
-		"type":                    chain.IDTransactionType,
 		"data":                    data,
-		"timestamp":               time.Now(),
+		"timestamp":               time.Now().Unix(),
+		"type":                    chain.KeychainTransactionType,
 		"public_key":              pub,
 		"em_shared_keys_proposal": prop,
 	})
-	sig, _ := crypto.Sign(string(txBytes), pv)
-
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.IDTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashBytes(txBytes))
+	sig, _ := crypto.Sign(string(txRaw), pv)
+	txSigned, _ := json.Marshal(map[string]interface{}{
+		"addr":                    crypto.HashString("addr"),
+		"data":                    data,
+		"timestamp":               time.Now().Unix(),
+		"type":                    chain.KeychainTransactionType,
+		"public_key":              pub,
+		"em_shared_keys_proposal": prop,
+		"signature":               sig,
+	})
+	emSig, _ := crypto.Sign(string(txSigned), pv)
+	txEmSigned, _ := json.Marshal(map[string]interface{}{
+		"addr":                    crypto.HashString("addr"),
+		"data":                    data,
+		"timestamp":               time.Now().Unix(),
+		"type":                    chain.KeychainTransactionType,
+		"public_key":              pub,
+		"em_shared_keys_proposal": prop,
+		"signature":               sig,
+		"em_signature":            emSig,
+	})
+	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txEmSigned))
 
 	valids, err := requestValidations(tx, mv, Pool{}, 1, poolR)
 	assert.Nil(t, err)
@@ -84,7 +103,7 @@ func TestValidateTransaction(t *testing.T) {
 
 	data := map[string]string{
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 	}
 
@@ -105,9 +124,19 @@ func TestValidateTransaction(t *testing.T) {
 		"public_key":              pub,
 		"em_shared_keys_proposal": prop,
 		"signature":               sig,
-		"em_signature":            sig,
 	})
-	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashBytes(txSigned))
+	emSig, _ := crypto.Sign(string(txSigned), pv)
+	txEmSigned, _ := json.Marshal(map[string]interface{}{
+		"addr":                    crypto.HashString("addr"),
+		"data":                    data,
+		"timestamp":               time.Now().Unix(),
+		"type":                    chain.KeychainTransactionType,
+		"public_key":              pub,
+		"em_shared_keys_proposal": prop,
+		"signature":               sig,
+		"em_signature":            emSig,
+	})
+	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txEmSigned))
 	assert.Nil(t, err)
 
 	v, _ := buildMinerValidation(chain.ValidationOK, pub, pv)
@@ -131,7 +160,7 @@ func TestValidateTransactionWithBadIntegrity(t *testing.T) {
 
 	data := map[string]string{
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 	}
 
@@ -163,7 +192,7 @@ func TestPerformPOW(t *testing.T) {
 
 	data := map[string]string{
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 	}
 
@@ -184,9 +213,19 @@ func TestPerformPOW(t *testing.T) {
 		"public_key":              pub,
 		"em_shared_keys_proposal": prop,
 		"signature":               sig,
-		"em_signature":            sig,
 	})
-	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashBytes(txSigned))
+	emSig, _ := crypto.Sign(string(txSigned), pv)
+	txEmSigned, _ := json.Marshal(map[string]interface{}{
+		"addr":                    crypto.HashString("addr"),
+		"data":                    data,
+		"timestamp":               time.Now().Unix(),
+		"type":                    chain.KeychainTransactionType,
+		"public_key":              pub,
+		"em_shared_keys_proposal": prop,
+		"signature":               sig,
+		"em_signature":            emSig,
+	})
+	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txEmSigned))
 	assert.Nil(t, err)
 
 	pow, err := proofOfWork(tx, emReader)
@@ -211,7 +250,7 @@ func TestPreValidateTransaction(t *testing.T) {
 
 	data := map[string]string{
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 	}
 
@@ -232,9 +271,19 @@ func TestPreValidateTransaction(t *testing.T) {
 		"public_key":              pub,
 		"em_shared_keys_proposal": prop,
 		"signature":               sig,
-		"em_signature":            sig,
 	})
-	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashBytes(txSigned))
+	emSig, _ := crypto.Sign(string(txSigned), pv)
+	txEmSigned, _ := json.Marshal(map[string]interface{}{
+		"addr":                    crypto.HashString("addr"),
+		"data":                    data,
+		"timestamp":               time.Now().Unix(),
+		"type":                    chain.KeychainTransactionType,
+		"public_key":              pub,
+		"em_shared_keys_proposal": prop,
+		"signature":               sig,
+		"em_signature":            emSig,
+	})
+	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txEmSigned))
 	assert.Nil(t, err)
 
 	mv, err := preValidateTransaction(tx, Pool{}, 1, pub, pv, emReader)
@@ -264,7 +313,7 @@ func TestLeadMining(t *testing.T) {
 
 	data := map[string]string{
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 	}
 
@@ -285,9 +334,19 @@ func TestLeadMining(t *testing.T) {
 		"public_key":              pub,
 		"em_shared_keys_proposal": prop,
 		"signature":               sig,
-		"em_signature":            sig,
 	})
-	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashBytes(txSigned))
+	emSig, _ := crypto.Sign(string(txSigned), pv)
+	txEmSigned, _ := json.Marshal(map[string]interface{}{
+		"addr":                    crypto.HashString("addr"),
+		"data":                    data,
+		"timestamp":               time.Now().Unix(),
+		"type":                    chain.KeychainTransactionType,
+		"public_key":              pub,
+		"em_shared_keys_proposal": prop,
+		"signature":               sig,
+		"em_signature":            emSig,
+	})
+	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txEmSigned))
 	assert.Nil(t, err)
 	poolR := &mockPoolRequester{}
 	assert.Nil(t, LeadMining(tx, 1, poolR, pub, pv, emReader))

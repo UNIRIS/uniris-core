@@ -38,7 +38,7 @@ func TestHandleGetTransactionStatusInternal(t *testing.T) {
 	chainSrv := NewChainServer(chainDB, techDB, pr)
 	intSrv := NewInternalServer(techDB, pr)
 
-	lis, _ := net.Listen("tcp", ":3545")
+	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
 	api.RegisterChainServiceServer(grpcServer, chainSrv)
@@ -86,7 +86,7 @@ func TestHandleIncomingTransaction(t *testing.T) {
 	intSrv := NewInternalServer(techDB, pr)
 	miningSrv := NewMiningServer(techDB, pr, pub, pv)
 
-	lis, _ := net.Listen("tcp", ":3545")
+	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
 	api.RegisterChainServiceServer(grpcServer, chainSrv)
@@ -96,8 +96,8 @@ func TestHandleIncomingTransaction(t *testing.T) {
 	tx := map[string]interface{}{
 		"addr": crypto.HashString("addr"),
 		"data": map[string]string{
-			"encrypted_address": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		"timestamp":  time.Now().Unix(),
 		"type":       int(chain.KeychainTransactionType),
@@ -110,7 +110,10 @@ func TestHandleIncomingTransaction(t *testing.T) {
 	txBytes, _ := json.Marshal(tx)
 	sig, _ := crypto.Sign(string(txBytes), pv)
 	tx["signature"] = sig
-	tx["em_signature"] = sig
+
+	txBytesWithSig, _ := json.Marshal(tx)
+	emSig, _ := crypto.Sign(string(txBytesWithSig), pv)
+	tx["em_signature"] = emSig
 	txBytes, _ = json.Marshal(tx)
 
 	cipherTx, _ := crypto.Encrypt(string(txBytes), pub)
@@ -163,7 +166,7 @@ func TestHandleGetAccount(t *testing.T) {
 	miningSrv := NewMiningServer(techDB, pr, pub, pv)
 	intSrv := NewInternalServer(techDB, pr)
 
-	lis, _ := net.Listen("tcp", ":3545")
+	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
 	api.RegisterChainServiceServer(grpcServer, chainSrv)
@@ -177,7 +180,7 @@ func TestHandleGetAccount(t *testing.T) {
 		"addr": crypto.HashString("idHash"),
 		"data": map[string]string{
 			"encrypted_address_by_id":    encAddr,
-			"encrypted_address_by_robot": encAddr,
+			"encrypted_address_by_miner": encAddr,
 			"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
 		},
 		"timestamp":  time.Now().Unix(),
@@ -191,7 +194,11 @@ func TestHandleGetAccount(t *testing.T) {
 	txIDBytes, _ := json.Marshal(txID)
 	sigID, _ := crypto.Sign(string(txIDBytes), pv)
 	txID["signature"] = sigID
-	txID["em_signature"] = sigID
+
+	txIDBytesWithSig, _ := json.Marshal(txID)
+	idEmSig, _ := crypto.Sign(string(txIDBytesWithSig), pv)
+	txID["em_signature"] = idEmSig
+
 	txIDBytes, _ = json.Marshal(txID)
 
 	cipherTx, _ := crypto.Encrypt(string(txIDBytes), pub)
@@ -209,8 +216,8 @@ func TestHandleGetAccount(t *testing.T) {
 	txKeychain := map[string]interface{}{
 		"addr": crypto.HashString("addr"),
 		"data": map[string]string{
-			"encrypted_address": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		"timestamp":  time.Now().Unix(),
 		"type":       int(chain.KeychainTransactionType),
@@ -223,7 +230,11 @@ func TestHandleGetAccount(t *testing.T) {
 	txKeychainBytes, _ := json.Marshal(txKeychain)
 	sigKeychain, _ := crypto.Sign(string(txKeychainBytes), pv)
 	txKeychain["signature"] = sigKeychain
-	txKeychain["em_signature"] = sigKeychain
+
+	txKeychainBytesWithSig, _ := json.Marshal(txKeychain)
+	idKeychainSig, _ := crypto.Sign(string(txKeychainBytesWithSig), pv)
+	txKeychain["em_signature"] = idKeychainSig
+
 	txKeychainBytes, _ = json.Marshal(txKeychain)
 
 	cipherTx2, _ := crypto.Encrypt(string(txKeychainBytes), pub)

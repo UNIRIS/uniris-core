@@ -27,8 +27,8 @@ func TestReadKeychainByHash(t *testing.T) {
 
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}
 	tx := Transaction{
 		addr:      crypto.HashString("addr"),
@@ -80,7 +80,7 @@ func TestGetIDTransactionByHash(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
 	}
@@ -203,7 +203,7 @@ func TestGetTransactionStatusSuccess(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
 	}
@@ -258,8 +258,8 @@ func TestReadLastKeychainTransaction(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}
 
 	tx := Transaction{
@@ -340,7 +340,7 @@ func TestGetLastIDTransaction(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
 	}
@@ -426,8 +426,8 @@ func TestGetTransactionChain(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}
 
 	tx := Transaction{
@@ -505,8 +505,8 @@ func TestCheckTransactionBeforeStore(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}
 
 	tx := Transaction{
@@ -519,8 +519,10 @@ func TestCheckTransactionBeforeStore(t *testing.T) {
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
 	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
-	tx.emSig = sig
 	tx.sig = sig
+	txBytesBeforeEmSig, _ := tx.MarshalBeforeEmitterSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeEmSig), pv)
+	tx.emSig = emSig
 	txBytes, _ := tx.MarshalHash()
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash
@@ -550,8 +552,8 @@ func TestCheckTransactionBeforeStoreWithMissingValidations(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}
 
 	tx := Transaction{
@@ -564,8 +566,10 @@ func TestCheckTransactionBeforeStoreWithMissingValidations(t *testing.T) {
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
 	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
-	tx.emSig = sig
 	tx.sig = sig
+	txBytesBeforeEmSig, _ := tx.MarshalBeforeEmitterSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeEmSig), pv)
+	tx.emSig = emSig
 	txBytes, _ := tx.MarshalHash()
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash
@@ -613,8 +617,8 @@ func TestStoreKOTransaction(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}
 
 	tx := Transaction{
@@ -627,8 +631,10 @@ func TestStoreKOTransaction(t *testing.T) {
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
 	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
-	tx.emSig = sig
 	tx.sig = sig
+	txBytesBeforeEmSig, _ := tx.MarshalBeforeEmitterSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeEmSig), pv)
+	tx.emSig = emSig
 	txBytes, _ := tx.MarshalHash()
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash
@@ -672,8 +678,8 @@ func TestStoreKeychainTransaction(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}
 
 	tx := Transaction{
@@ -686,8 +692,10 @@ func TestStoreKeychainTransaction(t *testing.T) {
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
 	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
-	tx.emSig = sig
 	tx.sig = sig
+	txBytesBeforeEmSig, _ := tx.MarshalBeforeEmitterSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeEmSig), pv)
+	tx.emSig = emSig
 	txBytes, _ := tx.MarshalHash()
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash
@@ -731,7 +739,7 @@ func TestStoreIDTransaction(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
 		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
 	}
@@ -746,8 +754,10 @@ func TestStoreIDTransaction(t *testing.T) {
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
 	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
-	tx.emSig = sig
 	tx.sig = sig
+	txBytesBeforeEmSig, _ := tx.MarshalBeforeEmitterSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeEmSig), pv)
+	tx.emSig = emSig
 	txBytes, _ := tx.MarshalHash()
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash

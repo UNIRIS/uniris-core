@@ -19,9 +19,9 @@ func NewKeychain(tx Transaction) (Keychain, error) {
 		return Keychain{}, errors.New("transaction: invalid type of transaction")
 	}
 
-	addr, exist := tx.data["encrypted_address"]
+	addr, exist := tx.data["encrypted_address_by_miner"]
 	if !exist {
-		return Keychain{}, errors.New("transaction: missing data keychain: 'encrypted_address'")
+		return Keychain{}, errors.New("transaction: missing data keychain: 'encrypted_address_by_miner'")
 	}
 
 	wallet, exist := tx.data["encrypted_wallet"]
@@ -30,7 +30,7 @@ func NewKeychain(tx Transaction) (Keychain, error) {
 	}
 
 	if _, err := hex.DecodeString(addr); err != nil {
-		return Keychain{}, errors.New("transaction: keychain encrypted address is not in hexadecimal format")
+		return Keychain{}, errors.New("transaction: keychain encrypted address for miner is not in hexadecimal format")
 	}
 
 	if _, err := hex.DecodeString(wallet); err != nil {

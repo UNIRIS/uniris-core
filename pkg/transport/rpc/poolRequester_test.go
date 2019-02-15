@@ -38,7 +38,7 @@ func TestRequestTransactionLock(t *testing.T) {
 	lockSrv := NewLockServer(lockDB, techDB)
 	pr := NewPoolRequester(techDB)
 
-	lis, _ := net.Listen("tcp", ":3545")
+	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
 	api.RegisterLockServiceServer(grpcServer, lockSrv)
@@ -74,7 +74,7 @@ func TestRequestTransactionUnlock(t *testing.T) {
 
 	pr := NewPoolRequester(techDB)
 
-	lis, _ := net.Listen("tcp", ":3545")
+	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
 	api.RegisterLockServiceServer(grpcServer, lockSrv)
@@ -106,15 +106,15 @@ func TestRequestConfirmValidation(t *testing.T) {
 
 	miningSrv := NewMiningServer(techDB, pr, pub, pv)
 
-	lis, err := net.Listen("tcp", ":3545")
+	lis, err := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
 	api.RegisterMiningServiceServer(grpcServer, miningSrv)
 	go grpcServer.Serve(lis)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}
 	prop := kp
 	txRaw := map[string]interface{}{
@@ -128,10 +128,12 @@ func TestRequestConfirmValidation(t *testing.T) {
 	txBytes, _ := json.Marshal(txRaw)
 	sig, _ := crypto.Sign(string(txBytes), pv)
 	txRaw["signature"] = sig
-	txRaw["em_signature"] = sig
+	txByteWithSig, _ := json.Marshal(txRaw)
+	emSig, _ := crypto.Sign(string(txByteWithSig), pv)
+	txRaw["em_signature"] = emSig
 	txBytes, _ = json.Marshal(txRaw)
 
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashBytes(txBytes))
+	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txBytes))
 	vBytes, _ := json.Marshal(map[string]interface{}{
 		"status":     chain.ValidationOK,
 		"public_key": pub,
@@ -175,15 +177,15 @@ func TestRequestStorage(t *testing.T) {
 
 	chainSrv := NewChainServer(chainDB, techDB, pr)
 
-	lis, _ := net.Listen("tcp", ":3545")
+	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
 	api.RegisterChainServiceServer(grpcServer, chainSrv)
 	go grpcServer.Serve(lis)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}
 	prop := kp
 	txRaw := map[string]interface{}{
@@ -197,10 +199,12 @@ func TestRequestStorage(t *testing.T) {
 	txBytes, _ := json.Marshal(txRaw)
 	sig, _ := crypto.Sign(string(txBytes), pv)
 	txRaw["signature"] = sig
-	txRaw["em_signature"] = sig
+	txByteWithSig, _ := json.Marshal(txRaw)
+	emSig, _ := crypto.Sign(string(txByteWithSig), pv)
+	txRaw["em_signature"] = emSig
 	txBytes, _ = json.Marshal(txRaw)
 
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashBytes(txBytes))
+	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txBytes))
 	vBytes, _ := json.Marshal(map[string]interface{}{
 		"status":     chain.ValidationOK,
 		"public_key": pub,
@@ -237,15 +241,15 @@ func TestSendGetLastTransaction(t *testing.T) {
 
 	chainSrv := NewChainServer(chainDB, techDB, pr)
 
-	lis, _ := net.Listen("tcp", ":3545")
+	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
 	api.RegisterChainServiceServer(grpcServer, chainSrv)
 	go grpcServer.Serve(lis)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}
 
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPV")), pub)
@@ -260,7 +264,9 @@ func TestSendGetLastTransaction(t *testing.T) {
 	txBytes, _ := json.Marshal(txRaw)
 	sig, _ := crypto.Sign(string(txBytes), pv)
 	txRaw["signature"] = sig
-	txRaw["em_signature"] = sig
+	txByteWithSig, _ := json.Marshal(txRaw)
+	emSig, _ := crypto.Sign(string(txByteWithSig), pv)
+	txRaw["em_signature"] = emSig
 	txBytes, _ = json.Marshal(txRaw)
 
 	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashBytes(txBytes))

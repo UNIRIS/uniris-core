@@ -38,8 +38,8 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 	miningSrv := NewMiningServer(techDB, pr, pub, pv)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}
 
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
@@ -54,10 +54,14 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 	txBytes, _ := json.Marshal(txRaw)
 	sig, _ := crypto.Sign(string(txBytes), pv)
 	txRaw["signature"] = sig
-	txRaw["em_signature"] = sig
+
+	txByteWithSig, _ := json.Marshal(txRaw)
+	emSig, _ := crypto.Sign(string(txByteWithSig), pv)
+	txRaw["em_signature"] = emSig
+
 	txBytes, _ = json.Marshal(txRaw)
 
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashBytes(txBytes))
+	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txBytes))
 	req := &api.LeadMiningRequest{
 		Timestamp:          time.Now().Unix(),
 		MinimumValidations: 1,
@@ -107,8 +111,8 @@ func TestHandleConfirmValiation(t *testing.T) {
 
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}
 
 	txRaw := map[string]interface{}{
@@ -122,9 +126,11 @@ func TestHandleConfirmValiation(t *testing.T) {
 	txBytes, _ := json.Marshal(txRaw)
 	sig, _ := crypto.Sign(string(txBytes), pv)
 	txRaw["signature"] = sig
-	txRaw["em_signature"] = sig
+	txByteWithSig, _ := json.Marshal(txRaw)
+	emSig, _ := crypto.Sign(string(txByteWithSig), pv)
+	txRaw["em_signature"] = emSig
 	txBytes, _ = json.Marshal(txRaw)
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashBytes(txBytes))
+	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txBytes))
 
 	vRaw := map[string]interface{}{
 		"status":     chain.ValidationOK,

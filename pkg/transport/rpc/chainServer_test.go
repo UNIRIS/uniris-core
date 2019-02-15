@@ -81,14 +81,14 @@ func TestHandleGetLastTransaction(t *testing.T) {
 	chainSrv := NewChainServer(chainDB, techR, poolR)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}
 
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
 
 	txRaw := map[string]interface{}{
-		"address":                 crypto.HashString("addr"),
+		"addr":                    crypto.HashString("addr"),
 		"data":                    data,
 		"timestamp":               time.Now().Unix(),
 		"type":                    chain.KeychainTransactionType,
@@ -98,10 +98,13 @@ func TestHandleGetLastTransaction(t *testing.T) {
 	txBytes, _ := json.Marshal(txRaw)
 	sig, _ := crypto.Sign(string(txBytes), pv)
 	txRaw["signature"] = sig
-	txRaw["em_signature"] = sig
+
+	txByteWithSign, _ := json.Marshal(txRaw)
+	emSig, _ := crypto.Sign(string(txByteWithSign), pv)
+	txRaw["em_signature"] = emSig
 	txBytes, _ = json.Marshal(txRaw)
 
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashBytes(txBytes))
+	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txBytes))
 	keychain, _ := chain.NewKeychain(tx)
 	chainDB.keychains = append(chainDB.keychains, keychain)
 
@@ -190,8 +193,8 @@ func TestHandleStoreTransaction(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}
 	txRaw := map[string]interface{}{
 		"addr":                    crypto.HashString("addr"),
@@ -204,10 +207,15 @@ func TestHandleStoreTransaction(t *testing.T) {
 	txBytes, _ := json.Marshal(txRaw)
 	sig, _ := crypto.Sign(string(txBytes), pv)
 	txRaw["signature"] = sig
-	txRaw["em_signature"] = sig
+
+	txByteWithSign, _ := json.Marshal(txRaw)
+	emSig, _ := crypto.Sign(string(txByteWithSign), pv)
+	txRaw["em_signature"] = emSig
 	txBytes, _ = json.Marshal(txRaw)
 
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashBytes(txBytes))
+	txBytes, _ = json.Marshal(txRaw)
+
+	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txBytes))
 
 	vRaw := map[string]interface{}{
 		"status":     chain.ValidationOK,

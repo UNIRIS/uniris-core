@@ -22,29 +22,27 @@ Scenario: Create a new transaction
 	Then I get it
 */
 func TestNewTransaction(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), hex.EncodeToString(pub))
+	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 
 	addr := crypto.HashString("addr")
 	data := map[string]string{
-		"encrypted_addr_by_robot": hex.EncodeToString([]byte("addr")),
-		"encrypted_addr_by_id":    hex.EncodeToString([]byte("addr")),
-		"encrypted_aes_key":       hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
 	}
 	hash := crypto.HashString("hash")
 
-	sig, _ := crypto.Sign("data", hex.EncodeToString(pv))
+	sig, _ := crypto.Sign("data", pv)
 
-	tx, err := NewTransaction(addr, KeychainTransactionType, data, time.Now(), hex.EncodeToString(pub), prop, sig, sig, hash)
+	tx, err := NewTransaction(addr, KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
 	assert.Equal(t, addr, tx.Address())
 	assert.Equal(t, data, tx.Data())
 	assert.Equal(t, KeychainTransactionType, tx.TransactionType())
 	assert.Equal(t, sig, tx.Signature())
-	assert.Equal(t, hex.EncodeToString(pub), tx.EmitterSharedKeyProposal().PublicKey())
+	assert.Equal(t, pub, tx.EmitterSharedKeyProposal().PublicKey())
 }
 
 /*
@@ -102,8 +100,8 @@ Scenario: Create a new transaction with an invalid transaction timestamp (more t
 */
 func TestNewWithInvalidTimestamp(t *testing.T) {
 	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}, time.Now().Add(2*time.Second), "", shared.EmitterKeyPair{}, "", "", crypto.HashString("addr"))
 	assert.EqualError(t, err, "transaction: timestamp must be greater lower than now")
 }
@@ -116,20 +114,20 @@ Scenario: Create a new transaction with an invalid transaction public key
 */
 func TestNewWithInvalidPublicKey(t *testing.T) {
 	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}, time.Now(), "", shared.EmitterKeyPair{}, "", "", crypto.HashString("addr"))
 	assert.EqualError(t, err, "transaction: public key is empty")
 
 	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}, time.Now(), "abc", shared.EmitterKeyPair{}, "", "", crypto.HashString("addr"))
 	assert.EqualError(t, err, "transaction: public key is not in hexadecimal format")
 
 	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}, time.Now(), hex.EncodeToString([]byte("abc")), shared.EmitterKeyPair{}, "", "", crypto.HashString("addr"))
 	assert.EqualError(t, err, "transaction: public key is not valid")
 }
@@ -141,25 +139,24 @@ Scenario: Create a new transaction with an invalid transaction signature
 	Then I get an error
 */
 func TestNewWithInvalidSignature(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
+	pub, _ := crypto.GenerateKeys()
 
 	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString(pub), shared.EmitterKeyPair{}, "", "", crypto.HashString(("hello")))
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+	}, time.Now(), pub, shared.EmitterKeyPair{}, "", "", crypto.HashString(("hello")))
 	assert.EqualError(t, err, "transaction: signature is empty")
 
 	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString(pub), shared.EmitterKeyPair{}, "abc", "", crypto.HashString("addr"))
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+	}, time.Now(), pub, shared.EmitterKeyPair{}, "abc", "", crypto.HashString("addr"))
 	assert.EqualError(t, err, "transaction: signature is not in hexadecimal format")
 
 	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString(pub), shared.EmitterKeyPair{}, hex.EncodeToString([]byte("abc")), "", crypto.HashString("addr"))
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+	}, time.Now(), pub, shared.EmitterKeyPair{}, hex.EncodeToString([]byte("abc")), "", crypto.HashString("addr"))
 	assert.EqualError(t, err, "transaction: signature is not valid")
 }
 
@@ -175,8 +172,8 @@ func TestNewWithInvalidType(t *testing.T) {
 	sig, _ := crypto.Sign("sig", pv)
 
 	_, err := NewTransaction(crypto.HashString("addr"), 10, map[string]string{
-		"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}, time.Now(), pub, shared.EmitterKeyPair{}, sig, sig, crypto.HashString(("hello")))
 	assert.EqualError(t, err, "transaction: type not allowed")
 }
@@ -188,16 +185,14 @@ Scenario: Create a new transaction without proposal
 	Then I get an error
 */
 func TestNewWithoutProposal(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	sig, _ := crypto.Sign("sig", hex.EncodeToString(pv))
+	sig, _ := crypto.Sign("sig", pv)
 
 	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString(pub), shared.EmitterKeyPair{}, sig, sig, crypto.HashString(("hello")))
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+	}, time.Now(), pub, shared.EmitterKeyPair{}, sig, sig, crypto.HashString(("hello")))
 	assert.EqualError(t, err, "transaction: proposal is missing")
 }
 
@@ -208,25 +203,23 @@ Scenario: Check the transaction integrity
 	Then I get not error
 */
 func TestCheckTransactionIntegrity(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	txRaw := Transaction{
 		addr: crypto.HashString("addr"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := txRaw.MarshalBeforeSignature()
-	sig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
 	txRaw.emSig = sig
 	txRaw.sig = sig
 	txBytes, _ := txRaw.MarshalHash()
@@ -244,30 +237,28 @@ Scenario: Check the transaction integrity with invalid hash
 	Then I get an error
 */
 func TestCheckTransactionIntegrityWithInvalidHash(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	raw, _ := json.Marshal(Transaction{
 		addr: crypto.HashString("addr"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	})
-	sig, _ := crypto.Sign(string(raw), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(raw), pv)
 	hash := "abc"
 
 	tx, _ := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString(pub), prop, sig, sig, hash)
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.EqualError(t, tx.checkTransactionIntegrity(), "transaction integrity violated")
 }
 
@@ -278,24 +269,22 @@ Scenario: Check the transaction integrity with invalid signature
 	Then I get not error
 */
 func TestCheckTransactionIntegrityWithInvalidSignature(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	txRaw := Transaction{
 		addr: crypto.HashString("addr"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
-	sig, _ := crypto.Sign(string("fake sig"), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string("fake sig"), pv)
 	txRaw.emSig = sig
 	txRaw.sig = sig
 
@@ -304,9 +293,9 @@ func TestCheckTransactionIntegrityWithInvalidSignature(t *testing.T) {
 	hash := crypto.HashBytes(txBytes)
 
 	tx, _ := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString(pub), prop, sig, sig, hash)
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.EqualError(t, tx.checkTransactionIntegrity(), "transaction signature invalid")
 }
 
@@ -317,39 +306,37 @@ Scenario: Add mining information to a transaction
 	Then I can retrieve in inside the transaction
 */
 func TestMined(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	raw, _ := json.Marshal(Transaction{
 		addr: crypto.HashString("addr"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	})
-	sig, _ := crypto.Sign(string(raw), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(raw), pv)
 	hash := crypto.HashBytes(raw)
 	tx, _ := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString(pub), prop, sig, sig, hash)
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+	}, time.Now(), pub, prop, sig, sig, hash)
 
 	b, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	sig, _ = crypto.Sign(string(b), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), sig)
+	sig, _ = crypto.Sign(string(b), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, sig)
 
-	masterValid, _ := NewMasterValidation([]string{}, hex.EncodeToString(pub), v)
+	masterValid, _ := NewMasterValidation([]string{}, pub, v)
 	assert.Nil(t, tx.Mined(masterValid, []MinerValidation{v}))
 
 	assert.Equal(t, sig, tx.MasterValidation().Validation().MinerSignature())
@@ -363,39 +350,37 @@ Scenario: Add mining information to a transaction without confirmations
 	Then I get an error
 */
 func TestMinedWithoutConfirmations(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	raw, _ := json.Marshal(Transaction{
 		addr: crypto.HashString("addr"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	})
-	sig, _ := crypto.Sign(string(raw), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(raw), pv)
 	hash := crypto.HashBytes(raw)
 	tx, _ := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString(pub), prop, sig, sig, hash)
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+	}, time.Now(), pub, prop, sig, sig, hash)
 
 	b, _ := json.Marshal(MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	sig, _ = crypto.Sign(string(b), hex.EncodeToString(pv))
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), hex.EncodeToString(pub), sig)
+	sig, _ = crypto.Sign(string(b), pv)
+	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, sig)
 
-	masterValid, _ := NewMasterValidation([]string{}, hex.EncodeToString(pub), v)
+	masterValid, _ := NewMasterValidation([]string{}, pub, v)
 	assert.EqualError(t, tx.Mined(masterValid, []MinerValidation{}), "transaction: missing confirmation validations")
 }
 
@@ -406,25 +391,23 @@ Scenario: Check the integrity of a transaction chain
 	Then I get not error
 */
 func TestCheckChainIntegrity(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	tx1 := Transaction{
 		addr: crypto.HashString("addr"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx1.MarshalBeforeSignature()
-	sig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
 	tx1.emSig = sig
 	tx1.sig = sig
 	txBytes1, _ := tx1.MarshalHash()
@@ -434,16 +417,16 @@ func TestCheckChainIntegrity(t *testing.T) {
 	tx2 := Transaction{
 		addr: crypto.HashString("addr"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now().Add(2 * time.Second),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig2, _ := tx2.MarshalBeforeSignature()
-	sig2, _ := crypto.Sign(string(txBytesBeforeSig2), hex.EncodeToString(pv))
+	sig2, _ := crypto.Sign(string(txBytesBeforeSig2), pv)
 	tx2.emSig = sig2
 	tx2.sig = sig2
 	txBytes2, _ := tx2.MarshalHash()
@@ -454,16 +437,16 @@ func TestCheckChainIntegrity(t *testing.T) {
 	tx3 := Transaction{
 		addr: crypto.HashString("hello3"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now().Add(3 * time.Second),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig3, _ := tx3.MarshalBeforeSignature()
-	sig3, _ := crypto.Sign(string(txBytesBeforeSig3), hex.EncodeToString(pv))
+	sig3, _ := crypto.Sign(string(txBytesBeforeSig3), pv)
 	tx3.emSig = sig3
 	tx3.sig = sig3
 	txBytes3, _ := tx3.MarshalHash()
@@ -481,39 +464,37 @@ Scenario: Check chain integrity with invalid timestamp
 	Then I get an error
 */
 func TestCheckChainIntegrityWithInvalidTime(t *testing.T) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	tx0 := Transaction{
 		addr: crypto.HashString("addr"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 
 	b, _ := json.Marshal(tx0)
 	hash := crypto.HashBytes(b)
-	sig, _ := crypto.Sign(string(b), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(b), pv)
 	tx0.sig = sig
 	tx0.hash = hash
 
 	tx1 := Transaction{
 		addr: crypto.HashString("hello2"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 		prevTx:    &tx0,
 	}
@@ -529,25 +510,23 @@ Scenario: Chain a transaction to another one
 */
 func TestChainTransaction(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	tx1 := Transaction{
 		addr: crypto.HashString("addr"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx1.MarshalBeforeSignature()
-	sig, _ := crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
 	tx1.emSig = sig
 	tx1.sig = sig
 	txBytes1, _ := tx1.MarshalHash()
@@ -559,16 +538,16 @@ func TestChainTransaction(t *testing.T) {
 	tx2 := Transaction{
 		addr: crypto.HashString("addr"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig2, _ := tx2.MarshalBeforeSignature()
-	sig2, _ := crypto.Sign(string(txBytesBeforeSig2), hex.EncodeToString(pv))
+	sig2, _ := crypto.Sign(string(txBytesBeforeSig2), pv)
 	tx2.emSig = sig2
 	tx2.sig = sig2
 	txBytes2, _ := tx2.MarshalHash()
@@ -588,50 +567,48 @@ Scenario: Chain a transaction with same timestamp for the both
 */
 func TestChainTransactionWithInvalidTimestamp(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	txTime1 := time.Now()
 	raw1, _ := json.Marshal(Transaction{
 		addr: crypto.HashString("addr"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: txTime1,
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	})
-	sig1, _ := crypto.Sign(string(raw1), hex.EncodeToString(pv))
+	sig1, _ := crypto.Sign(string(raw1), pv)
 	hash1 := crypto.HashBytes(raw1)
 
 	tx1, _ := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
-	}, txTime1, hex.EncodeToString(pub), prop, sig1, sig1, hash1)
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+	}, txTime1, pub, prop, sig1, sig1, hash1)
 
 	raw2, _ := json.Marshal(Transaction{
 		addr: crypto.HashString("addr"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: txTime1,
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	})
-	sig2, _ := crypto.Sign(string(raw2), hex.EncodeToString(pv))
+	sig2, _ := crypto.Sign(string(raw2), pv)
 	hash2 := crypto.HashBytes(raw2)
 
 	tx2, _ := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
-	}, txTime1, hex.EncodeToString(pub), prop, sig2, sig2, hash2)
+		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+	}, txTime1, pub, prop, sig2, sig2, hash2)
 
 	assert.EqualError(t, tx2.Chain(&tx1), "previous chained transaction must be anterior to the current transaction")
 }
@@ -644,41 +621,41 @@ Scenario: Check master validation
 */
 func TestCheckMasterValidation(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
 	v := MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	}
 	b, _ := json.Marshal(v)
-	sig, _ := crypto.Sign(string(b), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(b), pv)
 	v.minerSig = sig
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	tx := Transaction{
 		addr: crypto.HashString("addr"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ = crypto.Sign(string(txBytesBeforeSig), hex.EncodeToString(pv))
-	tx.emSig = sig
+	sig, _ = crypto.Sign(string(txBytesBeforeSig), pv)
 	tx.sig = sig
+	txBytesBeforeEmSig, _ := tx.MarshalBeforeEmitterSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeEmSig), pv)
+	tx.emSig = emSig
 	txBytes, _ := tx.MarshalHash()
 	txHash := crypto.HashBytes(txBytes)
 	tx.hash = txHash
 	tx.masterV = MasterValidation{
-		pow:        hex.EncodeToString(pub),
+		pow:        pub,
 		validation: v,
 	}
 
@@ -693,36 +670,34 @@ Scenario: Check master validation with invalid POW
 */
 func TestCheckMasterValidationWithInvalidPOW(t *testing.T) {
 
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
+	pub, pv := crypto.GenerateKeys()
 
 	key2, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	pub2, _ := x509.MarshalPKIXPublicKey(key2.Public())
 
 	v := MinerValidation{
-		minerPubk: hex.EncodeToString(pub),
+		minerPubk: pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	}
 	b, _ := json.Marshal(v)
-	sig, _ := crypto.Sign(string(b), hex.EncodeToString(pv))
+	sig, _ := crypto.Sign(string(b), pv)
 	v.minerSig = sig
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), hex.EncodeToString(pub))
+	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	raw, _ := json.Marshal(Transaction{
 		addr: crypto.HashString("addr"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 	})
-	sigTx, _ := crypto.Sign(string(raw), hex.EncodeToString(pv))
+	sigTx, _ := crypto.Sign(string(raw), pv)
 	hash := crypto.HashBytes(raw)
 
 	tx := Transaction{
@@ -732,12 +707,12 @@ func TestCheckMasterValidationWithInvalidPOW(t *testing.T) {
 		},
 		addr: crypto.HashString("addr"),
 		data: map[string]string{
-			"encrypted_addr":   hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
-		pubKey:    hex.EncodeToString(pub),
+		pubKey:    pub,
 		prop:      prop,
 		emSig:     sigTx,
 		sig:       sigTx,

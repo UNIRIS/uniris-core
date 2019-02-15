@@ -7,7 +7,7 @@ import (
 
 //ID represents a ID transaction
 type ID struct {
-	encAddrByRobot string
+	encAddrByMiner string
 	encAddrByID    string
 	encAesKey      string
 	Transaction
@@ -20,9 +20,9 @@ func NewID(tx Transaction) (ID, error) {
 		return ID{}, errors.New("transaction: invalid type of transaction")
 	}
 
-	addrRobot, exist := tx.data["encrypted_address_by_robot"]
+	addrMiner, exist := tx.data["encrypted_address_by_miner"]
 	if !exist {
-		return ID{}, errors.New("transaction: missing data ID 'encrypted_address_by_robot'")
+		return ID{}, errors.New("transaction: missing data ID 'encrypted_address_by_miner'")
 	}
 	addrID, exist := tx.data["encrypted_address_by_id"]
 	if !exist {
@@ -41,21 +41,21 @@ func NewID(tx Transaction) (ID, error) {
 		return ID{}, errors.New("transaction: id encrypted address for id is not in hexadecimal format")
 	}
 
-	if _, err := hex.DecodeString(addrRobot); err != nil {
-		return ID{}, errors.New("transaction: id encrypted address for robot is not in hexadecimal format")
+	if _, err := hex.DecodeString(addrMiner); err != nil {
+		return ID{}, errors.New("transaction: id encrypted address for miner is not in hexadecimal format")
 	}
 
 	return ID{
 		encAddrByID:    addrID,
-		encAddrByRobot: addrRobot,
+		encAddrByMiner: addrMiner,
 		encAesKey:      aesKey,
 		Transaction:    tx,
 	}, nil
 }
 
-//EncryptedAddrByRobot returns the encrypted keychain address with the robot public key
-func (id ID) EncryptedAddrByRobot() string {
-	return id.encAddrByRobot
+//EncryptedAddrByMiner returns the encrypted keychain address with the Miner public key
+func (id ID) EncryptedAddrByMiner() string {
+	return id.encAddrByMiner
 }
 
 //EncryptedAddrByID returns the encrypted keychain address with the ID public key
