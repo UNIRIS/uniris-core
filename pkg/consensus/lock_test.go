@@ -9,7 +9,7 @@ import (
 
 /*
 Scenario: Create transaction lock
-	Given a transaction hash, an address and a master robot key
+	Given a transaction hash, an address and a master miner key
 	When I want to lock the transaction
 	Then the lock is stored
 */

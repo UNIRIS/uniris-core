@@ -44,8 +44,8 @@ func NewKeychain(tx Transaction) (Keychain, error) {
 	}, nil
 }
 
-//EncryptedAddrByRobot returns the encrypted keychain address by the shared robot key
-func (k Keychain) EncryptedAddrByRobot() string {
+//EncryptedAddrByMiner returns the encrypted keychain address by the shared miner key
+func (k Keychain) EncryptedAddrByMiner() string {
 	return k.encAddr
 }
 

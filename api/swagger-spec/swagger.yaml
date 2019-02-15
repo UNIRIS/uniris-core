@@ -4,9 +4,9 @@ basePath: /api
 
 info:
   description: |
-    This is the endpoints provided by the UNIRIS robot.
+    This is the endpoints provided by the UNIRIS miner.
     This API is documented in **OpenAPI format**
-    You can find out more about the robot code here [http://github.com/uniris/uniris-core](http://github.com/uniris/uniris-core)
+    You can find out more about the miner code here [http://github.com/uniris/uniris-core](http://github.com/uniris/uniris-core)
   version: 1.0
   title: UNIRIS API
   contact:
@@ -32,7 +32,6 @@ paths:
         - Transaction
       summary: Get the transaction status
       description: Retrieve the status of a transaction
-      operationId: getTransactionStatus
       parameters:
         - name: tx_receipt
           in: path
@@ -55,7 +54,6 @@ paths:
         - Shared
       summary: Get the latest shared keys
       description: Retrieve the last shared keys for miners and emitter
-      operationId: getSharedKeys
       parameters:
         - name: emitter_public_key
           in: query
@@ -78,7 +76,6 @@ paths:
         - Account
       summary: Enroll a new user
       description: Creates a new wallet
-      operationId: createAccount
       parameters:
         - name: account
           in: body
@@ -102,9 +99,8 @@ paths:
         - Account
         summary: Get account's details
         description: |
-          Retrieve account details by requesting the data service of the UNIRIS robot.
+          Retrieve account details by requesting the data service of the UNIRIS miner.
           All the data are encrypted and need to be decrypted by the emitter using ID keys.
-        operationId: getAccount
         parameters:
           - name: hash
             in: path
@@ -139,6 +135,7 @@ definitions:
       error:
         type: string
         description: Error message
+
   AccountDetails:
     required:
       - encrypted_wallet
@@ -151,9 +148,13 @@ definitions:
       encrypted_aes_key:
         description: Encrypted key which encrypt the wallet
         type: string
-      signature:
-        description: Request signature
+      timestamp:
+        description: Response timestamp
         type: string
+      signature:
+        description: Response signature
+        type: string
+
   AccountCreationRequest:
     required:
       - encrypted_id
@@ -174,7 +175,6 @@ definitions:
     required:
       - id_transaction
       - keychain_transaction
-      - signature
     properties:
       id_transaction:
         description: ID transaction result
@@ -186,9 +186,6 @@ definitions:
         type: object
         schema:
           $ref: "#/definitions/TransactionResult"
-      signature:
-        type: string
-        description: Response signature
 
   TransactionResult:
     required:
@@ -201,7 +198,7 @@ definitions:
         description: Transaction receipt
       timestamp:
         type: integer
-        description: Response time from the miner
+        description: Response timestamp
       signature:
         type: string
         description: Signature of the transaction response
@@ -229,8 +226,6 @@ definitions:
             encrypted_private_key:
               type: string
               description: Encrypted shared emitter private key
-
-  
 
   TransactionStatus:
     required:

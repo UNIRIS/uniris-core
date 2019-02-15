@@ -36,7 +36,7 @@ Scenario: Get account request with an ID hash not a valid hash
 func TestGetAccountWhenInvalidHash(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 3545, &mockTechDB{})
+	NewAccountHandler(apiGroup, 1717, &mockTechDB{})
 
 	path := fmt.Sprintf("http://localhost:3000/api/account/abc")
 	req, _ := http.NewRequest("GET", path, nil)
@@ -59,7 +59,7 @@ Scenario: Get account request with an invalid idSignature
 func TestGetAccountWhenInvalidSignature(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 3545, &mockTechDB{})
+	NewAccountHandler(apiGroup, 1717, &mockTechDB{})
 
 	path1 := fmt.Sprintf("http://localhost:3000/api/account/%s", crypto.HashString("abc"))
 	req1, _ := http.NewRequest("GET", path1, nil)
@@ -116,7 +116,7 @@ func TestGetAccountWhenIDNotExist(t *testing.T) {
 	chainSrv := rpc.NewChainServer(chainDB, techDB, pr)
 	intSrv := rpc.NewInternalServer(techDB, pr)
 
-	lisTx, _ := net.Listen("tcp", ":3545")
+	lisTx, _ := net.Listen("tcp", ":5000")
 	defer lisTx.Close()
 	grpcServer := grpc.NewServer()
 	api.RegisterChainServiceServer(grpcServer, chainSrv)
@@ -354,7 +354,7 @@ Scenario: Create account request with an invalid encrypted ID
 func TestCreationAccountWhenInvalidID(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 3545, &mockTechDB{})
+	NewAccountHandler(apiGroup, 1717, &mockTechDB{})
 
 	form, _ := json.Marshal(map[string]string{
 		"encrypted_id":       "abc",
@@ -384,7 +384,7 @@ Scenario: Create account request with an invalid encrypted Keychain
 func TestCreationAccountWhenKeychainInvalid(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 3545, &mockTechDB{})
+	NewAccountHandler(apiGroup, 1717, &mockTechDB{})
 
 	form, _ := json.Marshal(map[string]string{
 		"encrypted_id":       hex.EncodeToString([]byte("id")),
@@ -424,7 +424,7 @@ func TestCreationAccountWhenSignatureInvalid(t *testing.T) {
 
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 3545, techDB)
+	NewAccountHandler(apiGroup, 1717, techDB)
 
 	form, _ := json.Marshal(map[string]string{
 		"encrypted_id":       hex.EncodeToString([]byte("id")),

@@ -28,7 +28,7 @@ Scenario: Get transactions status with receipt non hexadecimal
 func TestGetTransactionStatusWithNoHexaReceipt(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewTransactionHandler(apiGroup, 3545)
+	NewTransactionHandler(apiGroup, 1717)
 
 	path := fmt.Sprintf("http://localhost:3000/api/transaction/abc/status")
 	req, _ := http.NewRequest("GET", path, nil)
@@ -51,7 +51,7 @@ Scenario: Get transactions status with receipt bad length
 func TestGetTransactionStatusWithBadReceiptLength(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewTransactionHandler(apiGroup, 3545)
+	NewTransactionHandler(apiGroup, 1717)
 
 	path := fmt.Sprintf("http://localhost:3000/api/transaction/%s/status", hex.EncodeToString([]byte("abc")))
 	req, _ := http.NewRequest("GET", path, nil)

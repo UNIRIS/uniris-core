@@ -37,7 +37,7 @@ func TestNewKeychain(t *testing.T) {
 	keychain, err := NewKeychain(tx)
 	assert.Nil(t, err)
 
-	assert.Equal(t, hex.EncodeToString([]byte("addr")), keychain.EncryptedAddrByRobot())
+	assert.Equal(t, hex.EncodeToString([]byte("addr")), keychain.EncryptedAddrByMiner())
 	assert.Equal(t, hex.EncodeToString([]byte("wallet")), keychain.EncryptedWallet())
 
 }

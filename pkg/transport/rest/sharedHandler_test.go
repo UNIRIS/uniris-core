@@ -27,7 +27,7 @@ Scenario: Get shared keys with no emitter public key in the query
 func TestGetSharedKeysWhenMissingPublicKey(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewSharedHandler(apiGroup, 3545)
+	NewSharedHandler(apiGroup, 1717)
 
 	path := fmt.Sprintf("http://localhost:3000/api/sharedkeys")
 	req, _ := http.NewRequest("GET", path, nil)
@@ -50,7 +50,7 @@ Scenario: Get shared keys with an invalid emitter public key
 func TestGetSharedKeysWithInvalidPublicKey(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewSharedHandler(apiGroup, 3545)
+	NewSharedHandler(apiGroup, 1717)
 
 	path := fmt.Sprintf("http://localhost:3000/api/sharedkeys?emitter_public_key=abc")
 	req, _ := http.NewRequest("GET", path, nil)
