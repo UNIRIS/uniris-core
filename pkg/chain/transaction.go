@@ -19,10 +19,10 @@ const (
 	TransactionStatusUnknown TransactionStatus = 0
 
 	//TransactionStatusInProgress define a transaction in in progress. (mining has not been finished)
-	TransactionStatusInProgress TransactionStatus = 2
+	TransactionStatusInProgress TransactionStatus = 1
 
 	//TransactionStatusSuccess define a transaction in success (mining and storage succeed)
-	TransactionStatusSuccess TransactionStatus = 1
+	TransactionStatusSuccess TransactionStatus = 2
 
 	//TransactionStatusFailure define a transaction in failure (mining failed due to an invalid transaction/signatures)
 	TransactionStatusFailure TransactionStatus = 3
@@ -185,12 +185,12 @@ func (t Transaction) CheckMasterValidation() error {
 		return err
 	}
 
-	txBytesBeforeSig, err := t.MarshalBeforeSignature()
+	txBytesBeforeEmSig, err := t.MarshalBeforeEmitterSignature()
 	if err != nil {
 		return err
 	}
 
-	err = crypto.VerifySignature(string(txBytesBeforeSig), t.masterV.pow, t.emSig)
+	err = crypto.VerifySignature(string(txBytesBeforeEmSig), t.masterV.pow, t.emSig)
 	if err == crypto.ErrInvalidSignature {
 		return errors.New("invalid proof of work")
 	}
@@ -245,6 +245,19 @@ func (t Transaction) MarshalBeforeSignature() ([]byte, error) {
 		"type":                    t.txType,
 		"public_key":              t.pubKey,
 		"em_shared_keys_proposal": t.prop,
+	})
+}
+
+//MarshalBeforeEmitterSignature serializes as JSON the transaction before the emitter signature
+func (t Transaction) MarshalBeforeEmitterSignature() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"addr":                    t.addr,
+		"data":                    t.data,
+		"timestamp":               t.timestamp.Unix(),
+		"type":                    t.txType,
+		"public_key":              t.pubKey,
+		"em_shared_keys_proposal": t.prop,
+		"signature":               t.sig,
 	})
 }
 

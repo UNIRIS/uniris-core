@@ -45,15 +45,15 @@ func LeadMining(tx chain.Transaction, minValids int, poolR PoolRequester, pub, p
 	go func() {
 		minedTx, err := mineTransaction(tx, lastVPool, minValids, pub, pv, emR, poolR)
 		if err != nil {
-			fmt.Printf("transaction mining failed: %s", err.Error())
+			fmt.Printf("transaction mining failed: %s\n", err.Error())
 			return
 		}
 		if err := storeTransaction(minedTx, sPool, poolR); err != nil {
-			fmt.Printf("transaction storage failed: %s", err.Error())
+			fmt.Printf("transaction storage failed: %s\n", err.Error())
 			return
 		}
 		if err := unlockTransaction(tx, lastVPool, poolR); err != nil {
-			fmt.Printf("transaction unlock failed: %s", err.Error())
+			fmt.Printf("transaction unlock failed: %s\n", err.Error())
 			return
 		}
 	}()
@@ -171,7 +171,7 @@ func proofOfWork(tx chain.Transaction, emR shared.EmitterDatabaseReader) (pow st
 		return
 	}
 
-	txBytes, err := tx.MarshalBeforeSignature()
+	txBytes, err := tx.MarshalBeforeEmitterSignature()
 	if err != nil {
 		return "", err
 	}
