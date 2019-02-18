@@ -1,6 +1,6 @@
 # uniris-core
 
-Welcome tp the UNIRIS node source repository ! This software enables you to build the first transaction chain and next generation of blockchain focused on scalability and human oriented.
+Welcome to the UNIRIS Node source repository ! This software enables you to build the first transaction chain and next generation of blockchain focused on scalability and human oriented.
 
 UNIRIS features:
 
@@ -25,7 +25,8 @@ UNIRIS project comes with several executables found in the `cmd` directory
 
 | Command       | Description | 
 | ------------- |-------------| 
-| uniris       | Entry point to the UNIRIS network by running a blockchain node 
+| uniris-node | Entry point to the UNIRIS network by running a blockchain node 
+| uniris-interpreter | UNIRIS smart contract interpreter 
 
 ## Architecture
 
@@ -34,67 +35,40 @@ UNIRIS node software uses a separation of concerns designed by running multiple 
 | Service name  | Public | Description |
 | ------------  | -------| ----------- |
 | API           | Yes | Gateway providing endpoints for clients
-| Discovery     | Yes | Peer to peer discovery using a built-in Gossip protocol
+| Discovery     | Yes | Peer to peer discovery using a built-in Gossip implementation
 | Mining        | Yes | Transaction mining (proof of work) and validation confirmations
-| Lock          | Yes | Transaction lock and unlock to avoid double spending
-| Chain         | Yes | Transaction storage and queries 
+| Storage       | Yes | Transaction lock, storage and queries 
 | Internal |  No | Forward transaction to other nodes (mining, pool requesting) and retrieve shared data between nodes
 
 ## Running UNIRIS
 
 ### API Access
 
-The OpenAPI is available on the port `4000`
+The OpenAPI is available on the port `80`
 
 ### Configuration
 
-UNIRIS executable support few command line flags in its scope also configurable with a YAML file
+UNIRIS executable support few command line flags in its scope and also configurable with a YAML file
 
 Supported flags:
 
 | Name | Description | Value |
 | ---- | ----------- | ---- |
-| conf | Configuration file | File location. default: `cmd/uniris/conf.yaml` |
+| conf | Configuration file | File location. default: `cmd/uniris-node/conf.yaml` |
 | private-key|  private key | Hexadecimal ECDSA private key
 | public-key |  public key | Hexadecimal ECDSA public key
 | network-type | Type of network | `public` (default) or `private` |
-|network-interface | Name of the network interface when network type is `private` | network interface name
+| network-interface | Name of the network interface when network type is `private` | network interface name
 | discovery-db-type|Discovery database instance type | `mem` (default), `redis` |
 | discovery-db-host| Discovery database instance hostname | default: `localhost` |
 | discovery-db-port | Discovery database instance port | default: `6379` (Redis) |
 | discovery-db-password | Discovery database instance password | default: `''`
 | bus-type| Bus messenging instance type | `mem` (default), `amqp` |
 | bus-host | Bus messenging instance host | default: `localhost`|
-| discovery-notif-user | Bus messenging instance user | default: `guest` (AMQP) |
-| bus-password | Bus messenging instance password | default: `guest` (AMQP) |
+| discovery-notif-user | Bus messenging instance user | default: `uniris` (AMQP) |
+| bus-password | Bus messenging instance password | default: `uniris` (AMQP) |
 | external-grpc-port | External GRPC port | default: `5000`|
 | internal-grpc-port | Internal GRPC port  | default: `3009`|
-
-Supported YAML configuration
-
-```yaml
-# NETWORK CONFIGURATION
-network-type: private
-network-interface: lo0
-
-# MINER IDENTIFICATION
-public-key: 3059301306072a8648ce3d020106082a8648ce3d0301070342000459c8b568df66798d7f876d94fb0afc516502893d996610632c40f70b830aebf39e0cbee311af4450ec56859d2b8f59ec09a44c7e303d030899aee551de61af2e
-private-key: 307702010104201432f00062c0229d19e24c070a713d900da4883788ce3f8bd3fede4c10a36a79a00a06082a8648ce3d030107a1440342000459c8b568df66798d7f876d94fb0afc516502893d996610632c40f70b830aebf39e0cbee311af4450ec56859d2b8f59ec09a44c7e303d030899aee551de61af2e
-
-#SERVICES CONFIGURATION
-external-grpc-port: 5000
-internal-grpc-port: 3009
-discovery-seeds: 127.0.0.1:5000:3059301306072a8648ce3d020106082a8648ce3d0301070342000459c8b568df66798d7f876d94fb0afc516502893d996610632c40f70b830aebf39e0cbee311af4450ec56859d2b8f59ec09a44c7e303d030899aee551de61af2e
-discovery-db-type: mem
-discovery-db-host: localhost
-discovery-db-port: 6379
-discovery-db-password: ""
-bus-type: mem
-bus-host: localhost
-bus-port: 5672
-bus-user: guest
-bus-password: guest
-```
 
 ## Contribution
 

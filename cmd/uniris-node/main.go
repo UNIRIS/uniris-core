@@ -232,7 +232,7 @@ func startAPI(conf unirisConf, techDB shared.TechDatabaseReader) {
 		rest.NewSharedHandler(apiRouter, conf.grpcInternalPort)
 	}
 
-	r.Run(":4000")
+	r.Run(":80")
 }
 
 func startInternalServer(conf unirisConf, techDB shared.TechDatabaseReader, poolR consensus.PoolRequester) {
