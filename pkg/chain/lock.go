@@ -1,4 +1,4 @@
-package consensus
+package chain
 
 import (
 	"errors"
@@ -7,8 +7,8 @@ import (
 	"github.com/uniris/uniris-core/pkg/crypto"
 )
 
-//LockDatabase define methods to handle the lock storage
-type LockDatabase interface {
+//Locker define methods to handle the lock storage
+type Locker interface {
 
 	//WriteLock creates a new lock from the given transaction hash and transaction address
 	WriteLock(txHash string, txAddr string, masterPublicKey string) error
@@ -21,7 +21,7 @@ type LockDatabase interface {
 }
 
 //LockTransaction stores the lock in the locker system. If a lock exists already an error is returned
-func LockTransaction(db LockDatabase, txHash string, txAddr string, masterPubk string) error {
+func LockTransaction(l Locker, txHash string, txAddr string, masterPubk string) error {
 	if _, err := crypto.IsHash(txHash); err != nil {
 		return fmt.Errorf("lock transaction hash: %s", err.Error())
 	}
@@ -34,24 +34,23 @@ func LockTransaction(db LockDatabase, txHash string, txAddr string, masterPubk s
 		return fmt.Errorf("lock transaction public key: %s", err.Error())
 	}
 
-	exist, err := db.ContainsLock(txHash, txAddr)
+	exist, err := l.ContainsLock(txHash, txAddr)
 	if err != nil {
 		return err
 	}
 	if exist {
 		return errors.New("a lock already exist for this transaction")
 	}
-	return db.WriteLock(txHash, txAddr, masterPubk)
+	return l.WriteLock(txHash, txAddr, masterPubk)
 }
 
-//UnlockTransaction deletes a transaction from the locker
-func UnlockTransaction(db LockDatabase, txHash string, txAddr string) error {
-	exist, err := db.ContainsLock(txHash, txAddr)
+func unlockTransaction(l Locker, txHash string, txAddr string) error {
+	exist, err := l.ContainsLock(txHash, txAddr)
 	if err != nil {
 		return err
 	}
 	if !exist {
 		return errors.New("no lock exist for this transaction")
 	}
-	return db.RemoveLock(txHash, txAddr)
+	return l.RemoveLock(txHash, txAddr)
 }

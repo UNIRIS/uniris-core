@@ -29,19 +29,20 @@ func TestHandleGetTransactionStatusInternal(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
 	chainDB := &mockChainDB{}
+	locker := &mockLocker{}
 	techDB := &mockTechDB{}
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	pr := NewPoolRequester(techDB)
 
-	chainSrv := NewChainServer(chainDB, techDB, pr)
+	storageSrv := NewStorageServer(chainDB, locker, techDB, pr)
 	intSrv := NewInternalServer(techDB, pr)
 
-	lis, _ := net.Listen("tcp", ":3545")
+	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterChainServiceServer(grpcServer, chainSrv)
+	api.RegisterStorageServiceServer(grpcServer, storageSrv)
 	go grpcServer.Serve(lis)
 
 	req := &api.InternalTransactionStatusRequest{
@@ -62,42 +63,43 @@ func TestHandleGetTransactionStatusInternal(t *testing.T) {
 }
 
 /*
-Scenario: Forward an transaction request from the API to the master miner
+Scenario: Forward an transaction request from the API to the master node
 	Given a transaction come from the API
 	When I want to process it
-	Then I forward to the master miner and reply the transaction hash
+	Then I forward to the master node and reply the transaction hash
 */
 func TestHandleIncomingTransaction(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
+	locker := &mockLocker{}
 
 	encKey, _ := crypto.Encrypt(pv, pub)
 	emKey, _ := shared.NewEmitterKeyPair(encKey, pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	pr := NewPoolRequester(techDB)
 
-	chainSrv := NewChainServer(chainDB, techDB, pr)
+	storageSrv := NewStorageServer(chainDB, locker, techDB, pr)
 	intSrv := NewInternalServer(techDB, pr)
 	miningSrv := NewMiningServer(techDB, pr, pub, pv)
 
-	lis, _ := net.Listen("tcp", ":3545")
+	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterChainServiceServer(grpcServer, chainSrv)
+	api.RegisterStorageServiceServer(grpcServer, storageSrv)
 	api.RegisterMiningServiceServer(grpcServer, miningSrv)
 	go grpcServer.Serve(lis)
 
 	tx := map[string]interface{}{
 		"addr": crypto.HashString("addr"),
 		"data": map[string]string{
-			"encrypted_address": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 		},
 		"timestamp":  time.Now().Unix(),
 		"type":       int(chain.KeychainTransactionType),
@@ -110,7 +112,10 @@ func TestHandleIncomingTransaction(t *testing.T) {
 	txBytes, _ := json.Marshal(tx)
 	sig, _ := crypto.Sign(string(txBytes), pv)
 	tx["signature"] = sig
-	tx["em_signature"] = sig
+
+	txBytesWithSig, _ := json.Marshal(tx)
+	emSig, _ := crypto.Sign(string(txBytesWithSig), pv)
+	tx["em_signature"] = emSig
 	txBytes, _ = json.Marshal(tx)
 
 	cipherTx, _ := crypto.Encrypt(string(txBytes), pub)
@@ -152,21 +157,22 @@ func TestHandleGetAccount(t *testing.T) {
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	locker := &mockLocker{}
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pv")), pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
 	pr := NewPoolRequester(techDB)
 
-	chainSrv := NewChainServer(chainDB, techDB, pr)
+	storageSrv := NewStorageServer(chainDB, locker, techDB, pr)
 	miningSrv := NewMiningServer(techDB, pr, pub, pv)
 	intSrv := NewInternalServer(techDB, pr)
 
-	lis, _ := net.Listen("tcp", ":3545")
+	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterChainServiceServer(grpcServer, chainSrv)
+	api.RegisterStorageServiceServer(grpcServer, storageSrv)
 	api.RegisterMiningServiceServer(grpcServer, miningSrv)
 	go grpcServer.Serve(lis)
 
@@ -176,9 +182,9 @@ func TestHandleGetAccount(t *testing.T) {
 	txID := map[string]interface{}{
 		"addr": crypto.HashString("idHash"),
 		"data": map[string]string{
-			"encrypted_address_by_id":    encAddr,
-			"encrypted_address_by_robot": encAddr,
-			"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_id":   encAddr,
+			"encrypted_address_by_node": encAddr,
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
 		},
 		"timestamp":  time.Now().Unix(),
 		"type":       int(chain.IDTransactionType),
@@ -191,7 +197,11 @@ func TestHandleGetAccount(t *testing.T) {
 	txIDBytes, _ := json.Marshal(txID)
 	sigID, _ := crypto.Sign(string(txIDBytes), pv)
 	txID["signature"] = sigID
-	txID["em_signature"] = sigID
+
+	txIDBytesWithSig, _ := json.Marshal(txID)
+	idEmSig, _ := crypto.Sign(string(txIDBytesWithSig), pv)
+	txID["em_signature"] = idEmSig
+
 	txIDBytes, _ = json.Marshal(txID)
 
 	cipherTx, _ := crypto.Encrypt(string(txIDBytes), pub)
@@ -209,8 +219,8 @@ func TestHandleGetAccount(t *testing.T) {
 	txKeychain := map[string]interface{}{
 		"addr": crypto.HashString("addr"),
 		"data": map[string]string{
-			"encrypted_address": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 		},
 		"timestamp":  time.Now().Unix(),
 		"type":       int(chain.KeychainTransactionType),
@@ -223,7 +233,11 @@ func TestHandleGetAccount(t *testing.T) {
 	txKeychainBytes, _ := json.Marshal(txKeychain)
 	sigKeychain, _ := crypto.Sign(string(txKeychainBytes), pv)
 	txKeychain["signature"] = sigKeychain
-	txKeychain["em_signature"] = sigKeychain
+
+	txKeychainBytesWithSig, _ := json.Marshal(txKeychain)
+	idKeychainSig, _ := crypto.Sign(string(txKeychainBytesWithSig), pv)
+	txKeychain["em_signature"] = idKeychainSig
+
 	txKeychainBytes, _ = json.Marshal(txKeychain)
 
 	cipherTx2, _ := crypto.Encrypt(string(txKeychainBytes), pub)
@@ -259,13 +273,13 @@ func TestGetLastSharedKeys(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
 	techDB := &mockTechDB{}
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	encKey, _ := crypto.Encrypt(pv, pub)
 	emKey, _ := shared.NewEmitterKeyPair(encKey, pub)
 
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
 	pr := NewPoolRequester(techDB)
@@ -277,7 +291,7 @@ func TestGetLastSharedKeys(t *testing.T) {
 		Timestamp:        time.Now().Unix(),
 	})
 	assert.Nil(t, err)
-	assert.Equal(t, pub, res.MinerPublicKey)
+	assert.Equal(t, pub, res.NodePublicKey)
 	assert.Len(t, res.EmitterKeys, 1)
 	assert.Equal(t, pub, res.EmitterKeys[0].PublicKey)
 
@@ -286,14 +300,14 @@ func TestGetLastSharedKeys(t *testing.T) {
 }
 
 type mockTechDB struct {
-	emKeys    shared.EmitterKeys
-	minerKeys []shared.MinerKeyPair
+	emKeys   shared.EmitterKeys
+	nodeKeys []shared.KeyPair
 }
 
 func (db mockTechDB) EmitterKeys() (shared.EmitterKeys, error) {
 	return db.emKeys, nil
 }
 
-func (db mockTechDB) LastMinerKeys() (shared.MinerKeyPair, error) {
-	return db.minerKeys[len(db.minerKeys)-1], nil
+func (db mockTechDB) NodeLastKeys() (shared.KeyPair, error) {
+	return db.nodeKeys[len(db.nodeKeys)-1], nil
 }

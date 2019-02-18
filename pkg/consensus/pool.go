@@ -11,11 +11,8 @@ type PoolRequester interface {
 	//RequestTransactionLock asks a pool to lock a transaction using the address related
 	RequestTransactionLock(pool Pool, txHash string, txAddr string, masterPublicKey string) error
 
-	//RequestTransactionUnlock asks a pool to unlock a transaction using the address related
-	RequestTransactionUnlock(pool Pool, txHash string, txAddr string) error
-
 	//RequestTransactionValidations asks a pool to validation a transaction
-	RequestTransactionValidations(pool Pool, tx chain.Transaction, minValid int, masterValid chain.MasterValidation) ([]chain.MinerValidation, error)
+	RequestTransactionValidations(pool Pool, tx chain.Transaction, minValid int, masterValid chain.MasterValidation) ([]chain.Validation, error)
 
 	//RequestTransactionStorage asks a pool to store a transaction
 	RequestTransactionStorage(pool Pool, minStorage int, tx chain.Transaction) error
@@ -24,13 +21,13 @@ type PoolRequester interface {
 	RequestLastTransaction(pool Pool, txAddr string, txType chain.TransactionType) (*chain.Transaction, error)
 }
 
-//FindMasterPeers finds a list of master peer from a transaction hash
+//FindMasterNodes finds a list of master node from a transaction hash
 //TODO: To implement with AI algorithms
-func FindMasterPeers(txHash string) (Pool, error) {
+func FindMasterNodes(txHash string) (Pool, error) {
 	return Pool{
 		PoolMember{
 			ip:   net.ParseIP("127.0.0.1"),
-			port: 3545,
+			port: 5000,
 		},
 	}, nil
 }
@@ -41,7 +38,7 @@ func FindStoragePool(address string) (Pool, error) {
 	return Pool{
 		PoolMember{
 			ip:   net.ParseIP("127.0.0.1"),
-			port: 3545,
+			port: 5000,
 		},
 	}, nil
 }
@@ -52,7 +49,7 @@ func FindValidationPool(tx chain.Transaction) (Pool, error) {
 	return Pool{
 		PoolMember{
 			ip:   net.ParseIP("127.0.0.1"),
-			port: 3545,
+			port: 5000,
 		},
 	}, nil
 }
@@ -60,7 +57,7 @@ func FindValidationPool(tx chain.Transaction) (Pool, error) {
 //Pool represent a pool either for sharding or validation
 type Pool []PoolMember
 
-//PoolMember represent a peer member of a pool
+//PoolMember represent a node member of a pool
 type PoolMember struct {
 	ip   net.IP
 	port int

@@ -9,7 +9,7 @@ esac
 
 echo "Build UNIRIS binary"
 echo "###################"
-CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o uniris-miner ../../cmd/uniris-miner
+CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o uniris-node ../../cmd/uniris-node
 
 
 echo "Build UNIRIS image"
@@ -22,4 +22,4 @@ else
      docker build -t uniris:latest .
 fi
 
-rm uniris-miner
+rm uniris-node

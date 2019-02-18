@@ -28,7 +28,7 @@ Scenario: Get transactions status with receipt non hexadecimal
 func TestGetTransactionStatusWithNoHexaReceipt(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewTransactionHandler(apiGroup, 3545)
+	NewTransactionHandler(apiGroup, 1717)
 
 	path := fmt.Sprintf("http://localhost:3000/api/transaction/abc/status")
 	req, _ := http.NewRequest("GET", path, nil)
@@ -51,7 +51,7 @@ Scenario: Get transactions status with receipt bad length
 func TestGetTransactionStatusWithBadReceiptLength(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewTransactionHandler(apiGroup, 3545)
+	NewTransactionHandler(apiGroup, 1717)
 
 	path := fmt.Sprintf("http://localhost:3000/api/transaction/%s/status", hex.EncodeToString([]byte("abc")))
 	req, _ := http.NewRequest("GET", path, nil)
@@ -76,21 +76,22 @@ func TestGetTransactionStatusUnknown(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
 	techDB := &mockTechDB{}
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
+	locker := &mockLocker{}
 
 	pr := rpc.NewPoolRequester(techDB)
 
-	chainSrv := rpc.NewChainServer(chainDB, techDB, pr)
+	storageSrv := rpc.NewStorageServer(chainDB, locker, techDB, pr)
 	intSrv := rpc.NewInternalServer(techDB, pr)
 
 	//Start transaction server
-	lisTx, _ := net.Listen("tcp", ":3545")
+	lisTx, _ := net.Listen("tcp", ":5000")
 	defer lisTx.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterChainServiceServer(grpcServer, chainSrv)
+	api.RegisterStorageServiceServer(grpcServer, storageSrv)
 	go grpcServer.Serve(lisTx)
 
 	//Start internal server

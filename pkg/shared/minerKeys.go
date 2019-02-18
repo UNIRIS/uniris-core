@@ -6,34 +6,34 @@ import (
 	"github.com/uniris/uniris-core/pkg/crypto"
 )
 
-//MinerKeyPair represent a shared miner keypair
-type MinerKeyPair struct {
+//KeyPair represent a shared node keypair
+type KeyPair struct {
 	pubKey string
 	pvKey  string
 }
 
-//NewMinerKeyPair creates a new miner keypairs
-func NewMinerKeyPair(pubKey string, pvKey string) (MinerKeyPair, error) {
+//NewKeyPair creates a new node keypairs
+func NewKeyPair(pubKey string, pvKey string) (KeyPair, error) {
 	if _, err := crypto.IsPublicKey(pubKey); err != nil {
-		return MinerKeyPair{}, fmt.Errorf("shared miner keys: %s", err.Error())
+		return KeyPair{}, fmt.Errorf("shared node keys: %s", err.Error())
 	}
 
 	if _, err := crypto.IsPrivateKey(pvKey); err != nil {
-		return MinerKeyPair{}, fmt.Errorf("shared miner keys: %s", err.Error())
+		return KeyPair{}, fmt.Errorf("shared node keys: %s", err.Error())
 	}
 
-	return MinerKeyPair{
+	return KeyPair{
 		pubKey: pubKey,
 		pvKey:  pvKey,
 	}, nil
 }
 
-//PublicKey returns the shared miner public key
-func (mKP MinerKeyPair) PublicKey() string {
+//PublicKey returns the shared node public key
+func (mKP KeyPair) PublicKey() string {
 	return mKP.pubKey
 }
 
-//PrivateKey returns the shared miner private key
-func (mKP MinerKeyPair) PrivateKey() string {
+//PrivateKey returns the shared node private key
+func (mKP KeyPair) PrivateKey() string {
 	return mKP.pvKey
 }

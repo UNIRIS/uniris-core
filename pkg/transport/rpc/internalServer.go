@@ -39,7 +39,7 @@ func (s intSrv) GetTransactionStatus(ctx context.Context, req *api.InternalTrans
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	//Select storage master peer
+	//Select storage master node
 	serverAddr := fmt.Sprintf("%s:%d", pool[0].IP().String(), pool[0].Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
@@ -47,7 +47,7 @@ func (s intSrv) GetTransactionStatus(ctx context.Context, req *api.InternalTrans
 	}
 	defer conn.Close()
 
-	cli := api.NewChainServiceClient(conn)
+	cli := api.NewStorageServiceClient(conn)
 
 	reqStatus := &api.TransactionStatusRequest{
 		TransactionHash: req.TransactionHash,
@@ -58,11 +58,11 @@ func (s intSrv) GetTransactionStatus(ctx context.Context, req *api.InternalTrans
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	lastMinersKeys, err := s.techDB.LastMinerKeys()
+	nodeLastKeys, err := s.techDB.NodeLastKeys()
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := crypto.Sign(string(reqBytes), lastMinersKeys.PrivateKey())
+	sig, err := crypto.Sign(string(reqBytes), nodeLastKeys.PrivateKey())
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -83,7 +83,7 @@ func (s intSrv) GetTransactionStatus(ctx context.Context, req *api.InternalTrans
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	if err := crypto.VerifySignature(string(resBytes), lastMinersKeys.PublicKey(), res.SignatureResponse); err != nil {
+	if err := crypto.VerifySignature(string(resBytes), nodeLastKeys.PublicKey(), res.SignatureResponse); err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
@@ -93,12 +93,12 @@ func (s intSrv) GetTransactionStatus(ctx context.Context, req *api.InternalTrans
 func (s intSrv) HandleTransaction(ctx context.Context, req *api.IncomingTransaction) (*api.TransactionResult, error) {
 	fmt.Printf("HANDLING TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	lastMinersKeys, err := s.techDB.LastMinerKeys()
+	nodeLastKeys, err := s.techDB.NodeLastKeys()
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	txJSON, err := crypto.Decrypt(req.EncryptedTransaction, lastMinersKeys.PrivateKey())
+	txJSON, err := crypto.Decrypt(req.EncryptedTransaction, nodeLastKeys.PrivateKey())
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
@@ -109,28 +109,28 @@ func (s intSrv) HandleTransaction(ctx context.Context, req *api.IncomingTransact
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	masterPeers, err := consensus.FindMasterPeers(txHash)
+	masterNodess, err := consensus.FindMasterNodes(txHash)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 	minValidations := consensus.GetMinimumValidation(txHash)
 
-	//Building the request to the master miner
+	//Building the request to the master node
 	leadReq := formatLeadMiningRequest(tx, txHash, minValidations)
 	leadRBytes, err := json.Marshal(leadReq)
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
-	reqSig, err := crypto.Sign(string(leadRBytes), lastMinersKeys.PrivateKey())
+	reqSig, err := crypto.Sign(string(leadRBytes), nodeLastKeys.PrivateKey())
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 	leadReq.SignatureRequest = reqSig
 
-	//TODO: send to all the elected master peers
+	//TODO: send to all the elected master nodes
 
 	//Send the request
-	serverAddr := fmt.Sprintf("%s:%d", masterPeers[0].IP(), masterPeers[0].Port())
+	serverAddr := fmt.Sprintf("%s:%d", masterNodess[0].IP(), masterNodess[0].Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
@@ -140,7 +140,7 @@ func (s intSrv) HandleTransaction(ctx context.Context, req *api.IncomingTransact
 	res, err := cli.LeadTransactionMining(context.Background(), leadReq)
 	if err != nil {
 		statusCodes, _ := status.FromError(err)
-		return nil, status.New(statusCodes.Code(), err.Error()).Err()
+		return nil, status.New(statusCodes.Code(), statusCodes.Message()).Err()
 	}
 	fmt.Printf("PRE VALIDATE TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
@@ -152,7 +152,7 @@ func (s intSrv) HandleTransaction(ctx context.Context, req *api.IncomingTransact
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := crypto.Sign(string(txResBytes), lastMinersKeys.PrivateKey())
+	sig, err := crypto.Sign(string(txResBytes), nodeLastKeys.PrivateKey())
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -165,12 +165,12 @@ func (s intSrv) HandleTransaction(ctx context.Context, req *api.IncomingTransact
 func (s intSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest) (*api.GetAccountResponse, error) {
 	fmt.Printf("GET ACCOUNT REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	lastMinersKeys, err := s.techDB.LastMinerKeys()
+	nodeLastKeys, err := s.techDB.NodeLastKeys()
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	idAddr, err := crypto.Decrypt(req.EncryptedIdAddress, lastMinersKeys.PrivateKey())
+	idAddr, err := crypto.Decrypt(req.EncryptedIdAddress, nodeLastKeys.PrivateKey())
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
@@ -193,7 +193,7 @@ func (s intSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest) (*ap
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	keychainAddr, err := crypto.Decrypt(id.EncryptedAddrByRobot(), lastMinersKeys.PrivateKey())
+	keychainAddr, err := crypto.Decrypt(id.EncryptedAddrBy(), nodeLastKeys.PrivateKey())
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -225,7 +225,7 @@ func (s intSrv) GetAccount(ctx context.Context, req *api.GetAccountRequest) (*ap
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	sig, err := crypto.Sign(string(resBytes), lastMinersKeys.PrivateKey())
+	sig, err := crypto.Sign(string(resBytes), nodeLastKeys.PrivateKey())
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -257,15 +257,15 @@ func (s intSrv) GetLastSharedKeys(ctx context.Context, req *api.LastSharedKeysRe
 		})
 	}
 
-	lastMinersKeys, err := s.techDB.LastMinerKeys()
+	nodeLastKeys, err := s.techDB.NodeLastKeys()
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
 	return &api.LastSharedKeys{
-		EmitterKeys:    emKeyPairs,
-		MinerPublicKey: lastMinersKeys.PublicKey(),
-		Timestamp:      time.Now().Unix(),
+		EmitterKeys:   emKeyPairs,
+		NodePublicKey: nodeLastKeys.PublicKey(),
+		Timestamp:     time.Now().Unix(),
 	}, nil
 }
 

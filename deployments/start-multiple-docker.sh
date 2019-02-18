@@ -18,7 +18,7 @@ fi
 
 echo "Create image"
 echo "################"
-CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o uniris-miner ../cmd/uniris-miner
+CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o uniris-node ../cmd/uniris-node
 if [ $machine = "Linux" ]
 then
     sudo docker build -t uniris:latest -f ../build/docker/Dockerfile .
@@ -26,7 +26,7 @@ else
     docker build -t uniris:latest -f ../build/docker/Dockerfile .
 fi
 
-rm uniris-miner
+rm uniris-node
 
 nb=$1
 

@@ -17,22 +17,24 @@ import (
 	"github.com/uniris/uniris-core/pkg/crypto"
 )
 
-type chainSrv struct {
-	db     chain.Database
-	techDB shared.TechDatabaseReader
-	poolR  consensus.PoolRequester
+type storageSrv struct {
+	chainDB chain.Database
+	locker  chain.Locker
+	techDB  shared.TechDatabaseReader
+	poolR   consensus.PoolRequester
 }
 
-//NewChainServer creates a new GPRC server for the chain service
-func NewChainServer(db chain.Database, tDB shared.TechDatabaseReader, poolR consensus.PoolRequester) api.ChainServiceServer {
-	return &chainSrv{
-		db:     db,
-		techDB: tDB,
-		poolR:  poolR,
+//NewStorageServer creates a new GPRC server for the storage service
+func NewStorageServer(db chain.Database, l chain.Locker, tDB shared.TechDatabaseReader, poolR consensus.PoolRequester) api.StorageServiceServer {
+	return &storageSrv{
+		chainDB: db,
+		locker:  l,
+		techDB:  tDB,
+		poolR:   poolR,
 	}
 }
 
-func (s chainSrv) GetLastTransaction(ctx context.Context, req *api.LastTransactionRequest) (*api.LastTransactionResponse, error) {
+func (s storageSrv) GetLastTransaction(ctx context.Context, req *api.LastTransactionRequest) (*api.LastTransactionResponse, error) {
 	fmt.Printf("GET LAST TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
 	reqBytes, err := json.Marshal(&api.LastTransactionRequest{
@@ -44,16 +46,16 @@ func (s chainSrv) GetLastTransaction(ctx context.Context, req *api.LastTransacti
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	lastMinerKeys, err := s.techDB.LastMinerKeys()
+	nodeLastKeys, err := s.techDB.NodeLastKeys()
 	if err != nil {
 		return nil, err
 	}
 
-	if err := crypto.VerifySignature(string(reqBytes), lastMinerKeys.PublicKey(), req.SignatureRequest); err != nil {
+	if err := crypto.VerifySignature(string(reqBytes), nodeLastKeys.PublicKey(), req.SignatureRequest); err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	tx, err := chain.LastTransaction(s.db, req.TransactionAddress, chain.TransactionType(req.Type))
+	tx, err := chain.LastTransaction(s.chainDB, req.TransactionAddress, chain.TransactionType(req.Type))
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -70,7 +72,7 @@ func (s chainSrv) GetLastTransaction(ctx context.Context, req *api.LastTransacti
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	sig, err := crypto.Sign(string(resBytes), lastMinerKeys.PrivateKey())
+	sig, err := crypto.Sign(string(resBytes), nodeLastKeys.PrivateKey())
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -79,7 +81,7 @@ func (s chainSrv) GetLastTransaction(ctx context.Context, req *api.LastTransacti
 	return res, nil
 }
 
-func (s chainSrv) GetTransactionStatus(ctx context.Context, req *api.TransactionStatusRequest) (*api.TransactionStatusResponse, error) {
+func (s storageSrv) GetTransactionStatus(ctx context.Context, req *api.TransactionStatusRequest) (*api.TransactionStatusResponse, error) {
 	fmt.Printf("GET TRANSACTION STATUS REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
 	reqBytes, err := json.Marshal(&api.TransactionStatusRequest{
@@ -89,15 +91,15 @@ func (s chainSrv) GetTransactionStatus(ctx context.Context, req *api.Transaction
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
-	lastMinerKeys, err := s.techDB.LastMinerKeys()
+	nodeLastKeys, err := s.techDB.NodeLastKeys()
 	if err != nil {
 		return nil, err
 	}
-	if err := crypto.VerifySignature(string(reqBytes), lastMinerKeys.PublicKey(), req.SignatureRequest); err != nil {
+	if err := crypto.VerifySignature(string(reqBytes), nodeLastKeys.PublicKey(), req.SignatureRequest); err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	txStatus, err := chain.GetTransactionStatus(s.db, req.TransactionHash)
+	txStatus, err := chain.GetTransactionStatus(s.chainDB, req.TransactionHash)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -110,7 +112,7 @@ func (s chainSrv) GetTransactionStatus(ctx context.Context, req *api.Transaction
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := crypto.Sign(string(resBytes), lastMinerKeys.PrivateKey())
+	sig, err := crypto.Sign(string(resBytes), nodeLastKeys.PrivateKey())
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -119,18 +121,18 @@ func (s chainSrv) GetTransactionStatus(ctx context.Context, req *api.Transaction
 	return res, nil
 }
 
-func (s chainSrv) StoreTransaction(ctx context.Context, req *api.StoreRequest) (*api.StoreResponse, error) {
+func (s storageSrv) StoreTransaction(ctx context.Context, req *api.StoreRequest) (*api.StoreResponse, error) {
 	fmt.Printf("STORE TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
 	reqBytes, err := json.Marshal(&api.StoreRequest{
 		MinedTransaction: req.MinedTransaction,
 		Timestamp:        req.Timestamp,
 	})
-	lastMinerKeys, err := s.techDB.LastMinerKeys()
+	nodeLastKeys, err := s.techDB.NodeLastKeys()
 	if err != nil {
 		return nil, err
 	}
-	if err := crypto.VerifySignature(string(reqBytes), lastMinerKeys.PublicKey(), req.SignatureRequest); err != nil {
+	if err := crypto.VerifySignature(string(reqBytes), nodeLastKeys.PublicKey(), req.SignatureRequest); err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
@@ -143,7 +145,7 @@ func (s chainSrv) StoreTransaction(ctx context.Context, req *api.StoreRequest) (
 		return nil, status.New(codes.PermissionDenied, "not authorized to store this data").Err()
 	}
 
-	if err := chain.WriteTransaction(s.db, tx, int(req.MinimumValidations)); err != nil {
+	if err := chain.WriteTransaction(s.chainDB, s.locker, tx, int(req.MinimumValidations)); err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
@@ -154,7 +156,43 @@ func (s chainSrv) StoreTransaction(ctx context.Context, req *api.StoreRequest) (
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := crypto.Sign(string(resBytes), lastMinerKeys.PrivateKey())
+	sig, err := crypto.Sign(string(resBytes), nodeLastKeys.PrivateKey())
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	res.SignatureResponse = sig
+	return res, nil
+}
+
+func (s storageSrv) LockTransaction(ctx context.Context, req *api.LockRequest) (*api.LockResponse, error) {
+	fmt.Printf("LOCK TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
+
+	reqBytes, err := json.Marshal(&api.LockRequest{
+		TransactionHash:     req.TransactionHash,
+		MasterNodePublicKey: req.MasterNodePublicKey,
+		Timestamp:           req.Timestamp,
+		Address:             req.Address,
+	})
+	nodeLastKeys, err := s.techDB.NodeLastKeys()
+	if err != nil {
+		return nil, err
+	}
+	if err := crypto.VerifySignature(string(reqBytes), nodeLastKeys.PublicKey(), req.SignatureRequest); err != nil {
+		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
+	}
+
+	if err := chain.LockTransaction(s.locker, req.TransactionHash, req.Address, req.MasterNodePublicKey); err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+
+	res := &api.LockResponse{
+		Timestamp: time.Now().Unix(),
+	}
+	resBytes, err := json.Marshal(res)
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	sig, err := crypto.Sign(string(resBytes), nodeLastKeys.PrivateKey())
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}

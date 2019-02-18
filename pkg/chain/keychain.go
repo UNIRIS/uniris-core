@@ -7,8 +7,6 @@ import (
 
 //Keychain represents a keychain transaction
 type Keychain struct {
-	encAddr   string
-	encWallet string
 	Transaction
 }
 
@@ -19,9 +17,9 @@ func NewKeychain(tx Transaction) (Keychain, error) {
 		return Keychain{}, errors.New("transaction: invalid type of transaction")
 	}
 
-	addr, exist := tx.data["encrypted_address"]
+	addr, exist := tx.data["encrypted_address_by_node"]
 	if !exist {
-		return Keychain{}, errors.New("transaction: missing data keychain: 'encrypted_address'")
+		return Keychain{}, errors.New("transaction: missing data keychain: 'encrypted_address_by_node'")
 	}
 
 	wallet, exist := tx.data["encrypted_wallet"]
@@ -30,7 +28,7 @@ func NewKeychain(tx Transaction) (Keychain, error) {
 	}
 
 	if _, err := hex.DecodeString(addr); err != nil {
-		return Keychain{}, errors.New("transaction: keychain encrypted address is not in hexadecimal format")
+		return Keychain{}, errors.New("transaction: keychain encrypted address for node is not in hexadecimal format")
 	}
 
 	if _, err := hex.DecodeString(wallet); err != nil {
@@ -38,18 +36,16 @@ func NewKeychain(tx Transaction) (Keychain, error) {
 	}
 
 	return Keychain{
-		encAddr:     addr,
-		encWallet:   wallet,
 		Transaction: tx,
 	}, nil
 }
 
-//EncryptedAddrByRobot returns the encrypted keychain address by the shared robot key
-func (k Keychain) EncryptedAddrByRobot() string {
-	return k.encAddr
+//EncryptedAddrBy returns the encrypted keychain address by the shared node key
+func (k Keychain) EncryptedAddrBy() string {
+	return k.data["encrypted_address_by_node"]
 }
 
 //EncryptedWallet returns encrypted wallet by the person AES key
 func (k Keychain) EncryptedWallet() string {
-	return k.encWallet
+	return k.data["encrypted_wallet"]
 }

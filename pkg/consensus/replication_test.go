@@ -20,7 +20,7 @@ func TestGetMinimumReplicas(t *testing.T) {
 }
 
 /*
-Scenario: Check if the miner is authorized to store the transaction
+Scenario: Check if the node is authorized to store the transaction
 	Given a transaction hash
 	When I dbant to check if I can store this transaction
 	Then I get a true

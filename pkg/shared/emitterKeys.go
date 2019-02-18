@@ -12,7 +12,7 @@ import (
 //EmitterKeys define list of shared emitter keys
 type EmitterKeys []EmitterKeyPair
 
-//RequestKey returns the public key used to request between clients and miners
+//RequestKey returns the public key used to request between clients and nodes
 func (em EmitterKeys) RequestKey() string {
 	return em[0].pubKey
 }

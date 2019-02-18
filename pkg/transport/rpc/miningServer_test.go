@@ -25,8 +25,8 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
 	techDB := &mockTechDB{}
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpv")), pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
@@ -38,8 +38,8 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 	miningSrv := NewMiningServer(techDB, pr, pub, pv)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
@@ -54,10 +54,14 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 	txBytes, _ := json.Marshal(txRaw)
 	sig, _ := crypto.Sign(string(txBytes), pv)
 	txRaw["signature"] = sig
-	txRaw["em_signature"] = sig
+
+	txByteWithSig, _ := json.Marshal(txRaw)
+	emSig, _ := crypto.Sign(string(txByteWithSig), pv)
+	txRaw["em_signature"] = emSig
+
 	txBytes, _ = json.Marshal(txRaw)
 
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashBytes(txBytes))
+	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txBytes))
 	req := &api.LeadMiningRequest{
 		Timestamp:          time.Now().Unix(),
 		MinimumValidations: 1,
@@ -86,15 +90,15 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 Scenario: Receive confirmation of validations transaction request
 	Given a transaction to validate
 	When I want to request to validation of the transaction
-	Then I get the miner validation
+	Then I get the node validation
 */
 func TestHandleConfirmValiation(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
 	techDB := &mockTechDB{}
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpv")), pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
@@ -107,8 +111,8 @@ func TestHandleConfirmValiation(t *testing.T) {
 
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 
 	txRaw := map[string]interface{}{
@@ -122,9 +126,11 @@ func TestHandleConfirmValiation(t *testing.T) {
 	txBytes, _ := json.Marshal(txRaw)
 	sig, _ := crypto.Sign(string(txBytes), pv)
 	txRaw["signature"] = sig
-	txRaw["em_signature"] = sig
+	txByteWithSig, _ := json.Marshal(txRaw)
+	emSig, _ := crypto.Sign(string(txByteWithSig), pv)
+	txRaw["em_signature"] = emSig
 	txBytes, _ = json.Marshal(txRaw)
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashBytes(txBytes))
+	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txBytes))
 
 	vRaw := map[string]interface{}{
 		"status":     chain.ValidationOK,
@@ -134,7 +140,7 @@ func TestHandleConfirmValiation(t *testing.T) {
 
 	vBytes, _ := json.Marshal(vRaw)
 	vSig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ := chain.NewMinerValidation(chain.ValidationOK, time.Now(), pub, vSig)
+	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
 	mv, _ := chain.NewMasterValidation([]string{}, pub, v)
 	req := &api.ConfirmValidationRequest{
 		Transaction:      formatAPITransaction(tx),
@@ -156,6 +162,6 @@ func TestHandleConfirmValiation(t *testing.T) {
 	assert.Nil(t, crypto.VerifySignature(string(resBytes), pub, res.SignatureResponse))
 
 	assert.NotNil(t, res.Validation)
-	assert.Equal(t, api.MinerValidation_OK, res.Validation.Status)
+	assert.Equal(t, api.Validation_OK, res.Validation.Status)
 	assert.Equal(t, pub, res.Validation.PublicKey)
 }

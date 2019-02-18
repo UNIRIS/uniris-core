@@ -17,8 +17,8 @@ discovery-db-password: ""
 bus-type: mem
 bus-host: localhost
 bus-port: 5672
-bus-user: guest
-bus-password: guest
+bus-user: uniris
+bus-password: uniris
 
 
 

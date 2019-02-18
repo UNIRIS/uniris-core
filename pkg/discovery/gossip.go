@@ -2,6 +2,7 @@ package discovery
 
 import (
 	"errors"
+	"log"
 )
 
 //Notifier handle the notification of the gossip events
@@ -70,7 +71,12 @@ func updateSelf(self Peer, discoveries []Peer, seeds []PeerIdentity, db Database
 
 	_, _, _, cpu, space, err := systemInfo(sysR)
 	if err != nil {
-		return self, err
+		if err == ErrGeoPosition {
+			status = FaultyPeer
+			log.Println(ErrGeoPosition)
+		} else {
+			return self, err
+		}
 	}
 
 	self.SelfRefresh(status, space, cpu, p2pFactor(discoveries), len(discoveries))

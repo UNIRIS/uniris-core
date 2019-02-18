@@ -1,4 +1,4 @@
-package consensus
+package chain
 
 import (
 	"testing"
@@ -9,12 +9,12 @@ import (
 
 /*
 Scenario: Create transaction lock
-	Given a transaction hash, an address and a master robot key
+	Given a transaction hash, an address and a master node key
 	When I want to lock the transaction
 	Then the lock is stored
 */
 func TestStoreLock(t *testing.T) {
-	lockDB := &mockDB{}
+	lockDB := &mockLocker{}
 
 	pub, _ := crypto.GenerateKeys()
 
@@ -31,7 +31,7 @@ Scenario: Create two lock identicals
 	Then I get an error
 */
 func TestCreatedExistingLock(t *testing.T) {
-	lockDB := &mockDB{}
+	lockDB := &mockLocker{}
 	pub, _ := crypto.GenerateKeys()
 	assert.Nil(t, LockTransaction(lockDB, crypto.HashString("hash"), crypto.HashString("addr"), pub))
 	assert.EqualError(t, LockTransaction(lockDB, crypto.HashString("hash"), crypto.HashString("addr"), pub), "a lock already exist for this transaction")
@@ -44,19 +44,19 @@ Scenario: Remove a lock
 	Then I get no lock after
 */
 func TestRemoveLock(t *testing.T) {
-	lockDB := &mockDB{}
+	lockDB := &mockLocker{}
 
 	pub, _ := crypto.GenerateKeys()
 	LockTransaction(lockDB, crypto.HashString("hash"), crypto.HashString("addr"), pub)
-	assert.Nil(t, UnlockTransaction(lockDB, crypto.HashString("hash"), crypto.HashString("addr")))
+	assert.Nil(t, unlockTransaction(lockDB, crypto.HashString("hash"), crypto.HashString("addr")))
 	assert.Len(t, lockDB.locks, 0)
 }
 
-type mockDB struct {
+type mockLocker struct {
 	locks []map[string]interface{}
 }
 
-func (r *mockDB) WriteLock(txHash string, txAddr string, masterPubk string) error {
+func (r *mockLocker) WriteLock(txHash string, txAddr string, masterPubk string) error {
 	r.locks = append(r.locks, map[string]interface{}{
 		"transaction_hash":    txHash,
 		"transaction_address": txAddr,
@@ -65,7 +65,7 @@ func (r *mockDB) WriteLock(txHash string, txAddr string, masterPubk string) erro
 	return nil
 }
 
-func (r *mockDB) RemoveLock(txHash string, txAddr string) error {
+func (r *mockLocker) RemoveLock(txHash string, txAddr string) error {
 	pos := r.findLockPosition(txHash, txAddr)
 	if pos > -1 {
 		r.locks = append(r.locks[:pos], r.locks[pos+1:]...)
@@ -73,11 +73,11 @@ func (r *mockDB) RemoveLock(txHash string, txAddr string) error {
 	return nil
 }
 
-func (r mockDB) ContainsLock(txHash string, txAddr string) (bool, error) {
+func (r mockLocker) ContainsLock(txHash string, txAddr string) (bool, error) {
 	return r.findLockPosition(txHash, txAddr) > -1, nil
 }
 
-func (r mockDB) findLockPosition(txHash string, txAddr string) int {
+func (r mockLocker) findLockPosition(txHash string, txAddr string) int {
 	for i, l := range r.locks {
 		if l["transaction_hash"] == txHash && l["transaction_address"] == txAddr {
 			return i

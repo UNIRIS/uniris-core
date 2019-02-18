@@ -27,8 +27,8 @@ func TestReadKeychainByHash(t *testing.T) {
 
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 	tx := Transaction{
 		addr:      crypto.HashString("addr"),
@@ -45,16 +45,16 @@ func TestReadKeychainByHash(t *testing.T) {
 	txBytes, _ := tx.MarshalHash()
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash
-	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: pub,
+	vBytes, _ := json.Marshal(Validation{
+		nodePubk:  pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
 	vSig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
 	mv, _ := NewMasterValidation([]string{}, pub, v)
 
-	tx.Mined(mv, []MinerValidation{v})
+	tx.Mined(mv, []Validation{v})
 	keychain, err := NewKeychain(tx)
 	chainDB.keychains = append(chainDB.keychains, keychain)
 
@@ -80,9 +80,9 @@ func TestGetIDTransactionByHash(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
-		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
 	}
 
 	tx := Transaction{
@@ -100,16 +100,16 @@ func TestGetIDTransactionByHash(t *testing.T) {
 	txBytes, _ := tx.MarshalHash()
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash
-	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: pub,
+	vBytes, _ := json.Marshal(Validation{
+		nodePubk:  pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
 	vSig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
 	mv, _ := NewMasterValidation([]string{}, pub, v)
 
-	tx.Mined(mv, []MinerValidation{v})
+	tx.Mined(mv, []Validation{v})
 	id, _ := NewID(tx)
 
 	chainDB.ids = append(chainDB.ids, id)
@@ -203,9 +203,9 @@ func TestGetTransactionStatusSuccess(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
-		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
 	}
 
 	tx := Transaction{
@@ -223,16 +223,16 @@ func TestGetTransactionStatusSuccess(t *testing.T) {
 	txBytes, _ := tx.MarshalHash()
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash
-	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: pub,
+	vBytes, _ := json.Marshal(Validation{
+		nodePubk:  pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
 	vSig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
 	mv, _ := NewMasterValidation([]string{}, pub, v)
 
-	tx.Mined(mv, []MinerValidation{v})
+	tx.Mined(mv, []Validation{v})
 	id, _ := NewID(tx)
 
 	chainDB.ids = append(chainDB.ids, id)
@@ -258,8 +258,8 @@ func TestReadLastKeychainTransaction(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 
 	tx := Transaction{
@@ -278,16 +278,16 @@ func TestReadLastKeychainTransaction(t *testing.T) {
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash
 
-	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: pub,
+	vBytes, _ := json.Marshal(Validation{
+		nodePubk:  pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
 	vSig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
 	mv, _ := NewMasterValidation([]string{}, pub, v)
 
-	tx.Mined(mv, []MinerValidation{v})
+	tx.Mined(mv, []Validation{v})
 	keychain1, _ := NewKeychain(tx)
 
 	chainDB.keychains = append(chainDB.keychains, keychain1)
@@ -310,7 +310,7 @@ func TestReadLastKeychainTransaction(t *testing.T) {
 	hash2 := crypto.HashBytes(txBytes2)
 	tx2.hash = hash2
 
-	tx2.Mined(mv, []MinerValidation{v})
+	tx2.Mined(mv, []Validation{v})
 	keychain2, err := NewKeychain(tx2)
 
 	chainDB.keychains = append(chainDB.keychains, keychain2)
@@ -340,9 +340,9 @@ func TestGetLastIDTransaction(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
-		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
 	}
 
 	tx := Transaction{
@@ -361,16 +361,16 @@ func TestGetLastIDTransaction(t *testing.T) {
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash
 
-	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: pub,
+	vBytes, _ := json.Marshal(Validation{
+		nodePubk:  pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
 	vSig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
 	mv, _ := NewMasterValidation([]string{}, pub, v)
 
-	tx.Mined(mv, []MinerValidation{v})
+	tx.Mined(mv, []Validation{v})
 	id1, _ := NewID(tx)
 
 	chainDB.ids = append(chainDB.ids, id1)
@@ -392,7 +392,7 @@ func TestGetLastIDTransaction(t *testing.T) {
 	txBytes2, _ := tx2.MarshalHash()
 	hash2 := crypto.HashBytes(txBytes2)
 	tx2.hash = hash2
-	tx2.Mined(mv, []MinerValidation{v})
+	tx2.Mined(mv, []Validation{v})
 	id2, err := NewID(tx2)
 
 	chainDB.ids = append(chainDB.ids, id2)
@@ -426,8 +426,8 @@ func TestGetTransactionChain(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 
 	tx := Transaction{
@@ -446,16 +446,16 @@ func TestGetTransactionChain(t *testing.T) {
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash
 
-	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: pub,
+	vBytes, _ := json.Marshal(Validation{
+		nodePubk:  pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
 	vSig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
 	mv, _ := NewMasterValidation([]string{}, pub, v)
 
-	tx.Mined(mv, []MinerValidation{v})
+	tx.Mined(mv, []Validation{v})
 	keychain1, _ := NewKeychain(tx)
 
 	chainDB.keychains = append(chainDB.keychains, keychain1)
@@ -478,7 +478,7 @@ func TestGetTransactionChain(t *testing.T) {
 	hash2 := crypto.HashBytes(txBytes2)
 	tx2.hash = hash2
 
-	tx2.Mined(mv, []MinerValidation{v})
+	tx2.Mined(mv, []Validation{v})
 	keychain2, _ := NewKeychain(tx2)
 	assert.Nil(t, keychain2.Chain(&tx))
 
@@ -505,8 +505,8 @@ func TestCheckTransactionBeforeStore(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 
 	tx := Transaction{
@@ -519,21 +519,23 @@ func TestCheckTransactionBeforeStore(t *testing.T) {
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
 	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
-	tx.emSig = sig
 	tx.sig = sig
+	txBytesBeforeEmSig, _ := tx.MarshalBeforeEmitterSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeEmSig), pv)
+	tx.emSig = emSig
 	txBytes, _ := tx.MarshalHash()
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash
 
-	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: pub,
+	vBytes, _ := json.Marshal(Validation{
+		nodePubk:  pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
 	vSig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
 	mv, _ := NewMasterValidation([]string{}, pub, v)
-	tx.Mined(mv, []MinerValidation{v})
+	tx.Mined(mv, []Validation{v})
 
 	assert.Nil(t, checkTransactionBeforeStorage(tx, 1))
 }
@@ -550,8 +552,8 @@ func TestCheckTransactionBeforeStoreWithMissingValidations(t *testing.T) {
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 
 	tx := Transaction{
@@ -564,21 +566,23 @@ func TestCheckTransactionBeforeStoreWithMissingValidations(t *testing.T) {
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
 	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
-	tx.emSig = sig
 	tx.sig = sig
+	txBytesBeforeEmSig, _ := tx.MarshalBeforeEmitterSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeEmSig), pv)
+	tx.emSig = emSig
 	txBytes, _ := tx.MarshalHash()
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash
 
-	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: pub,
+	vBytes, _ := json.Marshal(Validation{
+		nodePubk:  pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
 	vSig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
 	mv, _ := NewMasterValidation([]string{}, pub, v)
-	tx.Mined(mv, []MinerValidation{})
+	tx.Mined(mv, []Validation{})
 
 	assert.EqualError(t, checkTransactionBeforeStorage(tx, 1), "transaction: invalid number of validations")
 }
@@ -593,28 +597,28 @@ func TestStoreKOTransaction(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: pub,
+	vBytes, _ := json.Marshal(Validation{
+		nodePubk:  pub,
 		status:    ValidationKO,
 		timestamp: time.Now(),
 	})
 	vSig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ := NewMinerValidation(ValidationKO, time.Now(), pub, vSig)
+	v, _ := NewValidation(ValidationKO, time.Now(), pub, vSig)
 
-	vBytes2, _ := json.Marshal(MinerValidation{
-		minerPubk: pub,
+	vBytes2, _ := json.Marshal(Validation{
+		nodePubk:  pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
 	vSig2, _ := crypto.Sign(string(vBytes2), pv)
-	v2, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig2)
+	v2, _ := NewValidation(ValidationOK, time.Now(), pub, vSig2)
 	mv, _ := NewMasterValidation([]string{}, pub, v)
 
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 
 	tx := Transaction{
@@ -627,17 +631,19 @@ func TestStoreKOTransaction(t *testing.T) {
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
 	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
-	tx.emSig = sig
 	tx.sig = sig
+	txBytesBeforeEmSig, _ := tx.MarshalBeforeEmitterSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeEmSig), pv)
+	tx.emSig = emSig
 	txBytes, _ := tx.MarshalHash()
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash
 
-	tx.Mined(mv, []MinerValidation{v2})
+	tx.Mined(mv, []Validation{v2})
 
 	chainDB := &mockChainDB{}
 
-	assert.Nil(t, WriteTransaction(chainDB, tx, 1))
+	assert.Nil(t, WriteTransaction(chainDB, &mockLocker{}, tx, 1))
 	assert.Len(t, chainDB.kos, 1)
 	assert.Equal(t, crypto.HashBytes(txBytes), chainDB.kos[0].hash)
 }
@@ -652,28 +658,28 @@ func TestStoreKeychainTransaction(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: pub,
+	vBytes, _ := json.Marshal(Validation{
+		nodePubk:  pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
 	vSig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
 
-	vBytes2, _ := json.Marshal(MinerValidation{
-		minerPubk: pub,
+	vBytes2, _ := json.Marshal(Validation{
+		nodePubk:  pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
 	vSig2, _ := crypto.Sign(string(vBytes2), pv)
-	v2, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig2)
+	v2, _ := NewValidation(ValidationOK, time.Now(), pub, vSig2)
 	mv, _ := NewMasterValidation([]string{}, pub, v)
 
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":  hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 
 	tx := Transaction{
@@ -686,17 +692,19 @@ func TestStoreKeychainTransaction(t *testing.T) {
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
 	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
-	tx.emSig = sig
 	tx.sig = sig
+	txBytesBeforeEmSig, _ := tx.MarshalBeforeEmitterSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeEmSig), pv)
+	tx.emSig = emSig
 	txBytes, _ := tx.MarshalHash()
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash
 
-	tx.Mined(mv, []MinerValidation{v2})
+	tx.Mined(mv, []Validation{v2})
 
 	chainDB := &mockChainDB{}
 
-	assert.Nil(t, WriteTransaction(chainDB, tx, 1))
+	assert.Nil(t, WriteTransaction(chainDB, &mockLocker{}, tx, 1))
 	assert.Len(t, chainDB.keychains, 1)
 	assert.Equal(t, crypto.HashBytes(txBytes), chainDB.keychains[0].hash)
 }
@@ -711,29 +719,29 @@ func TestStoreIDTransaction(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	vBytes, _ := json.Marshal(MinerValidation{
-		minerPubk: pub,
+	vBytes, _ := json.Marshal(Validation{
+		nodePubk:  pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
 	vSig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig)
+	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
 
-	vBytes2, _ := json.Marshal(MinerValidation{
-		minerPubk: pub,
+	vBytes2, _ := json.Marshal(Validation{
+		nodePubk:  pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
 	vSig2, _ := crypto.Sign(string(vBytes2), pv)
-	v2, _ := NewMinerValidation(ValidationOK, time.Now(), pub, vSig2)
+	v2, _ := NewValidation(ValidationOK, time.Now(), pub, vSig2)
 	mv, _ := NewMasterValidation([]string{}, pub, v)
 
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
-		"encrypted_address_by_robot": hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
-		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
 	}
 
 	tx := Transaction{
@@ -746,17 +754,19 @@ func TestStoreIDTransaction(t *testing.T) {
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
 	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
-	tx.emSig = sig
 	tx.sig = sig
+	txBytesBeforeEmSig, _ := tx.MarshalBeforeEmitterSignature()
+	emSig, _ := crypto.Sign(string(txBytesBeforeEmSig), pv)
+	tx.emSig = emSig
 	txBytes, _ := tx.MarshalHash()
 	hash := crypto.HashBytes(txBytes)
 	tx.hash = hash
 
-	tx.Mined(mv, []MinerValidation{v2})
+	tx.Mined(mv, []Validation{v2})
 
 	chainDB := &mockChainDB{}
 
-	assert.Nil(t, WriteTransaction(chainDB, tx, 1))
+	assert.Nil(t, WriteTransaction(chainDB, &mockLocker{}, tx, 1))
 	assert.Len(t, chainDB.ids, 1)
 	assert.Equal(t, crypto.HashBytes(txBytes), chainDB.ids[0].hash)
 }

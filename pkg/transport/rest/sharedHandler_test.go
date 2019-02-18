@@ -27,7 +27,7 @@ Scenario: Get shared keys with no emitter public key in the query
 func TestGetSharedKeysWhenMissingPublicKey(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewSharedHandler(apiGroup, 3545)
+	NewSharedHandler(apiGroup, 1717)
 
 	path := fmt.Sprintf("http://localhost:3000/api/sharedkeys")
 	req, _ := http.NewRequest("GET", path, nil)
@@ -50,7 +50,7 @@ Scenario: Get shared keys with an invalid emitter public key
 func TestGetSharedKeysWithInvalidPublicKey(t *testing.T) {
 	r := gin.Default()
 	apiGroup := r.Group("/api")
-	NewSharedHandler(apiGroup, 3545)
+	NewSharedHandler(apiGroup, 1717)
 
 	path := fmt.Sprintf("http://localhost:3000/api/sharedkeys?emitter_public_key=abc")
 	req, _ := http.NewRequest("GET", path, nil)
@@ -80,8 +80,8 @@ func TestGetSharedKeys(t *testing.T) {
 	techDB := &mockTechDB{}
 	encPv, _ := crypto.Encrypt(pv, pub)
 	emKP, _ := shared.NewEmitterKeyPair(encPv, pub)
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 	techDB.emKeys = append(techDB.emKeys, emKP)
 
 	pr := rpc.NewPoolRequester(techDB)
@@ -102,10 +102,10 @@ func TestGetSharedKeys(t *testing.T) {
 	resBytes, _ := ioutil.ReadAll(w.Body)
 	var res map[string]interface{}
 	json.Unmarshal(resBytes, &res)
-	assert.NotEmpty(t, res["shared_miner_public_key"])
+	assert.NotEmpty(t, res["shared_node_public_key"])
 	assert.NotEmpty(t, res["shared_emitter_keys"])
 
-	assert.Equal(t, pub, res["shared_miner_public_key"])
+	assert.Equal(t, pub, res["shared_node_public_key"])
 
 	emKeys := res["shared_emitter_keys"].([]interface{})
 	assert.Len(t, emKeys, 1)
@@ -117,14 +117,14 @@ func TestGetSharedKeys(t *testing.T) {
 }
 
 type mockTechDB struct {
-	emKeys    shared.EmitterKeys
-	minerKeys []shared.MinerKeyPair
+	emKeys   shared.EmitterKeys
+	nodeKeys []shared.KeyPair
 }
 
 func (db mockTechDB) EmitterKeys() (shared.EmitterKeys, error) {
 	return db.emKeys, nil
 }
 
-func (db mockTechDB) LastMinerKeys() (shared.MinerKeyPair, error) {
-	return db.minerKeys[len(db.minerKeys)-1], nil
+func (db mockTechDB) NodeLastKeys() (shared.KeyPair, error) {
+	return db.nodeKeys[len(db.nodeKeys)-1], nil
 }

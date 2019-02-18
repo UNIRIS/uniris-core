@@ -88,14 +88,14 @@ func formatTransaction(tx *api.Transaction) (chain.Transaction, error) {
 		tx.TransactionHash)
 }
 
-func formatMinedTransaction(t *api.Transaction, mv *api.MasterValidation, valids []*api.MinerValidation) (chain.Transaction, error) {
+func formatMinedTransaction(t *api.Transaction, mv *api.MasterValidation, valids []*api.Validation) (chain.Transaction, error) {
 
 	masterValid, err := formatMasterValidation(mv)
 	if err != nil {
 		return chain.Transaction{}, err
 	}
 
-	confValids := make([]chain.MinerValidation, 0)
+	confValids := make([]chain.Validation, 0)
 	for _, v := range valids {
 		txValid, err := formatValidation(v)
 		if err != nil {
@@ -126,21 +126,21 @@ func formatMasterValidation(mv *api.MasterValidation) (chain.MasterValidation, e
 		return chain.MasterValidation{}, err
 	}
 
-	masterValidation, err := chain.NewMasterValidation(mv.PreviousTransactionMiners, mv.ProofOfWork, preValid)
+	masterValidation, err := chain.NewMasterValidation(mv.PreviousTransactionNodes, mv.ProofOfWork, preValid)
 	return masterValidation, err
 }
 
-func formatAPIValidation(v chain.MinerValidation) *api.MinerValidation {
-	return &api.MinerValidation{
-		PublicKey: v.MinerPublicKey(),
-		Signature: v.MinerSignature(),
-		Status:    api.MinerValidation_ValidationStatus(v.Status()),
+func formatAPIValidation(v chain.Validation) *api.Validation {
+	return &api.Validation{
+		PublicKey: v.PublicKey(),
+		Signature: v.Signature(),
+		Status:    api.Validation_ValidationStatus(v.Status()),
 		Timestamp: v.Timestamp().Unix(),
 	}
 }
 
-func formatValidation(v *api.MinerValidation) (chain.MinerValidation, error) {
-	return chain.NewMinerValidation(chain.ValidationStatus(v.Status), time.Unix(v.Timestamp, 0), v.PublicKey, v.Signature)
+func formatValidation(v *api.Validation) (chain.Validation, error) {
+	return chain.NewValidation(chain.ValidationStatus(v.Status), time.Unix(v.Timestamp, 0), v.PublicKey, v.Signature)
 }
 
 func formatAPITransaction(tx chain.Transaction) *api.Transaction {
@@ -162,8 +162,8 @@ func formatAPITransaction(tx chain.Transaction) *api.Transaction {
 
 func formatAPIMasterValidation(masterValid chain.MasterValidation) *api.MasterValidation {
 	return &api.MasterValidation{
-		ProofOfWork:               masterValid.ProofOfWork(),
-		PreviousTransactionMiners: masterValid.PreviousTransactionMiners(),
-		PreValidation:             formatAPIValidation(masterValid.Validation()),
+		ProofOfWork:              masterValid.ProofOfWork(),
+		PreviousTransactionNodes: masterValid.PreviousTransactionNodes(),
+		PreValidation:            formatAPIValidation(masterValid.Validation()),
 	}
 }

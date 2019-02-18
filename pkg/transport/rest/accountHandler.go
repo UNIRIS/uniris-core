@@ -24,7 +24,9 @@ func NewAccountHandler(apiGroup *gin.RouterGroup, intServerPort int, techDB shar
 
 func getAccount(intServerPort int, techDB shared.TechDatabaseReader) func(c *gin.Context) {
 	return func(c *gin.Context) {
+
 		hash := c.Param("hash")
+
 		if _, err := hex.DecodeString(hash); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("id hash: must be hexadecimal")})
 			return
@@ -32,17 +34,18 @@ func getAccount(intServerPort int, techDB shared.TechDatabaseReader) func(c *gin
 
 		sig := c.Query("signature")
 		if _, err := crypto.IsSignature(sig); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("request signature: %s", err.Error())})
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("signature request: %s", err.Error())})
 			return
 		}
 
 		emKeys, err := techDB.EmitterKeys()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
 		}
 
 		if err := crypto.VerifySignature(hash, emKeys.RequestKey(), sig); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("request signature: %s", err.Error())})
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("signature request: %s", err.Error())})
 			return
 		}
 
@@ -57,6 +60,7 @@ func getAccount(intServerPort int, techDB shared.TechDatabaseReader) func(c *gin
 		cli := api.NewInternalServiceClient(conn)
 		account, err := cli.GetAccount(context.Background(), &api.GetAccountRequest{
 			EncryptedIdAddress: hash,
+			Timestamp:          time.Now().Unix(),
 		})
 
 		if err != nil {
@@ -64,10 +68,11 @@ func getAccount(intServerPort int, techDB shared.TechDatabaseReader) func(c *gin
 			return
 		}
 
-		c.JSON(http.StatusOK, map[string]string{
-			"encrypted_aes_key":  account.EncryptedAesKey,
-			"encrypted_wallet":   account.EncryptedWallet,
-			"signature_response": account.SignatureResponse,
+		c.JSON(http.StatusOK, map[string]interface{}{
+			"encrypted_aes_key": account.EncryptedAesKey,
+			"encrypted_wallet":  account.EncryptedWallet,
+			"timestamp":         account.Timestamp,
+			"signature":         account.SignatureResponse,
 		})
 	}
 }
@@ -101,16 +106,17 @@ func createAccount(intServerPort int, techDB shared.TechDatabaseReader) func(c *
 			return
 		}
 
-		lastMinerKeys, err := techDB.LastMinerKeys()
+		emKeys, err := techDB.EmitterKeys()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
 		}
 
 		formBytes, _ := json.Marshal(map[string]string{
 			"encrypted_id":       form.EncryptedID,
 			"encrypted_keychain": form.EncryptedKeychain,
 		})
-		if err := crypto.VerifySignature(string(formBytes), lastMinerKeys.PublicKey(), form.Signature); err != nil {
+		if err := crypto.VerifySignature(string(formBytes), emKeys.RequestKey(), form.Signature); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("signature request: %s", err.Error())})
 			return
 		}

@@ -54,18 +54,18 @@ func TestFindLastValidationPool(t *testing.T) {
 }
 
 /*
-Scenario: Find master validation peer
+Scenario: Find master validation node
 	Given a transaction hash
-	When I want to find the transaction master validation
+	When I want to find the transaction master validati
 	Then I get an IP address
 
 	TODO: To improve when the implementation of the method will be provided
 */
-func TestFindMasterValidationPeer(t *testing.T) {
+func TestFindMasterValidationNode(t *testing.T) {
 
-	masterPeers, err := FindMasterPeers("hash")
+	masterNodess, err := FindMasterNodes("hash")
 	assert.Nil(t, err)
-	assert.Len(t, masterPeers, 1)
-	assert.Equal(t, "127.0.0.1", masterPeers[0].IP().String())
-	assert.Equal(t, 3545, masterPeers[0].Port())
+	assert.Len(t, masterNodess, 1)
+	assert.Equal(t, "127.0.0.1", masterNodess[0].IP().String())
+	assert.Equal(t, 5000, masterNodess[0].Port())
 }
