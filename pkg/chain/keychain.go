@@ -7,8 +7,6 @@ import (
 
 //Keychain represents a keychain transaction
 type Keychain struct {
-	encAddr   string
-	encWallet string
 	Transaction
 }
 
@@ -38,18 +36,16 @@ func NewKeychain(tx Transaction) (Keychain, error) {
 	}
 
 	return Keychain{
-		encAddr:     addr,
-		encWallet:   wallet,
 		Transaction: tx,
 	}, nil
 }
 
 //EncryptedAddrByMiner returns the encrypted keychain address by the shared miner key
 func (k Keychain) EncryptedAddrByMiner() string {
-	return k.encAddr
+	return k.data["encrypted_address_by_miner"]
 }
 
 //EncryptedWallet returns encrypted wallet by the person AES key
 func (k Keychain) EncryptedWallet() string {
-	return k.encWallet
+	return k.data["encrypted_wallet"]
 }

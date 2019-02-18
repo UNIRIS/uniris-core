@@ -7,9 +7,6 @@ import (
 
 //ID represents a ID transaction
 type ID struct {
-	encAddrByMiner string
-	encAddrByID    string
-	encAesKey      string
 	Transaction
 }
 
@@ -46,24 +43,21 @@ func NewID(tx Transaction) (ID, error) {
 	}
 
 	return ID{
-		encAddrByID:    addrID,
-		encAddrByMiner: addrMiner,
-		encAesKey:      aesKey,
-		Transaction:    tx,
+		Transaction: tx,
 	}, nil
 }
 
 //EncryptedAddrByMiner returns the encrypted keychain address with the Miner public key
 func (id ID) EncryptedAddrByMiner() string {
-	return id.encAddrByMiner
+	return id.data["encrypted_address_by_miner"]
 }
 
 //EncryptedAddrByID returns the encrypted keychain address with the ID public key
 func (id ID) EncryptedAddrByID() string {
-	return id.encAddrByID
+	return id.data["encrypted_address_by_id"]
 }
 
 //EncryptedAESKey returns the encrypted AES key with the ID public key
 func (id ID) EncryptedAESKey() string {
-	return id.encAesKey
+	return id.data["encrypted_aes_key"]
 }
