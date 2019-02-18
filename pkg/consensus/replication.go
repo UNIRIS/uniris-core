@@ -13,7 +13,7 @@ func ReplicateTransaction() {
 	//TODO: Implement the algorithm
 }
 
-//IsAuthorizedToStoreTx checks if the transaction can be stored on this peer
+//IsAuthorizedToStoreTx checks if the transaction can be stored on this node
 func IsAuthorizedToStoreTx(tx chain.Transaction) bool {
 	//TODO: Implement the algorithm
 	return true

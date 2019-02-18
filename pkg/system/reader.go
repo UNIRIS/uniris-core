@@ -69,7 +69,7 @@ func (i sysReader) FreeDiskSpace() (float64, error) {
 	var stat syscall.Statfs_t
 	wd, err := os.Getwd()
 	if err != nil {
-		return 0.0, err
+		return 0.0, nil
 	}
 	syscall.Statfs(wd, &stat)
 	return float64((stat.Bavail * uint64(stat.Bsize)) / 1024), nil

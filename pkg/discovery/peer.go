@@ -54,7 +54,7 @@ type Peer struct {
 	isSelf   bool
 }
 
-//NewSelfPeer creates a new peer started on the miner's machine (aka local peer)
+//NewSelfPeer creates a new peer started on the node's machine (aka local peer)
 func NewSelfPeer(pbKey string, ip net.IP, port int, version string, lon float64, lat float64) Peer {
 	return Peer{
 		identity: PeerIdentity{
@@ -266,7 +266,7 @@ func (a PeerAppState) FreeDiskSpace() float64 {
 	return a.freeDiskSpace
 }
 
-//Version returns the miner software version
+//Version returns the node software version
 func (a PeerAppState) Version() string {
 	return a.version
 }

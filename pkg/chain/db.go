@@ -56,20 +56,20 @@ var ErrUnknownTransaction = errors.New("unknown transaction")
 
 //WriteTransaction stores the transaction
 //
-//It ensures the miner has the authorized to store the transaction
+//It ensures the node has the authorized to store the transaction
 //It checks the transaction validations (master and confirmations)
 //It's building the transaction chain and verify its integrity
 //Then finally store in the right database
-func WriteTransaction(db Database, tx Transaction, minValids int) error {
+func WriteTransaction(chainDB Database, l Locker, tx Transaction, minValids int) error {
 	if err := checkTransactionBeforeStorage(tx, minValids); err != nil {
 		return err
 	}
 
 	if tx.IsKO() {
-		return db.WriteKO(tx)
+		return chainDB.WriteKO(tx)
 	}
 
-	chain, err := getFullChain(db, tx.addr, tx.txType)
+	chain, err := getFullChain(chainDB, tx.addr, tx.txType)
 	if err != nil {
 		return err
 	}
@@ -83,16 +83,16 @@ func WriteTransaction(db Database, tx Transaction, minValids int) error {
 		if err != nil {
 			return err
 		}
-		return db.WriteKeychain(keychain)
+		return chainDB.WriteKeychain(keychain)
 	case IDTransactionType:
 		id, err := NewID(tx)
 		if err != nil {
 			return err
 		}
-		return db.WriteID(id)
+		return chainDB.WriteID(id)
 	}
 
-	return nil
+	return unlockTransaction(l, tx.TransactionHash(), tx.Address())
 }
 
 func checkTransactionBeforeStorage(tx Transaction, minValids int) error {

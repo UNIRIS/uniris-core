@@ -1,6 +1,6 @@
 # uniris-core
 
-Welcome tp the UNIRIS miner source repository ! This software enables you to build the first transaction chain and next generation of blockchain focused on scalability and human oriented.
+Welcome tp the UNIRIS node source repository ! This software enables you to build the first transaction chain and next generation of blockchain focused on scalability and human oriented.
 
 UNIRIS features:
 
@@ -10,7 +10,7 @@ UNIRIS features:
 - Account management on the blockchain  itself (no need to keep your keys with you ever)
 - Smart contract platform powered by a build-in interpreter
 - Strong scalability using Artificial Intelligence 
-- Secure key exchange to ensure a authorization between miners and clients at anytime
+- Secure key exchange to ensure a authorization between nodes and clients at anytime
 
 ## Supported Operating Systems
 
@@ -25,11 +25,11 @@ UNIRIS project comes with several executables found in the `cmd` directory
 
 | Command       | Description | 
 | ------------- |-------------| 
-| uniris       | Entry point to the UNIRIS network by running a blockchain miner 
+| uniris       | Entry point to the UNIRIS network by running a blockchain node 
 
 ## Architecture
 
-UNIRIS miner software uses a separation of concerns designed by running multiple processes with a microservice philosophy.
+UNIRIS node software uses a separation of concerns designed by running multiple processes with a microservice philosophy.
 
 | Service name  | Public | Description |
 | ------------  | -------| ----------- |
@@ -38,7 +38,7 @@ UNIRIS miner software uses a separation of concerns designed by running multiple
 | Mining        | Yes | Transaction mining (proof of work) and validation confirmations
 | Lock          | Yes | Transaction lock and unlock to avoid double spending
 | Chain         | Yes | Transaction storage and queries 
-| Internal |  No | Forward transaction to other miners (mining, pool requesting) and retrieve shared data between miners
+| Internal |  No | Forward transaction to other nodes (mining, pool requesting) and retrieve shared data between nodes
 
 ## Running UNIRIS
 
@@ -55,8 +55,8 @@ Supported flags:
 | Name | Description | Value |
 | ---- | ----------- | ---- |
 | conf | Configuration file | File location. default: `cmd/uniris/conf.yaml` |
-| private-key| Miner private key | Hexadecimal ECDSA private key
-| public-key | Miner public key | Hexadecimal ECDSA public key
+| private-key|  private key | Hexadecimal ECDSA private key
+| public-key |  public key | Hexadecimal ECDSA public key
 | network-type | Type of network | `public` (default) or `private` |
 |network-interface | Name of the network interface when network type is `private` | network interface name
 | discovery-db-type|Discovery database instance type | `mem` (default), `redis` |

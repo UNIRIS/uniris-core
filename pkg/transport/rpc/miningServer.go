@@ -16,19 +16,19 @@ import (
 )
 
 type miningSrv struct {
-	techDB   shared.TechDatabaseReader
-	poolR    consensus.PoolRequester
-	minerPub string
-	minerPv  string
+	techDB  shared.TechDatabaseReader
+	poolR   consensus.PoolRequester
+	nodePub string
+	nodePv  string
 }
 
 //NewMiningServer creates a new GRPC server for the mining service
 func NewMiningServer(tDB shared.TechDatabaseReader, pr consensus.PoolRequester, pubKey, pvKey string) api.MiningServiceServer {
 	return &miningSrv{
-		techDB:   tDB,
-		poolR:    pr,
-		minerPub: pubKey,
-		minerPv:  pvKey,
+		techDB:  tDB,
+		poolR:   pr,
+		nodePub: pubKey,
+		nodePv:  pvKey,
 	}
 }
 
@@ -40,11 +40,11 @@ func (s miningSrv) LeadTransactionMining(ctx context.Context, req *api.LeadMinin
 		MinimumValidations: req.MinimumValidations,
 		Timestamp:          req.Timestamp,
 	})
-	lastMinerKeys, err := s.techDB.LastMinerKeys()
+	nodeLastKeys, err := s.techDB.NodeLastKeys()
 	if err != nil {
 		return nil, err
 	}
-	if err := crypto.VerifySignature(string(reqBytes), lastMinerKeys.PublicKey(), req.SignatureRequest); err != nil {
+	if err := crypto.VerifySignature(string(reqBytes), nodeLastKeys.PublicKey(), req.SignatureRequest); err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
@@ -53,7 +53,7 @@ func (s miningSrv) LeadTransactionMining(ctx context.Context, req *api.LeadMinin
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	if err := consensus.LeadMining(tx, int(req.MinimumValidations), s.poolR, s.minerPub, s.minerPv, s.techDB); err != nil {
+	if err := consensus.LeadMining(tx, int(req.MinimumValidations), s.poolR, s.nodePub, s.nodePv, s.techDB); err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
@@ -64,7 +64,7 @@ func (s miningSrv) LeadTransactionMining(ctx context.Context, req *api.LeadMinin
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := crypto.Sign(string(resBytes), lastMinerKeys.PrivateKey())
+	sig, err := crypto.Sign(string(resBytes), nodeLastKeys.PrivateKey())
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -84,11 +84,11 @@ func (s miningSrv) ConfirmTransactionValidation(ctx context.Context, req *api.Co
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	lastMinerKeys, err := s.techDB.LastMinerKeys()
+	nodeLastKeys, err := s.techDB.NodeLastKeys()
 	if err != nil {
 		return nil, err
 	}
-	if err := crypto.VerifySignature(string(reqBytes), lastMinerKeys.PublicKey(), req.SignatureRequest); err != nil {
+	if err := crypto.VerifySignature(string(reqBytes), nodeLastKeys.PublicKey(), req.SignatureRequest); err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
@@ -100,7 +100,7 @@ func (s miningSrv) ConfirmTransactionValidation(ctx context.Context, req *api.Co
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
-	valid, err := consensus.ConfirmTransactionValidation(tx, masterValid, s.minerPub, s.minerPv)
+	valid, err := consensus.ConfirmTransactionValidation(tx, masterValid, s.nodePub, s.nodePv)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -113,7 +113,7 @@ func (s miningSrv) ConfirmTransactionValidation(ctx context.Context, req *api.Co
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := crypto.Sign(string(resBytes), lastMinerKeys.PrivateKey())
+	sig, err := crypto.Sign(string(resBytes), nodeLastKeys.PrivateKey())
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}

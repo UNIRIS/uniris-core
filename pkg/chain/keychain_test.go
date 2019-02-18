@@ -29,7 +29,7 @@ func TestNewKeychain(t *testing.T) {
 	sig, _ := crypto.Sign("data", pv)
 
 	tx, err := NewTransaction(addr, KeychainTransactionType, map[string]string{
-		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
@@ -37,7 +37,7 @@ func TestNewKeychain(t *testing.T) {
 	keychain, err := NewKeychain(tx)
 	assert.Nil(t, err)
 
-	assert.Equal(t, hex.EncodeToString([]byte("addr")), keychain.EncryptedAddrByMiner())
+	assert.Equal(t, hex.EncodeToString([]byte("addr")), keychain.EncryptedAddrBy())
 	assert.Equal(t, hex.EncodeToString([]byte("wallet")), keychain.EncryptedWallet())
 
 }
@@ -61,7 +61,7 @@ func TestNewKeychainWithInvalkeychainType(t *testing.T) {
 	sig, _ := crypto.Sign("data", pv)
 
 	tx, err := NewTransaction(addr, IDTransactionType, map[string]string{
-		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
@@ -95,10 +95,10 @@ func TestNewKeychainWithMissingDataFields(t *testing.T) {
 	assert.Nil(t, err)
 
 	_, err = NewKeychain(tx)
-	assert.EqualError(t, err, "transaction: missing data keychain: 'encrypted_address_by_miner'")
+	assert.EqualError(t, err, "transaction: missing data keychain: 'encrypted_address_by_node'")
 
 	tx, err = NewTransaction(addr, KeychainTransactionType, map[string]string{
-		"encrypted_address_by_miner": hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("wallet")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
 
@@ -125,14 +125,14 @@ func TestNewKeychainWithNotHexDataFields(t *testing.T) {
 	sig, _ := crypto.Sign("data", pv)
 
 	tx, _ := NewTransaction(addr, KeychainTransactionType, map[string]string{
-		"encrypted_address_by_miner": "addr",
+		"encrypted_address_by_node": "addr",
 		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	_, err := NewKeychain(tx)
-	assert.EqualError(t, err, "transaction: keychain encrypted address for miner is not in hexadecimal format")
+	assert.EqualError(t, err, "transaction: keychain encrypted address for node is not in hexadecimal format")
 
 	tx, _ = NewTransaction(addr, KeychainTransactionType, map[string]string{
-		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":           "wallet",
 	}, time.Now(), pub, prop, sig, sig, hash)
 	_, err = NewKeychain(tx)

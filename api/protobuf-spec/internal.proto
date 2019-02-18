@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "chain.proto";
+import "storage.proto";
 import "common.proto";
 
 package api;
@@ -48,6 +48,6 @@ message LastSharedKeysRequest {
 
 message LastSharedKeys {
     repeated SharedKeyPair emitter_keys = 1;
-    string miner_public_key = 2;
+    string node_public_key = 2;
     int64 timestamp = 3;
 }

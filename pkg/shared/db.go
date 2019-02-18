@@ -1,11 +1,11 @@
 package shared
 
-//TechDatabaseReader wraps the shared emitter and miner storage
+//TechDatabaseReader wraps the shared emitter and node storage
 type TechDatabaseReader interface {
 	EmitterDatabaseReader
 
-	//LastMinerKeys retrieve the last shared miner keys from the Tech DB
-	LastMinerKeys() (MinerKeyPair, error)
+	//NodeLastKeys retrieve the last shared node keys from the Tech DB
+	NodeLastKeys() (KeyPair, error)
 }
 
 //EmitterDatabaseReader handles queries for the shared emitter information

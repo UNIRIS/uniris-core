@@ -76,21 +76,22 @@ func TestGetTransactionStatusUnknown(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
 	techDB := &mockTechDB{}
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
+	locker := &mockLocker{}
 
 	pr := rpc.NewPoolRequester(techDB)
 
-	chainSrv := rpc.NewChainServer(chainDB, techDB, pr)
+	storageSrv := rpc.NewStorageServer(chainDB, locker, techDB, pr)
 	intSrv := rpc.NewInternalServer(techDB, pr)
 
 	//Start transaction server
 	lisTx, _ := net.Listen("tcp", ":5000")
 	defer lisTx.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterChainServiceServer(grpcServer, chainSrv)
+	api.RegisterStorageServiceServer(grpcServer, storageSrv)
 	go grpcServer.Serve(lisTx)
 
 	//Start internal server

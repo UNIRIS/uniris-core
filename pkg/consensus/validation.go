@@ -22,7 +22,6 @@ import (
 // - Executes the proof of work
 // - Requests validation confirmations
 // - Requests storage
-// - Unlocks the transaction
 func LeadMining(tx chain.Transaction, minValids int, poolR PoolRequester, pub, pv string, emR shared.EmitterDatabaseReader) error {
 	log.Printf("transaction %s is in progress\n", tx.TransactionHash())
 
@@ -38,9 +37,11 @@ func LeadMining(tx chain.Transaction, minValids int, poolR PoolRequester, pub, p
 
 	//TODO: ask storage pool to store in in progress
 
-	if err := lockTransaction(tx, lastVPool, poolR, pub); err != nil {
-		return err
+	if err := poolR.RequestTransactionLock(sPool, tx.TransactionHash(), tx.Address(), pub); err != nil {
+		return fmt.Errorf("transaction lock failed: %s", err.Error())
 	}
+
+	log.Printf("transaction %s is locked\n", tx.TransactionHash())
 
 	go func() {
 		minedTx, err := mineTransaction(tx, lastVPool, minValids, pub, pv, emR, poolR)
@@ -52,35 +53,19 @@ func LeadMining(tx chain.Transaction, minValids int, poolR PoolRequester, pub, p
 			fmt.Printf("transaction storage failed: %s\n", err.Error())
 			return
 		}
-		if err := unlockTransaction(tx, lastVPool, poolR); err != nil {
-			fmt.Printf("transaction unlock failed: %s\n", err.Error())
-			return
-		}
 	}()
 
 	return nil
 }
 
-func lockTransaction(tx chain.Transaction, lastVPool Pool, poolR PoolRequester, masterPublicKey string) error {
-	//TODO: find a solution when no last validation pool (example for the first transaction)
-	if lastVPool != nil {
-		if err := poolR.RequestTransactionLock(lastVPool, tx.TransactionHash(), tx.Address(), masterPublicKey); err != nil {
-			return fmt.Errorf("transaction lock failed: %s", err.Error())
-		}
-
-		log.Printf("transaction %s is locked\n", tx.TransactionHash())
-	}
-	return nil
-}
-
-func mineTransaction(tx chain.Transaction, lastVPool Pool, minValids int, minerPub, minerPv string, emR shared.EmitterDatabaseReader, poolR PoolRequester) (chain.Transaction, error) {
+func mineTransaction(tx chain.Transaction, lastVPool Pool, minValids int, nodePub, nodePv string, emR shared.EmitterDatabaseReader, poolR PoolRequester) (chain.Transaction, error) {
 
 	vPool, err := FindValidationPool(tx)
 	if err != nil {
 		return tx, fmt.Errorf("transaction find validation pool failed: %s", err.Error())
 	}
 
-	masterValid, err := preValidateTransaction(tx, lastVPool, minValids, minerPub, minerPv, emR)
+	masterValid, err := preValidateTransaction(tx, lastVPool, minValids, nodePub, nodePv, emR)
 	if err != nil {
 		return tx, fmt.Errorf("transaction pre-validation failed: %s", err.Error())
 	}
@@ -101,16 +86,6 @@ func storeTransaction(tx chain.Transaction, sPool Pool, poolR PoolRequester) err
 		return fmt.Errorf("transaction storage failed: %s", err.Error())
 	}
 	log.Printf("transaction %s is stored \n", tx.TransactionHash())
-	return nil
-}
-
-func unlockTransaction(tx chain.Transaction, lastVPool Pool, poolR PoolRequester) error {
-	//TODO: find a solution when no last validation pool (example for the first transaction)
-	if lastVPool != nil {
-		if err := poolR.RequestTransactionUnlock(lastVPool, tx.TransactionHash(), tx.Address()); err != nil {
-			return fmt.Errorf("transaction unlock failed: %s", err.Error())
-		}
-	}
 	return nil
 }
 
@@ -148,16 +123,16 @@ func preValidateTransaction(tx chain.Transaction, lastVPool Pool, minValids int,
 	if pow != "" {
 		validStatus = chain.ValidationOK
 	}
-	preValid, err := buildMinerValidation(validStatus, pub, pv)
+	preValid, err := buildValidation(validStatus, pub, pv)
 	if err != nil {
 		return chain.MasterValidation{}, err
 	}
 
-	lastMinersKeys := make([]string, 0)
+	lastsKeys := make([]string, 0)
 	for _, pm := range lastVPool {
-		lastMinersKeys = append(lastMinersKeys, pm.PublicKey())
+		lastsKeys = append(lastsKeys, pm.PublicKey())
 	}
-	masterValid, err := chain.NewMasterValidation(lastMinersKeys, pow, preValid)
+	masterValid, err := chain.NewMasterValidation(lastsKeys, pow, preValid)
 	if err != nil {
 		return chain.MasterValidation{}, err
 	}
@@ -202,7 +177,7 @@ func findLastValidationPool(txAddr string, txType chain.TransactionType, req Poo
 	}
 
 	pm := make([]PoolMember, 0)
-	for _, key := range tx.MasterValidation().PreviousTransactionMiners() {
+	for _, key := range tx.MasterValidation().PreviousTransactionNodes() {
 		//TODO: find ip address and port
 		pm = append(pm, PoolMember{
 			pubK: key,
@@ -215,7 +190,7 @@ func findLastValidationPool(txAddr string, txType chain.TransactionType, req Poo
 	return Pool(pm), nil
 }
 
-func requestValidations(tx chain.Transaction, masterValid chain.MasterValidation, vPool Pool, minValids int, poolR PoolRequester) ([]chain.MinerValidation, error) {
+func requestValidations(tx chain.Transaction, masterValid chain.MasterValidation, vPool Pool, minValids int, poolR PoolRequester) ([]chain.Validation, error) {
 	validations, err := poolR.RequestTransactionValidations(vPool, tx, minValids, masterValid)
 	if err != nil {
 		return nil, err
@@ -229,7 +204,7 @@ func requestValidations(tx chain.Transaction, masterValid chain.MasterValidation
 }
 
 //ConfirmTransactionValidation approve the transaction validation by master and ensure its integrity
-func ConfirmTransactionValidation(tx chain.Transaction, masterV chain.MasterValidation, pub, pv string) (chain.MinerValidation, error) {
+func ConfirmTransactionValidation(tx chain.Transaction, masterV chain.MasterValidation, pub, pv string) (chain.Validation, error) {
 
 	var status chain.ValidationStatus
 
@@ -243,23 +218,23 @@ func ConfirmTransactionValidation(tx chain.Transaction, masterV chain.MasterVali
 		status = chain.ValidationOK
 	}
 
-	return buildMinerValidation(status, pub, pv)
+	return buildValidation(status, pub, pv)
 }
 
-func buildMinerValidation(s chain.ValidationStatus, pub, pv string) (chain.MinerValidation, error) {
+func buildValidation(s chain.ValidationStatus, pub, pv string) (chain.Validation, error) {
 	b, err := json.Marshal(map[string]interface{}{
 		"status":     s,
 		"timestamp":  time.Now().Unix(),
 		"public_key": pub,
 	})
 	if err != nil {
-		return chain.MinerValidation{}, err
+		return chain.Validation{}, err
 	}
 	sig, err := crypto.Sign(string(b), pv)
 	if err != nil {
-		return chain.MinerValidation{}, err
+		return chain.Validation{}, err
 	}
-	return chain.NewMinerValidation(s, time.Now(), pub, sig)
+	return chain.NewValidation(s, time.Now(), pub, sig)
 }
 
 //GetMinimumValidation returns the validation from a transaction hash
@@ -267,8 +242,8 @@ func GetMinimumValidation(txHash string) int {
 	return 1
 }
 
-// IsValidationConsensuReach determinates if for the miner validations the consensus is reached
-func IsValidationConsensuReach(valids []chain.MinerValidation) bool {
+// IsValidationConsensuReach determinates if for the node validations the consensus is reached
+func IsValidationConsensuReach(valids []chain.Validation) bool {
 	//TODO: maybe to improve
 	for _, v := range valids {
 		if v.Status() == chain.ValidationKO {

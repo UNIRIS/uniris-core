@@ -58,7 +58,7 @@ type Transaction struct {
 	hash          string
 	prevTx        *Transaction
 	masterV       MasterValidation
-	confirmValids []MinerValidation
+	confirmValids []Validation
 }
 
 //NewTransaction creates a new transaction
@@ -139,7 +139,7 @@ func (t Transaction) MasterValidation() MasterValidation {
 }
 
 //ConfirmationsValidations returns the Transaction confirmation validations performed by the validation pool
-func (t Transaction) ConfirmationsValidations() []MinerValidation {
+func (t Transaction) ConfirmationsValidations() []Validation {
 	return t.confirmValids
 }
 
@@ -211,7 +211,7 @@ func (t Transaction) IsKO() bool {
 }
 
 //Mined define the transaction as mined by providing the master validation and confirmation validations
-func (t *Transaction) Mined(mv MasterValidation, confs []MinerValidation) error {
+func (t *Transaction) Mined(mv MasterValidation, confs []Validation) error {
 	t.masterV = mv
 	if len(confs) == 0 {
 		return errors.New("transaction: missing confirmation validations")
@@ -343,103 +343,103 @@ const (
 	ValidationOK ValidationStatus = 1
 )
 
-//MinerValidation represents a Transaction validation made by a miner
-type MinerValidation struct {
+//Validation represents a Transaction validation made by a node
+type Validation struct {
 	status    ValidationStatus
 	timestamp time.Time
-	minerPubk string
-	minerSig  string
+	nodePubk  string
+	nodeSig   string
 }
 
-//NewMinerValidation creates a new miner validation
-func NewMinerValidation(status ValidationStatus, t time.Time, minerPubk string, minerSig string) (MinerValidation, error) {
-	v := MinerValidation{
+//NewValidation creates a new node validation
+func NewValidation(status ValidationStatus, t time.Time, nodePubk string, nodeSig string) (Validation, error) {
+	v := Validation{
 		status:    status,
 		timestamp: t,
-		minerPubk: minerPubk,
-		minerSig:  minerSig,
+		nodePubk:  nodePubk,
+		nodeSig:   nodeSig,
 	}
 
 	_, err := v.IsValid()
 	if err != nil {
-		return MinerValidation{}, err
+		return Validation{}, err
 	}
 	return v, nil
 }
 
 //Status return the validation status
-func (v MinerValidation) Status() ValidationStatus {
+func (v Validation) Status() ValidationStatus {
 	return v.status
 }
 
 //Timestamp return the validation timestamp
-func (v MinerValidation) Timestamp() time.Time {
+func (v Validation) Timestamp() time.Time {
 	return v.timestamp
 }
 
-//MinerPublicKey return the miner's public key performed this validation
-func (v MinerValidation) MinerPublicKey() string {
-	return v.minerPubk
+//PublicKey return the node's public key performed this validation
+func (v Validation) PublicKey() string {
+	return v.nodePubk
 }
 
-//MinerSignature returne the miner's signature which performed this validation
-func (v MinerValidation) MinerSignature() string {
-	return v.minerSig
+//Signature returne the node's signature which performed this validation
+func (v Validation) Signature() string {
+	return v.nodeSig
 }
 
-//IsValid checks if the miner validation is valid
-func (v MinerValidation) IsValid() (bool, error) {
+//IsValid checks if the node validation is valid
+func (v Validation) IsValid() (bool, error) {
 
 	if v.timestamp.Unix() > time.Now().Unix() {
-		return false, errors.New("miner validation: timestamp must be anterior or equal to now")
+		return false, errors.New("node validation: timestamp must be anterior or equal to now")
 	}
 
-	if _, err := crypto.IsPublicKey(v.minerPubk); err != nil {
-		return false, fmt.Errorf("miner validation: %s", err.Error())
+	if _, err := crypto.IsPublicKey(v.nodePubk); err != nil {
+		return false, fmt.Errorf("node validation: %s", err.Error())
 	}
 	switch v.status {
 	case ValidationKO:
 	case ValidationOK:
 	default:
-		return false, errors.New("miner validation: status not allowed")
+		return false, errors.New("node validation: status not allowed")
 	}
 
-	if _, err := crypto.IsSignature(v.minerSig); err != nil {
-		return false, fmt.Errorf("miner validation: %s", err.Error())
+	if _, err := crypto.IsSignature(v.nodeSig); err != nil {
+		return false, fmt.Errorf("node validation: %s", err.Error())
 	}
 	vBytes, err := json.Marshal(v)
 	if err != nil {
 		return false, err
 	}
-	if err := crypto.VerifySignature(string(vBytes), v.minerPubk, v.minerSig); err != nil {
+	if err := crypto.VerifySignature(string(vBytes), v.nodePubk, v.nodeSig); err != nil {
 		if err == crypto.ErrInvalidSignature {
-			return false, errors.New("miner validation: signature is invalid")
+			return false, errors.New("node validation: signature is invalid")
 		}
 		return false, err
 	}
 	return true, nil
 }
 
-//MarshalJSON serializes as JSON a miner validation
-func (v MinerValidation) MarshalJSON() ([]byte, error) {
+//MarshalJSON serializes as JSON a node validation
+func (v Validation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"status":     v.status,
-		"public_key": v.minerPubk,
+		"public_key": v.nodePubk,
 		"timestamp":  v.timestamp.Unix(),
 	})
 }
 
 //MasterValidation describe the master Transaction validation
 type MasterValidation struct {
-	prevMiners []string
+	prevs      []string
 	pow        string
-	validation MinerValidation
+	validation Validation
 }
 
 //NewMasterValidation creates a new master Transaction validation
-func NewMasterValidation(prevMiners []string, pow string, valid MinerValidation) (MasterValidation, error) {
+func NewMasterValidation(prevs []string, pow string, valid Validation) (MasterValidation, error) {
 	mv := MasterValidation{
-		prevMiners: prevMiners,
+		prevs:      prevs,
 		pow:        pow,
 		validation: valid,
 	}
@@ -449,9 +449,9 @@ func NewMasterValidation(prevMiners []string, pow string, valid MinerValidation)
 	return mv, nil
 }
 
-//PreviousTransactionMiners returns the miners for the previous Transaction
-func (mv MasterValidation) PreviousTransactionMiners() []string {
-	return mv.prevMiners
+//PreviousTransactionNodes returns the nodes for the previous Transaction
+func (mv MasterValidation) PreviousTransactionNodes() []string {
+	return mv.prevs
 }
 
 //ProofOfWork returns the Transaction proof of work (emitter public key) validated the emitter signature
@@ -460,16 +460,16 @@ func (mv MasterValidation) ProofOfWork() string {
 }
 
 //Validation returns the mining performed by the master peer
-func (mv MasterValidation) Validation() MinerValidation {
+func (mv MasterValidation) Validation() Validation {
 	return mv.validation
 }
 
 //IsValid check is the master validation is correct
 func (mv MasterValidation) IsValid() (bool, error) {
 
-	//Ensure the previous miners are public keys
-	if len(mv.prevMiners) > 0 {
-		for _, m := range mv.prevMiners {
+	//Ensure the previous nodes are public keys
+	if len(mv.prevs) > 0 {
+		for _, m := range mv.prevs {
 			if _, err := crypto.IsPublicKey(m); err != nil {
 				return false, err
 			}

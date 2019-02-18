@@ -7,13 +7,16 @@ import (
 )
 
 //ErrNTPShift is returned when the NTP clock drift to much
-var ErrNTPShift = errors.New("System Clock have a big Offset check the ntp configuration of the system")
+var ErrNTPShift = errors.New("system Clock have a big Offset check the ntp configuration of the system")
 
 //ErrNTPFailure is returned when the NTP server cannot be reached
-var ErrNTPFailure = errors.New("Could not get reply from ntp servers")
+var ErrNTPFailure = errors.New("could not get reply from ntp servers")
 
 //ErrGRPCServer is returned when the GRPC servers cannot be reached
 var ErrGRPCServer = errors.New("GRPC servers are not running")
+
+//ErrGeoPosition is returned when the Geoposition cannot be reached
+var ErrGeoPosition = errors.New("geographic position cannot be found")
 
 //BootstrapingMinTime is the necessary minimum time on seconds to finish learning about the network
 const BootstrapingMinTime = 1800
@@ -43,6 +46,7 @@ type SystemReader interface {
 func systemInfo(sr SystemReader) (lon float64, lat float64, ip net.IP, cpu string, space float64, err error) {
 	lon, lat, err = sr.GeoPosition()
 	if err != nil {
+		err = ErrGeoPosition
 		return
 	}
 

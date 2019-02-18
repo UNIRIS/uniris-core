@@ -17,9 +17,9 @@ func NewID(tx Transaction) (ID, error) {
 		return ID{}, errors.New("transaction: invalid type of transaction")
 	}
 
-	addrMiner, exist := tx.data["encrypted_address_by_miner"]
+	addr, exist := tx.data["encrypted_address_by_node"]
 	if !exist {
-		return ID{}, errors.New("transaction: missing data ID 'encrypted_address_by_miner'")
+		return ID{}, errors.New("transaction: missing data ID 'encrypted_address_by_node'")
 	}
 	addrID, exist := tx.data["encrypted_address_by_id"]
 	if !exist {
@@ -38,8 +38,8 @@ func NewID(tx Transaction) (ID, error) {
 		return ID{}, errors.New("transaction: id encrypted address for id is not in hexadecimal format")
 	}
 
-	if _, err := hex.DecodeString(addrMiner); err != nil {
-		return ID{}, errors.New("transaction: id encrypted address for miner is not in hexadecimal format")
+	if _, err := hex.DecodeString(addr); err != nil {
+		return ID{}, errors.New("transaction: id encrypted address for node is not in hexadecimal format")
 	}
 
 	return ID{
@@ -47,9 +47,9 @@ func NewID(tx Transaction) (ID, error) {
 	}, nil
 }
 
-//EncryptedAddrByMiner returns the encrypted keychain address with the Miner public key
-func (id ID) EncryptedAddrByMiner() string {
-	return id.data["encrypted_address_by_miner"]
+//EncryptedAddrBy returns the encrypted keychain address with the  public key
+func (id ID) EncryptedAddrBy() string {
+	return id.data["encrypted_address_by_node"]
 }
 
 //EncryptedAddrByID returns the encrypted keychain address with the ID public key

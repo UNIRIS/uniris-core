@@ -58,8 +58,8 @@ func getSharedKeys(internalPort int) func(*gin.Context) {
 		}
 
 		c.JSON(http.StatusOK, map[string]interface{}{
-			"shared_miner_public_key": res.MinerPublicKey,
-			"shared_emitter_keys":     emKeys,
+			"shared_node_public_key": res.NodePublicKey,
+			"shared_emitter_keys":    emKeys,
 		})
 	}
 }

@@ -31,58 +31,25 @@ func TestRequestTransactionLock(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
 	techDB := &mockTechDB{}
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
-	lockDB := &mockLockDb{}
-	lockSrv := NewLockServer(lockDB, techDB)
+	chainDB := &mockChainDB{}
+	locker := &mockLocker{}
 	pr := NewPoolRequester(techDB)
+	storageSrv := NewStorageServer(chainDB, locker, techDB, pr)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterLockServiceServer(grpcServer, lockSrv)
+	api.RegisterStorageServiceServer(grpcServer, storageSrv)
 	go grpcServer.Serve(lis)
 
 	pool, _ := consensus.FindStoragePool("addr")
 	assert.Nil(t, pr.RequestTransactionLock(pool, crypto.HashString("tx"), crypto.HashString("addr"), pub))
 
-	assert.Len(t, lockDB.locks, 1)
-	assert.Equal(t, crypto.HashString("addr"), lockDB.locks[0]["transaction_address"])
-}
-
-/*
-Scenario: Request transction lock on a pool
-	Given a transaction already locked
-	When I request to unlock it
-	Then the lock is removed from the database
-*/
-func TestRequestTransactionUnlock(t *testing.T) {
-
-	pub, pv := crypto.GenerateKeys()
-
-	techDB := &mockTechDB{}
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
-
-	lockDB := &mockLockDb{}
-	lockSrv := NewLockServer(lockDB, techDB)
-	lockDB.locks = append(lockDB.locks, map[string]string{
-		"transaction_hash":    crypto.HashString("tx"),
-		"transaction_address": crypto.HashString("addr"),
-	})
-
-	pr := NewPoolRequester(techDB)
-
-	lis, _ := net.Listen("tcp", ":5000")
-	defer lis.Close()
-	grpcServer := grpc.NewServer()
-	api.RegisterLockServiceServer(grpcServer, lockSrv)
-	go grpcServer.Serve(lis)
-
-	pool, _ := consensus.FindStoragePool("addr")
-	assert.Nil(t, pr.RequestTransactionUnlock(pool, crypto.HashString("tx"), crypto.HashString("addr")))
-	assert.Len(t, lockDB.locks, 0)
+	assert.Len(t, locker.locks, 1)
+	assert.Equal(t, crypto.HashString("addr"), locker.locks[0]["transaction_address"])
 }
 
 /*
@@ -99,8 +66,8 @@ func TestRequestConfirmValidation(t *testing.T) {
 
 	techDB := &mockTechDB{}
 	techDB.emKeys = append(techDB.emKeys, kp)
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	pr := NewPoolRequester(techDB)
 
@@ -113,8 +80,8 @@ func TestRequestConfirmValidation(t *testing.T) {
 	go grpcServer.Serve(lis)
 
 	data := map[string]string{
-		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 	prop := kp
 	txRaw := map[string]interface{}{
@@ -140,7 +107,7 @@ func TestRequestConfirmValidation(t *testing.T) {
 		"timestamp":  time.Now().Unix(),
 	})
 	vSig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ := chain.NewMinerValidation(chain.ValidationOK, time.Now(), pub, vSig)
+	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
 	mv, _ := chain.NewMasterValidation([]string{}, pub, v)
 
 	pool, _ := consensus.FindValidationPool(tx)
@@ -148,7 +115,7 @@ func TestRequestConfirmValidation(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Len(t, valids, 1)
-	assert.Equal(t, pub, valids[0].MinerPublicKey())
+	assert.Equal(t, pub, valids[0].PublicKey())
 	assert.Equal(t, chain.ValidationOK, valids[0].Status())
 	ok, err := valids[0].IsValid()
 	assert.Nil(t, err)
@@ -168,24 +135,25 @@ func TestRequestStorage(t *testing.T) {
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	locker := &mockLocker{}
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	techDB.emKeys = append(techDB.emKeys, kp)
 
 	pr := NewPoolRequester(techDB)
 
-	chainSrv := NewChainServer(chainDB, techDB, pr)
+	storageSrv := NewStorageServer(chainDB, locker, techDB, pr)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterChainServiceServer(grpcServer, chainSrv)
+	api.RegisterStorageServiceServer(grpcServer, storageSrv)
 	go grpcServer.Serve(lis)
 
 	data := map[string]string{
-		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 	prop := kp
 	txRaw := map[string]interface{}{
@@ -211,11 +179,11 @@ func TestRequestStorage(t *testing.T) {
 		"timestamp":  time.Now().Unix(),
 	})
 	vSig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ := chain.NewMinerValidation(chain.ValidationOK, time.Now(), pub, vSig)
+	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
 	mv, _ := chain.NewMasterValidation([]string{}, pub, v)
 
 	pool, _ := consensus.FindStoragePool("addr")
-	tx.Mined(mv, []chain.MinerValidation{v})
+	tx.Mined(mv, []chain.Validation{v})
 	assert.Nil(t, pr.RequestTransactionStorage(pool, 1, tx))
 
 	assert.Len(t, chainDB.keychains, 1)
@@ -225,7 +193,7 @@ func TestRequestStorage(t *testing.T) {
 /*
 Scenario: Send request to get last transaction
 	Given a keychain transaction stored
-	When I want to request a miner to get the last transaction from the address
+	When I want to request a node to get the last transaction from the address
 	Then I get the last transaction
 */
 func TestSendGetLastTransaction(t *testing.T) {
@@ -234,22 +202,23 @@ func TestSendGetLastTransaction(t *testing.T) {
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	locker := &mockLocker{}
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	pr := NewPoolRequester(techDB)
 
-	chainSrv := NewChainServer(chainDB, techDB, pr)
+	storageSrv := NewStorageServer(chainDB, locker, techDB, pr)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterChainServiceServer(grpcServer, chainSrv)
+	api.RegisterStorageServiceServer(grpcServer, storageSrv)
 	go grpcServer.Serve(lis)
 
 	data := map[string]string{
-		"encrypted_address_by_miner": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPV")), pub)

@@ -40,8 +40,8 @@ func main() {
 	conf := unirisConf{}
 
 	app := cli.NewApp()
-	app.Name = "uniris-miner"
-	app.Usage = "UNIRIS miner"
+	app.Name = "uniris"
+	app.Usage = "UNIRIS node"
 	app.Version = "0.0.1"
 	app.Flags = getCliFlags(&conf)
 
@@ -75,7 +75,7 @@ func main() {
 		conf.version = app.Version
 
 		fmt.Println("----------")
-		fmt.Println("UNIRIS MINER")
+		fmt.Println("UNIRIS NODE")
 		fmt.Println("----------")
 		fmt.Printf("Version: %s\n", conf.version)
 		fmt.Printf("Public key: %s\n", conf.publicKey)
@@ -106,13 +106,13 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 		},
 		altsrc.NewStringFlag(cli.StringFlag{
 			Name:        "private-key",
-			Usage:       "Miner private key in hexadecimal",
+			Usage:       " private key in hexadecimal",
 			EnvVar:      "UNIRIS_PRIVATE_KEY",
 			Destination: &conf.privateKey,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
 			Name:        "public-key",
-			Usage:       "Miner public key in hexadecimal",
+			Usage:       " public key in hexadecimal",
 			EnvVar:      "UNIRIS_PUBLIC_KEY",
 			Destination: &conf.publicKey,
 		}),
@@ -132,7 +132,7 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 		altsrc.NewStringFlag(cli.StringFlag{
 			Name:        "discovery-seeds",
 			EnvVar:      "UNIRIS_DISCOVERY_SEEDS",
-			Usage:       "List of the seeds peers to bootstrap the miner `IP:PORT:PUBLIC_KEY;IP:PORT:PUBLIC_KEY`",
+			Usage:       "List of the seeds peers to bootstrap the node `IP:PORT:PUBLIC_KEY;IP:PORT:PUBLIC_KEY`",
 			Destination: &conf.discoverySeeds,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
@@ -201,7 +201,7 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 			Name:        "external-grpc-port",
 			EnvVar:      "UNIRIS_EXT_GRPC_PORT",
 			Value:       5000,
-			Usage:       "External GRPC port to communicate with other miners",
+			Usage:       "External GRPC port to communicate with other nodes",
 			Destination: &conf.grpcExternalPort,
 		}),
 		altsrc.NewIntFlag(cli.IntFlag{
@@ -255,11 +255,10 @@ func startExternalServer(conf unirisConf, techDB shared.TechDatabaseReader, pool
 	grpcServer := grpc.NewServer()
 
 	chainDB := memstorage.NewchainDatabase()
-	lockDB := memstorage.NewLockDatabase()
+	locker := memstorage.NewLocker()
 
-	api.RegisterChainServiceServer(grpcServer, rpc.NewChainServer(chainDB, techDB, poolR))
+	api.RegisterStorageServiceServer(grpcServer, rpc.NewStorageServer(chainDB, locker, techDB, poolR))
 	api.RegisterMiningServiceServer(grpcServer, rpc.NewMiningServer(techDB, poolR, conf.publicKey, conf.privateKey))
-	api.RegisterLockServiceServer(grpcServer, rpc.NewLockServer(lockDB, techDB))
 
 	var discoveryDB discovery.Database
 	if conf.discoveryDatabase.dbType == "redis" {
@@ -309,7 +308,7 @@ func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Noti
 	}
 	lon, lat, err := systemReader.GeoPosition()
 	if err != nil {
-		panic(err)
+		log.Println(discovery.ErrGeoPosition)
 	}
 
 	selfPeer := discovery.NewSelfPeer(conf.publicKey, ip, conf.grpcExternalPort, conf.version, lon, lat)
@@ -359,7 +358,7 @@ type unirisConf struct {
 		encryptedPrivateKey string
 		publicKey           string
 	}
-	sharedMinerKey struct { //TODO: to remove once the feature is implemented
+	sharedKey struct { //TODO: to remove once the feature is implemented
 		privateKey string
 		publicKey  string
 	}

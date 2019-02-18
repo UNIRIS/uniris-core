@@ -103,8 +103,8 @@ func TestGetAccountWhenIDNotExist(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
 	techDB := &mockTechDB{}
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("ov")), pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
@@ -112,14 +112,15 @@ func TestGetAccountWhenIDNotExist(t *testing.T) {
 	pr := &mockPoolRequester{
 		repo: chainDB,
 	}
+	locker := &mockLocker{}
 
-	chainSrv := rpc.NewChainServer(chainDB, techDB, pr)
+	storageSrv := rpc.NewStorageServer(chainDB, locker, techDB, pr)
 	intSrv := rpc.NewInternalServer(techDB, pr)
 
 	lisTx, _ := net.Listen("tcp", ":5000")
 	defer lisTx.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterChainServiceServer(grpcServer, chainSrv)
+	api.RegisterStorageServiceServer(grpcServer, storageSrv)
 	go grpcServer.Serve(lisTx)
 
 	lisInt, _ := net.Listen("tcp", ":1717")
@@ -160,8 +161,8 @@ func TestGetAccountWhenKeychainNotExist(t *testing.T) {
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("ov")), pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
@@ -187,9 +188,9 @@ func TestGetAccountWhenKeychainNotExist(t *testing.T) {
 	encAddr, _ := crypto.Encrypt(hex.EncodeToString([]byte("addr")), pub)
 
 	idData := map[string]string{
-		"encrypted_address_by_miner": encAddr,
-		"encrypted_address_by_id":    encAddr,
-		"encrypted_aes_key":          hex.EncodeToString([]byte("aes_key")),
+		"encrypted_address_by_node": encAddr,
+		"encrypted_address_by_id":   encAddr,
+		"encrypted_aes_key":         hex.EncodeToString([]byte("aes_key")),
 	}
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPV")), pub)
 	idHash := crypto.HashString("abc")
@@ -242,8 +243,8 @@ func TestGetAccount(t *testing.T) {
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("ov")), pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
@@ -270,9 +271,9 @@ func TestGetAccount(t *testing.T) {
 	encAddr, _ := crypto.Encrypt(addr, pub)
 
 	idData := map[string]string{
-		"encrypted_address_by_miner": encAddr,
-		"encrypted_address_by_id":    encAddr,
-		"encrypted_aes_key":          hex.EncodeToString([]byte("aes_key")),
+		"encrypted_address_by_node": encAddr,
+		"encrypted_address_by_id":   encAddr,
+		"encrypted_aes_key":         hex.EncodeToString([]byte("aes_key")),
 	}
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPV")), pub)
 
@@ -300,8 +301,8 @@ func TestGetAccount(t *testing.T) {
 	chainDB.WriteID(id)
 
 	keychainData := map[string]string{
-		"encrypted_address_by_miner": encAddr,
-		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+		"encrypted_address_by_node": encAddr,
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 
 	keychainTxRaw := map[string]interface{}{
@@ -417,9 +418,9 @@ func TestCreationAccountWhenSignatureInvalid(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
 	techDB := &mockTechDB{}
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
 	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pv")), pub)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
 	r := gin.Default()
@@ -496,26 +497,24 @@ func TestCreateAccount(t *testing.T) {
 	emKey, _ := shared.NewEmitterKeyPair(encKey, pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
-	minerKey, _ := shared.NewMinerKeyPair(pub, pv)
-	techDB.minerKeys = append(techDB.minerKeys, minerKey)
-	lockDB := &mockLockDB{}
+	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
+	locker := &mockLocker{}
 
 	pr := &mockPoolRequester{
 		repo: chainDB,
 	}
 
-	chainSrv := rpc.NewChainServer(chainDB, techDB, pr)
+	storageSrv := rpc.NewStorageServer(chainDB, locker, techDB, pr)
 	intSrv := rpc.NewInternalServer(techDB, pr)
 	miningSrv := rpc.NewMiningServer(techDB, pr, pub, pv)
-	lockSrv := rpc.NewLockServer(lockDB, techDB)
 
 	//Start transaction server
 	lisTx, _ := net.Listen("tcp", ":5000")
 	defer lisTx.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterChainServiceServer(grpcServer, chainSrv)
+	api.RegisterStorageServiceServer(grpcServer, storageSrv)
 	api.RegisterMiningServiceServer(grpcServer, miningSrv)
-	api.RegisterLockServiceServer(grpcServer, lockSrv)
 	go grpcServer.Serve(lisTx)
 
 	//Start internal server
@@ -537,9 +536,9 @@ func TestCreateAccount(t *testing.T) {
 	idTx := map[string]interface{}{
 		"addr": crypto.HashString("abc"),
 		"data": map[string]string{
-			"encrypted_address_by_miner": encAddr,
-			"encrypted_address_by_id":    encAddr,
-			"encrypted_aes_key":          hex.EncodeToString([]byte("aes_key")),
+			"encrypted_address_by_node": encAddr,
+			"encrypted_address_by_id":   encAddr,
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aes_key")),
 		},
 		"timestamp":  time.Now().Unix(),
 		"type":       int(chain.IDTransactionType),
@@ -561,8 +560,8 @@ func TestCreateAccount(t *testing.T) {
 	keychainTx := map[string]interface{}{
 		"addr": addr,
 		"data": map[string]string{
-			"encrypted_address_by_miner": encAddr,
-			"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+			"encrypted_address_by_node": encAddr,
+			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 		},
 		"timestamp":  time.Now().Unix(),
 		"type":       int(chain.KeychainTransactionType),
@@ -661,7 +660,7 @@ func (pr mockPoolRequester) RequestTransactionUnlock(pool consensus.Pool, txHash
 	return nil
 }
 
-func (pr mockPoolRequester) RequestTransactionValidations(pool consensus.Pool, tx chain.Transaction, minValids int, masterValid chain.MasterValidation) ([]chain.MinerValidation, error) {
+func (pr mockPoolRequester) RequestTransactionValidations(pool consensus.Pool, tx chain.Transaction, minValids int, masterValid chain.MasterValidation) ([]chain.Validation, error) {
 	pub, pv := crypto.GenerateKeys()
 
 	vRaw := map[string]interface{}{
@@ -671,9 +670,9 @@ func (pr mockPoolRequester) RequestTransactionValidations(pool consensus.Pool, t
 	}
 	vBytes, _ := json.Marshal(vRaw)
 	sig, _ := crypto.Sign(string(vBytes), pv)
-	v, _ := chain.NewMinerValidation(chain.ValidationOK, time.Now(), pub, sig)
+	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, sig)
 
-	return []chain.MinerValidation{v}, nil
+	return []chain.Validation{v}, nil
 }
 
 func (pr *mockPoolRequester) RequestTransactionStorage(pool consensus.Pool, minReplicas int, tx chain.Transaction) error {
@@ -784,11 +783,11 @@ func (r *mockChainDB) WriteInProgress(tx chain.Transaction) error {
 	return nil
 }
 
-type mockLockDB struct {
+type mockLocker struct {
 	locks []map[string]string
 }
 
-func (l *mockLockDB) WriteLock(txHash string, txAddr string, masterPublicKey string) error {
+func (l *mockLocker) WriteLock(txHash string, txAddr string, masterPublicKey string) error {
 	l.locks = append(l.locks, map[string]string{
 		"transaction_address": txAddr,
 		"transaction_hash":    txHash,
@@ -796,18 +795,18 @@ func (l *mockLockDB) WriteLock(txHash string, txAddr string, masterPublicKey str
 	})
 	return nil
 }
-func (l *mockLockDB) RemoveLock(txHash string, txAddr string) error {
+func (l *mockLocker) RemoveLock(txHash string, txAddr string) error {
 	pos := l.findLockPosition(txHash, txAddr)
 	if pos > -1 {
 		l.locks = append(l.locks[:pos], l.locks[pos+1:]...)
 	}
 	return nil
 }
-func (l mockLockDB) ContainsLock(txHash string, txAddr string) (bool, error) {
+func (l mockLocker) ContainsLock(txHash string, txAddr string) (bool, error) {
 	return l.findLockPosition(txHash, txAddr) > -1, nil
 }
 
-func (l mockLockDB) findLockPosition(txHash string, txAddr string) int {
+func (l mockLocker) findLockPosition(txHash string, txAddr string) int {
 	for i, lock := range l.locks {
 		if lock["transaction_hash"] == txHash && lock["transaction_address"] == txAddr {
 			return i

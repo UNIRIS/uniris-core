@@ -17,9 +17,9 @@ func NewKeychain(tx Transaction) (Keychain, error) {
 		return Keychain{}, errors.New("transaction: invalid type of transaction")
 	}
 
-	addr, exist := tx.data["encrypted_address_by_miner"]
+	addr, exist := tx.data["encrypted_address_by_node"]
 	if !exist {
-		return Keychain{}, errors.New("transaction: missing data keychain: 'encrypted_address_by_miner'")
+		return Keychain{}, errors.New("transaction: missing data keychain: 'encrypted_address_by_node'")
 	}
 
 	wallet, exist := tx.data["encrypted_wallet"]
@@ -28,7 +28,7 @@ func NewKeychain(tx Transaction) (Keychain, error) {
 	}
 
 	if _, err := hex.DecodeString(addr); err != nil {
-		return Keychain{}, errors.New("transaction: keychain encrypted address for miner is not in hexadecimal format")
+		return Keychain{}, errors.New("transaction: keychain encrypted address for node is not in hexadecimal format")
 	}
 
 	if _, err := hex.DecodeString(wallet); err != nil {
@@ -40,9 +40,9 @@ func NewKeychain(tx Transaction) (Keychain, error) {
 	}, nil
 }
 
-//EncryptedAddrByMiner returns the encrypted keychain address by the shared miner key
-func (k Keychain) EncryptedAddrByMiner() string {
-	return k.data["encrypted_address_by_miner"]
+//EncryptedAddrBy returns the encrypted keychain address by the shared node key
+func (k Keychain) EncryptedAddrBy() string {
+	return k.data["encrypted_address_by_node"]
 }
 
 //EncryptedWallet returns encrypted wallet by the person AES key

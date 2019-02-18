@@ -4,10 +4,11 @@ import "common.proto";
 
 package api;
 
-service ChainService {
+service StorageService {
     rpc GetLastTransaction(LastTransactionRequest) returns (LastTransactionResponse);
     rpc GetTransactionStatus(TransactionStatusRequest) returns (TransactionStatusResponse);
     rpc StoreTransaction(StoreRequest) returns (StoreResponse);
+    rpc LockTransaction(LockRequest) returns (LockResponse);
 }
 
 message LastTransactionRequest{
@@ -50,6 +51,19 @@ message StoreRequest {
 }
 
 message StoreResponse {
+    int64 timestamp = 1;
+    string signature_response = 2;
+}
+
+message LockRequest {
+    string transaction_hash = 1;
+    string address = 2;
+    string master_node_public_key = 3;
+    int64 timestamp = 4;
+    string signature_request = 5;
+}
+
+message LockResponse {
     int64 timestamp = 1;
     string signature_response = 2;
 }

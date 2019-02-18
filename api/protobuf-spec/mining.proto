@@ -29,7 +29,7 @@ message ConfirmValidationRequest {
 }
 
 message ConfirmValidationResponse {
-    MinerValidation validation = 1;
+    Validation validation = 1;
     int64 timestamp = 2;
     string signature_response = 3;
 }
