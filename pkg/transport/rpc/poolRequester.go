@@ -41,7 +41,7 @@ func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr strin
 	var wg sync.WaitGroup
 	wg.Add(len(pool))
 
-	req := &api.LastTransactionRequest{
+	req := &api.GetLastTransactionRequest{
 		TransactionAddress: txAddr,
 		Type:               api.TransactionType(txType),
 		Timestamp:          time.Now().Unix(),
@@ -69,7 +69,7 @@ func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr strin
 				return
 			}
 			defer conn.Close()
-			cli := api.NewStorageServiceClient(conn)
+			cli := api.NewTransactionServiceClient(conn)
 			res, err := cli.GetLastTransaction(context.Background(), req)
 			if err != nil {
 				grpcErr, _ := status.FromError(err)
@@ -79,7 +79,7 @@ func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr strin
 
 			fmt.Printf("GET LAST TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
-			resBytes, err := json.Marshal(&api.LastTransactionResponse{
+			resBytes, err := json.Marshal(&api.GetLastTransactionResponse{
 				Timestamp:   res.Timestamp,
 				Transaction: res.Transaction,
 			})
@@ -125,7 +125,7 @@ func (pr poolRequester) RequestTransactionLock(pool consensus.Pool, txHash strin
 
 	var ackUnlock int32
 
-	req := &api.LockRequest{
+	req := &api.LockTransactionRequest{
 		Address:             txAddress,
 		TransactionHash:     txHash,
 		MasterNodePublicKey: masterPublicKey,
@@ -153,7 +153,7 @@ func (pr poolRequester) RequestTransactionLock(pool consensus.Pool, txHash strin
 				return
 			}
 			defer conn.Close()
-			cli := api.NewStorageServiceClient(conn)
+			cli := api.NewTransactionServiceClient(conn)
 			res, err := cli.LockTransaction(context.Background(), req)
 			if err != nil {
 				grpcErr, _ := status.FromError(err)
@@ -163,7 +163,7 @@ func (pr poolRequester) RequestTransactionLock(pool consensus.Pool, txHash strin
 
 			fmt.Printf("LOCK TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
-			resBytes, err := json.Marshal(&api.LockResponse{
+			resBytes, err := json.Marshal(&api.LockTransactionResponse{
 				Timestamp: req.Timestamp,
 			})
 			if err != nil {
@@ -198,7 +198,7 @@ func (pr poolRequester) RequestTransactionValidations(pool consensus.Pool, tx ch
 		return nil, fmt.Errorf("confirm validation request error: %s", err.Error())
 	}
 
-	req := &api.ConfirmValidationRequest{
+	req := &api.ConfirmTransactionValidationRequest{
 		MasterValidation: formatAPIMasterValidation(masterValid),
 		Transaction:      formatAPITransaction(tx),
 		Timestamp:        time.Now().Unix(),
@@ -231,7 +231,7 @@ func (pr poolRequester) RequestTransactionValidations(pool consensus.Pool, tx ch
 				return
 			}
 			defer conn.Close()
-			cli := api.NewMiningServiceClient(conn)
+			cli := api.NewTransactionServiceClient(conn)
 			res, err := cli.ConfirmTransactionValidation(context.Background(), req)
 			if err != nil {
 				grpcErr, _ := status.FromError(err)
@@ -241,7 +241,7 @@ func (pr poolRequester) RequestTransactionValidations(pool consensus.Pool, tx ch
 
 			fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
-			resBytes, err := json.Marshal(&api.ConfirmValidationResponse{
+			resBytes, err := json.Marshal(&api.ConfirmTransactionValidationResponse{
 				Timestamp:  res.Timestamp,
 				Validation: res.Validation,
 			})
@@ -279,7 +279,7 @@ func (pr poolRequester) RequestTransactionStorage(pool consensus.Pool, minStorag
 		confValids = append(confValids, formatAPIValidation(v))
 	}
 
-	req := &api.StoreRequest{
+	req := &api.StoreTransactionRequest{
 		MinedTransaction: &api.MinedTransaction{
 			MasterValidation:   formatAPIMasterValidation(tx.MasterValidation()),
 			ConfirmValidations: confValids,
@@ -315,7 +315,7 @@ func (pr poolRequester) RequestTransactionStorage(pool consensus.Pool, minStorag
 				return
 			}
 			defer conn.Close()
-			cli := api.NewStorageServiceClient(conn)
+			cli := api.NewTransactionServiceClient(conn)
 			res, err := cli.StoreTransaction(context.Background(), req)
 			if err != nil {
 				grpcErr, _ := status.FromError(err)
@@ -325,7 +325,7 @@ func (pr poolRequester) RequestTransactionStorage(pool consensus.Pool, minStorag
 
 			fmt.Printf("STORE TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
-			resBytes, err := json.Marshal(&api.StoreResponse{
+			resBytes, err := json.Marshal(&api.StoreTransactionResponse{
 				Timestamp: res.Timestamp,
 			})
 			if err != nil {

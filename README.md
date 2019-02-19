@@ -23,22 +23,19 @@ UNIRIS currently supports the following systems:
 
 UNIRIS project comes with several executables found in the `cmd` directory
 
-| Command       | Description | 
-| ------------- |-------------| 
-| uniris-node | Entry point to the UNIRIS network by running a blockchain node 
-| uniris-interpreter | UNIRIS smart contract interpreter 
+| Command            | Description | 
+| -------------------|-------------| 
+| uniris-node        | Entry point to the UNIRIS network by running a node 
+| uniris-interpreter | UNIRIS smart contract interpreter
 
 ## Architecture
 
-UNIRIS node software uses a separation of concerns designed by running multiple processes with a microservice philosophy.
-
-| Service name  | Public | Description |
-| ------------  | -------| ----------- |
-| API           | Yes | Gateway providing endpoints for clients
-| Discovery     | Yes | Peer to peer discovery using a built-in Gossip implementation
-| Mining        | Yes | Transaction mining (proof of work) and validation confirmations
-| Storage       | Yes | Transaction lock, storage and queries 
-| Internal |  No | Forward transaction to other nodes (mining, pool requesting) and retrieve shared data between nodes
+UNIRIS node software uses a separation of concerns designed by running multiple processes and services
+| Service name | Protocol | Public | Description |
+| ------------ | ---------| -------| ----------- |
+| API          | HTTP     | Yes    | Gateway providing endpoints for clients
+| Discovery    | GRPC     | Yes    | Peer to peer discovery using a built-in Gossip implementation
+| Transaction  | GRPC     | Yes    | Transaction storage/queries, mining (proof of work, validation confirmations) and lock 
 
 ## Running UNIRIS
 
@@ -67,8 +64,7 @@ Supported flags:
 | bus-host | Bus messenging instance host | default: `localhost`|
 | discovery-notif-user | Bus messenging instance user | default: `uniris` (AMQP) |
 | bus-password | Bus messenging instance password | default: `uniris` (AMQP) |
-| external-grpc-port | External GRPC port | default: `5000`|
-| internal-grpc-port | Internal GRPC port  | default: `3009`|
+| grpc-port | GRPC port | default: `5000`|
 
 ## Contribution
 

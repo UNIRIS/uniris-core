@@ -34,20 +34,21 @@ Scenario: Get account request with an ID hash not a valid hash
 	Then I got a 400 (Bad request) response status and an error message
 */
 func TestGetAccountWhenInvalidHash(t *testing.T) {
-	r := gin.Default()
-	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 1717, &mockTechDB{})
+	r := gin.New()
+	r.GET("/api/account/:idHash", GetAccountHandler(&mockTechDB{}))
 
-	path := fmt.Sprintf("http://localhost:3000/api/account/abc")
+	path := fmt.Sprintf("http://localhost/api/account/abc")
 	req, _ := http.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	resBytes, _ := ioutil.ReadAll(w.Body)
-	var errorRes map[string]string
-	json.Unmarshal(resBytes, &errorRes)
-	assert.Equal(t, errorRes["error"], "id hash: must be hexadecimal")
+	var err httpError
+	json.Unmarshal(resBytes, &err)
+	assert.Equal(t, "id hash: must be hexadecimal", err.Error)
+	assert.Equal(t, http.StatusText(http.StatusBadRequest), err.Status)
+	assert.Equal(t, time.Now().Unix(), err.Timestamp)
 }
 
 /*
@@ -57,39 +58,44 @@ Scenario: Get account request with an invalid idSignature
 	Then I got a 400 (Bad request) response status and an error message
 */
 func TestGetAccountWhenInvalidSignature(t *testing.T) {
-	r := gin.Default()
-	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 1717, &mockTechDB{})
+	r := gin.New()
+	r.GET("/api/account/:idHash", GetAccountHandler(&mockTechDB{}))
 
-	path1 := fmt.Sprintf("http://localhost:3000/api/account/%s", crypto.HashString("abc"))
+	path1 := fmt.Sprintf("http://localhost/api/account/%s", crypto.HashString("abc"))
 	req1, _ := http.NewRequest("GET", path1, nil)
 	w1 := httptest.NewRecorder()
 	r.ServeHTTP(w1, req1)
 	assert.Equal(t, http.StatusBadRequest, w1.Code)
 	resBytes, _ := ioutil.ReadAll(w1.Body)
-	var errorRes map[string]string
-	json.Unmarshal(resBytes, &errorRes)
-	assert.Equal(t, errorRes["error"], "signature request: signature is empty")
+	var err httpError
+	json.Unmarshal(resBytes, &err)
+	assert.Equal(t, "signature request: signature is empty", err.Error)
+	assert.Equal(t, http.StatusText(http.StatusBadRequest), err.Status)
+	assert.Equal(t, time.Now().Unix(), err.Timestamp)
 
-	path2 := fmt.Sprintf("http://localhost:3000/api/account/%s?signature=%s", crypto.HashString("abc"), "idSig")
+	path2 := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", crypto.HashString("abc"), "idSig")
 	req2, _ := http.NewRequest("GET", path2, nil)
 	w2 := httptest.NewRecorder()
 	r.ServeHTTP(w2, req2)
 	assert.Equal(t, http.StatusBadRequest, w2.Code)
 	resBytes2, _ := ioutil.ReadAll(w2.Body)
-	var errorRes2 map[string]string
-	json.Unmarshal(resBytes2, &errorRes2)
-	assert.Equal(t, errorRes2["error"], "signature request: signature is not in hexadecimal format")
+	var err2 httpError
+	json.Unmarshal(resBytes2, &err2)
+	assert.Equal(t, "signature request: signature is not in hexadecimal format", err2.Error)
+	assert.Equal(t, http.StatusText(http.StatusBadRequest), err2.Status)
+	assert.Equal(t, time.Now().Unix(), err2.Timestamp)
 
-	path3 := fmt.Sprintf("http://localhost:3000/api/account/%s?signature=%s", crypto.HashString("abc"), hex.EncodeToString([]byte("idSig")))
+	path3 := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", crypto.HashString("abc"), hex.EncodeToString([]byte("idSig")))
 	req3, _ := http.NewRequest("GET", path3, nil)
 	w3 := httptest.NewRecorder()
 	r.ServeHTTP(w3, req3)
 	assert.Equal(t, http.StatusBadRequest, w3.Code)
 	resBytes3, _ := ioutil.ReadAll(w3.Body)
-	var errorRes3 map[string]string
-	json.Unmarshal(resBytes3, &errorRes3)
-	assert.Equal(t, errorRes3["error"], "signature request: signature is not valid")
+	var err3 httpError
+	json.Unmarshal(resBytes3, &err3)
+	assert.Equal(t, "signature request: signature is not valid", err3.Error)
+	assert.Equal(t, http.StatusText(http.StatusBadRequest), err3.Status)
+	assert.Equal(t, time.Now().Unix(), err3.Timestamp)
 }
 
 /*
@@ -114,40 +120,31 @@ func TestGetAccountWhenIDNotExist(t *testing.T) {
 	}
 	locker := &mockLocker{}
 
-	storageSrv := rpc.NewStorageServer(chainDB, locker, techDB, pr)
-	intSrv := rpc.NewInternalServer(techDB, pr)
-
-	lisTx, _ := net.Listen("tcp", ":5000")
-	defer lisTx.Close()
+	lis, _ := net.Listen("tcp", ":5000")
+	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterStorageServiceServer(grpcServer, storageSrv)
-	go grpcServer.Serve(lisTx)
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, locker, techDB, pr, pub, pv))
+	go grpcServer.Serve(lis)
 
-	lisInt, _ := net.Listen("tcp", ":1717")
-	defer lisInt.Close()
-	grpcServerInt := grpc.NewServer()
-	api.RegisterInternalServiceServer(grpcServerInt, intSrv)
-	go grpcServerInt.Serve(lisInt)
-
-	r := gin.Default()
-	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 1717, techDB)
+	r := gin.New()
+	r.GET("/api/account/:idHash", GetAccountHandler(techDB))
 
 	idHash := crypto.HashString("abc")
 	encIDHash, _ := crypto.Encrypt(idHash, pub)
 	sig, _ := crypto.Sign(encIDHash, pv)
 
-	path := fmt.Sprintf("http://localhost:3000/api/account/%s?signature=%s", encIDHash, sig)
+	path := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", encIDHash, sig)
 	req, _ := http.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
 	resBytes, _ := ioutil.ReadAll(w.Body)
-	var errorRes map[string]string
-	json.Unmarshal(resBytes, &errorRes)
-	assert.Equal(t, errorRes["error"], "ID does not exist")
-
+	var err httpError
+	json.Unmarshal(resBytes, &err)
+	assert.Equal(t, "ID: transaction does not exist", err.Error)
+	assert.Equal(t, http.StatusText(http.StatusNotFound), err.Status)
+	assert.Equal(t, time.Now().Unix(), err.Timestamp)
 }
 
 /*
@@ -165,24 +162,20 @@ func TestGetAccountWhenKeychainNotExist(t *testing.T) {
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("ov")), pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
-
+	locker := &mockLocker{}
 	pr := &mockPoolRequester{
 		repo: chainDB,
 	}
 
-	intSrv := rpc.NewInternalServer(techDB, pr)
-
-	//Start internal server
-	lisInt, _ := net.Listen("tcp", ":1717")
-	defer lisInt.Close()
-	grpcServerInt := grpc.NewServer()
-	api.RegisterInternalServiceServer(grpcServerInt, intSrv)
-	go grpcServerInt.Serve(lisInt)
+	lis, _ := net.Listen("tcp", ":5000")
+	defer lis.Close()
+	grpcServer := grpc.NewServer()
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, locker, techDB, pr, pub, pv))
+	go grpcServer.Serve(lis)
 
 	//Start API
-	r := gin.Default()
-	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 1717, techDB)
+	r := gin.New()
+	r.GET("/api/account/:idHash", GetAccountHandler(techDB))
 
 	//Create transactions
 	encAddr, _ := crypto.Encrypt(hex.EncodeToString([]byte("addr")), pub)
@@ -219,17 +212,18 @@ func TestGetAccountWhenKeychainNotExist(t *testing.T) {
 	encIDHash, _ := crypto.Encrypt(idHash, pub)
 	sig, _ := crypto.Sign(encIDHash, pv)
 
-	path := fmt.Sprintf("http://localhost:3000/api/account/%s?signature=%s", encIDHash, sig)
+	path := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", encIDHash, sig)
 	req, _ := http.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusNotFound, w.Code)
 
 	resBytes, _ := ioutil.ReadAll(w.Body)
-	var errorRes map[string]string
-	json.Unmarshal(resBytes, &errorRes)
-	assert.Equal(t, errorRes["error"], "Keychain does not exist")
-
+	var err httpError
+	json.Unmarshal(resBytes, &err)
+	assert.Equal(t, "Keychain: transaction does not exist", err.Error)
+	assert.Equal(t, http.StatusText(http.StatusNotFound), err.Status)
+	assert.Equal(t, time.Now().Unix(), err.Timestamp)
 }
 
 /*
@@ -247,24 +241,16 @@ func TestGetAccount(t *testing.T) {
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("ov")), pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
-
+	locker := &mockLocker{}
 	pr := &mockPoolRequester{
 		repo: chainDB,
 	}
 
-	intSrv := rpc.NewInternalServer(techDB, pr)
-
-	//Start internal server
-	lisInt, _ := net.Listen("tcp", ":1717")
-	defer lisInt.Close()
-	grpcServerInt := grpc.NewServer()
-	api.RegisterInternalServiceServer(grpcServerInt, intSrv)
-	go grpcServerInt.Serve(lisInt)
-
-	//Start API
-	r := gin.Default()
-	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 1717, techDB)
+	lis, _ := net.Listen("tcp", ":5000")
+	defer lis.Close()
+	grpcServer := grpc.NewServer()
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, locker, techDB, pr, pub, pv))
+	go grpcServer.Serve(lis)
 
 	//Create transactions
 	addr := crypto.HashString("addr")
@@ -331,7 +317,9 @@ func TestGetAccount(t *testing.T) {
 	encIDHash, _ := crypto.Encrypt(idHash, pub)
 	sig, _ := crypto.Sign(encIDHash, pv)
 
-	path := fmt.Sprintf("http://localhost:3000/api/account/%s?signature=%s", encIDHash, sig)
+	r := gin.New()
+	r.GET("/api/account/:idHash", GetAccountHandler(techDB))
+	path := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", encIDHash, sig)
 
 	req, _ := http.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
@@ -339,11 +327,23 @@ func TestGetAccount(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	resBytes, _ := ioutil.ReadAll(w.Body)
-	var accountRes api.GetAccountResponse
-	json.Unmarshal(resBytes, &accountRes)
-	assert.Equal(t, hex.EncodeToString([]byte("aes_key")), accountRes.EncryptedAesKey)
-	assert.Equal(t, hex.EncodeToString([]byte("wallet")), accountRes.EncryptedWallet)
+	var res accountFindResponse
+	json.Unmarshal(resBytes, &res)
+	assert.Equal(t, hex.EncodeToString([]byte("aes_key")), res.EncryptedAESKey)
+	assert.Equal(t, hex.EncodeToString([]byte("wallet")), res.EncryptedWallet)
+	assert.Equal(t, time.Now().Unix(), res.Timestamp)
+	assert.NotEmpty(t, res.Signature)
 
+	resBytes, _ = json.Marshal(struct {
+		EncryptedWallet string `json:"encrypted_wallet"`
+		EncryptedAESKey string `json:"encrypted_aes_key"`
+		Timestamp       int64  `json:"timestamp"`
+	}{
+		EncryptedAESKey: res.EncryptedAESKey,
+		EncryptedWallet: res.EncryptedWallet,
+		Timestamp:       res.Timestamp,
+	})
+	assert.Nil(t, crypto.VerifySignature(string(resBytes), techDB.nodeKeys[0].PublicKey(), res.Signature))
 }
 
 /*
@@ -353,9 +353,8 @@ Scenario: Create account request with an invalid encrypted ID
 	Then I got a 400 (Bad request) response status and an error message
 */
 func TestCreationAccountWhenInvalidID(t *testing.T) {
-	r := gin.Default()
-	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 1717, &mockTechDB{})
+	r := gin.New()
+	r.POST("/api/account", CreateAccountHandler(&mockTechDB{}))
 
 	form, _ := json.Marshal(map[string]string{
 		"encrypted_id":       "abc",
@@ -363,16 +362,18 @@ func TestCreationAccountWhenInvalidID(t *testing.T) {
 		"signature":          "abc",
 	})
 
-	path := "http://localhost:3000/api/account"
+	path := "http://localhost/api/account"
 	req, _ := http.NewRequest("POST", path, bytes.NewBuffer(form))
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	resBytes, _ := ioutil.ReadAll(w.Body)
-	var errorRes map[string]string
-	json.Unmarshal(resBytes, &errorRes)
-	assert.Equal(t, errorRes["error"], "encrypted id: must be hexadecimal")
+	var err httpError
+	json.Unmarshal(resBytes, &err)
+	assert.Equal(t, "encrypted id: must be hexadecimal", err.Error)
+	assert.Equal(t, http.StatusText(http.StatusBadRequest), err.Status)
+	assert.Equal(t, time.Now().Unix(), err.Timestamp)
 
 }
 
@@ -383,9 +384,8 @@ Scenario: Create account request with an invalid encrypted Keychain
 	Then I got a 400 (Bad request) response status and an error message
 */
 func TestCreationAccountWhenKeychainInvalid(t *testing.T) {
-	r := gin.Default()
-	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 1717, &mockTechDB{})
+	r := gin.New()
+	r.POST("/api/account", CreateAccountHandler(&mockTechDB{}))
 
 	form, _ := json.Marshal(map[string]string{
 		"encrypted_id":       hex.EncodeToString([]byte("id")),
@@ -394,16 +394,18 @@ func TestCreationAccountWhenKeychainInvalid(t *testing.T) {
 	})
 	log.Print(string(form))
 
-	path := "http://localhost:3000/api/account"
+	path := "http://localhost/api/account"
 	req, _ := http.NewRequest("POST", path, bytes.NewBuffer(form))
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	resBytes, _ := ioutil.ReadAll(w.Body)
-	var errorRes map[string]string
-	json.Unmarshal(resBytes, &errorRes)
-	assert.Equal(t, errorRes["error"], "encrypted keychain: must be hexadecimal")
+	var err httpError
+	json.Unmarshal(resBytes, &err)
+	assert.Equal(t, "encrypted keychain: must be hexadecimal", err.Error)
+	assert.Equal(t, http.StatusText(http.StatusBadRequest), err.Status)
+	assert.Equal(t, time.Now().Unix(), err.Timestamp)
 
 }
 
@@ -423,9 +425,8 @@ func TestCreationAccountWhenSignatureInvalid(t *testing.T) {
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
-	r := gin.Default()
-	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 1717, techDB)
+	r := gin.New()
+	r.POST("/api/account", CreateAccountHandler(techDB))
 
 	form, _ := json.Marshal(map[string]string{
 		"encrypted_id":       hex.EncodeToString([]byte("id")),
@@ -433,7 +434,7 @@ func TestCreationAccountWhenSignatureInvalid(t *testing.T) {
 		"signature":          "abc",
 	})
 
-	path := "http://localhost:3000/api/account"
+	path := "http://localhost/api/account"
 	req1, _ := http.NewRequest("POST", path, bytes.NewBuffer(form))
 	w1 := httptest.NewRecorder()
 	r.ServeHTTP(w1, req1)
@@ -441,9 +442,11 @@ func TestCreationAccountWhenSignatureInvalid(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w1.Code)
 	resBytes, _ := ioutil.ReadAll(w1.Body)
 
-	var errorRes map[string]string
-	json.Unmarshal(resBytes, &errorRes)
-	assert.Equal(t, errorRes["error"], "signature request: signature is not in hexadecimal format")
+	var err httpError
+	json.Unmarshal(resBytes, &err)
+	assert.Equal(t, "signature request: signature is not in hexadecimal format", err.Error)
+	assert.Equal(t, http.StatusText(http.StatusBadRequest), err.Status)
+	assert.Equal(t, time.Now().Unix(), err.Timestamp)
 
 	form2, _ := json.Marshal(map[string]string{
 		"encrypted_id":       hex.EncodeToString([]byte("id")),
@@ -457,9 +460,11 @@ func TestCreationAccountWhenSignatureInvalid(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, w2.Code)
 	resBytes2, _ := ioutil.ReadAll(w2.Body)
-	var errorRes2 map[string]string
-	json.Unmarshal(resBytes2, &errorRes2)
-	assert.Equal(t, errorRes2["error"], "signature request: signature is not valid")
+	var err2 httpError
+	json.Unmarshal(resBytes2, &err2)
+	assert.Equal(t, "signature request: signature is not valid", err2.Error)
+	assert.Equal(t, http.StatusText(http.StatusBadRequest), err2.Status)
+	assert.Equal(t, time.Now().Unix(), err2.Timestamp)
 
 	sig, _ := crypto.Sign(hex.EncodeToString([]byte("hello")), pv)
 
@@ -475,9 +480,11 @@ func TestCreationAccountWhenSignatureInvalid(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, w3.Code)
 	resBytes3, _ := ioutil.ReadAll(w3.Body)
-	var errorRes3 map[string]string
-	json.Unmarshal(resBytes3, &errorRes3)
-	assert.Equal(t, errorRes3["error"], "signature request: signature is not valid")
+	var err3 httpError
+	json.Unmarshal(resBytes3, &err3)
+	assert.Equal(t, "signature request: signature is not valid", err3.Error)
+	assert.Equal(t, http.StatusText(http.StatusBadRequest), err3.Status)
+	assert.Equal(t, time.Now().Unix(), err3.Timestamp)
 
 }
 
@@ -505,29 +512,18 @@ func TestCreateAccount(t *testing.T) {
 		repo: chainDB,
 	}
 
-	storageSrv := rpc.NewStorageServer(chainDB, locker, techDB, pr)
-	intSrv := rpc.NewInternalServer(techDB, pr)
-	miningSrv := rpc.NewMiningServer(techDB, pr, pub, pv)
+	txSrv := rpc.NewTransactionService(chainDB, locker, techDB, pr, pub, pv)
 
 	//Start transaction server
-	lisTx, _ := net.Listen("tcp", ":5000")
-	defer lisTx.Close()
+	lis, _ := net.Listen("tcp", ":5000")
+	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterStorageServiceServer(grpcServer, storageSrv)
-	api.RegisterMiningServiceServer(grpcServer, miningSrv)
-	go grpcServer.Serve(lisTx)
-
-	//Start internal server
-	lisInt, _ := net.Listen("tcp", ":1717")
-	defer lisInt.Close()
-	grpcServerInt := grpc.NewServer()
-	api.RegisterInternalServiceServer(grpcServerInt, intSrv)
-	go grpcServerInt.Serve(lisInt)
+	api.RegisterTransactionServiceServer(grpcServer, txSrv)
+	go grpcServer.Serve(lis)
 
 	//Start API
-	r := gin.Default()
-	apiGroup := r.Group("/api")
-	NewAccountHandler(apiGroup, 1717, techDB)
+	r := gin.New()
+	r.POST("/api/account", CreateAccountHandler(techDB))
 
 	//Create transactions
 	addr := crypto.HashString("addr")
@@ -597,7 +593,7 @@ func TestCreateAccount(t *testing.T) {
 
 	formB, _ = json.Marshal(form)
 
-	path := "http://localhost:3000/api/account"
+	path := "http://localhost/api/account"
 	req, _ := http.NewRequest("POST", path, bytes.NewBuffer(formB))
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -606,20 +602,38 @@ func TestCreateAccount(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, w.Code)
 
-	var resTx map[string]interface{}
+	var resTx accountCreationResponse
 	json.Unmarshal(resBytes, &resTx)
 
-	idTxRes := resTx["id_transaction"].(map[string]interface{})
-	assert.NotEmpty(t, idTxRes["transaction_receipt"])
-	assert.NotEmpty(t, idTxRes["timestamp"])
-	assert.NotEmpty(t, idTxRes["signature"])
+	assert.NotEmpty(t, resTx.IDTransaction.TransactionReceipt)
+	assert.NotEmpty(t, resTx.IDTransaction.Timestamp)
+	assert.NotEmpty(t, resTx.IDTransaction.Signature)
+	assert.Equal(t, time.Now().Unix(), resTx.IDTransaction.Timestamp)
 
-	keychainTxRes := resTx["keychain_transaction"].(map[string]interface{})
-	assert.NotEmpty(t, keychainTxRes["transaction_receipt"])
-	assert.NotEmpty(t, keychainTxRes["timestamp"])
-	assert.NotEmpty(t, keychainTxRes["signature"])
+	idTxHash := crypto.HashBytes(idTxBytes)
+	assert.Equal(t, fmt.Sprintf("%s%s", crypto.HashString("abc"), idTxHash), resTx.IDTransaction.TransactionReceipt)
 
-	time.Sleep(1 * time.Second)
+	idResBytes, _ := json.Marshal(transactionResponse{
+		TransactionReceipt: resTx.IDTransaction.TransactionReceipt,
+		Timestamp:          resTx.IDTransaction.Timestamp,
+	})
+	assert.Nil(t, crypto.VerifySignature(string(idResBytes), techDB.nodeKeys[0].PublicKey(), resTx.IDTransaction.Signature))
+
+	assert.NotEmpty(t, resTx.KeychainTransaction.TransactionReceipt)
+	assert.NotEmpty(t, resTx.KeychainTransaction.Timestamp)
+	assert.NotEmpty(t, resTx.KeychainTransaction.Signature)
+	assert.Equal(t, time.Now().Unix(), resTx.KeychainTransaction.Timestamp)
+
+	keychainTxHash := crypto.HashBytes(keychainTxBytes)
+	assert.Equal(t, fmt.Sprintf("%s%s", addr, keychainTxHash), resTx.KeychainTransaction.TransactionReceipt)
+
+	keychainResBytes, _ := json.Marshal(transactionResponse{
+		TransactionReceipt: resTx.KeychainTransaction.TransactionReceipt,
+		Timestamp:          resTx.KeychainTransaction.Timestamp,
+	})
+	assert.Nil(t, crypto.VerifySignature(string(keychainResBytes), techDB.nodeKeys[0].PublicKey(), resTx.KeychainTransaction.Signature))
+
+	time.Sleep(50 * time.Millisecond)
 
 	assert.Len(t, chainDB.keychains, 1)
 	assert.Equal(t, addr, chainDB.keychains[0].Address())
@@ -813,50 +827,4 @@ func (l mockLocker) findLockPosition(txHash string, txAddr string) int {
 		}
 	}
 	return -1
-}
-
-type txSigned struct {
-	Address                   string            `json:"address"`
-	Data                      map[string]string `json:"data"`
-	Timestamp                 int64             `json:"timestamp"`
-	Type                      int               `json:"type"`
-	PublicKey                 string            `json:"public_key"`
-	SharedKeysEmitterProposal txSharedKeys      `json:"em_shared_keys_proposal"`
-	Signature                 string            `json:"idSignature"`
-	EmitterSignature          string            `json:"em_idSignature"`
-}
-
-type txRaw struct {
-	Address                   string            `json:"address"`
-	Data                      map[string]string `json:"data"`
-	Timestamp                 int64             `json:"timestamp"`
-	Type                      int               `json:"type"`
-	PublicKey                 string            `json:"public_key"`
-	SharedKeysEmitterProposal txSharedKeys      `json:"em_shared_keys_proposal"`
-}
-
-type txSharedKeys struct {
-	EncryptedPrivateKey string `json:"encrypted_private_key"`
-	PublicKey           string `json:"public_key"`
-}
-
-func formatLeadMiningRequest(tx txSigned, txHash string, minValidations int) *api.LeadMiningRequest {
-	return &api.LeadMiningRequest{
-		MinimumValidations: int32(minValidations),
-		Timestamp:          time.Now().Unix(),
-		Transaction: &api.Transaction{
-			Address:          tx.Address,
-			Data:             tx.Data,
-			Type:             api.TransactionType(tx.Type),
-			Timestamp:        tx.Timestamp,
-			PublicKey:        tx.PublicKey,
-			Signature:        tx.Signature,
-			EmitterSignature: tx.EmitterSignature,
-			SharedKeysEmitterProposal: &api.SharedKeyPair{
-				EncryptedPrivateKey: tx.SharedKeysEmitterProposal.EncryptedPrivateKey,
-				PublicKey:           tx.SharedKeysEmitterProposal.PublicKey,
-			},
-			TransactionHash: txHash,
-		},
-	}
 }

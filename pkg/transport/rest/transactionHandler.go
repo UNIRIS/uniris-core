@@ -2,85 +2,131 @@ package rest
 
 import (
 	"context"
-	"encoding/hex"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
+	"github.com/uniris/uniris-core/pkg/consensus"
 	"github.com/uniris/uniris-core/pkg/crypto"
+	"github.com/uniris/uniris-core/pkg/shared"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 )
 
-//NewTransactionHandler creates a new HTTP handler for the transaction endpoints
-func NewTransactionHandler(r *gin.RouterGroup, internalPort int) {
-	r.GET("/transaction/:txReceipt/status", getTransactionStatus(internalPort))
-}
-
-func getTransactionStatus(internalPort int) func(c *gin.Context) {
+//GetTransactionStatusHandler defines an HTTP handler to get the status of a transaction
+func GetTransactionStatusHandler(techReader shared.TechDatabaseReader) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		txReceipt := c.Param("txReceipt")
 		txAddress, txHash, err := decodeTxReceipt(txReceipt)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("tx receipt decoding: %s", err.Error())})
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     fmt.Sprintf("tx receipt decoding: %s", err.Error()),
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
 
-		serverAddr := fmt.Sprintf("localhost:%d", internalPort)
+		sPool, err := consensus.FindStoragePool(txAddress)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+
+		//Send request to the storage master node
+		serverAddr := fmt.Sprintf("%s:%d", sPool[0].IP().String(), sPool[0].Port())
 		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
-		defer conn.Close()
 		if err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			c.JSON(http.StatusServiceUnavailable, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusServiceUnavailable),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
-		cli := api.NewInternalServiceClient(conn)
-		req := &api.InternalTransactionStatusRequest{
-			Timestamp:          time.Now().Unix(),
-			TransactionHash:    txHash,
-			TransactionAddress: txAddress,
+		defer conn.Close()
+
+		cli := api.NewTransactionServiceClient(conn)
+		reqStatus := &api.GetTransactionStatusRequest{
+			TransactionHash: txHash,
+			Timestamp:       time.Now().Unix(),
 		}
-		res, err := cli.GetTransactionStatus(context.Background(), req)
+		reqBytes, err := json.Marshal(reqStatus)
 		if err != nil {
-			c.JSON(parseGrpcError(err))
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
 
-		c.JSON(http.StatusOK, map[string]interface{}{
-			"status":    res.Status.String(),
-			"timestamp": res.Timestamp,
-			"signature": res.SignatureResponse,
+		nodeLastKeys, err := techReader.NodeLastKeys()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+		sig, err := crypto.Sign(string(reqBytes), nodeLastKeys.PrivateKey())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+		reqStatus.SignatureRequest = sig
+
+		res, err := cli.GetTransactionStatus(context.Background(), reqStatus)
+		if err != nil {
+			grpcStatus, _ := status.FromError(err)
+			code, message := parseGrpcError(grpcStatus.Err())
+			c.JSON(code, httpError{
+				Error:     message,
+				Status:    http.StatusText(code),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+
+		fmt.Printf("GET TRANSACTION STATUS RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+		resBytes, err := json.Marshal(&api.GetTransactionStatusResponse{
+			Status:    res.Status,
+			Timestamp: res.Timestamp,
+		})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+
+		if err := crypto.VerifySignature(string(resBytes), nodeLastKeys.PublicKey(), res.SignatureResponse); err != nil {
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, transactionStatusResponse{
+			Status:    res.Status.String(),
+			Timestamp: res.Timestamp,
+			Signature: res.SignatureResponse,
 		})
 	}
-}
-
-func decodeTxReceipt(receipt string) (addr, hash string, err error) {
-	if _, err = hex.DecodeString(receipt); err != nil {
-		err = errors.New("must be hexadecimal")
-		return
-	}
-
-	/*
-		Length from sha256 hash is 64 bytes.
-		a transaction receipt is a set of the hash of the address and the hash of the transaction
-		So a transaction receipt is 128 bytes
-	*/
-	if len(receipt) != 128 {
-		err = errors.New("invalid length")
-		return
-	}
-
-	addr = receipt[:64]
-	hash = receipt[64:]
-
-	if _, err = crypto.IsHash(addr); err != nil {
-		return
-	}
-
-	if _, err = crypto.IsHash(hash); err != nil {
-		return
-	}
-
-	return
 }

@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uniris/uniris-core/pkg/consensus"
-
 	"github.com/uniris/uniris-core/pkg/shared"
 
 	"github.com/uniris/uniris-core/pkg/transport/amqp"
@@ -83,11 +81,9 @@ func main() {
 		fmt.Printf("Network interface: %s\n", conf.networkInterface)
 
 		techDB := memstorage.NewTechDatabase()
-		poolR := rpc.NewPoolRequester(techDB)
 
-		go startInternalServer(conf, techDB, poolR)
-		go startExternalServer(conf, techDB, poolR)
-		startAPI(conf, techDB)
+		go startGRPCServer(conf, techDB)
+		startHTTPServer(conf, techDB)
 
 		return nil
 	}
@@ -198,23 +194,16 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 			Destination: &conf.bus.password,
 		}),
 		altsrc.NewIntFlag(cli.IntFlag{
-			Name:        "external-grpc-port",
-			EnvVar:      "UNIRIS_EXT_GRPC_PORT",
+			Name:        "grpc-port",
+			EnvVar:      "UNIRIS_GRPC_PORT",
 			Value:       5000,
-			Usage:       "External GRPC port to communicate with other nodes",
-			Destination: &conf.grpcExternalPort,
-		}),
-		altsrc.NewIntFlag(cli.IntFlag{
-			Name:        "internal-grpc-port",
-			EnvVar:      "UNIRIS_INT_GRPC_PORT",
-			Value:       3009,
-			Usage:       "Internal GRPC port",
-			Destination: &conf.grpcInternalPort,
+			Usage:       "GRPC server port used to communicate with other nodes",
+			Destination: &conf.grpcPort,
 		}),
 	}
 }
 
-func startAPI(conf unirisConf, techDB shared.TechDatabaseReader) {
+func startHTTPServer(conf unirisConf, techDB shared.TechDatabaseReader) {
 	r := gin.Default()
 
 	staticDir, _ := filepath.Abs("../../web/static")
@@ -225,40 +214,21 @@ func startAPI(conf unirisConf, techDB shared.TechDatabaseReader) {
 	swaggerFile, _ := filepath.Abs("../../api/swagger-spec/swagger.yaml")
 	r.StaticFile("/swagger.yaml", swaggerFile)
 
-	apiRouter := r.Group("/api")
-	{
-		rest.NewAccountHandler(apiRouter, conf.grpcInternalPort, techDB)
-		rest.NewTransactionHandler(apiRouter, conf.grpcInternalPort)
-		rest.NewSharedHandler(apiRouter, conf.grpcInternalPort)
-	}
+	r.GET("/api/account/:idHash", rest.GetAccountHandler(techDB))
+	r.POST("/api/account", rest.CreateAccountHandler(techDB))
+	r.GET("/api/transaction/:txReceipt/status", rest.GetTransactionStatusHandler(techDB))
+	r.GET("/api/sharedkeys", rest.GetSharedKeysHandler(techDB))
 
 	r.Run(":80")
 }
 
-func startInternalServer(conf unirisConf, techDB shared.TechDatabaseReader, poolR consensus.PoolRequester) {
-	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", conf.grpcInternalPort))
-	if err != nil {
-		panic(err)
-	}
+func startGRPCServer(conf unirisConf, techDB shared.TechDatabaseReader) {
 	grpcServer := grpc.NewServer()
 
-	srv := rpc.NewInternalServer(techDB, poolR)
-	api.RegisterInternalServiceServer(grpcServer, srv)
-	fmt.Printf("Internal service listening on %d\n", conf.grpcInternalPort)
-	if err := grpcServer.Serve(lis); err != nil {
-		panic(err)
-	}
-}
-
-func startExternalServer(conf unirisConf, techDB shared.TechDatabaseReader, poolR consensus.PoolRequester) {
-
-	grpcServer := grpc.NewServer()
-
+	poolR := rpc.NewPoolRequester(techDB)
 	chainDB := memstorage.NewchainDatabase()
 	locker := memstorage.NewLocker()
-
-	api.RegisterStorageServiceServer(grpcServer, rpc.NewStorageServer(chainDB, locker, techDB, poolR))
-	api.RegisterMiningServiceServer(grpcServer, rpc.NewMiningServer(techDB, poolR, conf.publicKey, conf.privateKey))
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, locker, techDB, poolR, conf.publicKey, conf.privateKey))
 
 	var discoveryDB discovery.Database
 	if conf.discoveryDatabase.dbType == "redis" {
@@ -277,14 +247,16 @@ func startExternalServer(conf unirisConf, techDB shared.TechDatabaseReader, pool
 	} else {
 		notif = &memtransport.DiscoveryNotifier{}
 	}
+
 	api.RegisterDiscoveryServiceServer(grpcServer, rpc.NewDiscoveryServer(discoveryDB, notif))
+
 	go startDiscovery(conf, discoveryDB, notif)
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", conf.grpcExternalPort))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", conf.grpcPort))
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("External service listening on %d\n", conf.grpcExternalPort)
+	fmt.Printf("GRPC server listening on %d\n", conf.grpcPort)
 	if err := grpcServer.Serve(lis); err != nil {
 		panic(err)
 	}
@@ -292,7 +264,7 @@ func startExternalServer(conf unirisConf, techDB shared.TechDatabaseReader, pool
 
 func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Notifier) {
 
-	netCheck := system.NewNetworkChecker(conf.grpcInternalPort, conf.grpcExternalPort)
+	netCheck := system.NewNetworkChecker(conf.grpcInternalPort, conf.grpcPort)
 
 	var systemReader discovery.SystemReader
 	if conf.networkType == "private" {
@@ -311,7 +283,7 @@ func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Noti
 		log.Println(discovery.ErrGeoPosition)
 	}
 
-	selfPeer := discovery.NewSelfPeer(conf.publicKey, ip, conf.grpcExternalPort, conf.version, lon, lat)
+	selfPeer := discovery.NewSelfPeer(conf.publicKey, ip, conf.grpcPort, conf.version, lon, lat)
 
 	timer := time.NewTicker(time.Second * 3)
 	log.Print("Gossip running...")
@@ -362,9 +334,8 @@ type unirisConf struct {
 		privateKey string
 		publicKey  string
 	}
-	grpcInternalPort int
-	grpcExternalPort int
-	bus              struct {
+	grpcPort int
+	bus      struct {
 		busType  string
 		host     string
 		port     int

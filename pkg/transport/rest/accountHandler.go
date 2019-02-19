@@ -1,164 +1,244 @@
 package rest
 
 import (
-	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
+	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/shared"
 
 	"github.com/gin-gonic/gin"
-	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/crypto"
-	"google.golang.org/grpc"
 )
 
-//NewAccountHandler creates a new HTTP handler for the account endpoints
-func NewAccountHandler(apiGroup *gin.RouterGroup, intServerPort int, techDB shared.TechDatabaseReader) {
-	apiGroup.GET("/account/:hash", getAccount(intServerPort, techDB))
-	apiGroup.POST("/account", createAccount(intServerPort, techDB))
-}
-
-func getAccount(intServerPort int, techDB shared.TechDatabaseReader) func(c *gin.Context) {
+//GetAccountHandler is an HTTP handler which retrieves an account from an ID public key hash
+//It requests the storage pool from the id address, decrypts the encrypted keychain address and request the keychain from its dedicated pool
+//Then it aggregates the ID and Keychain data
+func GetAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
-		hash := c.Param("hash")
-
-		if _, err := hex.DecodeString(hash); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("id hash: must be hexadecimal")})
+		encIDHash := c.Param("idHash")
+		if _, err := hex.DecodeString(encIDHash); err != nil {
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     "id hash: must be hexadecimal",
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
 
-		sig := c.Query("signature")
-		if _, err := crypto.IsSignature(sig); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("signature request: %s", err.Error())})
+		sigReq := c.Query("signature")
+		if _, err := crypto.IsSignature(sigReq); err != nil {
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     fmt.Sprintf("signature request: %s", err.Error()),
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
 
-		emKeys, err := techDB.EmitterKeys()
+		emKeys, err := techReader.EmitterKeys()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
 
-		if err := crypto.VerifySignature(hash, emKeys.RequestKey(), sig); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("signature request: %s", err.Error())})
+		if err := crypto.VerifySignature(encIDHash, emKeys.RequestKey(), sigReq); err != nil {
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     fmt.Sprintf("signature request: %s", err.Error()),
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
 
-		serverAddr := fmt.Sprintf("localhost:%d", intServerPort)
-		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
-		defer conn.Close()
-
+		nodeLastKeys, err := techReader.NodeLastKeys()
 		if err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
-		cli := api.NewInternalServiceClient(conn)
-		account, err := cli.GetAccount(context.Background(), &api.GetAccountRequest{
-			EncryptedIdAddress: hash,
-			Timestamp:          time.Now().Unix(),
-		})
 
+		idHash, err := crypto.Decrypt(encIDHash, nodeLastKeys.PrivateKey())
 		if err != nil {
-			c.JSON(parseGrpcError(err))
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+		idTx, httpErr := findLastTransaction(idHash, api.TransactionType_ID, nodeLastKeys.PrivateKey())
+		if httpErr != nil {
+			httpErr.Error = fmt.Sprintf("ID: %s", httpErr.Error)
+			c.JSON(httpErr.code, httpErr)
 			return
 		}
 
-		c.JSON(http.StatusOK, map[string]interface{}{
-			"encrypted_aes_key": account.EncryptedAesKey,
-			"encrypted_wallet":  account.EncryptedWallet,
-			"timestamp":         account.Timestamp,
-			"signature":         account.SignatureResponse,
-		})
+		encKeychainAddr := idTx.Data["encrypted_address_by_node"]
+		keychainAddr, err := crypto.Decrypt(encKeychainAddr, nodeLastKeys.PrivateKey())
+		if err != nil {
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+
+		keychainTx, httpErr := findLastTransaction(keychainAddr, api.TransactionType_KEYCHAIN, nodeLastKeys.PrivateKey())
+		if httpErr != nil {
+			httpErr.Error = fmt.Sprintf("Keychain: %s", httpErr.Error)
+			c.JSON(httpErr.code, httpErr)
+			return
+		}
+
+		res := accountFindResponse{
+			EncryptedAESKey: idTx.Data["encrypted_aes_key"],
+			EncryptedWallet: keychainTx.Data["encrypted_wallet"],
+			Timestamp:       time.Now().Unix(),
+		}
+
+		resBytes, err := json.Marshal(res)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+		sigRes, err := crypto.Sign(string(resBytes), nodeLastKeys.PrivateKey())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+
+		res.Signature = sigRes
+
+		c.JSON(http.StatusOK, res)
 	}
 }
 
-func createAccount(intServerPort int, techDB shared.TechDatabaseReader) func(c *gin.Context) {
+//CreateAccountHandler is an HTTP handler which forwards ID and Keychain transaction to master nodes and reply with the transaction receipts
+func CreateAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
-		var form struct {
-			EncryptedID       string `json:"encrypted_id" binding:"required"`
-			EncryptedKeychain string `json:"encrypted_keychain" binding:"required"`
-			Signature         string `json:"signature" binding:"required"`
-		}
+		var form accountCreationRequest
 
 		if err := c.ShouldBindJSON(&form); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
 		}
 
 		if _, err := hex.DecodeString(form.EncryptedID); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "encrypted id: must be hexadecimal"})
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     "encrypted id: must be hexadecimal",
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
 
 		if _, err := hex.DecodeString(form.EncryptedKeychain); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "encrypted keychain: must be hexadecimal"})
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     "encrypted keychain: must be hexadecimal",
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
 
 		if _, err := crypto.IsSignature(form.Signature); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("signature request: %s", err.Error())})
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     fmt.Sprintf("signature request: %s", err.Error()),
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
 
-		emKeys, err := techDB.EmitterKeys()
+		emKeys, err := techReader.EmitterKeys()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
 
-		formBytes, _ := json.Marshal(map[string]string{
-			"encrypted_id":       form.EncryptedID,
-			"encrypted_keychain": form.EncryptedKeychain,
+		formBytes, _ := json.Marshal(accountCreationRequest{
+			EncryptedID:       form.EncryptedID,
+			EncryptedKeychain: form.EncryptedKeychain,
 		})
 		if err := crypto.VerifySignature(string(formBytes), emKeys.RequestKey(), form.Signature); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("signature request: %s", err.Error())})
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     fmt.Sprintf("signature request: %s", err.Error()),
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
 
-		serverAddr := fmt.Sprintf("localhost:%d", intServerPort)
-		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
-		defer conn.Close()
-
+		nodeLastKeys, err := techReader.NodeLastKeys()
 		if err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
-			return
-		}
-		cli := api.NewInternalServiceClient(conn)
-		resID, err := cli.HandleTransaction(context.Background(), &api.IncomingTransaction{
-			EncryptedTransaction: form.EncryptedID,
-			Timestamp:            time.Now().Unix(),
-		})
-		if err != nil {
-			c.JSON(parseGrpcError(err))
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
 
-		resKeychain, err := cli.HandleTransaction(context.Background(), &api.IncomingTransaction{
-			EncryptedTransaction: form.EncryptedKeychain,
-			Timestamp:            time.Now().Unix(),
-		})
+		idTx, err := decodeTransactionRaw(form.EncryptedID, nodeLastKeys.PrivateKey())
 		if err != nil {
-			c.JSON(parseGrpcError(err))
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
+		}
+		idTxRes, httpErr := requestTransactionMining(idTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey())
+		if httpErr != nil {
+			c.JSON(httpErr.code, httpErr)
 			return
 		}
 
-		c.JSON(http.StatusCreated, map[string]interface{}{
-			"id_transaction": map[string]interface{}{
-				"transaction_receipt": resID.TransactionReceipt,
-				"timestamp":           resID.Timestamp,
-				"signature":           resID.Signature,
-			},
-			"keychain_transaction": map[string]interface{}{
-				"transaction_receipt": resKeychain.TransactionReceipt,
-				"timestamp":           resKeychain.Timestamp,
-				"signature":           resKeychain.Signature,
-			},
+		keychainTx, err := decodeTransactionRaw(form.EncryptedKeychain, nodeLastKeys.PrivateKey())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
+		}
+		keychainTxRes, httpErr := requestTransactionMining(keychainTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey())
+		if httpErr != nil {
+			c.JSON(httpErr.code, httpErr)
+			return
+		}
+
+		c.JSON(http.StatusCreated, accountCreationResponse{
+			IDTransaction:       idTxRes,
+			KeychainTransaction: keychainTxRes,
 		})
 	}
 }
