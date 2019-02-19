@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -26,20 +27,21 @@ Scenario: Get transactions status with receipt non hexadecimal
 	Then I get an error
 */
 func TestGetTransactionStatusWithNoHexaReceipt(t *testing.T) {
-	r := gin.Default()
-	apiGroup := r.Group("/api")
-	NewTransactionHandler(apiGroup, 1717)
+	r := gin.New()
+	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(&mockTechDB{}))
 
-	path := fmt.Sprintf("http://localhost:3000/api/transaction/abc/status")
+	path := fmt.Sprintf("http://localhost/api/transaction/abc/status")
 	req, _ := http.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	resBytes, _ := ioutil.ReadAll(w.Body)
-	var errorRes map[string]string
-	json.Unmarshal(resBytes, &errorRes)
-	assert.Equal(t, errorRes["error"], "tx receipt decoding: must be hexadecimal")
+	var err httpError
+	json.Unmarshal(resBytes, &err)
+	assert.Equal(t, "tx receipt decoding: must be hexadecimal", err.Error)
+	assert.Equal(t, http.StatusText(http.StatusBadRequest), err.Status)
+	assert.Equal(t, time.Now().Unix(), err.Timestamp)
 }
 
 /*
@@ -49,20 +51,21 @@ Scenario: Get transactions status with receipt bad length
 	Then I get an error
 */
 func TestGetTransactionStatusWithBadReceiptLength(t *testing.T) {
-	r := gin.Default()
-	apiGroup := r.Group("/api")
-	NewTransactionHandler(apiGroup, 1717)
+	r := gin.New()
+	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(&mockTechDB{}))
 
-	path := fmt.Sprintf("http://localhost:3000/api/transaction/%s/status", hex.EncodeToString([]byte("abc")))
+	path := fmt.Sprintf("http://localhost/api/transaction/%s/status", hex.EncodeToString([]byte("abc")))
 	req, _ := http.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	resBytes, _ := ioutil.ReadAll(w.Body)
-	var errorRes map[string]string
-	json.Unmarshal(resBytes, &errorRes)
-	assert.Equal(t, errorRes["error"], "tx receipt decoding: invalid length")
+	var err httpError
+	json.Unmarshal(resBytes, &err)
+	assert.Equal(t, "tx receipt decoding: invalid length", err.Error)
+	assert.Equal(t, http.StatusText(http.StatusBadRequest), err.Status)
+	assert.Equal(t, time.Now().Unix(), err.Timestamp)
 }
 
 /*
@@ -84,40 +87,31 @@ func TestGetTransactionStatusUnknown(t *testing.T) {
 
 	pr := rpc.NewPoolRequester(techDB)
 
-	storageSrv := rpc.NewStorageServer(chainDB, locker, techDB, pr)
-	intSrv := rpc.NewInternalServer(techDB, pr)
+	txSrv := rpc.NewTransactionService(chainDB, locker, techDB, pr, pub, pv)
 
 	//Start transaction server
 	lisTx, _ := net.Listen("tcp", ":5000")
 	defer lisTx.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterStorageServiceServer(grpcServer, storageSrv)
+	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lisTx)
 
-	//Start internal server
-	lisInt, _ := net.Listen("tcp", ":1717")
-	defer lisInt.Close()
-	grpcServerInt := grpc.NewServer()
-	api.RegisterInternalServiceServer(grpcServerInt, intSrv)
-	go grpcServerInt.Serve(lisInt)
-
 	//Start API
-	r := gin.Default()
-	apiGroup := r.Group("/api")
-	NewTransactionHandler(apiGroup, 1717)
+	r := gin.New()
+	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(techDB))
 
 	txReceipt := fmt.Sprintf("%s%s", crypto.HashString("hash"), crypto.HashString("abc"))
 
-	path := fmt.Sprintf("http://localhost:3000/api/transaction/%s/status", txReceipt)
+	path := fmt.Sprintf("http://localhost/api/transaction/%s/status", txReceipt)
 	req, _ := http.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	resBytes, _ := ioutil.ReadAll(w.Body)
-	var res map[string]interface{}
+	var res transactionStatusResponse
 	json.Unmarshal(resBytes, &res)
-	assert.Equal(t, res["status"], "UNKNOWN")
-	assert.NotEmpty(t, res["timestamp"])
-	assert.NotEmpty(t, res["signature"])
+	assert.Equal(t, "UNKNOWN", res.Status)
+	// assert.Equal(t, time.Now().Unix(), res.Timestamp)
+	// assert.NotEmpty(t, res.Signature)
 }
