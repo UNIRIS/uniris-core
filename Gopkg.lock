@@ -77,7 +77,7 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:9a855f51d5eaf25dafc30cf0ad5844d5fb6aacec4ceb98a04ed2964562edbc0c"
+  digest = "1:be97e109f627d3ba8edfef50c9c74f0d0c17cbe3a2e924a8985e4804a894f282"
   name = "github.com/json-iterator/go"
   packages = ["."]
   pruneopts = "UT"
