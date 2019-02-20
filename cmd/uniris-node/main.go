@@ -264,7 +264,7 @@ func startGRPCServer(conf unirisConf, techDB shared.TechDatabaseReader) {
 
 func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Notifier) {
 
-	netCheck := system.NewNetworkChecker(conf.grpcInternalPort, conf.grpcPort)
+	netCheck := system.NewNetworkChecker(conf.grpcPort)
 
 	var systemReader discovery.SystemReader
 	if conf.networkType == "private" {

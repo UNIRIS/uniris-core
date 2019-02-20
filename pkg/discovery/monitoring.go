@@ -25,7 +25,7 @@ const BootstrapingMinTime = 1800
 type NetworkChecker interface {
 	CheckNtpState() error
 	CheckInternetState() error
-	CheckGRPCServers() error
+	CheckGRPCServer() error
 }
 
 //SystemReader retrieve local system information
@@ -82,7 +82,7 @@ func localStatus(p Peer, seedAvgDiscovery int, nv NetworkChecker) (PeerStatus, e
 		return FaultyPeer, err
 	}
 
-	if err := nv.CheckGRPCServers(); err != nil {
+	if err := nv.CheckGRPCServer(); err != nil {
 		if err == ErrGRPCServer {
 			fmt.Printf("networking error: %s\n", err.Error())
 			return FaultyPeer, nil

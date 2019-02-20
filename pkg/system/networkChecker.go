@@ -19,15 +19,13 @@ const (
 var cntp = [...]string{"1.pool.ntp.org", "2.pool.ntp.org", "3.pool.ntp.org", "4.pool.ntp.org"}
 
 type netCheck struct {
-	internGrpcPort int
-	externGrpcPort int
+	grpcPort int
 }
 
 //NewNetworkChecker creates new network checker
-func NewNetworkChecker(internGrpcPort, externGrpcPort int) discovery.NetworkChecker {
+func NewNetworkChecker(grpcPort int) discovery.NetworkChecker {
 	return netCheck{
-		internGrpcPort: internGrpcPort,
-		externGrpcPort: externGrpcPort,
+		grpcPort: grpcPort,
 	}
 }
 
@@ -60,8 +58,8 @@ func (n netCheck) CheckInternetState() error {
 	return nil
 }
 
-func (n netCheck) CheckGRPCServers() error {
-	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", n.internGrpcPort))
+func (n netCheck) CheckGRPCServer() error {
+	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", n.grpcPort))
 	if err != nil {
 		return discovery.ErrGRPCServer
 	}
@@ -72,14 +70,5 @@ func (n netCheck) CheckGRPCServers() error {
 		return discovery.ErrGRPCServer
 	}
 
-	conn2, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", n.externGrpcPort))
-	if err != nil {
-		return discovery.ErrGRPCServer
-	}
-	var buffer2 []byte
-	if _, err := conn2.Read(buffer2); err != nil {
-		conn2.Close()
-		return discovery.ErrGRPCServer
-	}
 	return nil
 }

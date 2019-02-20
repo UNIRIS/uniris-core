@@ -221,7 +221,7 @@ func (n mockFailInternetNetworker) CheckInternetState() error {
 	return errors.New("Unexpected")
 }
 
-func (n mockFailInternetNetworker) CheckGRPCServers() error {
+func (n mockFailInternetNetworker) CheckGRPCServer() error {
 	return nil
 }
 
@@ -235,7 +235,7 @@ func (n mockFailNTPNetworker) CheckInternetState() error {
 	return nil
 }
 
-func (n mockFailNTPNetworker) CheckGRPCServers() error {
+func (n mockFailNTPNetworker) CheckGRPCServer() error {
 	return nil
 }
 
@@ -249,6 +249,6 @@ func (n mockFailGRPCServersNetworker) CheckInternetState() error {
 	return nil
 }
 
-func (n mockFailGRPCServersNetworker) CheckGRPCServers() error {
+func (n mockFailGRPCServersNetworker) CheckGRPCServer() error {
 	return ErrGRPCServer
 }
