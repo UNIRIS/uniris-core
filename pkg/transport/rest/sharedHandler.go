@@ -1,65 +1,78 @@
 package rest
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/crypto"
-	"google.golang.org/grpc"
+	"github.com/uniris/uniris-core/pkg/shared"
 )
 
-//NewSharedHandler creates a new HTTP handler for the shared endpoints
-func NewSharedHandler(apiGroup *gin.RouterGroup, internalPort int) {
-
-	apiGroup.GET("/sharedkeys", getSharedKeys(internalPort))
-}
-
-func getSharedKeys(internalPort int) func(*gin.Context) {
+//GetSharedKeysHandler defines an HTTP handler to retrieve the shared keys
+func GetSharedKeysHandler(techReader shared.TechDatabaseReader) func(*gin.Context) {
 	return func(c *gin.Context) {
 
 		emPublicKey := c.Query("emitter_public_key")
 
-		//Check the emitter public key parameters
 		if _, err := crypto.IsPublicKey(emPublicKey); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("emitter_public_key: %s", err.Error())})
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     fmt.Sprintf("emitter_public_key: %s", err.Error()),
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
 
-		//Call the internal datamining to get the last shared keys
-		serverAddr := fmt.Sprintf("localhost:%d", internalPort)
-		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
-		defer conn.Close()
-
+		auth, err := shared.IsEmitterKeyAuthorized(emPublicKey)
 		if err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
-		cli := api.NewInternalServiceClient(conn)
-		res, err := cli.GetLastSharedKeys(context.Background(), &api.LastSharedKeysRequest{
-			EmitterPublicKey: emPublicKey,
-			Timestamp:        time.Now().Unix(),
-		})
-		if err != nil {
-			c.JSON(parseGrpcError(err))
+		if !auth {
+			c.JSON(http.StatusUnauthorized, httpError{
+				Error:     "emitter not authorized",
+				Status:    http.StatusText(http.StatusUnauthorized),
+				Timestamp: time.Now().Unix(),
+			})
 			return
 		}
 
-		//Building the JSON response
-		emKeys := make([]map[string]string, 0)
-		for _, k := range res.EmitterKeys {
-			emKeys = append(emKeys, map[string]string{
-				"public_key":            k.PublicKey,
-				"encrypted_private_key": k.EncryptedPrivateKey,
+		nodeLastKeys, err := techReader.NodeLastKeys()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+
+		sharedEmKeys, err := techReader.EmitterKeys()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, httpError{
+				Error:     err.Error(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+
+		emKeys := make([]emitterSharedKeys, 0)
+		for _, k := range sharedEmKeys {
+			emKeys = append(emKeys, emitterSharedKeys{
+				EncryptedPrivateKey: k.EncryptedPrivateKey(),
+				PublicKey:           k.PublicKey(),
 			})
 		}
-
-		c.JSON(http.StatusOK, map[string]interface{}{
-			"shared_node_public_key": res.NodePublicKey,
-			"shared_emitter_keys":    emKeys,
+		c.JSON(http.StatusOK, sharedKeysResponse{
+			NodePublicKey: nodeLastKeys.PublicKey(),
+			EmitterKeys:   emKeys,
 		})
 	}
 }

@@ -20,7 +20,7 @@ tags:
   - name: Account
     description: Manage accounts
   - name: Shared
-    description: About shared information
+    description: Shared information
   - name: Transaction
     description: Transaction information
 
@@ -93,7 +93,7 @@ paths:
           schema:
             $ref: "#/definitions/Error"
           
-  /account/{hash}:
+  /account/{id_hash}:
       get:
         tags:
         - Account
@@ -102,7 +102,7 @@ paths:
           Retrieve account details by requesting the data service of the UNIRIS node.
           All the data are encrypted and need to be decrypted by the emitter using ID keys.
         parameters:
-          - name: hash
+          - name: id_hash
             in: path
             required: true
             type: string
@@ -117,10 +117,6 @@ paths:
             description: Encrypted account details
             schema:
               $ref: "#/definitions/AccountDetails"
-          "404":
-            description: "Error"
-            schema:
-              $ref: "#/definitions/Error"
           default:
             description: Error
             schema:
@@ -131,10 +127,19 @@ definitions:
     type: object
     required:
       - error
+      - status
+      - timestamp
     properties:
       error:
         type: string
         description: Error message
+      status:
+        type: string
+        description: Error HTTP status
+      timestamp:
+        type: integer
+        description: Error response timestamp
+
 
   AccountDetails:
     required:

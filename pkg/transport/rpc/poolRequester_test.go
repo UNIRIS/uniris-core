@@ -37,12 +37,12 @@ func TestRequestTransactionLock(t *testing.T) {
 	chainDB := &mockChainDB{}
 	locker := &mockLocker{}
 	pr := NewPoolRequester(techDB)
-	storageSrv := NewStorageServer(chainDB, locker, techDB, pr)
+	txSrv := NewTransactionService(chainDB, locker, techDB, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterStorageServiceServer(grpcServer, storageSrv)
+	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
 	pool, _ := consensus.FindStoragePool("addr")
@@ -71,12 +71,12 @@ func TestRequestConfirmValidation(t *testing.T) {
 
 	pr := NewPoolRequester(techDB)
 
-	miningSrv := NewMiningServer(techDB, pr, pub, pv)
+	miningSrv := NewTransactionService(nil, nil, techDB, pr, pub, pv)
 
 	lis, err := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterMiningServiceServer(grpcServer, miningSrv)
+	api.RegisterTransactionServiceServer(grpcServer, miningSrv)
 	go grpcServer.Serve(lis)
 
 	data := map[string]string{
@@ -143,12 +143,12 @@ func TestRequestStorage(t *testing.T) {
 
 	pr := NewPoolRequester(techDB)
 
-	storageSrv := NewStorageServer(chainDB, locker, techDB, pr)
+	txSrv := NewTransactionService(chainDB, locker, techDB, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterStorageServiceServer(grpcServer, storageSrv)
+	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
 	data := map[string]string{
@@ -208,12 +208,12 @@ func TestSendGetLastTransaction(t *testing.T) {
 
 	pr := NewPoolRequester(techDB)
 
-	storageSrv := NewStorageServer(chainDB, locker, techDB, pr)
+	txSrv := NewTransactionService(chainDB, locker, techDB, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterStorageServiceServer(grpcServer, storageSrv)
+	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
 	data := map[string]string{

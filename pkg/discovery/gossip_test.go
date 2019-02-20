@@ -228,7 +228,7 @@ func (nc mockNetworkChecker) CheckInternetState() error {
 	return nil
 }
 
-func (nc mockNetworkChecker) CheckGRPCServers() error {
+func (nc mockNetworkChecker) CheckGRPCServer() error {
 	return nil
 }
 
