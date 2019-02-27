@@ -31,11 +31,12 @@ UNIRIS project comes with several executables found in the `cmd` directory
 ## Architecture
 
 UNIRIS node software uses a separation of concerns designed by running multiple processes and services
+
 | Service name | Protocol | Public | Description |
 | ------------ | ---------| -------| ----------- |
-| API          | HTTP     | Yes    | Gateway providing endpoints for clients
-| Discovery    | GRPC     | Yes    | Peer to peer discovery using a built-in Gossip implementation
-| Transaction  | GRPC     | Yes    | Transaction storage/queries, mining (proof of work, validation confirmations) and lock 
+| API          | HTTP     | Yes    | Gateway providing endpoints for clients |
+| Discovery    | GRPC     | Yes    | Peer to peer discovery using a built-in Gossip implementation |
+| Transaction  | GRPC     | Yes    | Transaction storage/queries, mining (proof of work, validation confirmations) and lock |
 
 ## Running UNIRIS
 
