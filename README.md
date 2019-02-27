@@ -80,4 +80,4 @@ Please make sure your contributions adhere to our coding guidelines:
 
 ## Licence
 
-TBD
+GPL
