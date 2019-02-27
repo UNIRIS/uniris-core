@@ -108,9 +108,9 @@ func TestHandleAcknowledgeRequest(t *testing.T) {
 					GenerationTime:    time.Now().Unix(),
 				},
 				AppState: &api.PeerAppState{
-					CpuLoad:               "",
-					DiscoveredPeersNumber: 100,
-					FreeDiskSpace:         300,
+					CpuLoad:              "",
+					ReachablePeersNumber: 100,
+					FreeDiskSpace:        300,
 					GeoPosition: &api.PeerAppState_GeoCoordinates{
 						Latitude:  30.0,
 						Longitude: 20.0,

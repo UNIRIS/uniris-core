@@ -94,9 +94,9 @@ func localStatus(p Peer, seedAvgDiscovery int, nv NetworkChecker) (PeerStatus, e
 		return BootstrapingPeer, nil
 	}
 
-	if t := p.HeartbeatState().ElapsedHeartbeats(); t < BootstrapingMinTime && seedAvgDiscovery > p.AppState().DiscoveredPeersNumber() {
+	if t := p.HeartbeatState().ElapsedHeartbeats(); t < BootstrapingMinTime && seedAvgDiscovery > p.AppState().ReachablePeersNumber() {
 		return BootstrapingPeer, nil
-	} else if t < BootstrapingMinTime && seedAvgDiscovery <= p.AppState().DiscoveredPeersNumber() {
+	} else if t < BootstrapingMinTime && seedAvgDiscovery <= p.AppState().ReachablePeersNumber() {
 		return OkPeerStatus, nil
 	} else {
 		return OkPeerStatus, nil
@@ -107,13 +107,13 @@ func p2pFactor(peers []Peer) int {
 	return 1
 }
 
-func seedDiscoveryAverage(seeds []PeerIdentity, knownPeers []Peer) int {
+func seedReachableAverage(seeds []PeerIdentity, reachablePeers []Peer) int {
 	avg := 0
 	for i := 0; i < len(seeds); i++ {
 		ipseed := seeds[i].IP()
 
 		var foundPeer *Peer
-		for _, p := range knownPeers {
+		for _, p := range reachablePeers {
 			if p.Identity().IP().Equal(ipseed) {
 				foundPeer = &p
 				break
@@ -122,7 +122,7 @@ func seedDiscoveryAverage(seeds []PeerIdentity, knownPeers []Peer) int {
 		if foundPeer == nil {
 			continue
 		}
-		avg += foundPeer.AppState().DiscoveredPeersNumber()
+		avg += foundPeer.AppState().ReachablePeersNumber()
 	}
 	avg = avg / len(seeds)
 	return avg

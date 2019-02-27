@@ -242,13 +242,13 @@ func (p PeerPosition) String() string {
 
 //PeerAppState describes the state of peer and its metrics
 type PeerAppState struct {
-	status                PeerStatus
-	cpuLoad               string
-	freeDiskSpace         float64
-	version               string
-	geoPosition           PeerPosition
-	p2pFactor             int
-	discoveredPeersNumber int
+	status               PeerStatus
+	cpuLoad              string
+	freeDiskSpace        float64
+	version              string
+	geoPosition          PeerPosition
+	p2pFactor            int
+	reachablePeersNumber int
 }
 
 //Status returns the status of the peer
@@ -281,9 +281,9 @@ func (a PeerAppState) GeoPosition() PeerPosition {
 	return a.geoPosition
 }
 
-//DiscoveredPeersNumber returns the number of peers has been discovered
-func (a PeerAppState) DiscoveredPeersNumber() int {
-	return a.discoveredPeersNumber
+//ReachablePeersNumber returns the number of peers has been discovered and are Reachable
+func (a PeerAppState) ReachablePeersNumber() int {
+	return a.reachablePeersNumber
 }
 
 func (a PeerAppState) String() string {
@@ -294,12 +294,12 @@ func (a PeerAppState) String() string {
 		a.Version(),
 		a.GeoPosition().String(),
 		a.P2PFactor(),
-		a.DiscoveredPeersNumber(),
+		a.ReachablePeersNumber(),
 	)
 }
 
 //NewPeerAppState creates a new peer's app state
-func NewPeerAppState(ver string, stat PeerStatus, lon float64, lat float64, cpu string, disk float64, p2pfactor int, discoveredPeersNumber int) PeerAppState {
+func NewPeerAppState(ver string, stat PeerStatus, lon float64, lat float64, cpu string, disk float64, p2pfactor int, reachablePeersNumber int) PeerAppState {
 	return PeerAppState{
 		version: ver,
 		status:  stat,
@@ -307,18 +307,18 @@ func NewPeerAppState(ver string, stat PeerStatus, lon float64, lat float64, cpu 
 			lon: lon,
 			lat: lat,
 		},
-		cpuLoad:               cpu,
-		freeDiskSpace:         disk,
-		p2pFactor:             p2pfactor,
-		discoveredPeersNumber: discoveredPeersNumber,
+		cpuLoad:              cpu,
+		freeDiskSpace:        disk,
+		p2pFactor:            p2pfactor,
+		reachablePeersNumber: reachablePeersNumber,
 	}
 }
 
 //Refresh the peer state
-func (a *PeerAppState) refresh(status PeerStatus, disk float64, cpu string, p2pFactor int, discoveryPeersNb int) {
+func (a *PeerAppState) refresh(status PeerStatus, disk float64, cpu string, p2pFactor int, reachablePeersNb int) {
 	a.cpuLoad = cpu
 	a.status = status
 	a.freeDiskSpace = disk
 	a.p2pFactor = p2pFactor
-	a.discoveredPeersNumber = discoveryPeersNb
+	a.reachablePeersNumber = reachablePeersNb
 }

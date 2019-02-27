@@ -26,17 +26,22 @@ func Gossip(self Peer, seeds []PeerIdentity, db Database, netCheck NetworkChecke
 		return Cycle{}, err
 	}
 
-	//Refresh ourself and append to the list of discovered peers
-	self, err = updateSelf(self, peers, seeds, db, netCheck, sysR)
-	if err != nil {
-		return Cycle{}, err
-	}
-	peers = append(peers, self)
-
 	reaches, err := reachablePeers(db)
 	if err != nil {
 		return Cycle{}, err
 	}
+
+	reachesid, err := reachablePeersIdentity(db)
+	if err != nil {
+		return Cycle{}, err
+	}
+
+	//Refresh ourself and append to the list of discovered peers
+	self, err = updateSelf(self, reaches, seeds, db, netCheck, sysR)
+	if err != nil {
+		return Cycle{}, err
+	}
+	peers = append(peers, self)
 
 	unreaches, err := db.UnreachablePeers()
 	if err != nil {
@@ -45,7 +50,7 @@ func Gossip(self Peer, seeds []PeerIdentity, db Database, netCheck NetworkChecke
 
 	//Start the gossip Cycle
 	c := Cycle{}
-	if err := c.run(self, msg, seeds, peers, reaches, unreaches); err != nil {
+	if err := c.run(self, msg, seeds, peers, reachesid, unreaches); err != nil {
 		return Cycle{}, err
 	}
 
@@ -63,8 +68,8 @@ func Gossip(self Peer, seeds []PeerIdentity, db Database, netCheck NetworkChecke
 	return c, nil
 }
 
-func updateSelf(self Peer, discoveries []Peer, seeds []PeerIdentity, db DatabaseWriter, netCheck NetworkChecker, sysR SystemReader) (Peer, error) {
-	status, err := localStatus(self, seedDiscoveryAverage(seeds, discoveries), netCheck)
+func updateSelf(self Peer, reachables []Peer, seeds []PeerIdentity, db DatabaseWriter, netCheck NetworkChecker, sysR SystemReader) (Peer, error) {
+	status, err := localStatus(self, seedReachableAverage(seeds, reachables), netCheck)
 	if err != nil {
 		return self, err
 	}
@@ -79,7 +84,7 @@ func updateSelf(self Peer, discoveries []Peer, seeds []PeerIdentity, db Database
 		}
 	}
 
-	self.SelfRefresh(status, space, cpu, p2pFactor(discoveries), len(discoveries))
+	self.SelfRefresh(status, space, cpu, p2pFactor(reachables), len(reachables))
 	return self, nil
 }
 

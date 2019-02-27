@@ -146,18 +146,18 @@ func (r discoveryDb) fetchList(key string) ([]map[string]string, error) {
 
 func formatPeerToHash(p discovery.Peer) map[string]interface{} {
 	return map[string]interface{}{
-		"publicKey":             p.Identity().PublicKey(),
-		"port":                  strconv.Itoa(p.Identity().Port()),
-		"ip":                    p.Identity().IP().String(),
-		"generationTime":        strconv.Itoa(int(p.HeartbeatState().GenerationTime().Unix())),
-		"elapsedHeartbeats":     strconv.Itoa(int(p.HeartbeatState().ElapsedHeartbeats())),
-		"status":                string(p.AppState().Status()),
-		"cpuLoad":               p.AppState().CPULoad(),
-		"freeDiskSpace":         fmt.Sprintf("%f", p.AppState().FreeDiskSpace()),
-		"version":               p.AppState().Version(),
-		"geoPosition":           fmt.Sprintf("%f;%f", p.AppState().GeoPosition().Latitude(), p.AppState().GeoPosition().Longitude()),
-		"p2pFactor":             string(p.AppState().P2PFactor()),
-		"discoveredPeersNumber": fmt.Sprintf("%d", p.AppState().DiscoveredPeersNumber()),
+		"publicKey":            p.Identity().PublicKey(),
+		"port":                 strconv.Itoa(p.Identity().Port()),
+		"ip":                   p.Identity().IP().String(),
+		"generationTime":       strconv.Itoa(int(p.HeartbeatState().GenerationTime().Unix())),
+		"elapsedHeartbeats":    strconv.Itoa(int(p.HeartbeatState().ElapsedHeartbeats())),
+		"status":               string(p.AppState().Status()),
+		"cpuLoad":              p.AppState().CPULoad(),
+		"freeDiskSpace":        fmt.Sprintf("%f", p.AppState().FreeDiskSpace()),
+		"version":              p.AppState().Version(),
+		"geoPosition":          fmt.Sprintf("%f;%f", p.AppState().GeoPosition().Latitude(), p.AppState().GeoPosition().Longitude()),
+		"p2pFactor":            string(p.AppState().P2PFactor()),
+		"reachablePeersNumber": fmt.Sprintf("%d", p.AppState().ReachablePeersNumber()),
 	}
 }
 
@@ -201,12 +201,12 @@ func formatHashToPeer(hash map[string]string) discovery.Peer {
 	lat, _ := strconv.ParseFloat(posArr[0], 64)
 	lon, _ := strconv.ParseFloat(posArr[1], 64)
 
-	dpn, _ := strconv.Atoi(hash["discoveredPeersNumber"])
+	rpn, _ := strconv.Atoi(hash["reachablePeersNumber"])
 
 	p := discovery.NewDiscoveredPeer(
 		discovery.NewPeerIdentity(ip, port, pbKey),
 		discovery.NewPeerHeartbeatState(generationTime, elpased),
-		discovery.NewPeerAppState(version, status, lat, lon, cpuLoad, freeDiskSpace, p2pFactor, dpn),
+		discovery.NewPeerAppState(version, status, lat, lon, cpuLoad, freeDiskSpace, p2pFactor, rpn),
 	)
 	return p
 }

@@ -64,7 +64,7 @@ message PeerAppState {
     string version = 4;
     GeoCoordinates geo_position = 5;
     int32 p2p_factor = 6;
-    int32 discovered_peers_number = 7;
+    int32 reachable_peers_number = 7;
 
     message GeoCoordinates {
         float latitude = 1;

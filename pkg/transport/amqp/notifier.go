@@ -45,8 +45,8 @@ func (n notifier) NotifyDiscovery(p discovery.Peer) error {
 				"latitude":  p.AppState().GeoPosition().Latitude(),
 				"longitude": p.AppState().GeoPosition().Longitude(),
 			},
-			"p2p_factor":             p.AppState().P2PFactor(),
-			"discovered_peer_number": p.AppState().DiscoveredPeersNumber(),
+			"p2p_factor":            p.AppState().P2PFactor(),
+			"reachable_peer_number": p.AppState().ReachablePeersNumber(),
 		},
 	})
 	if err != nil {

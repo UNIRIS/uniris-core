@@ -3,9 +3,11 @@
 
 package api
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
+import (
+	fmt "fmt"
+	proto "github.com/golang/protobuf/proto"
+	math "math"
+)
 
 import (
 	context "golang.org/x/net/context"
@@ -36,6 +38,7 @@ var TransactionType_name = map[int32]string{
 	1: "ID",
 	2: "CONTRACT_CREATION",
 }
+
 var TransactionType_value = map[string]int32{
 	"KEYCHAIN":          0,
 	"ID":                1,
@@ -45,8 +48,9 @@ var TransactionType_value = map[string]int32{
 func (x TransactionType) String() string {
 	return proto.EnumName(TransactionType_name, int32(x))
 }
+
 func (TransactionType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{0}
+	return fileDescriptor_2cc4e03d2c28c490, []int{0}
 }
 
 type TransactionStatus int32
@@ -64,6 +68,7 @@ var TransactionStatus_name = map[int32]string{
 	2: "SUCCESS",
 	3: "FAILURE",
 }
+
 var TransactionStatus_value = map[string]int32{
 	"UNKNOWN":     0,
 	"IN_PROGRESS": 1,
@@ -74,8 +79,9 @@ var TransactionStatus_value = map[string]int32{
 func (x TransactionStatus) String() string {
 	return proto.EnumName(TransactionStatus_name, int32(x))
 }
+
 func (TransactionStatus) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{1}
+	return fileDescriptor_2cc4e03d2c28c490, []int{1}
 }
 
 type Validation_ValidationStatus int32
@@ -89,6 +95,7 @@ var Validation_ValidationStatus_name = map[int32]string{
 	0: "NO",
 	1: "OK",
 }
+
 var Validation_ValidationStatus_value = map[string]int32{
 	"NO": 0,
 	"OK": 1,
@@ -97,8 +104,9 @@ var Validation_ValidationStatus_value = map[string]int32{
 func (x Validation_ValidationStatus) String() string {
 	return proto.EnumName(Validation_ValidationStatus_name, int32(x))
 }
+
 func (Validation_ValidationStatus) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{15, 0}
+	return fileDescriptor_2cc4e03d2c28c490, []int{15, 0}
 }
 
 type GetLastTransactionRequest struct {
@@ -115,16 +123,17 @@ func (m *GetLastTransactionRequest) Reset()         { *m = GetLastTransactionReq
 func (m *GetLastTransactionRequest) String() string { return proto.CompactTextString(m) }
 func (*GetLastTransactionRequest) ProtoMessage()    {}
 func (*GetLastTransactionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{0}
+	return fileDescriptor_2cc4e03d2c28c490, []int{0}
 }
+
 func (m *GetLastTransactionRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetLastTransactionRequest.Unmarshal(m, b)
 }
 func (m *GetLastTransactionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetLastTransactionRequest.Marshal(b, m, deterministic)
 }
-func (dst *GetLastTransactionRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetLastTransactionRequest.Merge(dst, src)
+func (m *GetLastTransactionRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetLastTransactionRequest.Merge(m, src)
 }
 func (m *GetLastTransactionRequest) XXX_Size() int {
 	return xxx_messageInfo_GetLastTransactionRequest.Size(m)
@@ -176,16 +185,17 @@ func (m *GetLastTransactionResponse) Reset()         { *m = GetLastTransactionRe
 func (m *GetLastTransactionResponse) String() string { return proto.CompactTextString(m) }
 func (*GetLastTransactionResponse) ProtoMessage()    {}
 func (*GetLastTransactionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{1}
+	return fileDescriptor_2cc4e03d2c28c490, []int{1}
 }
+
 func (m *GetLastTransactionResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetLastTransactionResponse.Unmarshal(m, b)
 }
 func (m *GetLastTransactionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetLastTransactionResponse.Marshal(b, m, deterministic)
 }
-func (dst *GetLastTransactionResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetLastTransactionResponse.Merge(dst, src)
+func (m *GetLastTransactionResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetLastTransactionResponse.Merge(m, src)
 }
 func (m *GetLastTransactionResponse) XXX_Size() int {
 	return xxx_messageInfo_GetLastTransactionResponse.Size(m)
@@ -230,16 +240,17 @@ func (m *GetTransactionStatusRequest) Reset()         { *m = GetTransactionStatu
 func (m *GetTransactionStatusRequest) String() string { return proto.CompactTextString(m) }
 func (*GetTransactionStatusRequest) ProtoMessage()    {}
 func (*GetTransactionStatusRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{2}
+	return fileDescriptor_2cc4e03d2c28c490, []int{2}
 }
+
 func (m *GetTransactionStatusRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetTransactionStatusRequest.Unmarshal(m, b)
 }
 func (m *GetTransactionStatusRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetTransactionStatusRequest.Marshal(b, m, deterministic)
 }
-func (dst *GetTransactionStatusRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetTransactionStatusRequest.Merge(dst, src)
+func (m *GetTransactionStatusRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetTransactionStatusRequest.Merge(m, src)
 }
 func (m *GetTransactionStatusRequest) XXX_Size() int {
 	return xxx_messageInfo_GetTransactionStatusRequest.Size(m)
@@ -284,16 +295,17 @@ func (m *GetTransactionStatusResponse) Reset()         { *m = GetTransactionStat
 func (m *GetTransactionStatusResponse) String() string { return proto.CompactTextString(m) }
 func (*GetTransactionStatusResponse) ProtoMessage()    {}
 func (*GetTransactionStatusResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{3}
+	return fileDescriptor_2cc4e03d2c28c490, []int{3}
 }
+
 func (m *GetTransactionStatusResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetTransactionStatusResponse.Unmarshal(m, b)
 }
 func (m *GetTransactionStatusResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetTransactionStatusResponse.Marshal(b, m, deterministic)
 }
-func (dst *GetTransactionStatusResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetTransactionStatusResponse.Merge(dst, src)
+func (m *GetTransactionStatusResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetTransactionStatusResponse.Merge(m, src)
 }
 func (m *GetTransactionStatusResponse) XXX_Size() int {
 	return xxx_messageInfo_GetTransactionStatusResponse.Size(m)
@@ -339,16 +351,17 @@ func (m *StoreTransactionRequest) Reset()         { *m = StoreTransactionRequest
 func (m *StoreTransactionRequest) String() string { return proto.CompactTextString(m) }
 func (*StoreTransactionRequest) ProtoMessage()    {}
 func (*StoreTransactionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{4}
+	return fileDescriptor_2cc4e03d2c28c490, []int{4}
 }
+
 func (m *StoreTransactionRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_StoreTransactionRequest.Unmarshal(m, b)
 }
 func (m *StoreTransactionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_StoreTransactionRequest.Marshal(b, m, deterministic)
 }
-func (dst *StoreTransactionRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_StoreTransactionRequest.Merge(dst, src)
+func (m *StoreTransactionRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StoreTransactionRequest.Merge(m, src)
 }
 func (m *StoreTransactionRequest) XXX_Size() int {
 	return xxx_messageInfo_StoreTransactionRequest.Size(m)
@@ -399,16 +412,17 @@ func (m *StoreTransactionResponse) Reset()         { *m = StoreTransactionRespon
 func (m *StoreTransactionResponse) String() string { return proto.CompactTextString(m) }
 func (*StoreTransactionResponse) ProtoMessage()    {}
 func (*StoreTransactionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{5}
+	return fileDescriptor_2cc4e03d2c28c490, []int{5}
 }
+
 func (m *StoreTransactionResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_StoreTransactionResponse.Unmarshal(m, b)
 }
 func (m *StoreTransactionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_StoreTransactionResponse.Marshal(b, m, deterministic)
 }
-func (dst *StoreTransactionResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_StoreTransactionResponse.Merge(dst, src)
+func (m *StoreTransactionResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StoreTransactionResponse.Merge(m, src)
 }
 func (m *StoreTransactionResponse) XXX_Size() int {
 	return xxx_messageInfo_StoreTransactionResponse.Size(m)
@@ -448,16 +462,17 @@ func (m *LockTransactionRequest) Reset()         { *m = LockTransactionRequest{}
 func (m *LockTransactionRequest) String() string { return proto.CompactTextString(m) }
 func (*LockTransactionRequest) ProtoMessage()    {}
 func (*LockTransactionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{6}
+	return fileDescriptor_2cc4e03d2c28c490, []int{6}
 }
+
 func (m *LockTransactionRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LockTransactionRequest.Unmarshal(m, b)
 }
 func (m *LockTransactionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_LockTransactionRequest.Marshal(b, m, deterministic)
 }
-func (dst *LockTransactionRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_LockTransactionRequest.Merge(dst, src)
+func (m *LockTransactionRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LockTransactionRequest.Merge(m, src)
 }
 func (m *LockTransactionRequest) XXX_Size() int {
 	return xxx_messageInfo_LockTransactionRequest.Size(m)
@@ -515,16 +530,17 @@ func (m *LockTransactionResponse) Reset()         { *m = LockTransactionResponse
 func (m *LockTransactionResponse) String() string { return proto.CompactTextString(m) }
 func (*LockTransactionResponse) ProtoMessage()    {}
 func (*LockTransactionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{7}
+	return fileDescriptor_2cc4e03d2c28c490, []int{7}
 }
+
 func (m *LockTransactionResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LockTransactionResponse.Unmarshal(m, b)
 }
 func (m *LockTransactionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_LockTransactionResponse.Marshal(b, m, deterministic)
 }
-func (dst *LockTransactionResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_LockTransactionResponse.Merge(dst, src)
+func (m *LockTransactionResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LockTransactionResponse.Merge(m, src)
 }
 func (m *LockTransactionResponse) XXX_Size() int {
 	return xxx_messageInfo_LockTransactionResponse.Size(m)
@@ -563,16 +579,17 @@ func (m *LeadTransactionMiningRequest) Reset()         { *m = LeadTransactionMin
 func (m *LeadTransactionMiningRequest) String() string { return proto.CompactTextString(m) }
 func (*LeadTransactionMiningRequest) ProtoMessage()    {}
 func (*LeadTransactionMiningRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{8}
+	return fileDescriptor_2cc4e03d2c28c490, []int{8}
 }
+
 func (m *LeadTransactionMiningRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LeadTransactionMiningRequest.Unmarshal(m, b)
 }
 func (m *LeadTransactionMiningRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_LeadTransactionMiningRequest.Marshal(b, m, deterministic)
 }
-func (dst *LeadTransactionMiningRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_LeadTransactionMiningRequest.Merge(dst, src)
+func (m *LeadTransactionMiningRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LeadTransactionMiningRequest.Merge(m, src)
 }
 func (m *LeadTransactionMiningRequest) XXX_Size() int {
 	return xxx_messageInfo_LeadTransactionMiningRequest.Size(m)
@@ -623,16 +640,17 @@ func (m *LeadTransactionMiningResponse) Reset()         { *m = LeadTransactionMi
 func (m *LeadTransactionMiningResponse) String() string { return proto.CompactTextString(m) }
 func (*LeadTransactionMiningResponse) ProtoMessage()    {}
 func (*LeadTransactionMiningResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{9}
+	return fileDescriptor_2cc4e03d2c28c490, []int{9}
 }
+
 func (m *LeadTransactionMiningResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LeadTransactionMiningResponse.Unmarshal(m, b)
 }
 func (m *LeadTransactionMiningResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_LeadTransactionMiningResponse.Marshal(b, m, deterministic)
 }
-func (dst *LeadTransactionMiningResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_LeadTransactionMiningResponse.Merge(dst, src)
+func (m *LeadTransactionMiningResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LeadTransactionMiningResponse.Merge(m, src)
 }
 func (m *LeadTransactionMiningResponse) XXX_Size() int {
 	return xxx_messageInfo_LeadTransactionMiningResponse.Size(m)
@@ -671,16 +689,17 @@ func (m *ConfirmTransactionValidationRequest) Reset()         { *m = ConfirmTran
 func (m *ConfirmTransactionValidationRequest) String() string { return proto.CompactTextString(m) }
 func (*ConfirmTransactionValidationRequest) ProtoMessage()    {}
 func (*ConfirmTransactionValidationRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{10}
+	return fileDescriptor_2cc4e03d2c28c490, []int{10}
 }
+
 func (m *ConfirmTransactionValidationRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ConfirmTransactionValidationRequest.Unmarshal(m, b)
 }
 func (m *ConfirmTransactionValidationRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ConfirmTransactionValidationRequest.Marshal(b, m, deterministic)
 }
-func (dst *ConfirmTransactionValidationRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ConfirmTransactionValidationRequest.Merge(dst, src)
+func (m *ConfirmTransactionValidationRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ConfirmTransactionValidationRequest.Merge(m, src)
 }
 func (m *ConfirmTransactionValidationRequest) XXX_Size() int {
 	return xxx_messageInfo_ConfirmTransactionValidationRequest.Size(m)
@@ -732,16 +751,17 @@ func (m *ConfirmTransactionValidationResponse) Reset()         { *m = ConfirmTra
 func (m *ConfirmTransactionValidationResponse) String() string { return proto.CompactTextString(m) }
 func (*ConfirmTransactionValidationResponse) ProtoMessage()    {}
 func (*ConfirmTransactionValidationResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{11}
+	return fileDescriptor_2cc4e03d2c28c490, []int{11}
 }
+
 func (m *ConfirmTransactionValidationResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ConfirmTransactionValidationResponse.Unmarshal(m, b)
 }
 func (m *ConfirmTransactionValidationResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ConfirmTransactionValidationResponse.Marshal(b, m, deterministic)
 }
-func (dst *ConfirmTransactionValidationResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ConfirmTransactionValidationResponse.Merge(dst, src)
+func (m *ConfirmTransactionValidationResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ConfirmTransactionValidationResponse.Merge(m, src)
 }
 func (m *ConfirmTransactionValidationResponse) XXX_Size() int {
 	return xxx_messageInfo_ConfirmTransactionValidationResponse.Size(m)
@@ -785,16 +805,17 @@ func (m *SharedKeyPair) Reset()         { *m = SharedKeyPair{} }
 func (m *SharedKeyPair) String() string { return proto.CompactTextString(m) }
 func (*SharedKeyPair) ProtoMessage()    {}
 func (*SharedKeyPair) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{12}
+	return fileDescriptor_2cc4e03d2c28c490, []int{12}
 }
+
 func (m *SharedKeyPair) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SharedKeyPair.Unmarshal(m, b)
 }
 func (m *SharedKeyPair) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SharedKeyPair.Marshal(b, m, deterministic)
 }
-func (dst *SharedKeyPair) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SharedKeyPair.Merge(dst, src)
+func (m *SharedKeyPair) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SharedKeyPair.Merge(m, src)
 }
 func (m *SharedKeyPair) XXX_Size() int {
 	return xxx_messageInfo_SharedKeyPair.Size(m)
@@ -838,16 +859,17 @@ func (m *Transaction) Reset()         { *m = Transaction{} }
 func (m *Transaction) String() string { return proto.CompactTextString(m) }
 func (*Transaction) ProtoMessage()    {}
 func (*Transaction) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{13}
+	return fileDescriptor_2cc4e03d2c28c490, []int{13}
 }
+
 func (m *Transaction) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Transaction.Unmarshal(m, b)
 }
 func (m *Transaction) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Transaction.Marshal(b, m, deterministic)
 }
-func (dst *Transaction) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Transaction.Merge(dst, src)
+func (m *Transaction) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Transaction.Merge(m, src)
 }
 func (m *Transaction) XXX_Size() int {
 	return xxx_messageInfo_Transaction.Size(m)
@@ -934,16 +956,17 @@ func (m *MasterValidation) Reset()         { *m = MasterValidation{} }
 func (m *MasterValidation) String() string { return proto.CompactTextString(m) }
 func (*MasterValidation) ProtoMessage()    {}
 func (*MasterValidation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{14}
+	return fileDescriptor_2cc4e03d2c28c490, []int{14}
 }
+
 func (m *MasterValidation) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MasterValidation.Unmarshal(m, b)
 }
 func (m *MasterValidation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_MasterValidation.Marshal(b, m, deterministic)
 }
-func (dst *MasterValidation) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MasterValidation.Merge(dst, src)
+func (m *MasterValidation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MasterValidation.Merge(m, src)
 }
 func (m *MasterValidation) XXX_Size() int {
 	return xxx_messageInfo_MasterValidation.Size(m)
@@ -989,16 +1012,17 @@ func (m *Validation) Reset()         { *m = Validation{} }
 func (m *Validation) String() string { return proto.CompactTextString(m) }
 func (*Validation) ProtoMessage()    {}
 func (*Validation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{15}
+	return fileDescriptor_2cc4e03d2c28c490, []int{15}
 }
+
 func (m *Validation) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Validation.Unmarshal(m, b)
 }
 func (m *Validation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Validation.Marshal(b, m, deterministic)
 }
-func (dst *Validation) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Validation.Merge(dst, src)
+func (m *Validation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Validation.Merge(m, src)
 }
 func (m *Validation) XXX_Size() int {
 	return xxx_messageInfo_Validation.Size(m)
@@ -1050,16 +1074,17 @@ func (m *MinedTransaction) Reset()         { *m = MinedTransaction{} }
 func (m *MinedTransaction) String() string { return proto.CompactTextString(m) }
 func (*MinedTransaction) ProtoMessage()    {}
 func (*MinedTransaction) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_8479103c06d59dd0, []int{16}
+	return fileDescriptor_2cc4e03d2c28c490, []int{16}
 }
+
 func (m *MinedTransaction) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MinedTransaction.Unmarshal(m, b)
 }
 func (m *MinedTransaction) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_MinedTransaction.Marshal(b, m, deterministic)
 }
-func (dst *MinedTransaction) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MinedTransaction.Merge(dst, src)
+func (m *MinedTransaction) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MinedTransaction.Merge(m, src)
 }
 func (m *MinedTransaction) XXX_Size() int {
 	return xxx_messageInfo_MinedTransaction.Size(m)
@@ -1092,6 +1117,9 @@ func (m *MinedTransaction) GetConfirmValidations() []*Validation {
 }
 
 func init() {
+	proto.RegisterEnum("api.TransactionType", TransactionType_name, TransactionType_value)
+	proto.RegisterEnum("api.TransactionStatus", TransactionStatus_name, TransactionStatus_value)
+	proto.RegisterEnum("api.Validation_ValidationStatus", Validation_ValidationStatus_name, Validation_ValidationStatus_value)
 	proto.RegisterType((*GetLastTransactionRequest)(nil), "api.GetLastTransactionRequest")
 	proto.RegisterType((*GetLastTransactionResponse)(nil), "api.GetLastTransactionResponse")
 	proto.RegisterType((*GetTransactionStatusRequest)(nil), "api.GetTransactionStatusRequest")
@@ -1110,9 +1138,6 @@ func init() {
 	proto.RegisterType((*MasterValidation)(nil), "api.MasterValidation")
 	proto.RegisterType((*Validation)(nil), "api.Validation")
 	proto.RegisterType((*MinedTransaction)(nil), "api.MinedTransaction")
-	proto.RegisterEnum("api.TransactionType", TransactionType_name, TransactionType_value)
-	proto.RegisterEnum("api.TransactionStatus", TransactionStatus_name, TransactionStatus_value)
-	proto.RegisterEnum("api.Validation_ValidationStatus", Validation_ValidationStatus_name, Validation_ValidationStatus_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1352,9 +1377,9 @@ var _TransactionService_serviceDesc = grpc.ServiceDesc{
 	Metadata: "transaction.proto",
 }
 
-func init() { proto.RegisterFile("transaction.proto", fileDescriptor_transaction_8479103c06d59dd0) }
+func init() { proto.RegisterFile("transaction.proto", fileDescriptor_2cc4e03d2c28c490) }
 
-var fileDescriptor_transaction_8479103c06d59dd0 = []byte{
+var fileDescriptor_2cc4e03d2c28c490 = []byte{
 	// 1122 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x57, 0x4d, 0x6f, 0x23, 0x45,
 	0x13, 0x7e, 0xdb, 0xe3, 0x24, 0xeb, 0xf2, 0x9b, 0x64, 0xdc, 0xf9, 0x58, 0xaf, 0xd7, 0x01, 0x33,

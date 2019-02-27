@@ -143,7 +143,7 @@ Scenario: Avergage number of discoveries with 3 seeds as the only known peers
 	When I want to the retrieve the avergage of number discovered peers
 	Then I get 6
 */
-func TestAvergageDiscoveriesWithOnlySeeds(t *testing.T) {
+func TestAvergageReachableWithOnlySeeds(t *testing.T) {
 
 	seed1 := NewPeerIdentity(net.ParseIP("10.0.0.1"), 3001, "key1")
 	seed2 := NewPeerIdentity(net.ParseIP("10.0.0.2"), 3002, "key2")
@@ -167,7 +167,7 @@ func TestAvergageDiscoveriesWithOnlySeeds(t *testing.T) {
 		NewPeerAppState("0.0", OkPeerStatus, 10.0, 3.0, "0.0.0", 0.0, 0, 7),
 	)
 
-	avg := seedDiscoveryAverage([]PeerIdentity{seed1, seed2, seed3}, []Peer{p1, p2, p3})
+	avg := seedReachableAverage([]PeerIdentity{seed1, seed2, seed3}, []Peer{p1, p2, p3})
 	assert.Equal(t, 6, avg)
 }
 
@@ -207,7 +207,7 @@ func TestAvergageDiscoveriesWithSeedAndDiscoveries(t *testing.T) {
 		NewPeerAppState("0.0", OkPeerStatus, 40.0, 3.0, "0.0.0", 0.0, 0, 5),
 	)
 
-	avg := seedDiscoveryAverage([]PeerIdentity{seed1, seed2, seed3}, []Peer{p1, p2, p3, p4})
+	avg := seedReachableAverage([]PeerIdentity{seed1, seed2, seed3}, []Peer{p1, p2, p3, p4})
 	assert.Equal(t, 5, avg)
 }
 

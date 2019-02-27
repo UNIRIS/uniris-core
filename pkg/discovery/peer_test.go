@@ -40,7 +40,7 @@ func TestRefreshPeer(t *testing.T) {
 	assert.Equal(t, OkPeerStatus, p.AppState().Status())
 	assert.Equal(t, 600.10, p.AppState().FreeDiskSpace())
 	assert.Equal(t, "300.200.100", p.AppState().CPULoad())
-	assert.Equal(t, 1, p.AppState().DiscoveredPeersNumber())
+	assert.Equal(t, 1, p.AppState().ReachablePeersNumber())
 }
 
 /*
@@ -64,12 +64,12 @@ func TestCreateDiscoveredPeer(t *testing.T) {
 
 	appState := PeerAppState{
 
-		freeDiskSpace:         200.10,
-		status:                BootstrapingPeer,
-		cpuLoad:               "300.10.200",
-		version:               "1.0.0",
-		p2pFactor:             2,
-		discoveredPeersNumber: 10,
+		freeDiskSpace:        200.10,
+		status:               BootstrapingPeer,
+		cpuLoad:              "300.10.200",
+		version:              "1.0.0",
+		p2pFactor:            2,
+		reachablePeersNumber: 10,
 	}
 
 	p := NewDiscoveredPeer(identity, hbState, appState)
@@ -82,7 +82,7 @@ func TestCreateDiscoveredPeer(t *testing.T) {
 	assert.Equal(t, 200.10, p.AppState().FreeDiskSpace())
 	assert.Equal(t, BootstrapingPeer, p.AppState().Status())
 	assert.Equal(t, "1.0.0", p.AppState().Version())
-	assert.Equal(t, 10, p.AppState().DiscoveredPeersNumber())
+	assert.Equal(t, 10, p.AppState().ReachablePeersNumber())
 	assert.False(t, p.Self())
 }
 
