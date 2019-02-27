@@ -105,9 +105,9 @@ func addReaches(c Cycle, db Database, n Notifier) error {
 			if err := db.RemoveUnreachablePeer(p); err != nil {
 				return err
 			}
-		}
-		if err := n.NotifyReachable(p); err != nil {
-			return err
+			if err := n.NotifyReachable(p); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

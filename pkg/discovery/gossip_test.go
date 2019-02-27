@@ -70,6 +70,10 @@ func TestAddReachable(t *testing.T) {
 	db := &mockDatabase{}
 	notif := &mockNotifier{}
 
+	err := db.WriteUnreachablePeer(NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"))
+	assert.Nil(t, err)
+	assert.Len(t, db.unreachablePeers, 1)
+
 	c := Cycle{
 		Reaches: []PeerIdentity{
 			NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
@@ -90,7 +94,9 @@ func TestAddReachbleAfterBeingUnreachale(t *testing.T) {
 	db := &mockDatabase{}
 	notif := &mockNotifier{}
 
-	db.WriteUnreachablePeer(NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"))
+	err := db.WriteUnreachablePeer(NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"))
+	assert.Nil(t, err)
+	assert.Len(t, db.unreachablePeers, 1)
 
 	c := Cycle{
 		Reaches: []PeerIdentity{
