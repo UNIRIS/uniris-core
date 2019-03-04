@@ -1,10 +1,12 @@
 package rpc
 
 import (
+	"errors"
 	"net"
 	"time"
 
 	"github.com/uniris/uniris-core/pkg/chain"
+	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/shared"
 
 	"github.com/uniris/uniris-core/pkg/discovery"
@@ -81,19 +83,28 @@ func formatPeerDiscovered(p *api.PeerDiscovered) discovery.Peer {
 
 func formatTransaction(tx *api.Transaction) (chain.Transaction, error) {
 
-	propSharedKeys, err := shared.NewEmitterKeyPair(tx.SharedKeysEmitterProposal.EncryptedPrivateKey, tx.SharedKeysEmitterProposal.PublicKey)
+	propPubKey, err := crypto.ParsePublicKey(tx.SharedKeysEmitterProposal.PublicKey)
+	if err != nil {
+		return chain.Transaction{}, nil
+	}
+	propSharedKeys, err := shared.NewEmitterKeyPair(tx.SharedKeysEmitterProposal.EncryptedPrivateKey, propPubKey)
 	if err != nil {
 		return chain.Transaction{}, err
 	}
 
-	data := make(map[string]string, 0)
+	data := make(map[string][]byte, 0)
 	for k, v := range tx.Data {
 		data[k] = v
 	}
 
+	txPubKey, err := crypto.ParsePublicKey(tx.PublicKey)
+	if err != nil {
+		return chain.Transaction{}, errors.New("invalid public key")
+	}
+
 	return chain.NewTransaction(tx.Address, chain.TransactionType(tx.Type), data,
 		time.Unix(tx.Timestamp, 0),
-		tx.PublicKey,
+		txPubKey,
 		propSharedKeys,
 		tx.Signature,
 		tx.EmitterSignature,
@@ -138,77 +149,154 @@ func formatMasterValidation(mv *api.MasterValidation) (chain.MasterValidation, e
 		return chain.MasterValidation{}, err
 	}
 
-	wHeaders := formatNodeHeaders(mv.WelcomeHeaders)
-	vHeaders := formatNodeHeaders(mv.ValidationHeaders)
-	sHeaders := formatNodeHeaders(mv.StorageHeaders)
+	wHeaders, err := formatNodeHeaders(mv.WelcomeHeaders)
+	if err != nil {
+		return chain.MasterValidation{}, err
+	}
+	vHeaders, err := formatNodeHeaders(mv.ValidationHeaders)
+	if err != nil {
+		return chain.MasterValidation{}, err
+	}
+	sHeaders, err := formatNodeHeaders(mv.StorageHeaders)
+	if err != nil {
+		return chain.MasterValidation{}, err
+	}
+	powKey, err := crypto.ParsePublicKey(mv.ProofOfWork)
+	if err != nil {
+		return chain.MasterValidation{}, errors.New("invalid proof of work public key")
+	}
 
-	masterValidation, err := chain.NewMasterValidation(mv.PreviousValidationNodes, mv.ProofOfWork, preValid, wHeaders, vHeaders, sHeaders)
+	previousNodeKeys := make([]crypto.PublicKey, 0)
+	for _, prevNodeKey := range mv.PreviousTransactionNodes {
+		nodePubKey, err := crypto.ParsePublicKey(prevNodeKey)
+		if err != nil {
+			return chain.MasterValidation{}, errors.New("invalid previous transaction node public key")
+		}
+		previousNodeKeys = append(previousNodeKeys, nodePubKey)
+	}
+
+	masterValidation, err := chain.NewMasterValidation(previousNodeKeys, powKey, preValid, wHeaders, vHeaders, sHeaders)
 	return masterValidation, err
 }
 
-func formatAPIValidation(v chain.Validation) *api.Validation {
+func formatAPIValidation(v chain.Validation) (*api.Validation, error) {
+
+	nodeKey, err := v.PublicKey().Marshal()
+	if err != nil {
+		return nil, err
+	}
+
 	return &api.Validation{
-		PublicKey: v.PublicKey(),
+		PublicKey: nodeKey,
 		Signature: v.Signature(),
 		Status:    api.Validation_ValidationStatus(v.Status()),
 		Timestamp: v.Timestamp().Unix(),
-	}
+	}, nil
 }
 
 func formatValidation(v *api.Validation) (chain.Validation, error) {
-	return chain.NewValidation(chain.ValidationStatus(v.Status), time.Unix(v.Timestamp, 0), v.PublicKey, v.Signature)
+	nodeKey, err := crypto.ParsePublicKey(v.PublicKey)
+	if err != nil {
+		return chain.Validation{}, errors.New("validation public key is invalid")
+	}
+
+	return chain.NewValidation(chain.ValidationStatus(v.Status), time.Unix(v.Timestamp, 0), nodeKey, v.Signature)
 }
 
-func formatAPITransaction(tx chain.Transaction) *api.Transaction {
+func formatAPITransaction(tx chain.Transaction) (*api.Transaction, error) {
+
+	txPub, err := tx.PublicKey().Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	propPub, err := tx.EmitterSharedKeyProposal().PublicKey().Marshal()
+	if err != nil {
+		return nil, err
+	}
+
 	return &api.Transaction{
 		Address:          tx.Address(),
 		Data:             tx.Data(),
 		Type:             api.TransactionType(tx.TransactionType()),
-		PublicKey:        tx.PublicKey(),
+		PublicKey:        txPub,
 		Signature:        tx.Signature(),
 		EmitterSignature: tx.EmitterSignature(),
 		Timestamp:        tx.Timestamp().Unix(),
 		TransactionHash:  tx.TransactionHash(),
 		SharedKeysEmitterProposal: &api.SharedKeyPair{
 			EncryptedPrivateKey: tx.EmitterSharedKeyProposal().EncryptedPrivateKey(),
-			PublicKey:           tx.EmitterSharedKeyProposal().PublicKey(),
+			PublicKey:           propPub,
 		},
-	}
+	}, nil
 }
 
-func formatAPIMasterValidation(masterValid chain.MasterValidation) *api.MasterValidation {
+func formatAPIMasterValidation(masterValid chain.MasterValidation) (*api.MasterValidation, error) {
+
+	powKey, err := masterValid.ProofOfWork().Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	prevNodeKeys := make([][]byte, 0)
+	for _, k := range masterValid.PreviousTransactionNodes() {
+		nodeKey, err := k.Marshal()
+		if err != nil {
+			return nil, err
+		}
+		prevNodeKeys = append(prevNodeKeys, nodeKey)
+	}
+
+	v, err := formatAPIValidation(masterValid.Validation())
+	if err != nil {
+		return nil, err
+	}
+
 	return &api.MasterValidation{
-		ProofOfWork:             masterValid.ProofOfWork(),
-		PreviousValidationNodes: masterValid.PreviousValidationNodes(),
-		PreValidation:           formatAPIValidation(masterValid.Validation()),
-		WelcomeHeaders:          formatNodeHeadersAPI(masterValid.WelcomeHeaders()),
-		ValidationHeaders:       formatNodeHeadersAPI(masterValid.ValidationHeaders()),
-		StorageHeaders:          formatNodeHeadersAPI(masterValid.StorageHeaders()),
-	}
+		ProofOfWork:              powKey,
+		PreviousTransactionNodes: prevNodeKeys,
+		PreValidation:            v,
+		WelcomeHeaders:           formatNodeHeadersAPI(masterValid.WelcomeHeaders()),
+		ValidationHeaders:        formatNodeHeadersAPI(masterValid.ValidationHeaders()),
+		StorageHeaders:           formatNodeHeadersAPI(masterValid.StorageHeaders()),
+	}, nil
 }
 
-func formatNodeHeadersAPI(headers []chain.NodeHeader) (apiHeaders []*api.NodeHeader) {
+func formatNodeHeadersAPI(headers []chain.NodeHeader) (apiHeaders []*api.NodeHeader, error) {
 	for _, h := range headers {
-		apiHeaders = append(apiHeaders, &api.NodeHeader{
-			IsMaster:      h.IsMaster(),
+
+		pubBytes, err := h.PublicKey().Marshal()
+		if err != nil {
+			return err
+		}
+
+		headers = append(headers, &api.NodeHeader{
+			IsMaster: h.IsMaster(),
+			IsOK: h.IsOK(),
 			IsUnreachable: h.IsUnreachable(),
-			PublicKey:     h.PublicKey(),
-			PatchNumber:   int32(h.PatchNumber()),
-			IsOK:          h.IsOk(),
+			PatchNumber: h.PatchNumber(),
+			PublicKey: pubBytes,
 		})
 	}
-	return
+	return nil
 }
 
-func formatNodeHeaders(apiHeaders []*api.NodeHeader) (headers []chain.NodeHeader) {
+func formatNodeHeaders(apiHeaders []*api.NodeHeader) (headers []chain.NodeHeader, error) {
+
 	for _, h := range apiHeaders {
+
+		pubKey, err := crypto.ParsePublicKey(h.PublicKey)
+		if err != nil {
+			return err
+		}
+
 		headers = append(headers, chain.NewNodeHeader(
-			h.PublicKey,
+			pubKey,
 			h.IsUnreachable,
 			h.IsMaster,
 			int(h.PatchNumber),
 			h.IsOK,
 		))
 	}
-	return
+	return nil
 }
