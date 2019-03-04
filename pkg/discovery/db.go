@@ -36,27 +36,25 @@ type DatabaseRemover interface {
 	RemoveUnreachablePeer(p PeerIdentity) error
 }
 
-func reachablePeers(db DatabaseReader) ([]Peer, []PeerIdentity, error) {
+func reachablePeers(db DatabaseReader) (PeerList, error) {
 	peers, err := db.DiscoveredPeers()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	reachables := make([]Peer, 0)
-	reachablesIdentity := make([]PeerIdentity, 0)
 
 	for _, p := range peers {
 		exist, err := db.ContainsUnreachablePeer(p.Identity())
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		if !exist {
 			reachables = append(reachables, p)
-			reachablesIdentity = append(reachablesIdentity, p.identity)
 
 		}
 	}
 
-	return reachables, reachablesIdentity, nil
+	return reachables, nil
 
 }

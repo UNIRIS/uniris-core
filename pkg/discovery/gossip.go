@@ -26,7 +26,7 @@ func Gossip(self Peer, seeds []PeerIdentity, db Database, netCheck NetworkChecke
 		return Cycle{}, err
 	}
 
-	reaches, reachesid, err := reachablePeers(db)
+	reaches, err := reachablePeers(db)
 	if err != nil {
 		return Cycle{}, err
 	}
@@ -49,7 +49,7 @@ func Gossip(self Peer, seeds []PeerIdentity, db Database, netCheck NetworkChecke
 
 	//Start the gossip Cycle
 	c := Cycle{}
-	if err := c.run(self, msg, seeds, peers, reachesid, unreaches); err != nil {
+	if err := c.run(self, msg, seeds, peers, reaches.Identities(), unreaches); err != nil {
 		return Cycle{}, err
 	}
 
