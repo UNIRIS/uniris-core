@@ -26,8 +26,17 @@ func (r round) run(msg RoundMessenger) ([]Peer, error) {
 	}
 
 	if len(localDiscoveries) > 0 {
+
+		pp := mapPeers(r.peers)
+		requestedPeers := make([]Peer, len(localDiscoveries))
+		for _, lp := range localDiscoveries {
+			if p, exists := pp[lp.identity.publicKey]; exists {
+				requestedPeers = append(requestedPeers, p)
+			}
+		}
+
 		//Send to the SYN receiver an ACK with the peer detailed requested
-		if err := msg.SendAck(r.target, localDiscoveries); err != nil {
+		if err := msg.SendAck(r.target, requestedPeers); err != nil {
 			return nil, err
 		}
 	}
