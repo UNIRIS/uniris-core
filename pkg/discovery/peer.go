@@ -323,12 +323,10 @@ func (a *PeerAppState) refresh(status PeerStatus, disk float64, cpu string, p2pF
 	a.reachablePeersNumber = reachablePeersNb
 }
 
+type peerList []Peer
 
-//PeerList describe a list of peers
-type PeerList []Peer
-
-//Identities return the identities of the list of peers.
-func (pl PeerList) Identities() (list []PeerIdentity) {
+//identities return the identities of the list of peers.
+func (pl peerList) identities() (list []PeerIdentity) {
 	for _, i := range pl {
 		list = append(list, i.identity)
 	}

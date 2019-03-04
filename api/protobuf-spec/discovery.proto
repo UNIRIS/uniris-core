@@ -13,8 +13,8 @@ message SynRequest {
 }
 
 message SynResponse {
-    repeated PeerDiscovered remote_discoveris = 1;
-    repeated PeerDigest local_discoveries = 2;
+    repeated PeerDiscovered discovered_peers = 1;
+    repeated PeerIdentity requested_peers = 2;
     int64 timestamp = 3;
 }
 

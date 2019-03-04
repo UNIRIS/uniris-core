@@ -31,7 +31,7 @@ func TestSendSynRequest(t *testing.T) {
 
 	rndMsg := NewGossipRoundMessenger()
 	target := discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "pubkey")
-	unknown, news, err := rndMsg.SendSyn(target, []discovery.Peer{
+	reqPeers, discoveries, err := rndMsg.SendSyn(target, []discovery.Peer{
 		discovery.NewDiscoveredPeer(
 			discovery.NewPeerIdentity(net.ParseIP("10.0.0.1"), 3000, "pubkey2"),
 			discovery.NewPeerHeartbeatState(time.Now(), 1000),
@@ -39,9 +39,9 @@ func TestSendSynRequest(t *testing.T) {
 		),
 	})
 	assert.Nil(t, err)
-	assert.NotEmpty(t, unknown)
-	assert.Empty(t, news)
-	assert.Equal(t, "pubkey2", unknown[0].Identity().PublicKey())
+	assert.NotEmpty(t, reqPeers)
+	assert.Empty(t, discoveries)
+	assert.Equal(t, "pubkey2", reqPeers[0].PublicKey())
 }
 
 /*

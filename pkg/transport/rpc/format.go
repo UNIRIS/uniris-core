@@ -19,6 +19,10 @@ func formatPeerDigest(p *api.PeerDigest) discovery.Peer {
 	)
 }
 
+func formatPeerIdentity(p *api.PeerIdentity) discovery.PeerIdentity {
+	return discovery.NewPeerIdentity(net.ParseIP(p.Ip), int(p.Port), p.PublicKey)
+}
+
 func formatPeerDigestAPI(p discovery.Peer) *api.PeerDigest {
 	return &api.PeerDigest{
 		Identity: &api.PeerIdentity{
@@ -30,6 +34,14 @@ func formatPeerDigestAPI(p discovery.Peer) *api.PeerDigest {
 			ElapsedHeartbeats: p.HeartbeatState().ElapsedHeartbeats(),
 			GenerationTime:    p.HeartbeatState().GenerationTime().Unix(),
 		},
+	}
+}
+
+func formatPeerIdentityAPI(p discovery.Peer) *api.PeerIdentity {
+	return &api.PeerIdentity{
+		Ip:        p.Identity().IP().String(),
+		Port:      int32(p.Identity().Port()),
+		PublicKey: p.Identity().PublicKey(),
 	}
 }
 

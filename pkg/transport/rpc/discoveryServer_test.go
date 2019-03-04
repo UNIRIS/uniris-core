@@ -39,8 +39,8 @@ func TestHandleSynchronizeRequestWithoutKnownPeers(t *testing.T) {
 		},
 	})
 	assert.Nil(t, err)
-	assert.NotEmpty(t, res.LocalDiscoveries)
-	assert.Equal(t, "pubkey", res.LocalDiscoveries[0].Identity.PublicKey)
+	assert.NotEmpty(t, res.RequestedPeers)
+	assert.Equal(t, "pubkey", res.RequestedPeers[0].PublicKey)
 }
 
 /*
@@ -78,10 +78,10 @@ func TestHandleSynchronizeRequestByKnowingPeer(t *testing.T) {
 		},
 	})
 	assert.Nil(t, err)
-	assert.NotEmpty(t, res.LocalDiscoveries)
-	assert.Equal(t, "pubkey", res.LocalDiscoveries[0].Identity.PublicKey)
-	assert.NotEmpty(t, res.RemoteDiscoveris)
-	assert.Equal(t, "pubkey000", res.RemoteDiscoveris[0].Identity.PublicKey)
+	assert.NotEmpty(t, res.RequestedPeers)
+	assert.Equal(t, "pubkey", res.RequestedPeers[0].PublicKey)
+	assert.NotEmpty(t, res.DiscoveredPeers)
+	assert.Equal(t, "pubkey000", res.DiscoveredPeers[0].Identity.PublicKey)
 }
 
 /*

@@ -48,7 +48,7 @@ seed=""
 for idx in {1..3}
 do
     r=$(( $RANDOM % $nb + 1 ))
-    seed="172.16.0.1${r}:5000:publickey_${r},"
+    seed="172.16.0.1${r}:5000:publickey_${r};"
 done
 printf '      - UNIRIS_DISCOVERY_SEEDS=%s\n' "$seed"
 printf '    ports:\n'

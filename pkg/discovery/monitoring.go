@@ -3,8 +3,12 @@ package discovery
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 )
+
+//BootStrapingMinTime is the necessary minimum time on seconds to finish learning about the network
+const BootStrapingMinTime = 1800
 
 //ErrNTPShift is returned when the NTP clock drift to much
 var ErrNTPShift = errors.New("system Clock have a big Offset check the ntp configuration of the system")
@@ -43,6 +47,27 @@ type SystemReader interface {
 	IP() (net.IP, error)
 }
 
+func updateSelf(self Peer, reachables []Peer, seeds []PeerIdentity, db dbWriter, netCheck NetworkChecker, sysR SystemReader) (Peer, error) {
+	status, err := localStatus(self, seedReachableAverage(seeds, reachables), netCheck)
+	if err != nil {
+		return self, err
+	}
+
+	_, _, _, cpu, space, err := systemInfo(sysR)
+	if err != nil {
+		if err == ErrGeoPosition {
+			status = FaultyPeer
+			log.Println(ErrGeoPosition)
+		} else {
+			return self, err
+		}
+	}
+
+	self.SelfRefresh(status, space, cpu, p2pFactor(reachables), len(reachables))
+	return self, nil
+}
+
+//systemInfo retrieves system information such geo position, IP, CPU load and free disk space
 func systemInfo(sr SystemReader) (lon float64, lat float64, ip net.IP, cpu string, space float64, err error) {
 	lon, lat, err = sr.GeoPosition()
 	if err != nil {
@@ -68,6 +93,7 @@ func systemInfo(sr SystemReader) (lon float64, lat float64, ip net.IP, cpu strin
 	return
 }
 
+//localStatus retrieves the status of the local peer.
 func localStatus(p Peer, seedAvgDiscovery int, nv NetworkChecker) (PeerStatus, error) {
 	if err := nv.CheckInternetState(); err != nil {
 		fmt.Printf("networking error: %s\n", err.Error())
@@ -107,6 +133,7 @@ func p2pFactor(peers []Peer) int {
 	return 1
 }
 
+//seedReachableAverage computes an avergage of the reachables peers retrieved by the seeds
 func seedReachableAverage(seeds []PeerIdentity, reachablePeers []Peer) int {
 	avg := 0
 	for i := 0; i < len(seeds); i++ {
