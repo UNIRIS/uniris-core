@@ -10,6 +10,17 @@
   version = "v0.3.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:5699a1540433914320cef63d1afc814e0632c8e7ec5954c37b0fc07a614bf149"
+  name = "github.com/agl/ed25519"
+  packages = [
+    "edwards25519",
+    "extra25519",
+  ]
+  pruneopts = "UT"
+  revision = "5312a61534124124185d41f09206b9fef1d88403"
+
+[[projects]]
   digest = "1:a8d622a8049a4aa420e1c509873bb85d4c45c5107f420d922f919bfcb8d08694"
   name = "github.com/beevik/ntp"
   packages = ["."]
@@ -45,6 +56,25 @@
   pruneopts = "UT"
   revision = "b869fe1415e4b9eb52f247441830d502aece2d4d"
   version = "v1.3.0"
+
+[[projects]]
+  digest = "1:e1ff887e232b2d8f4f7c7db15a5fac7be418025afc4dda53c59c765dbb5aa6b4"
+  name = "github.com/go-playground/locales"
+  packages = [
+    ".",
+    "currency",
+  ]
+  pruneopts = "UT"
+  revision = "f63010822830b6fe52288ee52d5a1151088ce039"
+  version = "v0.12.1"
+
+[[projects]]
+  digest = "1:e022cf244bcac1b6ef933f1a2e0adcf6a6dfd7b872d8d41e4d4179bb09a87cbc"
+  name = "github.com/go-playground/universal-translator"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "b32fa301c9fe55953584134cb6853a13c87ec0a1"
+  version = "v0.16.0"
 
 [[projects]]
   digest = "1:ad53d1f710522a38d1f0e5e0a55a194b1c6b2cd8e84313568e43523271f0cf62"
@@ -83,6 +113,14 @@
   pruneopts = "UT"
   revision = "36b14963da70d11297d313183d7e6388c8510e1e"
   version = "1.0.0"
+
+[[projects]]
+  digest = "1:6782ffc812e8e700e6952ede1e60487ff1fd9da489eff762985be662a7cfc431"
+  name = "github.com/leodido/go-urn"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "70078a794e8ea4b497ba7c19a78cd60f90ccf0f4"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:fa610f9fe6a93f4a75e64c83673dfff9bf1a34bbb21e6102021b6bc7850834a3"
@@ -124,11 +162,16 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:fcb6ef44fb2624f18ccecd4d463ce2785ea964e92bd6461186d06d1b46bf9348"
-  name = "github.com/uniris/ecies"
-  packages = ["pkg"]
+  digest = "1:c80cb6a2e6259b777f3945b0c7b47db53a6a89fcd7a22de4e99aa85700edda8f"
+  name = "golang.org/x/crypto"
+  packages = [
+    "curve25519",
+    "ed25519",
+    "ed25519/internal/edwards25519",
+    "hkdf",
+  ]
   pruneopts = "UT"
-  revision = "d8698a67baca8352884f0c304649cf058e623b21"
+  revision = "8dd112bcdc25174059e45e07517d9fc663123347"
 
 [[projects]]
   branch = "master"
@@ -238,6 +281,14 @@
   version = "v8.18.1"
 
 [[projects]]
+  digest = "1:a5000fcb87d763e1d410111d32f3e1d07a6f7913f7efdf68070636c407da54d1"
+  name = "gopkg.in/go-playground/validator.v9"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "b199fa0642d29caca62b6a99d65cc981ba5edc3b"
+  version = "v9.27.0"
+
+[[projects]]
   digest = "1:5f1425074efce8ad776450fda6bdd11e816c825771ba56654493d5fdeac27322"
   name = "gopkg.in/urfave/cli.v1"
   packages = [
@@ -260,17 +311,23 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/agl/ed25519/extra25519",
     "github.com/beevik/ntp",
     "github.com/gin-gonic/gin",
+    "github.com/gin-gonic/gin/binding",
     "github.com/go-redis/redis",
     "github.com/golang/protobuf/proto",
     "github.com/streadway/amqp",
     "github.com/stretchr/testify/assert",
-    "github.com/uniris/ecies/pkg",
+    "golang.org/x/crypto/curve25519",
+    "golang.org/x/crypto/ed25519",
+    "golang.org/x/crypto/hkdf",
     "golang.org/x/net/context",
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/status",
+    "gopkg.in/go-playground/validator.v8",
+    "gopkg.in/go-playground/validator.v9",
     "gopkg.in/urfave/cli.v1",
     "gopkg.in/urfave/cli.v1/altsrc",
   ]

@@ -46,7 +46,7 @@ func (x TransactionType) String() string {
 	return proto.EnumName(TransactionType_name, int32(x))
 }
 func (TransactionType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{0}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{0}
 }
 
 type TransactionStatus int32
@@ -75,7 +75,7 @@ func (x TransactionStatus) String() string {
 	return proto.EnumName(TransactionStatus_name, int32(x))
 }
 func (TransactionStatus) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{1}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{1}
 }
 
 type Validation_ValidationStatus int32
@@ -98,14 +98,14 @@ func (x Validation_ValidationStatus) String() string {
 	return proto.EnumName(Validation_ValidationStatus_name, int32(x))
 }
 func (Validation_ValidationStatus) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{15, 0}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{15, 0}
 }
 
 type GetLastTransactionRequest struct {
-	TransactionAddress   string          `protobuf:"bytes,1,opt,name=transaction_address,json=transactionAddress,proto3" json:"transaction_address,omitempty"`
+	TransactionAddress   []byte          `protobuf:"bytes,1,opt,name=transaction_address,json=transactionAddress,proto3" json:"transaction_address,omitempty"`
 	Type                 TransactionType `protobuf:"varint,2,opt,name=type,proto3,enum=api.TransactionType" json:"type,omitempty"`
 	Timestamp            int64           `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	SignatureRequest     string          `protobuf:"bytes,4,opt,name=signature_request,json=signatureRequest,proto3" json:"signature_request,omitempty"`
+	SignatureRequest     []byte          `protobuf:"bytes,4,opt,name=signature_request,json=signatureRequest,proto3" json:"signature_request,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
 	XXX_unrecognized     []byte          `json:"-"`
 	XXX_sizecache        int32           `json:"-"`
@@ -115,7 +115,7 @@ func (m *GetLastTransactionRequest) Reset()         { *m = GetLastTransactionReq
 func (m *GetLastTransactionRequest) String() string { return proto.CompactTextString(m) }
 func (*GetLastTransactionRequest) ProtoMessage()    {}
 func (*GetLastTransactionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{0}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{0}
 }
 func (m *GetLastTransactionRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetLastTransactionRequest.Unmarshal(m, b)
@@ -135,11 +135,11 @@ func (m *GetLastTransactionRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GetLastTransactionRequest proto.InternalMessageInfo
 
-func (m *GetLastTransactionRequest) GetTransactionAddress() string {
+func (m *GetLastTransactionRequest) GetTransactionAddress() []byte {
 	if m != nil {
 		return m.TransactionAddress
 	}
-	return ""
+	return nil
 }
 
 func (m *GetLastTransactionRequest) GetType() TransactionType {
@@ -156,17 +156,17 @@ func (m *GetLastTransactionRequest) GetTimestamp() int64 {
 	return 0
 }
 
-func (m *GetLastTransactionRequest) GetSignatureRequest() string {
+func (m *GetLastTransactionRequest) GetSignatureRequest() []byte {
 	if m != nil {
 		return m.SignatureRequest
 	}
-	return ""
+	return nil
 }
 
 type GetLastTransactionResponse struct {
 	Transaction          *Transaction `protobuf:"bytes,1,opt,name=transaction,proto3" json:"transaction,omitempty"`
 	Timestamp            int64        `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	SignatureResponse    string       `protobuf:"bytes,3,opt,name=signature_response,json=signatureResponse,proto3" json:"signature_response,omitempty"`
+	SignatureResponse    []byte       `protobuf:"bytes,3,opt,name=signature_response,json=signatureResponse,proto3" json:"signature_response,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
 	XXX_unrecognized     []byte       `json:"-"`
 	XXX_sizecache        int32        `json:"-"`
@@ -176,7 +176,7 @@ func (m *GetLastTransactionResponse) Reset()         { *m = GetLastTransactionRe
 func (m *GetLastTransactionResponse) String() string { return proto.CompactTextString(m) }
 func (*GetLastTransactionResponse) ProtoMessage()    {}
 func (*GetLastTransactionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{1}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{1}
 }
 func (m *GetLastTransactionResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetLastTransactionResponse.Unmarshal(m, b)
@@ -210,17 +210,17 @@ func (m *GetLastTransactionResponse) GetTimestamp() int64 {
 	return 0
 }
 
-func (m *GetLastTransactionResponse) GetSignatureResponse() string {
+func (m *GetLastTransactionResponse) GetSignatureResponse() []byte {
 	if m != nil {
 		return m.SignatureResponse
 	}
-	return ""
+	return nil
 }
 
 type GetTransactionStatusRequest struct {
-	TransactionHash      string   `protobuf:"bytes,1,opt,name=transaction_hash,json=transactionHash,proto3" json:"transaction_hash,omitempty"`
+	TransactionHash      []byte   `protobuf:"bytes,1,opt,name=transaction_hash,json=transactionHash,proto3" json:"transaction_hash,omitempty"`
 	Timestamp            int64    `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	SignatureRequest     string   `protobuf:"bytes,3,opt,name=signature_request,json=signatureRequest,proto3" json:"signature_request,omitempty"`
+	SignatureRequest     []byte   `protobuf:"bytes,3,opt,name=signature_request,json=signatureRequest,proto3" json:"signature_request,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -230,7 +230,7 @@ func (m *GetTransactionStatusRequest) Reset()         { *m = GetTransactionStatu
 func (m *GetTransactionStatusRequest) String() string { return proto.CompactTextString(m) }
 func (*GetTransactionStatusRequest) ProtoMessage()    {}
 func (*GetTransactionStatusRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{2}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{2}
 }
 func (m *GetTransactionStatusRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetTransactionStatusRequest.Unmarshal(m, b)
@@ -250,11 +250,11 @@ func (m *GetTransactionStatusRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GetTransactionStatusRequest proto.InternalMessageInfo
 
-func (m *GetTransactionStatusRequest) GetTransactionHash() string {
+func (m *GetTransactionStatusRequest) GetTransactionHash() []byte {
 	if m != nil {
 		return m.TransactionHash
 	}
-	return ""
+	return nil
 }
 
 func (m *GetTransactionStatusRequest) GetTimestamp() int64 {
@@ -264,17 +264,17 @@ func (m *GetTransactionStatusRequest) GetTimestamp() int64 {
 	return 0
 }
 
-func (m *GetTransactionStatusRequest) GetSignatureRequest() string {
+func (m *GetTransactionStatusRequest) GetSignatureRequest() []byte {
 	if m != nil {
 		return m.SignatureRequest
 	}
-	return ""
+	return nil
 }
 
 type GetTransactionStatusResponse struct {
 	Status               TransactionStatus `protobuf:"varint,1,opt,name=status,proto3,enum=api.TransactionStatus" json:"status,omitempty"`
 	Timestamp            int64             `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	SignatureResponse    string            `protobuf:"bytes,3,opt,name=signature_response,json=signatureResponse,proto3" json:"signature_response,omitempty"`
+	SignatureResponse    []byte            `protobuf:"bytes,3,opt,name=signature_response,json=signatureResponse,proto3" json:"signature_response,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
 	XXX_sizecache        int32             `json:"-"`
@@ -284,7 +284,7 @@ func (m *GetTransactionStatusResponse) Reset()         { *m = GetTransactionStat
 func (m *GetTransactionStatusResponse) String() string { return proto.CompactTextString(m) }
 func (*GetTransactionStatusResponse) ProtoMessage()    {}
 func (*GetTransactionStatusResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{3}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{3}
 }
 func (m *GetTransactionStatusResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetTransactionStatusResponse.Unmarshal(m, b)
@@ -318,18 +318,18 @@ func (m *GetTransactionStatusResponse) GetTimestamp() int64 {
 	return 0
 }
 
-func (m *GetTransactionStatusResponse) GetSignatureResponse() string {
+func (m *GetTransactionStatusResponse) GetSignatureResponse() []byte {
 	if m != nil {
 		return m.SignatureResponse
 	}
-	return ""
+	return nil
 }
 
 type StoreTransactionRequest struct {
 	MinedTransaction     *MinedTransaction `protobuf:"bytes,1,opt,name=mined_transaction,json=minedTransaction,proto3" json:"mined_transaction,omitempty"`
 	MinimumValidations   int32             `protobuf:"varint,2,opt,name=minimum_validations,json=minimumValidations,proto3" json:"minimum_validations,omitempty"`
 	Timestamp            int64             `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	SignatureRequest     string            `protobuf:"bytes,4,opt,name=signature_request,json=signatureRequest,proto3" json:"signature_request,omitempty"`
+	SignatureRequest     []byte            `protobuf:"bytes,4,opt,name=signature_request,json=signatureRequest,proto3" json:"signature_request,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
 	XXX_sizecache        int32             `json:"-"`
@@ -339,7 +339,7 @@ func (m *StoreTransactionRequest) Reset()         { *m = StoreTransactionRequest
 func (m *StoreTransactionRequest) String() string { return proto.CompactTextString(m) }
 func (*StoreTransactionRequest) ProtoMessage()    {}
 func (*StoreTransactionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{4}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{4}
 }
 func (m *StoreTransactionRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_StoreTransactionRequest.Unmarshal(m, b)
@@ -380,16 +380,16 @@ func (m *StoreTransactionRequest) GetTimestamp() int64 {
 	return 0
 }
 
-func (m *StoreTransactionRequest) GetSignatureRequest() string {
+func (m *StoreTransactionRequest) GetSignatureRequest() []byte {
 	if m != nil {
 		return m.SignatureRequest
 	}
-	return ""
+	return nil
 }
 
 type StoreTransactionResponse struct {
 	Timestamp            int64    `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	SignatureResponse    string   `protobuf:"bytes,2,opt,name=signature_response,json=signatureResponse,proto3" json:"signature_response,omitempty"`
+	SignatureResponse    []byte   `protobuf:"bytes,2,opt,name=signature_response,json=signatureResponse,proto3" json:"signature_response,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -399,7 +399,7 @@ func (m *StoreTransactionResponse) Reset()         { *m = StoreTransactionRespon
 func (m *StoreTransactionResponse) String() string { return proto.CompactTextString(m) }
 func (*StoreTransactionResponse) ProtoMessage()    {}
 func (*StoreTransactionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{5}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{5}
 }
 func (m *StoreTransactionResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_StoreTransactionResponse.Unmarshal(m, b)
@@ -426,19 +426,19 @@ func (m *StoreTransactionResponse) GetTimestamp() int64 {
 	return 0
 }
 
-func (m *StoreTransactionResponse) GetSignatureResponse() string {
+func (m *StoreTransactionResponse) GetSignatureResponse() []byte {
 	if m != nil {
 		return m.SignatureResponse
 	}
-	return ""
+	return nil
 }
 
 type TimeLockTransactionRequest struct {
-	TransactionHash      string   `protobuf:"bytes,1,opt,name=transaction_hash,json=transactionHash,proto3" json:"transaction_hash,omitempty"`
-	Address              string   `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
-	MasterNodePublicKey  string   `protobuf:"bytes,3,opt,name=master_node_public_key,json=masterNodePublicKey,proto3" json:"master_node_public_key,omitempty"`
+	TransactionHash      []byte   `protobuf:"bytes,1,opt,name=transaction_hash,json=transactionHash,proto3" json:"transaction_hash,omitempty"`
+	Address              []byte   `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
+	MasterNodePublicKey  []byte   `protobuf:"bytes,3,opt,name=master_node_public_key,json=masterNodePublicKey,proto3" json:"master_node_public_key,omitempty"`
 	Timestamp            int64    `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	SignatureRequest     string   `protobuf:"bytes,5,opt,name=signature_request,json=signatureRequest,proto3" json:"signature_request,omitempty"`
+	SignatureRequest     []byte   `protobuf:"bytes,5,opt,name=signature_request,json=signatureRequest,proto3" json:"signature_request,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -448,7 +448,7 @@ func (m *TimeLockTransactionRequest) Reset()         { *m = TimeLockTransactionR
 func (m *TimeLockTransactionRequest) String() string { return proto.CompactTextString(m) }
 func (*TimeLockTransactionRequest) ProtoMessage()    {}
 func (*TimeLockTransactionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{6}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{6}
 }
 func (m *TimeLockTransactionRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TimeLockTransactionRequest.Unmarshal(m, b)
@@ -468,25 +468,25 @@ func (m *TimeLockTransactionRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_TimeLockTransactionRequest proto.InternalMessageInfo
 
-func (m *TimeLockTransactionRequest) GetTransactionHash() string {
+func (m *TimeLockTransactionRequest) GetTransactionHash() []byte {
 	if m != nil {
 		return m.TransactionHash
 	}
-	return ""
+	return nil
 }
 
-func (m *TimeLockTransactionRequest) GetAddress() string {
+func (m *TimeLockTransactionRequest) GetAddress() []byte {
 	if m != nil {
 		return m.Address
 	}
-	return ""
+	return nil
 }
 
-func (m *TimeLockTransactionRequest) GetMasterNodePublicKey() string {
+func (m *TimeLockTransactionRequest) GetMasterNodePublicKey() []byte {
 	if m != nil {
 		return m.MasterNodePublicKey
 	}
-	return ""
+	return nil
 }
 
 func (m *TimeLockTransactionRequest) GetTimestamp() int64 {
@@ -496,16 +496,16 @@ func (m *TimeLockTransactionRequest) GetTimestamp() int64 {
 	return 0
 }
 
-func (m *TimeLockTransactionRequest) GetSignatureRequest() string {
+func (m *TimeLockTransactionRequest) GetSignatureRequest() []byte {
 	if m != nil {
 		return m.SignatureRequest
 	}
-	return ""
+	return nil
 }
 
 type TimeLockTransactionResponse struct {
 	Timestamp            int64    `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	SignatureResponse    string   `protobuf:"bytes,2,opt,name=signature_response,json=signatureResponse,proto3" json:"signature_response,omitempty"`
+	SignatureResponse    []byte   `protobuf:"bytes,2,opt,name=signature_response,json=signatureResponse,proto3" json:"signature_response,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -515,7 +515,7 @@ func (m *TimeLockTransactionResponse) Reset()         { *m = TimeLockTransaction
 func (m *TimeLockTransactionResponse) String() string { return proto.CompactTextString(m) }
 func (*TimeLockTransactionResponse) ProtoMessage()    {}
 func (*TimeLockTransactionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{7}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{7}
 }
 func (m *TimeLockTransactionResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TimeLockTransactionResponse.Unmarshal(m, b)
@@ -542,18 +542,18 @@ func (m *TimeLockTransactionResponse) GetTimestamp() int64 {
 	return 0
 }
 
-func (m *TimeLockTransactionResponse) GetSignatureResponse() string {
+func (m *TimeLockTransactionResponse) GetSignatureResponse() []byte {
 	if m != nil {
 		return m.SignatureResponse
 	}
-	return ""
+	return nil
 }
 
 type LeadTransactionMiningRequest struct {
 	Transaction          *Transaction `protobuf:"bytes,1,opt,name=transaction,proto3" json:"transaction,omitempty"`
 	MinimumValidations   int32        `protobuf:"varint,2,opt,name=minimum_validations,json=minimumValidations,proto3" json:"minimum_validations,omitempty"`
 	Timestamp            int64        `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	SignatureRequest     string       `protobuf:"bytes,4,opt,name=signature_request,json=signatureRequest,proto3" json:"signature_request,omitempty"`
+	SignatureRequest     []byte       `protobuf:"bytes,4,opt,name=signature_request,json=signatureRequest,proto3" json:"signature_request,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
 	XXX_unrecognized     []byte       `json:"-"`
 	XXX_sizecache        int32        `json:"-"`
@@ -563,7 +563,7 @@ func (m *LeadTransactionMiningRequest) Reset()         { *m = LeadTransactionMin
 func (m *LeadTransactionMiningRequest) String() string { return proto.CompactTextString(m) }
 func (*LeadTransactionMiningRequest) ProtoMessage()    {}
 func (*LeadTransactionMiningRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{8}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{8}
 }
 func (m *LeadTransactionMiningRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LeadTransactionMiningRequest.Unmarshal(m, b)
@@ -604,16 +604,16 @@ func (m *LeadTransactionMiningRequest) GetTimestamp() int64 {
 	return 0
 }
 
-func (m *LeadTransactionMiningRequest) GetSignatureRequest() string {
+func (m *LeadTransactionMiningRequest) GetSignatureRequest() []byte {
 	if m != nil {
 		return m.SignatureRequest
 	}
-	return ""
+	return nil
 }
 
 type LeadTransactionMiningResponse struct {
 	Timestamp            int64    `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	SignatureResponse    string   `protobuf:"bytes,2,opt,name=signature_response,json=signatureResponse,proto3" json:"signature_response,omitempty"`
+	SignatureResponse    []byte   `protobuf:"bytes,2,opt,name=signature_response,json=signatureResponse,proto3" json:"signature_response,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -623,7 +623,7 @@ func (m *LeadTransactionMiningResponse) Reset()         { *m = LeadTransactionMi
 func (m *LeadTransactionMiningResponse) String() string { return proto.CompactTextString(m) }
 func (*LeadTransactionMiningResponse) ProtoMessage()    {}
 func (*LeadTransactionMiningResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{9}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{9}
 }
 func (m *LeadTransactionMiningResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LeadTransactionMiningResponse.Unmarshal(m, b)
@@ -650,18 +650,18 @@ func (m *LeadTransactionMiningResponse) GetTimestamp() int64 {
 	return 0
 }
 
-func (m *LeadTransactionMiningResponse) GetSignatureResponse() string {
+func (m *LeadTransactionMiningResponse) GetSignatureResponse() []byte {
 	if m != nil {
 		return m.SignatureResponse
 	}
-	return ""
+	return nil
 }
 
 type ConfirmTransactionValidationRequest struct {
 	Transaction          *Transaction      `protobuf:"bytes,1,opt,name=transaction,proto3" json:"transaction,omitempty"`
 	MasterValidation     *MasterValidation `protobuf:"bytes,2,opt,name=master_validation,json=masterValidation,proto3" json:"master_validation,omitempty"`
 	Timestamp            int64             `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	SignatureRequest     string            `protobuf:"bytes,4,opt,name=signature_request,json=signatureRequest,proto3" json:"signature_request,omitempty"`
+	SignatureRequest     []byte            `protobuf:"bytes,4,opt,name=signature_request,json=signatureRequest,proto3" json:"signature_request,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
 	XXX_sizecache        int32             `json:"-"`
@@ -671,7 +671,7 @@ func (m *ConfirmTransactionValidationRequest) Reset()         { *m = ConfirmTran
 func (m *ConfirmTransactionValidationRequest) String() string { return proto.CompactTextString(m) }
 func (*ConfirmTransactionValidationRequest) ProtoMessage()    {}
 func (*ConfirmTransactionValidationRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{10}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{10}
 }
 func (m *ConfirmTransactionValidationRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ConfirmTransactionValidationRequest.Unmarshal(m, b)
@@ -712,17 +712,17 @@ func (m *ConfirmTransactionValidationRequest) GetTimestamp() int64 {
 	return 0
 }
 
-func (m *ConfirmTransactionValidationRequest) GetSignatureRequest() string {
+func (m *ConfirmTransactionValidationRequest) GetSignatureRequest() []byte {
 	if m != nil {
 		return m.SignatureRequest
 	}
-	return ""
+	return nil
 }
 
 type ConfirmTransactionValidationResponse struct {
 	Validation           *Validation `protobuf:"bytes,1,opt,name=validation,proto3" json:"validation,omitempty"`
 	Timestamp            int64       `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	SignatureResponse    string      `protobuf:"bytes,3,opt,name=signature_response,json=signatureResponse,proto3" json:"signature_response,omitempty"`
+	SignatureResponse    []byte      `protobuf:"bytes,3,opt,name=signature_response,json=signatureResponse,proto3" json:"signature_response,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
 	XXX_unrecognized     []byte      `json:"-"`
 	XXX_sizecache        int32       `json:"-"`
@@ -732,7 +732,7 @@ func (m *ConfirmTransactionValidationResponse) Reset()         { *m = ConfirmTra
 func (m *ConfirmTransactionValidationResponse) String() string { return proto.CompactTextString(m) }
 func (*ConfirmTransactionValidationResponse) ProtoMessage()    {}
 func (*ConfirmTransactionValidationResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{11}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{11}
 }
 func (m *ConfirmTransactionValidationResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ConfirmTransactionValidationResponse.Unmarshal(m, b)
@@ -766,16 +766,16 @@ func (m *ConfirmTransactionValidationResponse) GetTimestamp() int64 {
 	return 0
 }
 
-func (m *ConfirmTransactionValidationResponse) GetSignatureResponse() string {
+func (m *ConfirmTransactionValidationResponse) GetSignatureResponse() []byte {
 	if m != nil {
 		return m.SignatureResponse
 	}
-	return ""
+	return nil
 }
 
 type SharedKeyPair struct {
-	EncryptedPrivateKey  string   `protobuf:"bytes,1,opt,name=encrypted_private_key,json=encryptedPrivateKey,proto3" json:"encrypted_private_key,omitempty"`
-	PublicKey            string   `protobuf:"bytes,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	EncryptedPrivateKey  []byte   `protobuf:"bytes,1,opt,name=encrypted_private_key,json=encryptedPrivateKey,proto3" json:"encrypted_private_key,omitempty"`
+	PublicKey            []byte   `protobuf:"bytes,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -785,7 +785,7 @@ func (m *SharedKeyPair) Reset()         { *m = SharedKeyPair{} }
 func (m *SharedKeyPair) String() string { return proto.CompactTextString(m) }
 func (*SharedKeyPair) ProtoMessage()    {}
 func (*SharedKeyPair) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{12}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{12}
 }
 func (m *SharedKeyPair) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SharedKeyPair.Unmarshal(m, b)
@@ -805,30 +805,30 @@ func (m *SharedKeyPair) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_SharedKeyPair proto.InternalMessageInfo
 
-func (m *SharedKeyPair) GetEncryptedPrivateKey() string {
+func (m *SharedKeyPair) GetEncryptedPrivateKey() []byte {
 	if m != nil {
 		return m.EncryptedPrivateKey
 	}
-	return ""
+	return nil
 }
 
-func (m *SharedKeyPair) GetPublicKey() string {
+func (m *SharedKeyPair) GetPublicKey() []byte {
 	if m != nil {
 		return m.PublicKey
 	}
-	return ""
+	return nil
 }
 
 type Transaction struct {
-	Address                   string            `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	Address                   []byte            `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
 	Type                      TransactionType   `protobuf:"varint,2,opt,name=type,proto3,enum=api.TransactionType" json:"type,omitempty"`
-	Data                      map[string]string `protobuf:"bytes,3,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Data                      map[string][]byte `protobuf:"bytes,3,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	Timestamp                 int64             `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	PublicKey                 string            `protobuf:"bytes,5,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
-	Signature                 string            `protobuf:"bytes,6,opt,name=signature,proto3" json:"signature,omitempty"`
-	EmitterSignature          string            `protobuf:"bytes,7,opt,name=emitter_signature,json=emitterSignature,proto3" json:"emitter_signature,omitempty"`
+	PublicKey                 []byte            `protobuf:"bytes,5,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	Signature                 []byte            `protobuf:"bytes,6,opt,name=signature,proto3" json:"signature,omitempty"`
+	EmitterSignature          []byte            `protobuf:"bytes,7,opt,name=emitter_signature,json=emitterSignature,proto3" json:"emitter_signature,omitempty"`
 	SharedKeysEmitterProposal *SharedKeyPair    `protobuf:"bytes,8,opt,name=shared_keys_emitter_proposal,json=sharedKeysEmitterProposal,proto3" json:"shared_keys_emitter_proposal,omitempty"`
-	TransactionHash           string            `protobuf:"bytes,9,opt,name=transaction_hash,json=transactionHash,proto3" json:"transaction_hash,omitempty"`
+	TransactionHash           []byte            `protobuf:"bytes,9,opt,name=transaction_hash,json=transactionHash,proto3" json:"transaction_hash,omitempty"`
 	XXX_NoUnkeyedLiteral      struct{}          `json:"-"`
 	XXX_unrecognized          []byte            `json:"-"`
 	XXX_sizecache             int32             `json:"-"`
@@ -838,7 +838,7 @@ func (m *Transaction) Reset()         { *m = Transaction{} }
 func (m *Transaction) String() string { return proto.CompactTextString(m) }
 func (*Transaction) ProtoMessage()    {}
 func (*Transaction) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{13}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{13}
 }
 func (m *Transaction) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Transaction.Unmarshal(m, b)
@@ -858,11 +858,11 @@ func (m *Transaction) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Transaction proto.InternalMessageInfo
 
-func (m *Transaction) GetAddress() string {
+func (m *Transaction) GetAddress() []byte {
 	if m != nil {
 		return m.Address
 	}
-	return ""
+	return nil
 }
 
 func (m *Transaction) GetType() TransactionType {
@@ -872,7 +872,7 @@ func (m *Transaction) GetType() TransactionType {
 	return TransactionType_KEYCHAIN
 }
 
-func (m *Transaction) GetData() map[string]string {
+func (m *Transaction) GetData() map[string][]byte {
 	if m != nil {
 		return m.Data
 	}
@@ -886,25 +886,25 @@ func (m *Transaction) GetTimestamp() int64 {
 	return 0
 }
 
-func (m *Transaction) GetPublicKey() string {
+func (m *Transaction) GetPublicKey() []byte {
 	if m != nil {
 		return m.PublicKey
 	}
-	return ""
+	return nil
 }
 
-func (m *Transaction) GetSignature() string {
+func (m *Transaction) GetSignature() []byte {
 	if m != nil {
 		return m.Signature
 	}
-	return ""
+	return nil
 }
 
-func (m *Transaction) GetEmitterSignature() string {
+func (m *Transaction) GetEmitterSignature() []byte {
 	if m != nil {
 		return m.EmitterSignature
 	}
-	return ""
+	return nil
 }
 
 func (m *Transaction) GetSharedKeysEmitterProposal() *SharedKeyPair {
@@ -914,16 +914,16 @@ func (m *Transaction) GetSharedKeysEmitterProposal() *SharedKeyPair {
 	return nil
 }
 
-func (m *Transaction) GetTransactionHash() string {
+func (m *Transaction) GetTransactionHash() []byte {
 	if m != nil {
 		return m.TransactionHash
 	}
-	return ""
+	return nil
 }
 
 type MasterValidation struct {
-	PreviousTransactionNodes []string    `protobuf:"bytes,1,rep,name=previous_transaction_nodes,json=previousTransactionNodes,proto3" json:"previous_transaction_nodes,omitempty"`
-	ProofOfWork              string      `protobuf:"bytes,2,opt,name=proof_of_work,json=proofOfWork,proto3" json:"proof_of_work,omitempty"`
+	PreviousTransactionNodes [][]byte    `protobuf:"bytes,1,rep,name=previous_transaction_nodes,json=previousTransactionNodes,proto3" json:"previous_transaction_nodes,omitempty"`
+	ProofOfWork              []byte      `protobuf:"bytes,2,opt,name=proof_of_work,json=proofOfWork,proto3" json:"proof_of_work,omitempty"`
 	PreValidation            *Validation `protobuf:"bytes,3,opt,name=pre_validation,json=preValidation,proto3" json:"pre_validation,omitempty"`
 	XXX_NoUnkeyedLiteral     struct{}    `json:"-"`
 	XXX_unrecognized         []byte      `json:"-"`
@@ -934,7 +934,7 @@ func (m *MasterValidation) Reset()         { *m = MasterValidation{} }
 func (m *MasterValidation) String() string { return proto.CompactTextString(m) }
 func (*MasterValidation) ProtoMessage()    {}
 func (*MasterValidation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{14}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{14}
 }
 func (m *MasterValidation) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MasterValidation.Unmarshal(m, b)
@@ -954,18 +954,18 @@ func (m *MasterValidation) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MasterValidation proto.InternalMessageInfo
 
-func (m *MasterValidation) GetPreviousTransactionNodes() []string {
+func (m *MasterValidation) GetPreviousTransactionNodes() [][]byte {
 	if m != nil {
 		return m.PreviousTransactionNodes
 	}
 	return nil
 }
 
-func (m *MasterValidation) GetProofOfWork() string {
+func (m *MasterValidation) GetProofOfWork() []byte {
 	if m != nil {
 		return m.ProofOfWork
 	}
-	return ""
+	return nil
 }
 
 func (m *MasterValidation) GetPreValidation() *Validation {
@@ -976,10 +976,10 @@ func (m *MasterValidation) GetPreValidation() *Validation {
 }
 
 type Validation struct {
-	PublicKey            string                      `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	PublicKey            []byte                      `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
 	Status               Validation_ValidationStatus `protobuf:"varint,2,opt,name=status,proto3,enum=api.Validation_ValidationStatus" json:"status,omitempty"`
 	Timestamp            int64                       `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	Signature            string                      `protobuf:"bytes,4,opt,name=signature,proto3" json:"signature,omitempty"`
+	Signature            []byte                      `protobuf:"bytes,4,opt,name=signature,proto3" json:"signature,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                    `json:"-"`
 	XXX_unrecognized     []byte                      `json:"-"`
 	XXX_sizecache        int32                       `json:"-"`
@@ -989,7 +989,7 @@ func (m *Validation) Reset()         { *m = Validation{} }
 func (m *Validation) String() string { return proto.CompactTextString(m) }
 func (*Validation) ProtoMessage()    {}
 func (*Validation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{15}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{15}
 }
 func (m *Validation) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Validation.Unmarshal(m, b)
@@ -1009,11 +1009,11 @@ func (m *Validation) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Validation proto.InternalMessageInfo
 
-func (m *Validation) GetPublicKey() string {
+func (m *Validation) GetPublicKey() []byte {
 	if m != nil {
 		return m.PublicKey
 	}
-	return ""
+	return nil
 }
 
 func (m *Validation) GetStatus() Validation_ValidationStatus {
@@ -1030,11 +1030,11 @@ func (m *Validation) GetTimestamp() int64 {
 	return 0
 }
 
-func (m *Validation) GetSignature() string {
+func (m *Validation) GetSignature() []byte {
 	if m != nil {
 		return m.Signature
 	}
-	return ""
+	return nil
 }
 
 type MinedTransaction struct {
@@ -1050,7 +1050,7 @@ func (m *MinedTransaction) Reset()         { *m = MinedTransaction{} }
 func (m *MinedTransaction) String() string { return proto.CompactTextString(m) }
 func (*MinedTransaction) ProtoMessage()    {}
 func (*MinedTransaction) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{16}
+	return fileDescriptor_transaction_c1cd857b5af6c2ca, []int{16}
 }
 func (m *MinedTransaction) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MinedTransaction.Unmarshal(m, b)
@@ -1106,7 +1106,7 @@ func init() {
 	proto.RegisterType((*ConfirmTransactionValidationResponse)(nil), "api.ConfirmTransactionValidationResponse")
 	proto.RegisterType((*SharedKeyPair)(nil), "api.SharedKeyPair")
 	proto.RegisterType((*Transaction)(nil), "api.Transaction")
-	proto.RegisterMapType((map[string]string)(nil), "api.Transaction.DataEntry")
+	proto.RegisterMapType((map[string][]byte)(nil), "api.Transaction.DataEntry")
 	proto.RegisterType((*MasterValidation)(nil), "api.MasterValidation")
 	proto.RegisterType((*Validation)(nil), "api.Validation")
 	proto.RegisterType((*MinedTransaction)(nil), "api.MinedTransaction")
@@ -1352,79 +1352,79 @@ var _TransactionService_serviceDesc = grpc.ServiceDesc{
 	Metadata: "transaction.proto",
 }
 
-func init() { proto.RegisterFile("transaction.proto", fileDescriptor_transaction_7f6439bdf7b91f11) }
+func init() { proto.RegisterFile("transaction.proto", fileDescriptor_transaction_c1cd857b5af6c2ca) }
 
-var fileDescriptor_transaction_7f6439bdf7b91f11 = []byte{
-	// 1124 bytes of a gzipped FileDescriptorProto
+var fileDescriptor_transaction_c1cd857b5af6c2ca = []byte{
+	// 1126 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x57, 0x4f, 0x6f, 0x1b, 0x45,
-	0x14, 0x67, 0xbc, 0x4e, 0x52, 0x3f, 0x93, 0x64, 0x3d, 0x49, 0x8a, 0xbb, 0x75, 0xc0, 0x2c, 0x1c,
-	0xdc, 0x22, 0x5c, 0xc9, 0x95, 0xa0, 0x42, 0x08, 0x11, 0x5c, 0x93, 0x46, 0x4e, 0xed, 0x68, 0xed,
-	0x50, 0x10, 0x12, 0xab, 0x89, 0x3d, 0x49, 0x96, 0x64, 0xff, 0x30, 0xb3, 0x0e, 0xf2, 0xe7, 0xe0,
-	0x88, 0xb8, 0x71, 0xe4, 0x4b, 0x80, 0x84, 0xc4, 0x01, 0x71, 0xe7, 0xc8, 0x8d, 0x8f, 0x81, 0x76,
-	0x66, 0x6d, 0x8f, 0xd7, 0xbb, 0x6e, 0x80, 0x54, 0x3d, 0xd9, 0x33, 0xef, 0xcd, 0x9b, 0xdf, 0xfb,
-	0xbd, 0x3f, 0xf3, 0x16, 0x4a, 0x21, 0x23, 0x1e, 0x27, 0x83, 0xd0, 0xf1, 0xbd, 0x7a, 0xc0, 0xfc,
-	0xd0, 0xc7, 0x1a, 0x09, 0x1c, 0xf3, 0x67, 0x04, 0x77, 0xf6, 0x69, 0x78, 0x48, 0x78, 0xd8, 0x9f,
-	0x69, 0x58, 0xf4, 0x9b, 0x11, 0xe5, 0x21, 0x7e, 0x00, 0x5b, 0xca, 0x39, 0x9b, 0x0c, 0x87, 0x8c,
-	0x72, 0x5e, 0x46, 0x55, 0x54, 0x2b, 0x58, 0x58, 0x11, 0xed, 0x49, 0x09, 0xae, 0x41, 0x3e, 0x1c,
-	0x07, 0xb4, 0x9c, 0xab, 0xa2, 0xda, 0x46, 0x63, 0xbb, 0x4e, 0x02, 0xa7, 0xae, 0xd8, 0xed, 0x8f,
-	0x03, 0x6a, 0x09, 0x0d, 0x5c, 0x81, 0x42, 0xe8, 0xb8, 0x94, 0x87, 0xc4, 0x0d, 0xca, 0x5a, 0x15,
-	0xd5, 0x34, 0x6b, 0xb6, 0x81, 0xdf, 0x81, 0x12, 0x77, 0xce, 0x3c, 0x12, 0x8e, 0x18, 0xb5, 0x99,
-	0x44, 0x53, 0xce, 0x8b, 0x6b, 0xf5, 0xa9, 0x20, 0x46, 0x69, 0xfe, 0x80, 0xc0, 0x48, 0xf3, 0x81,
-	0x07, 0xbe, 0xc7, 0x29, 0x6e, 0x40, 0x51, 0x41, 0x2a, 0xc0, 0x17, 0x1b, 0x7a, 0x12, 0x9a, 0xa5,
-	0x2a, 0xcd, 0xa3, 0xcb, 0x25, 0xd1, 0xbd, 0x0b, 0x58, 0x45, 0x27, 0xef, 0x11, 0x4e, 0x14, 0xac,
-	0x92, 0x02, 0x4f, 0x0a, 0xcc, 0xef, 0x10, 0xdc, 0xdd, 0xa7, 0x2a, 0xb6, 0x5e, 0x48, 0xc2, 0x11,
-	0x9f, 0xb0, 0x7c, 0x0f, 0x74, 0x95, 0xe5, 0x73, 0xc2, 0xcf, 0x63, 0x8a, 0x37, 0x95, 0xfd, 0x27,
-	0x84, 0x9f, 0x3f, 0x07, 0x57, 0x2a, 0x6b, 0x5a, 0x06, 0x6b, 0xdf, 0x23, 0xa8, 0xa4, 0xa3, 0x8a,
-	0x79, 0xab, 0xc3, 0x2a, 0x17, 0x3b, 0x02, 0xcc, 0x46, 0xe3, 0x76, 0x92, 0xb2, 0x58, 0x3f, 0xd6,
-	0xba, 0x59, 0xce, 0xfe, 0x44, 0xf0, 0x5a, 0x2f, 0xf4, 0x19, 0x4d, 0xc9, 0xca, 0x4f, 0xa0, 0xe4,
-	0x3a, 0x1e, 0x1d, 0xda, 0x8b, 0x61, 0xdd, 0x11, 0x18, 0x9f, 0x46, 0x52, 0xf5, 0xa0, 0xee, 0x26,
-	0x76, 0xa2, 0xcc, 0x76, 0x1d, 0xcf, 0x71, 0x47, 0xae, 0x7d, 0x45, 0x2e, 0x9d, 0x21, 0x89, 0x76,
-	0xb9, 0x80, 0xbd, 0x62, 0xe1, 0x58, 0xf4, 0xd9, 0x4c, 0x72, 0x93, 0xf9, 0x7a, 0x06, 0xe5, 0x45,
-	0xd7, 0x62, 0xd2, 0xe7, 0xae, 0x41, 0xd7, 0x23, 0x31, 0x97, 0x45, 0xe2, 0x5f, 0x08, 0x8c, 0xbe,
-	0xe3, 0xd2, 0x43, 0x7f, 0x70, 0x91, 0xc2, 0xe3, 0xbf, 0xc8, 0xbb, 0x32, 0xac, 0x4d, 0x8a, 0x5f,
-	0xde, 0x36, 0x59, 0xe2, 0x87, 0x70, 0xdb, 0x25, 0x3c, 0xa4, 0xcc, 0xf6, 0xfc, 0x21, 0xb5, 0x83,
-	0xd1, 0xc9, 0xa5, 0x33, 0xb0, 0x2f, 0xe8, 0x38, 0x8e, 0xed, 0x96, 0x94, 0x76, 0xfc, 0x21, 0x3d,
-	0x12, 0xb2, 0x36, 0x1d, 0xcf, 0x7b, 0x99, 0xbf, 0x16, 0x99, 0x2b, 0x19, 0x64, 0x7e, 0x0d, 0x77,
-	0x53, 0x5d, 0x7c, 0x11, 0x7c, 0xfe, 0x81, 0xa0, 0x72, 0x48, 0x89, 0x9a, 0x48, 0x4f, 0x1d, 0xcf,
-	0xf1, 0xce, 0x26, 0x8c, 0xfe, 0x97, 0x56, 0xf3, 0x32, 0x33, 0xf1, 0x12, 0x76, 0x33, 0xfc, 0x79,
-	0x11, 0xf4, 0xfd, 0x8d, 0xe0, 0xad, 0xa6, 0xef, 0x9d, 0x3a, 0xcc, 0x55, 0x6e, 0x9c, 0xb9, 0xf6,
-	0x7f, 0x58, 0x8c, 0x7a, 0x82, 0x4c, 0xc3, 0x19, 0x89, 0x02, 0xc9, 0xb4, 0x27, 0x08, 0xa9, 0x72,
-	0x99, 0xee, 0x26, 0x76, 0x6e, 0x92, 0xd8, 0x1f, 0x11, 0xbc, 0xbd, 0xdc, 0xd5, 0x98, 0xe0, 0x07,
-	0x00, 0x0a, 0x60, 0xe9, 0xea, 0xa6, 0x00, 0xac, 0x28, 0x2b, 0x2a, 0x37, 0xdb, 0x65, 0x4f, 0x60,
-	0xbd, 0x77, 0x4e, 0x18, 0x1d, 0xb6, 0xe9, 0xf8, 0x88, 0x38, 0x0c, 0x37, 0x60, 0x87, 0x7a, 0x03,
-	0x36, 0x0e, 0x42, 0x3a, 0xb4, 0x03, 0xe6, 0x5c, 0x91, 0x90, 0x8a, 0x62, 0x96, 0x7d, 0x61, 0x6b,
-	0x2a, 0x3c, 0x92, 0xb2, 0xa8, 0x98, 0x77, 0x01, 0x94, 0xaa, 0x97, 0xd1, 0x2f, 0x04, 0x93, 0x5a,
-	0x37, 0x7f, 0xd1, 0xa0, 0xa8, 0x76, 0x5e, 0xa5, 0x95, 0xa0, 0xf9, 0x56, 0x72, 0xfd, 0xe1, 0xa1,
-	0x0e, 0xf9, 0x21, 0x09, 0x49, 0x59, 0xab, 0x6a, 0xb5, 0x62, 0xc3, 0x48, 0x6a, 0xd6, 0x1f, 0x93,
-	0x90, 0xb4, 0xbc, 0x90, 0x8d, 0x2d, 0xa1, 0xf7, 0x9c, 0x7e, 0x33, 0xef, 0xc0, 0x4a, 0xc2, 0x81,
-	0xe8, 0xf0, 0x94, 0xb9, 0xf2, 0xaa, 0x94, 0x4e, 0x37, 0xa2, 0xb4, 0xa0, 0xae, 0x13, 0x46, 0x99,
-	0x37, 0xd3, 0x5a, 0x93, 0x69, 0x11, 0x0b, 0x7a, 0x53, 0xe5, 0x1e, 0x54, 0xb8, 0xe0, 0x3b, 0xba,
-	0x89, 0xdb, 0x93, 0x83, 0x01, 0xf3, 0x03, 0x9f, 0x93, 0xcb, 0xf2, 0x2d, 0x11, 0x7f, 0x2c, 0xfc,
-	0x99, 0x0b, 0x8c, 0x75, 0x87, 0x4f, 0x96, 0xbc, 0x25, 0x4f, 0x1d, 0xc5, 0x87, 0x52, 0xdb, 0x78,
-	0x21, 0xb5, 0x8d, 0x1b, 0xef, 0x43, 0x61, 0x4a, 0x0d, 0xd6, 0x41, 0x9b, 0x45, 0x36, 0xfa, 0x8b,
-	0xb7, 0x61, 0xe5, 0x8a, 0x5c, 0x8e, 0x26, 0x25, 0x2c, 0x17, 0x1f, 0xe4, 0x1e, 0x21, 0xf3, 0x27,
-	0x04, 0x7a, 0xb2, 0x82, 0xf0, 0x87, 0x60, 0x04, 0x8c, 0x5e, 0x39, 0xfe, 0x88, 0xab, 0x4f, 0xb1,
-	0x78, 0x08, 0xa2, 0xe0, 0x6a, 0xb5, 0x82, 0x55, 0x9e, 0x68, 0x28, 0xe1, 0x89, 0xde, 0x02, 0x8e,
-	0x4d, 0x58, 0x0f, 0x98, 0xef, 0x9f, 0xda, 0xfe, 0xa9, 0xfd, 0xad, 0xcf, 0x2e, 0xe2, 0x4b, 0x8b,
-	0x62, 0xb3, 0x7b, 0xfa, 0xcc, 0x67, 0x17, 0xf8, 0x3d, 0xd8, 0x08, 0x18, 0x55, 0x4b, 0x5a, 0x4b,
-	0xaf, 0x90, 0xf5, 0x80, 0xd1, 0xd9, 0xd2, 0xfc, 0x15, 0x01, 0x28, 0x40, 0xe7, 0x03, 0x8c, 0x92,
-	0x01, 0x7e, 0x34, 0x1d, 0x74, 0x64, 0xe6, 0x55, 0x13, 0xd6, 0x95, 0xbf, 0xcb, 0x46, 0x9e, 0x85,
-	0x8e, 0x31, 0x97, 0x38, 0xf9, 0x44, 0xe2, 0x98, 0x26, 0xe8, 0x49, 0xbb, 0x78, 0x15, 0x72, 0x9d,
-	0xae, 0xfe, 0x4a, 0xf4, 0xdb, 0x6d, 0xeb, 0xc8, 0xfc, 0x3d, 0xa2, 0x3d, 0x39, 0xba, 0xbc, 0xac,
-	0xf6, 0xf8, 0x31, 0x6c, 0x0d, 0x64, 0x4b, 0x9b, 0x7b, 0xa8, 0x64, 0x0d, 0x2e, 0x44, 0x04, 0xc7,
-	0xba, 0xca, 0xcb, 0x75, 0xff, 0x23, 0xd8, 0x4c, 0xd4, 0x33, 0x7e, 0x15, 0x6e, 0xb5, 0x5b, 0x5f,
-	0x34, 0x9f, 0xec, 0x1d, 0x74, 0xa4, 0xdf, 0x07, 0x8f, 0x75, 0x84, 0x77, 0xa0, 0xd4, 0xec, 0x76,
-	0xfa, 0xd6, 0x5e, 0xb3, 0x6f, 0x37, 0xad, 0xd6, 0x5e, 0xff, 0xa0, 0xdb, 0xd1, 0x73, 0xf7, 0xdb,
-	0x50, 0x5a, 0x18, 0x3f, 0x71, 0x11, 0xd6, 0x8e, 0x3b, 0xed, 0x4e, 0xf7, 0x59, 0x64, 0x60, 0x13,
-	0x8a, 0x07, 0x1d, 0xfb, 0xc8, 0xea, 0xee, 0x5b, 0xad, 0x5e, 0x4f, 0x47, 0x91, 0xb4, 0x77, 0xdc,
-	0x6c, 0x46, 0x8b, 0x5c, 0xb4, 0xf8, 0x74, 0xef, 0xe0, 0xf0, 0xd8, 0x6a, 0xe9, 0x5a, 0xe3, 0xb7,
-	0x3c, 0x60, 0xd5, 0x1a, 0x65, 0x57, 0xce, 0x80, 0xe2, 0x63, 0xc0, 0x8b, 0xdf, 0x12, 0xf8, 0x75,
-	0xe1, 0x5e, 0xe6, 0x87, 0x92, 0xf1, 0x46, 0xa6, 0x3c, 0xee, 0xf3, 0x5f, 0xc2, 0x76, 0xda, 0xb0,
-	0x8d, 0xab, 0x93, 0x83, 0x59, 0x5f, 0x07, 0xc6, 0x9b, 0x4b, 0x34, 0x62, 0xe3, 0x5d, 0xd0, 0x93,
-	0x03, 0x25, 0xae, 0xc8, 0x26, 0x92, 0x3e, 0x42, 0x1b, 0xbb, 0x19, 0xd2, 0xd8, 0xe0, 0xe7, 0xb0,
-	0x95, 0x32, 0x54, 0x61, 0xe9, 0x65, 0xf6, 0x44, 0x69, 0x54, 0xb3, 0x15, 0x62, 0xcb, 0x5f, 0xc1,
-	0x4e, 0xea, 0xc4, 0x81, 0xa5, 0x9b, 0xcb, 0xa6, 0x2b, 0xc3, 0x5c, 0xa6, 0x12, 0xdb, 0xe7, 0x50,
-	0x59, 0xf6, 0xee, 0xe2, 0x9a, 0xb0, 0x71, 0x8d, 0x29, 0xc4, 0xb8, 0x77, 0x0d, 0x4d, 0x79, 0xe9,
-	0xc9, 0xaa, 0xf8, 0xa0, 0x7e, 0xf8, 0x4f, 0x00, 0x00, 0x00, 0xff, 0xff, 0xb6, 0xea, 0x90, 0xf2,
-	0x65, 0x0f, 0x00, 0x00,
+	0x14, 0x67, 0xbc, 0x4e, 0xd2, 0x3c, 0xe7, 0xcf, 0x7a, 0x92, 0x14, 0x77, 0xeb, 0x80, 0x59, 0x38,
+	0xb8, 0x45, 0xb8, 0x92, 0x2b, 0x41, 0x85, 0x10, 0x22, 0xb8, 0x26, 0x8d, 0x9c, 0xda, 0xd1, 0xda,
+	0xa1, 0x20, 0x24, 0x56, 0x13, 0x7b, 0x92, 0x2c, 0xc9, 0xfe, 0x61, 0x66, 0x1d, 0xe4, 0xcf, 0xc1,
+	0x11, 0x71, 0xe3, 0xc8, 0x97, 0x00, 0x09, 0x89, 0x03, 0xe2, 0xce, 0x91, 0x1b, 0x1f, 0x03, 0xed,
+	0xcc, 0xae, 0x3d, 0x5e, 0xaf, 0xdd, 0x40, 0x53, 0xf5, 0x64, 0xcf, 0xbc, 0x37, 0x6f, 0x7e, 0xef,
+	0xf7, 0xfe, 0xcc, 0x5b, 0x28, 0x86, 0x8c, 0x78, 0x9c, 0xf4, 0x43, 0xc7, 0xf7, 0x6a, 0x01, 0xf3,
+	0x43, 0x1f, 0x6b, 0x24, 0x70, 0xcc, 0x5f, 0x10, 0xdc, 0xd9, 0xa7, 0xe1, 0x21, 0xe1, 0x61, 0x6f,
+	0xa2, 0x61, 0xd1, 0x6f, 0x87, 0x94, 0x87, 0xf8, 0x01, 0x6c, 0x29, 0xe7, 0x6c, 0x32, 0x18, 0x30,
+	0xca, 0x79, 0x09, 0x55, 0x50, 0x75, 0xcd, 0xc2, 0x8a, 0x68, 0x4f, 0x4a, 0x70, 0x15, 0xf2, 0xe1,
+	0x28, 0xa0, 0xa5, 0x5c, 0x05, 0x55, 0x37, 0xea, 0xdb, 0x35, 0x12, 0x38, 0x35, 0xc5, 0x6e, 0x6f,
+	0x14, 0x50, 0x4b, 0x68, 0xe0, 0x32, 0xac, 0x86, 0x8e, 0x4b, 0x79, 0x48, 0xdc, 0xa0, 0xa4, 0x55,
+	0x50, 0x55, 0xb3, 0x26, 0x1b, 0xf8, 0x5d, 0x28, 0x72, 0xe7, 0xcc, 0x23, 0xe1, 0x90, 0x51, 0x9b,
+	0x49, 0x34, 0xa5, 0xbc, 0xb8, 0x56, 0x1f, 0x0b, 0x62, 0x94, 0xe6, 0x8f, 0x08, 0x8c, 0x2c, 0x1f,
+	0x78, 0xe0, 0x7b, 0x9c, 0xe2, 0x3a, 0x14, 0x14, 0xa4, 0x02, 0x7c, 0xa1, 0xae, 0xa7, 0xa1, 0x59,
+	0xaa, 0xd2, 0x34, 0xba, 0x5c, 0x1a, 0xdd, 0x7b, 0x80, 0x55, 0x74, 0xf2, 0x1e, 0xe1, 0xc4, 0x9a,
+	0x55, 0x54, 0xe0, 0x49, 0x81, 0xf9, 0x3d, 0x82, 0xbb, 0xfb, 0x54, 0xc5, 0xd6, 0x0d, 0x49, 0x38,
+	0xe4, 0x09, 0xcb, 0xf7, 0x40, 0x57, 0x59, 0x3e, 0x27, 0xfc, 0x3c, 0xa6, 0x78, 0x53, 0xd9, 0x7f,
+	0x42, 0xf8, 0xf9, 0x73, 0x70, 0x65, 0xb2, 0xa6, 0xcd, 0x61, 0xed, 0x07, 0x04, 0xe5, 0x6c, 0x54,
+	0x31, 0x6f, 0x35, 0x58, 0xe6, 0x62, 0x47, 0x80, 0xd9, 0xa8, 0xdf, 0x4e, 0x53, 0x16, 0xeb, 0xc7,
+	0x5a, 0x37, 0xcb, 0xd9, 0x5f, 0x08, 0x5e, 0xef, 0x86, 0x3e, 0xa3, 0x19, 0x59, 0xf9, 0x29, 0x14,
+	0x5d, 0xc7, 0xa3, 0x03, 0x7b, 0x36, 0xac, 0x3b, 0x02, 0xe3, 0xd3, 0x48, 0xaa, 0x1e, 0xd4, 0xdd,
+	0xd4, 0x4e, 0x94, 0xd9, 0xae, 0xe3, 0x39, 0xee, 0xd0, 0xb5, 0xaf, 0xc8, 0xa5, 0x33, 0x20, 0xd1,
+	0x2e, 0x17, 0xb0, 0x97, 0x2c, 0x1c, 0x8b, 0x3e, 0x9f, 0x48, 0x6e, 0x32, 0x5f, 0xcf, 0xa0, 0x34,
+	0xeb, 0x5a, 0x4c, 0xfa, 0xd4, 0x35, 0xe8, 0x7a, 0x24, 0xe6, 0xe6, 0x91, 0xf8, 0x37, 0x02, 0xa3,
+	0xe7, 0xb8, 0xf4, 0xd0, 0xef, 0x5f, 0x64, 0xf0, 0xf8, 0x1f, 0xf2, 0xae, 0x04, 0x2b, 0x49, 0xf1,
+	0xcb, 0xdb, 0x92, 0x25, 0x7e, 0x08, 0xb7, 0x5d, 0xc2, 0x43, 0xca, 0x6c, 0xcf, 0x1f, 0x50, 0x3b,
+	0x18, 0x9e, 0x5c, 0x3a, 0x7d, 0xfb, 0x82, 0x8e, 0xe2, 0xd8, 0x6e, 0x49, 0x69, 0xdb, 0x1f, 0xd0,
+	0x23, 0x21, 0x6b, 0xd1, 0xd1, 0xb4, 0x97, 0xf9, 0x6b, 0x91, 0xb9, 0x34, 0x87, 0xcc, 0x6f, 0xe0,
+	0x6e, 0xa6, 0x8b, 0x2f, 0x83, 0xcf, 0x3f, 0x11, 0x94, 0x0f, 0x29, 0x51, 0x13, 0xe9, 0xa9, 0xe3,
+	0x39, 0xde, 0x59, 0xc2, 0xe8, 0xff, 0x69, 0x35, 0xaf, 0x32, 0x13, 0x2f, 0x61, 0x77, 0x8e, 0x3f,
+	0x2f, 0x83, 0xbe, 0x7f, 0x10, 0xbc, 0xdd, 0xf0, 0xbd, 0x53, 0x87, 0xb9, 0xca, 0x8d, 0x13, 0xd7,
+	0x5e, 0x84, 0xc5, 0xa8, 0x27, 0xc8, 0x34, 0x9c, 0x90, 0x28, 0x90, 0x8c, 0x7b, 0x82, 0x90, 0x2a,
+	0x97, 0xe9, 0x6e, 0x6a, 0xe7, 0x26, 0x89, 0xfd, 0x09, 0xc1, 0x3b, 0x8b, 0x5d, 0x8d, 0x09, 0x7e,
+	0x00, 0xa0, 0x00, 0x96, 0xae, 0x6e, 0x0a, 0xc0, 0x8a, 0xb2, 0xa2, 0x72, 0xb3, 0x5d, 0xf6, 0x04,
+	0xd6, 0xbb, 0xe7, 0x84, 0xd1, 0x41, 0x8b, 0x8e, 0x8e, 0x88, 0xc3, 0x70, 0x1d, 0x76, 0xa8, 0xd7,
+	0x67, 0xa3, 0x20, 0xa4, 0x03, 0x3b, 0x60, 0xce, 0x15, 0x09, 0xa9, 0x28, 0x66, 0xd9, 0x17, 0xb6,
+	0xc6, 0xc2, 0x23, 0x29, 0x8b, 0x8a, 0x79, 0x17, 0x40, 0xa9, 0x7a, 0x19, 0xfd, 0xd5, 0x20, 0xa9,
+	0x75, 0xf3, 0x57, 0x0d, 0x0a, 0x6a, 0xe7, 0x55, 0x5a, 0x09, 0x9a, 0x6e, 0x25, 0xd7, 0x1f, 0x1e,
+	0x6a, 0x90, 0x1f, 0x90, 0x90, 0x94, 0xb4, 0x8a, 0x56, 0x2d, 0xd4, 0x8d, 0xb4, 0x66, 0xed, 0x31,
+	0x09, 0x49, 0xd3, 0x0b, 0xd9, 0xc8, 0x12, 0x7a, 0xcf, 0xe9, 0x37, 0xd3, 0x0e, 0x2c, 0xa5, 0x1c,
+	0x88, 0x0e, 0x8f, 0x99, 0x2b, 0x2d, 0x4b, 0xe9, 0x78, 0x23, 0x4a, 0x0b, 0xea, 0x3a, 0x61, 0x94,
+	0x79, 0x13, 0xad, 0x15, 0x99, 0x16, 0xb1, 0xa0, 0x3b, 0x56, 0xee, 0x42, 0x99, 0x0b, 0xbe, 0xa3,
+	0x9b, 0xb8, 0x9d, 0x1c, 0x0c, 0x98, 0x1f, 0xf8, 0x9c, 0x5c, 0x96, 0x6e, 0x89, 0xf8, 0x63, 0xe1,
+	0xcf, 0x54, 0x60, 0xac, 0x3b, 0x3c, 0x59, 0xf2, 0xa6, 0x3c, 0x75, 0x14, 0x1f, 0xca, 0x6c, 0xe3,
+	0xab, 0x99, 0x6d, 0xdc, 0xf8, 0x00, 0x56, 0xc7, 0xd4, 0x60, 0x1d, 0xb4, 0x24, 0xb2, 0xab, 0x56,
+	0xf4, 0x17, 0x6f, 0xc3, 0xd2, 0x15, 0xb9, 0x1c, 0x26, 0x25, 0x2c, 0x17, 0x1f, 0xe6, 0x1e, 0x21,
+	0xf3, 0x67, 0x04, 0x7a, 0xba, 0x82, 0xf0, 0x47, 0x60, 0x04, 0x8c, 0x5e, 0x39, 0xfe, 0x90, 0xab,
+	0x4f, 0xb1, 0x78, 0x08, 0xa2, 0xe0, 0x6a, 0xd5, 0x35, 0xab, 0x94, 0x68, 0x28, 0xe1, 0x89, 0xde,
+	0x02, 0x8e, 0x4d, 0x58, 0x0f, 0x98, 0xef, 0x9f, 0xda, 0xfe, 0xa9, 0xfd, 0x9d, 0xcf, 0x2e, 0xe2,
+	0x4b, 0x0b, 0x62, 0xb3, 0x73, 0xfa, 0xcc, 0x67, 0x17, 0xf8, 0x7d, 0xd8, 0x08, 0x18, 0x55, 0x4b,
+	0x5a, 0xcb, 0xae, 0x90, 0xf5, 0x80, 0xd1, 0xc9, 0xd2, 0xfc, 0x0d, 0x01, 0x28, 0x40, 0xa7, 0x03,
+	0x8c, 0xd2, 0x01, 0x7e, 0x34, 0x1e, 0x74, 0x64, 0xe6, 0x55, 0x52, 0xd6, 0x95, 0xbf, 0x8b, 0x46,
+	0x9e, 0x99, 0x8e, 0x31, 0x95, 0x38, 0xf9, 0x54, 0xe2, 0x98, 0x26, 0xe8, 0x69, 0xbb, 0x78, 0x19,
+	0x72, 0xed, 0x8e, 0xfe, 0x5a, 0xf4, 0xdb, 0x69, 0xe9, 0xc8, 0xfc, 0x23, 0xa2, 0x3d, 0x3d, 0xba,
+	0xbc, 0xaa, 0xf6, 0xf8, 0x09, 0x6c, 0xf5, 0x65, 0x4b, 0x9b, 0x7a, 0xa8, 0x64, 0x0d, 0xce, 0x44,
+	0x04, 0xc7, 0xba, 0xca, 0xcb, 0x75, 0xff, 0x63, 0xd8, 0x4c, 0xd5, 0x33, 0x5e, 0x83, 0x5b, 0xad,
+	0xe6, 0x97, 0x8d, 0x27, 0x7b, 0x07, 0x6d, 0xe9, 0xf7, 0xc1, 0x63, 0x1d, 0xe1, 0x1d, 0x28, 0x36,
+	0x3a, 0xed, 0x9e, 0xb5, 0xd7, 0xe8, 0xd9, 0x0d, 0xab, 0xb9, 0xd7, 0x3b, 0xe8, 0xb4, 0xf5, 0xdc,
+	0xfd, 0x16, 0x14, 0x67, 0xc6, 0x4f, 0x5c, 0x80, 0x95, 0xe3, 0x76, 0xab, 0xdd, 0x79, 0x16, 0x19,
+	0xd8, 0x84, 0xc2, 0x41, 0xdb, 0x3e, 0xb2, 0x3a, 0xfb, 0x56, 0xb3, 0xdb, 0xd5, 0x51, 0x24, 0xed,
+	0x1e, 0x37, 0x1a, 0xd1, 0x22, 0x17, 0x2d, 0x3e, 0xdb, 0x3b, 0x38, 0x3c, 0xb6, 0x9a, 0xba, 0x56,
+	0xff, 0x3d, 0x0f, 0x58, 0xb5, 0x46, 0xd9, 0x95, 0xd3, 0xa7, 0xf8, 0x18, 0xf0, 0xec, 0xb7, 0x04,
+	0x7e, 0x43, 0xb8, 0x37, 0xf7, 0x43, 0xc9, 0x78, 0x73, 0xae, 0x3c, 0xee, 0xf3, 0x5f, 0xc1, 0x76,
+	0xd6, 0xb0, 0x8d, 0x2b, 0xc9, 0xc1, 0x79, 0x5f, 0x07, 0xc6, 0x5b, 0x0b, 0x34, 0x62, 0xe3, 0x1d,
+	0xd0, 0xd3, 0x03, 0x25, 0x2e, 0xcb, 0x26, 0x92, 0x3d, 0x42, 0x1b, 0xbb, 0x73, 0xa4, 0xb1, 0xc1,
+	0x2f, 0x60, 0x2b, 0x63, 0xa8, 0xc2, 0xd2, 0xcb, 0xf9, 0x13, 0xa5, 0x51, 0x99, 0xaf, 0x10, 0x5b,
+	0xfe, 0x1a, 0x76, 0x32, 0x27, 0x0e, 0x2c, 0xdd, 0x5c, 0x34, 0x5d, 0x19, 0xe6, 0x22, 0x95, 0xd8,
+	0x3e, 0x87, 0xf2, 0xa2, 0x77, 0x17, 0x57, 0x85, 0x8d, 0x6b, 0x4c, 0x21, 0xc6, 0xbd, 0x6b, 0x68,
+	0xca, 0x4b, 0x4f, 0x96, 0xc5, 0x07, 0xf5, 0xc3, 0x7f, 0x03, 0x00, 0x00, 0xff, 0xff, 0xd0, 0x0b,
+	0xcf, 0x28, 0x65, 0x0f, 0x00, 0x00,
 }

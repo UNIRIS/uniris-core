@@ -12,84 +12,84 @@ service TransactionService {
 }
 
 message GetLastTransactionRequest{
-    string transaction_address = 1;
+    bytes transaction_address = 1;
     TransactionType type = 2;
     int64 timestamp = 3;
-    string signature_request = 4;
+    bytes signature_request = 4;
 }
 
 message GetLastTransactionResponse {
     Transaction transaction = 1;
     int64 timestamp = 2;
-    string signature_response = 3;
+    bytes signature_response = 3;
 }
 
 message GetTransactionStatusRequest {
-    string transaction_hash = 1;
+    bytes transaction_hash = 1;
     int64 timestamp = 2;
-    string signature_request = 3;
+    bytes signature_request = 3;
 }
 
 message GetTransactionStatusResponse {
     TransactionStatus status = 1;
     int64 timestamp = 2;
-    string signature_response = 3;
+    bytes signature_response = 3;
 }
 
 message StoreTransactionRequest {
     MinedTransaction mined_transaction = 1;
     int32 minimum_validations = 2;
     int64 timestamp = 3;
-    string signature_request = 4;
+    bytes signature_request = 4;
 }
 
 message StoreTransactionResponse {
     int64 timestamp = 1;
-    string signature_response = 2;
+    bytes signature_response = 2;
 }
 
 message TimeLockTransactionRequest {
-    string transaction_hash = 1;
-    string address = 2;
-    string master_node_public_key = 3;
+    bytes transaction_hash = 1;
+    bytes address = 2;
+    bytes master_node_public_key = 3;
     int64 timestamp = 4;
-    string signature_request = 5;
+    bytes signature_request = 5;
 }
 
 message TimeLockTransactionResponse {
     int64 timestamp = 1;
-    string signature_response = 2;
+    bytes signature_response = 2;
 }
 
 message LeadTransactionMiningRequest {
     Transaction transaction = 1;
     int32 minimum_validations = 2;
     int64 timestamp = 3;
-    string signature_request = 4;
+    bytes signature_request = 4;
 }
 
 message LeadTransactionMiningResponse {
     int64 timestamp = 1;
-    string signature_response = 2;
+    bytes signature_response = 2;
 }
 
 message ConfirmTransactionValidationRequest {
     Transaction transaction = 1;
     MasterValidation master_validation = 2;
     int64 timestamp = 3;
-    string signature_request = 4;
+    bytes signature_request = 4;
 }
 
 message ConfirmTransactionValidationResponse {
     Validation validation = 1;
     int64 timestamp = 2;
-    string signature_response = 3;
+    bytes signature_response = 3;
 }
 
 
 message SharedKeyPair{
-    string encrypted_private_key = 1;
-    string public_key = 2;
+    bytes encrypted_private_key = 1;
+    bytes public_key = 2;
 }
 
 enum TransactionType {
@@ -99,20 +99,20 @@ enum TransactionType {
 }
 
 message Transaction {
-    string address = 1;
+    bytes address = 1;
     TransactionType type = 2;
-    map<string, string> data = 3;
+    map<string, bytes> data = 3;
     int64 timestamp = 4;
-    string public_key = 5;
-    string signature = 6;
-    string emitter_signature = 7;
+    bytes public_key = 5;
+    bytes signature = 6;
+    bytes emitter_signature = 7;
     SharedKeyPair shared_keys_emitter_proposal = 8;
-    string transaction_hash = 9;
+    bytes transaction_hash = 9;
 }
 
 message MasterValidation {
-    repeated string previous_transaction_nodes = 1;
-    string proof_of_work = 2;
+    repeated bytes previous_transaction_nodes = 1;
+    bytes proof_of_work = 2;
     Validation pre_validation = 3;
 }
 
@@ -122,10 +122,10 @@ message Validation {
         OK = 1;
     }
     
-    string public_key = 1;
+    bytes public_key = 1;
     ValidationStatus status = 2;
     int64 timestamp = 3;
-    string signature = 4;
+    bytes signature = 4;
 }
 
 message MinedTransaction {

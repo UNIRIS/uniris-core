@@ -19,12 +19,12 @@ type txSrv struct {
 	chainDB        chain.Database
 	techDB         shared.TechDatabaseReader
 	poolR          consensus.PoolRequester
-	nodePublicKey  string
-	nodePrivateKey string
+	nodePublicKey  crypto.PublicKey
+	nodePrivateKey crypto.PrivateKey
 }
 
 //NewTransactionService creates service handler for the GRPC Transaction service
-func NewTransactionService(cDB chain.Database, tDB shared.TechDatabaseReader, pR consensus.PoolRequester, nodePublicKeyk, nodePrivateKeyk string) api.TransactionServiceServer {
+func NewTransactionService(cDB chain.Database, l chain.Locker, tDB shared.TechDatabaseReader, pR consensus.PoolRequester, nodePublicKeyk crypto.PublicKey, nodePrivateKeyk crypto.PrivateKey) api.TransactionServiceServer {
 	return txSrv{
 		chainDB:        cDB,
 		techDB:         tDB,
@@ -51,8 +51,8 @@ func (s txSrv) GetLastTransaction(ctx context.Context, req *api.GetLastTransacti
 		return nil, err
 	}
 
-	if err := crypto.VerifySignature(string(reqBytes), nodeLastKeys.PublicKey(), req.SignatureRequest); err != nil {
-		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
+	if !nodeLastKeys.PublicKey().Verify(reqBytes, req.SignatureRequest) {
+		return nil, status.New(codes.InvalidArgument, "invalid signature").Err()
 	}
 
 	tx, err := chain.LastTransaction(s.chainDB, req.TransactionAddress, chain.TransactionType(req.Type))
@@ -63,16 +63,20 @@ func (s txSrv) GetLastTransaction(ctx context.Context, req *api.GetLastTransacti
 		return nil, status.New(codes.NotFound, "transaction does not exist").Err()
 	}
 
+	tvf, err := formatAPITransaction(*tx)
+	if err != nil {
+		return nil, err
+	}
 	res := &api.GetLastTransactionResponse{
 		Timestamp:   time.Now().Unix(),
-		Transaction: formatAPITransaction(*tx),
+		Transaction: tvf,
 	}
 	resBytes, err := json.Marshal(res)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	sig, err := crypto.Sign(string(resBytes), nodeLastKeys.PrivateKey())
+	sig, err := nodeLastKeys.PrivateKey().Sign(resBytes)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -95,8 +99,8 @@ func (s txSrv) GetTransactionStatus(ctx context.Context, req *api.GetTransaction
 	if err != nil {
 		return nil, err
 	}
-	if err := crypto.VerifySignature(string(reqBytes), nodeLastKeys.PublicKey(), req.SignatureRequest); err != nil {
-		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
+	if !nodeLastKeys.PublicKey().Verify(reqBytes, req.SignatureRequest) {
+		return nil, status.New(codes.InvalidArgument, "invalid signature").Err()
 	}
 
 	txStatus, err := chain.GetTransactionStatus(s.chainDB, req.TransactionHash)
@@ -112,7 +116,7 @@ func (s txSrv) GetTransactionStatus(ctx context.Context, req *api.GetTransaction
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := crypto.Sign(string(resBytes), nodeLastKeys.PrivateKey())
+	sig, err := nodeLastKeys.PrivateKey().Sign(resBytes)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -132,8 +136,8 @@ func (s txSrv) StoreTransaction(ctx context.Context, req *api.StoreTransactionRe
 	if err != nil {
 		return nil, err
 	}
-	if err := crypto.VerifySignature(string(reqBytes), nodeLastKeys.PublicKey(), req.SignatureRequest); err != nil {
-		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
+	if !nodeLastKeys.PublicKey().Verify(reqBytes, req.SignatureRequest) {
+		return nil, status.New(codes.InvalidArgument, "invalid signature").Err()
 	}
 
 	tx, err := formatMinedTransaction(req.MinedTransaction.Transaction, req.MinedTransaction.MasterValidation, req.MinedTransaction.ConfirmValidations)
@@ -156,7 +160,7 @@ func (s txSrv) StoreTransaction(ctx context.Context, req *api.StoreTransactionRe
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := crypto.Sign(string(resBytes), nodeLastKeys.PrivateKey())
+	sig, err := nodeLastKeys.PrivateKey().Sign(resBytes)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -177,11 +181,15 @@ func (s txSrv) TimeLockTransaction(ctx context.Context, req *api.TimeLockTransac
 	if err != nil {
 		return nil, err
 	}
-	if err := crypto.VerifySignature(string(reqBytes), nodeLastKeys.PublicKey(), req.SignatureRequest); err != nil {
-		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
+	if !nodeLastKeys.PublicKey().Verify(reqBytes, req.SignatureRequest) {
+		return nil, status.New(codes.InvalidArgument, "invalid signature").Err()
 	}
 
-	if err := chain.TimeLockTransaction(req.TransactionHash, req.Address, req.MasterNodePublicKey); err != nil {
+	masterKey, err := crypto.ParsePublicKey(req.MasterNodePublicKey)
+	if err != nil {
+		return nil, status.New(codes.InvalidArgument, "invalid master public key").Err()
+	}
+	if err := chain.TimeLockTransaction(req.TransactionHash, req.Address, masterKey); err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
@@ -192,7 +200,7 @@ func (s txSrv) TimeLockTransaction(ctx context.Context, req *api.TimeLockTransac
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := crypto.Sign(string(resBytes), nodeLastKeys.PrivateKey())
+	sig, err := nodeLastKeys.PrivateKey().Sign(resBytes)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -212,8 +220,8 @@ func (s txSrv) LeadTransactionMining(ctx context.Context, req *api.LeadTransacti
 	if err != nil {
 		return nil, err
 	}
-	if err := crypto.VerifySignature(string(reqBytes), nodeLastKeys.PublicKey(), req.SignatureRequest); err != nil {
-		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
+	if !nodeLastKeys.PublicKey().Verify(reqBytes, req.SignatureRequest) {
+		return nil, status.New(codes.InvalidArgument, "invalid signature").Err()
 	}
 
 	tx, err := formatTransaction(req.Transaction)
@@ -232,7 +240,7 @@ func (s txSrv) LeadTransactionMining(ctx context.Context, req *api.LeadTransacti
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := crypto.Sign(string(resBytes), nodeLastKeys.PrivateKey())
+	sig, err := nodeLastKeys.PrivateKey().Sign(resBytes)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -256,8 +264,8 @@ func (s txSrv) ConfirmTransactionValidation(ctx context.Context, req *api.Confir
 	if err != nil {
 		return nil, err
 	}
-	if err := crypto.VerifySignature(string(reqBytes), nodeLastKeys.PublicKey(), req.SignatureRequest); err != nil {
-		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
+	if !nodeLastKeys.PublicKey().Verify(reqBytes, req.SignatureRequest) {
+		return nil, status.New(codes.InvalidArgument, "invalid signature").Err()
 	}
 
 	tx, err := formatTransaction(req.Transaction)
@@ -273,15 +281,19 @@ func (s txSrv) ConfirmTransactionValidation(ctx context.Context, req *api.Confir
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
+	v, err := formatAPIValidation(valid)
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
 	res := &api.ConfirmTransactionValidationResponse{
-		Validation: formatAPIValidation(valid),
+		Validation: v,
 		Timestamp:  time.Now().Unix(),
 	}
 	resBytes, err := json.Marshal(res)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := crypto.Sign(string(resBytes), nodeLastKeys.PrivateKey())
+	sig, err := nodeLastKeys.PrivateKey().Sign(resBytes)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}

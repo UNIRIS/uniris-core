@@ -16,7 +16,7 @@ Scenario: Get the minimum number of a transaction replicas
 	//TODO: to improve when the implementation will be defined
 */
 func TestGetMinimumReplicas(t *testing.T) {
-	assert.Equal(t, 1, GetMinimumReplicas(""))
+	assert.Equal(t, 1, GetMinimumReplicas([]byte("")))
 }
 
 /*

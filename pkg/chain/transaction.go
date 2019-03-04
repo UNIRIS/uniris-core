@@ -1,6 +1,8 @@
 package chain
 
 import (
+	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -47,22 +49,22 @@ const (
 
 //Transaction describe a root Transaction
 type Transaction struct {
-	addr          string
+	addr          crypto.VersionnedHash
 	txType        TransactionType
-	data          map[string]string
+	data          map[string][]byte
 	timestamp     time.Time
-	pubKey        string
-	sig           string
-	emSig         string
+	pubKey        crypto.PublicKey
+	sig           []byte
+	emSig         []byte
 	prop          shared.EmitterKeyPair
-	hash          string
+	hash          crypto.VersionnedHash
 	prevTx        *Transaction
 	masterV       MasterValidation
 	confirmValids []Validation
 }
 
 //NewTransaction creates a new transaction
-func NewTransaction(addr string, txType TransactionType, data map[string]string, timestamp time.Time, pubK string, prop shared.EmitterKeyPair, sig string, emSig string, hash string) (Transaction, error) {
+func NewTransaction(addr crypto.VersionnedHash, txType TransactionType, data map[string][]byte, timestamp time.Time, pubK crypto.PublicKey, prop shared.EmitterKeyPair, sig []byte, emSig []byte, hash crypto.VersionnedHash) (Transaction, error) {
 	tx := Transaction{
 		addr:      addr,
 		txType:    txType,
@@ -81,7 +83,7 @@ func NewTransaction(addr string, txType TransactionType, data map[string]string,
 }
 
 //Address returns the Transaction's addr (use for the sharding and identify the owner of the Transaction)
-func (t Transaction) Address() string {
+func (t Transaction) Address() crypto.VersionnedHash {
 	return t.addr
 }
 
@@ -91,7 +93,7 @@ func (t Transaction) TransactionType() TransactionType {
 }
 
 //Data returns Transaction's data
-func (t Transaction) Data() map[string]string {
+func (t Transaction) Data() map[string][]byte {
 	return t.data
 }
 
@@ -101,17 +103,17 @@ func (t Transaction) Timestamp() time.Time {
 }
 
 //PublicKey returns Transaction's public key
-func (t Transaction) PublicKey() string {
+func (t Transaction) PublicKey() crypto.PublicKey {
 	return t.pubKey
 }
 
 //Signature returns Transaction's signature
-func (t Transaction) Signature() string {
+func (t Transaction) Signature() []byte {
 	return t.sig
 }
 
 //EmitterSignature returns Transaction's client signature (use to perform POW)
-func (t Transaction) EmitterSignature() string {
+func (t Transaction) EmitterSignature() []byte {
 	return t.emSig
 }
 
@@ -121,7 +123,7 @@ func (t Transaction) EmitterSharedKeyProposal() shared.EmitterKeyPair {
 }
 
 //TransactionHash returns the Transaction's hash
-func (t Transaction) TransactionHash() string {
+func (t Transaction) TransactionHash() crypto.VersionnedHash {
 	return t.hash
 }
 
@@ -146,8 +148,8 @@ func (t Transaction) ConfirmationsValidations() []Validation {
 //CheckChainTransactionIntegrity insure the Transaction chain integrity
 func (t *Transaction) CheckChainTransactionIntegrity() error {
 	if t.prevTx != nil {
-		if _, err := crypto.IsHash(t.prevTx.TransactionHash()); err != nil {
-			return err
+		if !t.prevTx.TransactionHash().IsValid() {
+			return errors.New("invalid previous transaction hash")
 		}
 		if t.prevTx.timestamp.Unix() >= t.timestamp.Unix() {
 			return errors.New("previous chained transaction must be anterior to the current transaction")
@@ -162,8 +164,9 @@ func (t Transaction) checkTransactionIntegrity() error {
 	if err != nil {
 		return err
 	}
-	hash := crypto.HashBytes(txBytesForHash)
-	if hash != t.hash {
+
+	hash := crypto.Hash(txBytesForHash)
+	if !bytes.Equal(hash, t.hash) {
 		return errors.New("transaction integrity violated")
 	}
 
@@ -172,11 +175,10 @@ func (t Transaction) checkTransactionIntegrity() error {
 		return err
 	}
 
-	err = crypto.VerifySignature(string(txBytesBeforeSig), t.pubKey, t.sig)
-	if err == crypto.ErrInvalidSignature {
+	if ok := t.pubKey.Verify(txBytesBeforeSig, t.sig); !ok {
 		return errors.New("transaction signature invalid")
 	}
-	return err
+	return nil
 }
 
 //CheckMasterValidation ensures the proof of work is valid
@@ -190,11 +192,10 @@ func (t Transaction) CheckMasterValidation() error {
 		return err
 	}
 
-	err = crypto.VerifySignature(string(txBytesBeforeEmSig), t.masterV.pow, t.emSig)
-	if err == crypto.ErrInvalidSignature {
+	if ok := t.masterV.pow.Verify(txBytesBeforeEmSig, t.emSig); !ok {
 		return errors.New("invalid proof of work")
 	}
-	return err
+	return nil
 }
 
 //IsKO determinates is the Transaction is KO (plan to be in the KO storage)
@@ -214,7 +215,7 @@ func (t Transaction) IsKO() bool {
 func (t *Transaction) Mined(mv MasterValidation, confs []Validation) error {
 	t.masterV = mv
 	if len(confs) == 0 {
-		return errors.New("transaction: missing confirmation validations")
+		return errors.New("confirmation validations of the transaction are missing")
 	}
 
 	t.confirmValids = confs
@@ -238,40 +239,96 @@ func (t *Transaction) Chain(prevTx *Transaction) error {
 
 //MarshalBeforeSignature serializes as JSON the transaction before its signature
 func (t Transaction) MarshalBeforeSignature() ([]byte, error) {
+
+	pubK, err := t.pubKey.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	propPub, err := t.prop.PublicKey().Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	data := make(map[string]string)
+	for k, v := range t.data {
+		data[k] = hex.EncodeToString(v)
+	}
+
 	return json.Marshal(map[string]interface{}{
-		"addr":                    t.addr,
-		"data":                    t.data,
-		"timestamp":               t.timestamp.Unix(),
-		"type":                    t.txType,
-		"public_key":              t.pubKey,
-		"em_shared_keys_proposal": t.prop,
+		"addr":       hex.EncodeToString(t.addr),
+		"data":       data,
+		"timestamp":  t.timestamp.Unix(),
+		"type":       t.txType,
+		"public_key": hex.EncodeToString(pubK),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString(t.prop.EncryptedPrivateKey()),
+			"public_key":            hex.EncodeToString(propPub),
+		},
 	})
 }
 
 //MarshalBeforeEmitterSignature serializes as JSON the transaction before the emitter signature
 func (t Transaction) MarshalBeforeEmitterSignature() ([]byte, error) {
+
+	pubK, err := t.pubKey.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	propPub, err := t.prop.PublicKey().Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	data := make(map[string]string)
+	for k, v := range t.data {
+		data[k] = hex.EncodeToString(v)
+	}
+
 	return json.Marshal(map[string]interface{}{
-		"addr":                    t.addr,
-		"data":                    t.data,
-		"timestamp":               t.timestamp.Unix(),
-		"type":                    t.txType,
-		"public_key":              t.pubKey,
-		"em_shared_keys_proposal": t.prop,
-		"signature":               t.sig,
+		"addr":       hex.EncodeToString(t.addr),
+		"data":       data,
+		"timestamp":  t.timestamp.Unix(),
+		"type":       t.txType,
+		"public_key": hex.EncodeToString(pubK),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString(t.prop.EncryptedPrivateKey()),
+			"public_key":            hex.EncodeToString(propPub),
+		},
+		"signature": hex.EncodeToString(t.sig),
 	})
 }
 
 //MarshalHash serializes as JSON the transaction to produce its hash
 func (t Transaction) MarshalHash() ([]byte, error) {
+	pubK, err := t.pubKey.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	propPub, err := t.prop.PublicKey().Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	data := make(map[string]string)
+	for k, v := range t.data {
+		data[k] = hex.EncodeToString(v)
+	}
+
 	return json.Marshal(map[string]interface{}{
-		"addr":                    t.addr,
-		"data":                    t.data,
-		"timestamp":               t.timestamp.Unix(),
-		"type":                    t.txType,
-		"public_key":              t.pubKey,
-		"em_shared_keys_proposal": t.prop,
-		"signature":               t.sig,
-		"em_signature":            t.emSig,
+		"addr":       hex.EncodeToString(t.addr),
+		"data":       data,
+		"timestamp":  t.timestamp.Unix(),
+		"type":       t.txType,
+		"public_key": hex.EncodeToString(pubK),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString(t.prop.EncryptedPrivateKey()),
+			"public_key":            hex.EncodeToString(propPub),
+		},
+		"signature":    hex.EncodeToString(t.sig),
+		"em_signature": hex.EncodeToString(t.emSig),
 	})
 }
 
@@ -287,32 +344,39 @@ func (t Transaction) IsValid() (bool, error) {
 }
 
 func (t Transaction) checkFields() error {
-	if _, err := crypto.IsHash(t.addr); err != nil {
-		return fmt.Errorf("transaction: addr %s", err.Error())
+
+	if len(t.addr) == 0 {
+		return errors.New("transaction address is missing")
+	}
+	if !t.addr.IsValid() {
+		return errors.New("transaction address is not a valid hash")
 	}
 
-	if _, err := crypto.IsHash(t.hash); err != nil {
-		return fmt.Errorf("transaction: %s", err.Error())
+	if t.pubKey == nil {
+		return errors.New("transaction public key is missing")
+	}
+
+	if len(t.sig) == 0 {
+		return errors.New("transaction signature is missing")
+	}
+
+	if len(t.emSig) == 0 {
+		return errors.New("transaction emitter signature is missing")
+	}
+
+	if len(t.hash) == 0 {
+		return errors.New("transaction hash is missing")
+	}
+	if !t.hash.IsValid() {
+		return errors.New("transaction hash is not a valid hash")
 	}
 
 	if len(t.data) == 0 {
-		return errors.New("transaction: data is empty")
+		return errors.New("transaction data is missing")
 	}
 
 	if t.timestamp.Unix() > time.Now().Unix() {
-		return errors.New("transaction: timestamp must be greater lower than now")
-	}
-
-	if _, err := crypto.IsPublicKey(t.pubKey); err != nil {
-		return fmt.Errorf("transaction: %s", err.Error())
-	}
-
-	if _, err := crypto.IsSignature(t.sig); err != nil {
-		return fmt.Errorf("transaction: %s", err.Error())
-	}
-
-	if _, err := crypto.IsSignature(t.emSig); err != nil {
-		return fmt.Errorf("transaction: %s", err.Error())
+		return errors.New("transaction timestamp must be greater lower than now")
 	}
 
 	switch t.txType {
@@ -321,11 +385,15 @@ func (t Transaction) checkFields() error {
 	case ContractTransactionType:
 	case ContractMessageTransactionType:
 	default:
-		return errors.New("transaction: type not allowed")
+		return errors.New("transaction type is not allowed")
 	}
 
-	if t.prop == (shared.EmitterKeyPair{}) {
-		return errors.New("transaction: proposal is missing")
+	if t.prop.EncryptedPrivateKey() == nil {
+		return errors.New("transaction proposal private key is missing")
+	}
+
+	if t.prop.PublicKey() == nil {
+		return errors.New("transaction proposal public key is missing")
 	}
 
 	return nil
@@ -347,12 +415,12 @@ const (
 type Validation struct {
 	status    ValidationStatus
 	timestamp time.Time
-	nodePubk  string
-	nodeSig   string
+	nodePubk  crypto.PublicKey
+	nodeSig   []byte
 }
 
 //NewValidation creates a new node validation
-func NewValidation(status ValidationStatus, t time.Time, nodePubk string, nodeSig string) (Validation, error) {
+func NewValidation(status ValidationStatus, t time.Time, nodePubk crypto.PublicKey, nodeSig []byte) (Validation, error) {
 	v := Validation{
 		status:    status,
 		timestamp: t,
@@ -378,66 +446,71 @@ func (v Validation) Timestamp() time.Time {
 }
 
 //PublicKey return the node's public key performed this validation
-func (v Validation) PublicKey() string {
+func (v Validation) PublicKey() crypto.PublicKey {
 	return v.nodePubk
 }
 
 //Signature returne the node's signature which performed this validation
-func (v Validation) Signature() string {
+func (v Validation) Signature() []byte {
 	return v.nodeSig
 }
 
 //IsValid checks if the node validation is valid
 func (v Validation) IsValid() (bool, error) {
 
-	if v.timestamp.Unix() > time.Now().Unix() {
-		return false, errors.New("node validation: timestamp must be anterior or equal to now")
+	if v.nodePubk == nil {
+		return false, errors.New("validation public key is missing")
 	}
 
-	if _, err := crypto.IsPublicKey(v.nodePubk); err != nil {
-		return false, fmt.Errorf("node validation: %s", err.Error())
+	if len(v.nodeSig) == 0 {
+		return false, errors.New("validation signature is missing")
 	}
+
+	if v.timestamp.Unix() > time.Now().Unix() {
+		return false, errors.New("validation timestamp must be anterior or equal to now")
+	}
+
 	switch v.status {
 	case ValidationKO:
 	case ValidationOK:
 	default:
-		return false, errors.New("node validation: status not allowed")
+		return false, errors.New("validation status is not allowed")
 	}
 
-	if _, err := crypto.IsSignature(v.nodeSig); err != nil {
-		return false, fmt.Errorf("node validation: %s", err.Error())
-	}
 	vBytes, err := json.Marshal(v)
 	if err != nil {
 		return false, err
 	}
-	if err := crypto.VerifySignature(string(vBytes), v.nodePubk, v.nodeSig); err != nil {
-		if err == crypto.ErrInvalidSignature {
-			return false, errors.New("node validation: signature is invalid")
-		}
-		return false, err
+
+	if ok := v.nodePubk.Verify(vBytes, v.nodeSig); !ok {
+		return false, errors.New("validation signature is not valid")
 	}
+
 	return true, nil
 }
 
 //MarshalJSON serializes as JSON a node validation
 func (v Validation) MarshalJSON() ([]byte, error) {
+	nodeKey, err := v.nodePubk.Marshal()
+	if err != nil {
+		return nil, err
+	}
 	return json.Marshal(map[string]interface{}{
 		"status":     v.status,
-		"public_key": v.nodePubk,
+		"public_key": nodeKey,
 		"timestamp":  v.timestamp.Unix(),
 	})
 }
 
 //MasterValidation describe the master Transaction validation
 type MasterValidation struct {
-	prevs      []string
-	pow        string
+	prevs      []crypto.PublicKey
+	pow        crypto.PublicKey
 	validation Validation
 }
 
 //NewMasterValidation creates a new master Transaction validation
-func NewMasterValidation(prevs []string, pow string, valid Validation) (MasterValidation, error) {
+func NewMasterValidation(prevs []crypto.PublicKey, pow crypto.PublicKey, valid Validation) (MasterValidation, error) {
 	mv := MasterValidation{
 		prevs:      prevs,
 		pow:        pow,
@@ -450,12 +523,12 @@ func NewMasterValidation(prevs []string, pow string, valid Validation) (MasterVa
 }
 
 //PreviousTransactionNodes returns the nodes for the previous Transaction
-func (mv MasterValidation) PreviousTransactionNodes() []string {
+func (mv MasterValidation) PreviousTransactionNodes() []crypto.PublicKey {
 	return mv.prevs
 }
 
 //ProofOfWork returns the Transaction proof of work (emitter public key) validated the emitter signature
-func (mv MasterValidation) ProofOfWork() string {
+func (mv MasterValidation) ProofOfWork() crypto.PublicKey {
 	return mv.pow
 }
 
@@ -467,21 +540,12 @@ func (mv MasterValidation) Validation() Validation {
 //IsValid check is the master validation is correct
 func (mv MasterValidation) IsValid() (bool, error) {
 
-	//Ensure the previous nodes are public keys
-	if len(mv.prevs) > 0 {
-		for _, m := range mv.prevs {
-			if _, err := crypto.IsPublicKey(m); err != nil {
-				return false, err
-			}
-		}
-	}
-
-	if _, err := crypto.IsPublicKey(mv.ProofOfWork()); err != nil {
-		return false, fmt.Errorf("master validation POW: %s", err.Error())
+	if mv.ProofOfWork() == nil {
+		return false, errors.New("proof of work is missing")
 	}
 
 	if _, err := mv.Validation().IsValid(); err != nil {
-		return false, fmt.Errorf("master validation: %s", err.Error())
+		return false, fmt.Errorf("master validation is not valid: %s", err.Error())
 	}
 
 	return true, nil

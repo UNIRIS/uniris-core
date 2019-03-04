@@ -1,7 +1,7 @@
 package chain
 
 import (
-	"encoding/hex"
+	"crypto/rand"
 	"encoding/json"
 	"testing"
 	"time"
@@ -17,20 +17,20 @@ Scenario: Create a new transaction
 	When I want to create the transaction
 	Then I get it
 */
-func TestNewTransaction(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+func TestNewTransactionTransaction(t *testing.T) {
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
 
-	addr := crypto.HashString("addr")
-	data := map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
-		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+	addr := crypto.Hash([]byte("addr"))
+	data := map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_address_by_id":   []byte("addr"),
+		"encrypted_aes_key":         []byte("aesKey"),
 	}
-	hash := crypto.HashString("hash")
+	hash := crypto.Hash([]byte("hash"))
 
-	sig, _ := crypto.Sign("data", pv)
+	sig, _ := pv.Sign([]byte("data"))
 
 	tx, err := NewTransaction(addr, KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
@@ -47,15 +47,48 @@ Scenario: Create a new transaction with an invalid addr
 	When I want to create the transaction
 	Then I get an error
 */
-func TestNewWithInvalidAddress(t *testing.T) {
-	_, err := NewTransaction("", KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterKeyPair{}, "", "", "")
-	assert.EqualError(t, err, "transaction: addr hash is empty")
+func TestNewTransactionWithInvalidAddress(t *testing.T) {
+	_, err := NewTransaction([]byte(""), KeychainTransactionType, map[string][]byte{}, time.Now(), nil, shared.EmitterKeyPair{}, []byte(""), []byte(""), []byte(""))
+	assert.EqualError(t, err, "transaction address is missing")
 
-	_, err = NewTransaction("abc", KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterKeyPair{}, "", "", "")
-	assert.EqualError(t, err, "transaction: addr hash is not in hexadecimal format")
+	_, err = NewTransaction([]byte("abc"), KeychainTransactionType, map[string][]byte{}, time.Now(), nil, shared.EmitterKeyPair{}, []byte(""), []byte(""), []byte(""))
+	assert.EqualError(t, err, "transaction address is not a valid hash")
+}
 
-	_, err = NewTransaction(hex.EncodeToString([]byte("abc")), KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterKeyPair{}, "", "", "")
-	assert.EqualError(t, err, "transaction: addr hash is not valid")
+/*
+Scenario: Create a new transaction without public key
+	Given a transaction without public key
+	When I want to create the transaction
+	Then I get an error
+*/
+func TestNewTransactionWithoutPublicKey(t *testing.T) {
+
+	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), nil, shared.EmitterKeyPair{}, []byte("fake sig"), []byte("fake sig"), []byte(""))
+	assert.EqualError(t, err, "transaction public key is missing")
+}
+
+/*
+Scenario: Create a new transaction without signature
+	Given a transaction without signature
+	When I want to create the transaction
+	Then I get an error
+*/
+func TestNewTransactionWithoutSignature(t *testing.T) {
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), pub, shared.EmitterKeyPair{}, nil, nil, []byte(""))
+	assert.EqualError(t, err, "transaction signature is missing")
+}
+
+/*
+Scenario: Create a new transaction without emitter signature
+	Given a transaction without emitt ersignature
+	When I want to create the transaction
+	Then I get an error
+*/
+func TestNewTransactionWithoutEmitterSignature(t *testing.T) {
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), pub, shared.EmitterKeyPair{}, []byte("fake sig"), nil, []byte(""))
+	assert.EqualError(t, err, "transaction emitter signature is missing")
 }
 
 /*
@@ -64,16 +97,15 @@ Scenario: Create a new transaction with an invalid transaction hash
 	When I want to create the transaction
 	Then I get an error
 */
-func TestNewWithInvalidHash(t *testing.T) {
+func TestNewTransactionWithInvalidHash(t *testing.T) {
 
-	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterKeyPair{}, "", "", "")
-	assert.EqualError(t, err, "transaction: hash is empty")
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterKeyPair{}, "", "", "abc")
-	assert.EqualError(t, err, "transaction: hash is not in hexadecimal format")
+	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), pub, shared.EmitterKeyPair{}, []byte("fake sig"), []byte("fake sig"), []byte(""))
+	assert.EqualError(t, err, "transaction hash is missing")
 
-	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterKeyPair{}, "", "", hex.EncodeToString([]byte("abc")))
-	assert.EqualError(t, err, "transaction: hash is not valid")
+	_, err = NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), pub, shared.EmitterKeyPair{}, []byte("fake sig"), []byte("fake sig"), []byte("abc"))
+	assert.EqualError(t, err, "transaction hash is not a valid hash")
 }
 
 /*
@@ -82,10 +114,11 @@ Scenario: Create a new transaction with an invalid transaction data
 	When I want to create the transaction
 	Then I get an error
 */
-func TestNewWithInvalidData(t *testing.T) {
+func TestNewTransactionWithInvalidData(t *testing.T) {
 
-	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterKeyPair{}, "", "", crypto.HashString("addr"))
-	assert.EqualError(t, err, "transaction: data is empty")
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), pub, shared.EmitterKeyPair{}, []byte("fake sig"), []byte("fake sig"), crypto.Hash([]byte("addr")))
+	assert.EqualError(t, err, "transaction data is missing")
 }
 
 /*
@@ -94,66 +127,13 @@ Scenario: Create a new transaction with an invalid transaction timestamp (more t
 	When I want to create the transaction
 	Then I get an error
 */
-func TestNewWithInvalidTimestamp(t *testing.T) {
-	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now().Add(2*time.Second), "", shared.EmitterKeyPair{}, "", "", crypto.HashString("addr"))
-	assert.EqualError(t, err, "transaction: timestamp must be greater lower than now")
-}
-
-/*
-Scenario: Create a new transaction with an invalid transaction public key
-	Given an invalid public key: empty or not hex or not a key
-	When I want to create the transaction
-	Then I get an error
-*/
-func TestNewWithInvalidPublicKey(t *testing.T) {
-	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), "", shared.EmitterKeyPair{}, "", "", crypto.HashString("addr"))
-	assert.EqualError(t, err, "transaction: public key is empty")
-
-	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), "abc", shared.EmitterKeyPair{}, "", "", crypto.HashString("addr"))
-	assert.EqualError(t, err, "transaction: public key is not in hexadecimal format")
-
-	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString([]byte("abc")), shared.EmitterKeyPair{}, "", "", crypto.HashString("addr"))
-	assert.EqualError(t, err, "transaction: public key is not valid")
-}
-
-/*
-Scenario: Create a new transaction with an invalid transaction signature
-	Given an invalid signature: empty or not hex or not a signature
-	When I want to create the transaction
-	Then I get an error
-*/
-func TestNewWithInvalidSignature(t *testing.T) {
-	pub, _ := crypto.GenerateKeys()
-
-	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), pub, shared.EmitterKeyPair{}, "", "", crypto.HashString(("hello")))
-	assert.EqualError(t, err, "transaction: signature is empty")
-
-	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), pub, shared.EmitterKeyPair{}, "abc", "", crypto.HashString("addr"))
-	assert.EqualError(t, err, "transaction: signature is not in hexadecimal format")
-
-	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), pub, shared.EmitterKeyPair{}, hex.EncodeToString([]byte("abc")), "", crypto.HashString("addr"))
-	assert.EqualError(t, err, "transaction: signature is not valid")
+func TestNewTransactionWithInvalidTimestamp(t *testing.T) {
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
+	}, time.Now().Add(2*time.Second), pub, shared.EmitterKeyPair{}, []byte("fake sig"), []byte("fake sig"), crypto.Hash([]byte("addr")))
+	assert.EqualError(t, err, "transaction timestamp must be greater lower than now")
 }
 
 /*
@@ -162,16 +142,16 @@ Scenario: Create a new transaction with invalid transaction type
 	When I want to create the transaction
 	Then I get an error
 */
-func TestNewWithInvalidType(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+func TestNewTransactionWithInvalidType(t *testing.T) {
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	sig, _ := crypto.Sign("sig", pv)
+	sig, _ := pv.Sign([]byte("sig"))
 
-	_, err := NewTransaction(crypto.HashString("addr"), 10, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), pub, shared.EmitterKeyPair{}, sig, sig, crypto.HashString(("hello")))
-	assert.EqualError(t, err, "transaction: type not allowed")
+	_, err := NewTransaction(crypto.Hash([]byte("addr")), 10, map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
+	}, time.Now(), pub, shared.EmitterKeyPair{}, sig, sig, crypto.Hash([]byte("hello")))
+	assert.EqualError(t, err, "transaction type is not allowed")
 }
 
 /*
@@ -180,16 +160,23 @@ Scenario: Create a new transaction without proposal
 	When I want to create the transaction
 	Then I get an error
 */
-func TestNewWithoutProposal(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+func TestNewTransactionWithoutProposal(t *testing.T) {
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	sig, _ := crypto.Sign("sig", pv)
+	sig, _ := pv.Sign([]byte("sig"))
 
-	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), pub, shared.EmitterKeyPair{}, sig, sig, crypto.HashString(("hello")))
-	assert.EqualError(t, err, "transaction: proposal is missing")
+	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
+	}, time.Now(), pub, shared.EmitterKeyPair{}, sig, sig, crypto.Hash([]byte("hello")))
+	assert.EqualError(t, err, "transaction proposal private key is missing")
+
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPv"), nil)
+	_, err = NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
+	}, time.Now(), pub, prop, sig, sig, crypto.Hash([]byte("hello")))
+	assert.EqualError(t, err, "transaction proposal public key is missing")
 }
 
 /*
@@ -199,15 +186,15 @@ Scenario: Check the transaction integrity
 	Then I get not error
 */
 func TestCheckTransactionIntegrity(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
 
 	txRaw := Transaction{
-		addr: crypto.HashString("addr"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
@@ -215,12 +202,12 @@ func TestCheckTransactionIntegrity(t *testing.T) {
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := txRaw.MarshalBeforeSignature()
-	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
+	sig, _ := pv.Sign(txBytesBeforeSig)
 	txRaw.emSig = sig
 	txRaw.sig = sig
 	txBytes, _ := txRaw.MarshalHash()
 
-	hash := crypto.HashBytes(txBytes)
+	hash := crypto.Hash(txBytes)
 
 	tx, _ := NewTransaction(txRaw.addr, KeychainTransactionType, txRaw.data, txRaw.timestamp, txRaw.pubKey, txRaw.prop, txRaw.sig, txRaw.emSig, hash)
 	assert.Nil(t, tx.checkTransactionIntegrity())
@@ -233,27 +220,27 @@ Scenario: Check the transaction integrity with invalid hash
 	Then I get an error
 */
 func TestCheckTransactionIntegrityWithInvalidHash(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
 
 	raw, _ := json.Marshal(Transaction{
-		addr: crypto.HashString("addr"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
 		pubKey:    pub,
 		prop:      prop,
 	})
-	sig, _ := crypto.Sign(string(raw), pv)
-	hash := "abc"
+	sig, _ := pv.Sign(raw)
+	hash := crypto.Hash([]byte("abc"))
 
-	tx, _ := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+	tx, _ := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.EqualError(t, tx.checkTransactionIntegrity(), "transaction integrity violated")
 }
@@ -265,32 +252,32 @@ Scenario: Check the transaction integrity with invalid signature
 	Then I get not error
 */
 func TestCheckTransactionIntegrityWithInvalidSignature(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
 
 	txRaw := Transaction{
-		addr: crypto.HashString("addr"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
 		pubKey:    pub,
 		prop:      prop,
 	}
-	sig, _ := crypto.Sign(string("fake sig"), pv)
+	sig, _ := pv.Sign([]byte("fakesig"))
 	txRaw.emSig = sig
 	txRaw.sig = sig
 
 	txBytes, _ := txRaw.MarshalHash()
 
-	hash := crypto.HashBytes(txBytes)
+	hash := crypto.Hash(txBytes)
 
-	tx, _ := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+	tx, _ := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.EqualError(t, tx.checkTransactionIntegrity(), "transaction signature invalid")
 }
@@ -302,26 +289,26 @@ Scenario: Add mining information to a transaction
 	Then I can retrieve in inside the transaction
 */
 func TestMined(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
 
 	raw, _ := json.Marshal(Transaction{
-		addr: crypto.HashString("addr"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
 		pubKey:    pub,
 		prop:      prop,
 	})
-	sig, _ := crypto.Sign(string(raw), pv)
-	hash := crypto.HashBytes(raw)
-	tx, _ := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+	sig, _ := pv.Sign(raw)
+	hash := crypto.Hash(raw)
+	tx, _ := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
 	}, time.Now(), pub, prop, sig, sig, hash)
 
 	b, _ := json.Marshal(Validation{
@@ -329,10 +316,10 @@ func TestMined(t *testing.T) {
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	sig, _ = crypto.Sign(string(b), pv)
+	sig, _ = pv.Sign(b)
 	v, _ := NewValidation(ValidationOK, time.Now(), pub, sig)
 
-	masterValid, _ := NewMasterValidation([]string{}, pub, v)
+	masterValid, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v)
 	assert.Nil(t, tx.Mined(masterValid, []Validation{v}))
 
 	assert.Equal(t, sig, tx.MasterValidation().Validation().Signature())
@@ -346,26 +333,26 @@ Scenario: Add mining information to a transaction without confirmations
 	Then I get an error
 */
 func TestMinedWithoutConfirmations(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
 
 	raw, _ := json.Marshal(Transaction{
-		addr: crypto.HashString("addr"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
 		pubKey:    pub,
 		prop:      prop,
 	})
-	sig, _ := crypto.Sign(string(raw), pv)
-	hash := crypto.HashBytes(raw)
-	tx, _ := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+	sig, _ := pv.Sign(raw)
+	hash := crypto.Hash(raw)
+	tx, _ := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
 	}, time.Now(), pub, prop, sig, sig, hash)
 
 	b, _ := json.Marshal(Validation{
@@ -373,11 +360,11 @@ func TestMinedWithoutConfirmations(t *testing.T) {
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	sig, _ = crypto.Sign(string(b), pv)
+	sig, _ = pv.Sign(b)
 	v, _ := NewValidation(ValidationOK, time.Now(), pub, sig)
 
-	masterValid, _ := NewMasterValidation([]string{}, pub, v)
-	assert.EqualError(t, tx.Mined(masterValid, []Validation{}), "transaction: missing confirmation validations")
+	masterValid, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v)
+	assert.EqualError(t, tx.Mined(masterValid, []Validation{}), "confirmation validations of the transaction are missing")
 }
 
 /*
@@ -387,15 +374,15 @@ Scenario: Check the integrity of a transaction chain
 	Then I get not error
 */
 func TestCheckChainIntegrity(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
 
 	tx1 := Transaction{
-		addr: crypto.HashString("addr"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
@@ -403,18 +390,18 @@ func TestCheckChainIntegrity(t *testing.T) {
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx1.MarshalBeforeSignature()
-	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
+	sig, _ := pv.Sign(txBytesBeforeSig)
 	tx1.emSig = sig
 	tx1.sig = sig
 	txBytes1, _ := tx1.MarshalHash()
-	txHash1 := crypto.HashBytes(txBytes1)
+	txHash1 := crypto.Hash(txBytes1)
 	tx1.hash = txHash1
 
 	tx2 := Transaction{
-		addr: crypto.HashString("addr"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now().Add(2 * time.Second),
@@ -422,19 +409,19 @@ func TestCheckChainIntegrity(t *testing.T) {
 		prop:      prop,
 	}
 	txBytesBeforeSig2, _ := tx2.MarshalBeforeSignature()
-	sig2, _ := crypto.Sign(string(txBytesBeforeSig2), pv)
+	sig2, _ := pv.Sign(txBytesBeforeSig2)
 	tx2.emSig = sig2
 	tx2.sig = sig2
 	txBytes2, _ := tx2.MarshalHash()
-	txHash2 := crypto.HashBytes(txBytes2)
+	txHash2 := crypto.Hash(txBytes2)
 	tx2.hash = txHash2
 	tx2.prevTx = &tx1
 
 	tx3 := Transaction{
-		addr: crypto.HashString("hello3"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now().Add(3 * time.Second),
@@ -442,11 +429,11 @@ func TestCheckChainIntegrity(t *testing.T) {
 		prop:      prop,
 	}
 	txBytesBeforeSig3, _ := tx3.MarshalBeforeSignature()
-	sig3, _ := crypto.Sign(string(txBytesBeforeSig3), pv)
+	sig3, _ := pv.Sign(txBytesBeforeSig3)
 	tx3.emSig = sig3
 	tx3.sig = sig3
 	txBytes3, _ := tx3.MarshalHash()
-	txHash3 := crypto.HashBytes(txBytes3)
+	txHash3 := crypto.Hash(txBytes3)
 	tx3.hash = txHash3
 	tx3.prevTx = &tx2
 
@@ -460,15 +447,15 @@ Scenario: Check chain integrity with invalid timestamp
 	Then I get an error
 */
 func TestCheckChainIntegrityWithInvalidTime(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
 
 	tx0 := Transaction{
-		addr: crypto.HashString("addr"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
@@ -477,16 +464,16 @@ func TestCheckChainIntegrityWithInvalidTime(t *testing.T) {
 	}
 
 	b, _ := json.Marshal(tx0)
-	hash := crypto.HashBytes(b)
-	sig, _ := crypto.Sign(string(b), pv)
+	hash := crypto.Hash(b)
+	sig, _ := pv.Sign(b)
 	tx0.sig = sig
 	tx0.hash = hash
 
 	tx1 := Transaction{
-		addr: crypto.HashString("hello2"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
@@ -506,15 +493,15 @@ Scenario: Chain a transaction to another one
 */
 func TestChainTransaction(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
 
 	tx1 := Transaction{
-		addr: crypto.HashString("addr"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
@@ -522,32 +509,30 @@ func TestChainTransaction(t *testing.T) {
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx1.MarshalBeforeSignature()
-	sig, _ := crypto.Sign(string(txBytesBeforeSig), pv)
+	sig, _ := pv.Sign(txBytesBeforeSig)
 	tx1.emSig = sig
 	tx1.sig = sig
 	txBytes1, _ := tx1.MarshalHash()
-	txHash1 := crypto.HashBytes(txBytes1)
+	txHash1 := crypto.Hash(txBytes1)
 	tx1.hash = txHash1
 
-	time.Sleep(1 * time.Second)
-
 	tx2 := Transaction{
-		addr: crypto.HashString("addr"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
-		timestamp: time.Now(),
+		timestamp: time.Now().Add(2 * time.Second),
 		pubKey:    pub,
 		prop:      prop,
 	}
 	txBytesBeforeSig2, _ := tx2.MarshalBeforeSignature()
-	sig2, _ := crypto.Sign(string(txBytesBeforeSig2), pv)
+	sig2, _ := pv.Sign(txBytesBeforeSig2)
 	tx2.emSig = sig2
 	tx2.sig = sig2
 	txBytes2, _ := tx2.MarshalHash()
-	txHash2 := crypto.HashBytes(txBytes2)
+	txHash2 := crypto.Hash(txBytes2)
 	tx2.hash = txHash2
 
 	assert.Nil(t, tx2.Chain(&tx1))
@@ -563,47 +548,47 @@ Scenario: Chain a transaction with same timestamp for the both
 */
 func TestChainTransactionWithInvalidTimestamp(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
 
 	txTime1 := time.Now()
 	raw1, _ := json.Marshal(Transaction{
-		addr: crypto.HashString("addr"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: txTime1,
 		pubKey:    pub,
 		prop:      prop,
 	})
-	sig1, _ := crypto.Sign(string(raw1), pv)
-	hash1 := crypto.HashBytes(raw1)
+	sig1, _ := pv.Sign(raw1)
+	hash1 := crypto.Hash(raw1)
 
-	tx1, _ := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+	tx1, _ := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
 	}, txTime1, pub, prop, sig1, sig1, hash1)
 
 	raw2, _ := json.Marshal(Transaction{
-		addr: crypto.HashString("addr"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: txTime1,
 		pubKey:    pub,
 		prop:      prop,
 	})
-	sig2, _ := crypto.Sign(string(raw2), pv)
-	hash2 := crypto.HashBytes(raw2)
+	sig2, _ := pv.Sign(raw2)
+	hash2 := crypto.Hash(raw2)
 
-	tx2, _ := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+	tx2, _ := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
 	}, txTime1, pub, prop, sig2, sig2, hash2)
 
 	assert.EqualError(t, tx2.Chain(&tx1), "previous chained transaction must be anterior to the current transaction")
@@ -617,7 +602,7 @@ Scenario: Check master validation
 */
 func TestCheckMasterValidation(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	v := Validation{
 		nodePubk:  pub,
@@ -625,16 +610,16 @@ func TestCheckMasterValidation(t *testing.T) {
 		timestamp: time.Now(),
 	}
 	b, _ := json.Marshal(v)
-	sig, _ := crypto.Sign(string(b), pv)
+	sig, _ := pv.Sign(b)
 	v.nodeSig = sig
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
 
 	tx := Transaction{
-		addr: crypto.HashString("addr"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
@@ -642,13 +627,13 @@ func TestCheckMasterValidation(t *testing.T) {
 		prop:      prop,
 	}
 	txBytesBeforeSig, _ := tx.MarshalBeforeSignature()
-	sig, _ = crypto.Sign(string(txBytesBeforeSig), pv)
+	sig, _ = pv.Sign(txBytesBeforeSig)
 	tx.sig = sig
 	txBytesBeforeEmSig, _ := tx.MarshalBeforeEmitterSignature()
-	emSig, _ := crypto.Sign(string(txBytesBeforeEmSig), pv)
+	emSig, _ := pv.Sign(txBytesBeforeEmSig)
 	tx.emSig = emSig
 	txBytes, _ := tx.MarshalHash()
-	txHash := crypto.HashBytes(txBytes)
+	txHash := crypto.Hash(txBytes)
 	tx.hash = txHash
 	tx.masterV = MasterValidation{
 		pow:        pub,
@@ -666,8 +651,8 @@ Scenario: Check master validation with invalid POW
 */
 func TestCheckMasterValidationWithInvalidPOW(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
-	pub2, _ := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	v := Validation{
 		nodePubk:  pub,
@@ -675,34 +660,34 @@ func TestCheckMasterValidationWithInvalidPOW(t *testing.T) {
 		timestamp: time.Now(),
 	}
 	b, _ := json.Marshal(v)
-	sig, _ := crypto.Sign(string(b), pv)
+	sig, _ := pv.Sign(b)
 	v.nodeSig = sig
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
 
 	raw, _ := json.Marshal(Transaction{
-		addr: crypto.HashString("addr"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
 		pubKey:    pub,
 		prop:      prop,
 	})
-	sigTx, _ := crypto.Sign(string(raw), pv)
-	hash := crypto.HashBytes(raw)
+	sigTx, _ := pv.Sign(raw)
+	hash := crypto.Hash(raw)
 
 	tx := Transaction{
 		masterV: MasterValidation{
 			pow:        pub2,
 			validation: v,
 		},
-		addr: crypto.HashString("addr"),
-		data: map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		addr: crypto.Hash([]byte("addr")),
+		data: map[string][]byte{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
 		},
 		txType:    KeychainTransactionType,
 		timestamp: time.Now(),
@@ -722,16 +707,16 @@ Scenario: Create a new node validation
 	When I want to create a node validation
 	Then I get the validation
 */
-func TestNewValidation(t *testing.T) {
+func TestNewTransactionValidation(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	b, _ := json.Marshal(Validation{
 		nodePubk:  pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	sig, _ := crypto.Sign(string(b), pv)
+	sig, _ := pv.Sign(b)
 
 	v, err := NewValidation(ValidationOK, time.Now(), pub, sig)
 	assert.Nil(t, err)
@@ -747,9 +732,11 @@ Scenario: Create a new node validation with a timestamp later than now
 	When I want to create a node validation
 	Then I get an error
 */
-func TestNewValidationWithInvalidTimestamp(t *testing.T) {
-	_, err := NewValidation(ValidationOK, time.Now().Add(2*time.Second), "", "")
-	assert.EqualError(t, err, "node validation: timestamp must be anterior or equal to now")
+func TestNewTransactionValidationWithInvalidTimestamp(t *testing.T) {
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	_, err := NewValidation(ValidationOK, time.Now().Add(2*time.Second), pub, []byte("sig"))
+	assert.EqualError(t, err, "validation timestamp must be anterior or equal to now")
 }
 
 /*
@@ -758,15 +745,9 @@ Scenario: Create a new node validation with invalid public key
 	When I want to create a node validation
 	Then I get an error
 */
-func TestNewValidationWithInvalidPublicKey(t *testing.T) {
-	_, err := NewValidation(ValidationOK, time.Now(), "", "sig")
-	assert.EqualError(t, err, "node validation: public key is empty")
-
-	_, err = NewValidation(ValidationOK, time.Now(), "key", "sig")
-	assert.EqualError(t, err, "node validation: public key is not in hexadecimal format")
-
-	_, err = NewValidation(ValidationOK, time.Now(), hex.EncodeToString([]byte("key")), "sig")
-	assert.EqualError(t, err, "node validation: public key is not valid")
+func TestNewTransactionValidationWithInvalidPublicKey(t *testing.T) {
+	_, err := NewValidation(ValidationOK, time.Now(), nil, []byte("sig"))
+	assert.EqualError(t, err, "validation public key is missing")
 }
 
 /*
@@ -775,19 +756,19 @@ Scenario: Create a new node validation with invalid signature
 	When I want to create a node validation
 	Then I get an error
 */
-func TestNewValidationWithInvalidSignature(t *testing.T) {
+func TestNewTransactionValidationWithInvalidSignature(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	_, err := NewValidation(ValidationOK, time.Now(), pub, "sig")
-	assert.EqualError(t, err, "node validation: signature is not in hexadecimal format")
+	_, err := NewValidation(ValidationOK, time.Now(), pub, nil)
+	assert.EqualError(t, err, "validation signature is missing")
 
-	_, err = NewValidation(ValidationOK, time.Now(), pub, hex.EncodeToString([]byte("sig")))
-	assert.EqualError(t, err, "node validation: signature is not valid")
+	_, err = NewValidation(ValidationOK, time.Now(), pub, []byte("sig"))
+	assert.EqualError(t, err, "validation signature is not valid")
 
-	sig, _ := crypto.Sign("hello", pv)
+	sig, _ := pv.Sign([]byte("hello"))
 	_, err = NewValidation(ValidationOK, time.Now(), pub, sig)
-	assert.EqualError(t, err, "node validation: signature is invalid")
+	assert.EqualError(t, err, "validation signature is not valid")
 }
 
 /*
@@ -796,13 +777,13 @@ Scenario: Create a new node validation with an invalid status
 	When I want to create a node validation
 	Then I get an error
 */
-func TestNewValidationWithInvalidStatus(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+func TestNewTransactionValidationWithInvalidStatus(t *testing.T) {
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	sig, _ := crypto.Sign("hello", pv)
+	sig, _ := pv.Sign([]byte("hello"))
 
 	_, err := NewValidation(10, time.Now(), pub, sig)
-	assert.EqualError(t, err, "node validation: status not allowed")
+	assert.EqualError(t, err, "validation status is not allowed")
 }
 
 /*
@@ -811,18 +792,18 @@ Scenario: Create a new master validation
 	When I want to create the master validation
 	Then I get it
 */
-func TestNewMasterValidation(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+func TestNewTransactionMasterValidation(t *testing.T) {
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	b, _ := json.Marshal(Validation{
 		nodePubk:  pub,
 		status:    ValidationOK,
 		timestamp: time.Now(),
 	})
-	sig, _ := crypto.Sign(string(b), pv)
+	sig, _ := pv.Sign(b)
 
 	v, _ := NewValidation(ValidationOK, time.Now(), pub, sig)
-	mv, err := NewMasterValidation([]string{}, pub, v)
+	mv, err := NewMasterValidation([]crypto.PublicKey{}, pub, v)
 	assert.Nil(t, err)
 	assert.Equal(t, pub, mv.ProofOfWork())
 	assert.Equal(t, v.PublicKey(), mv.Validation().PublicKey())
@@ -837,14 +818,8 @@ Scenario: Create a master validation with POW invalid
 	Then I get an error
 */
 func TestCreateMasterWithInvalidPOW(t *testing.T) {
-	_, err := NewMasterValidation([]string{}, "", Validation{})
-	assert.EqualError(t, err, "master validation POW: public key is empty")
-
-	_, err = NewMasterValidation([]string{}, "key", Validation{})
-	assert.EqualError(t, err, "master validation POW: public key is not in hexadecimal format")
-
-	_, err = NewMasterValidation([]string{}, hex.EncodeToString([]byte("key")), Validation{})
-	assert.EqualError(t, err, "master validation POW: public key is not valid")
+	_, err := NewMasterValidation([]crypto.PublicKey{}, nil, Validation{})
+	assert.EqualError(t, err, "proof of work is missing")
 }
 
 /*
@@ -854,9 +829,7 @@ Scenario: Create a master validation without node validation
 	Then I get an error
 */
 func TestCreateMasterWithoutValidation(t *testing.T) {
-
-	pub, _ := crypto.GenerateKeys()
-
-	_, err := NewMasterValidation([]string{}, pub, Validation{})
-	assert.EqualError(t, err, "master validation: node validation: public key is empty")
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, err := NewMasterValidation([]crypto.PublicKey{}, pub, Validation{})
+	assert.Contains(t, err.Error(), "master validation is not valid:")
 }

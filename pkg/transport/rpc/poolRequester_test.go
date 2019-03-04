@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"net"
@@ -28,10 +29,10 @@ Scenario: Request transction lock on a pool
 */
 func TestRequestTransactionLock(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
@@ -44,8 +45,8 @@ func TestRequestTransactionLock(t *testing.T) {
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
-	pool, _ := consensus.FindStoragePool("addr")
-	assert.Nil(t, pr.RequestTransactionTimeLock(pool, crypto.HashString("tx"), crypto.HashString("addr"), pub))
+	pool, _ := consensus.FindStoragePool([]byte("addr"))
+	assert.Nil(t, pr.RequestTransactionTimeLock(pool, crypto.Hash([]byte("tx")), crypto.Hash([]byte("addr")), pub))
 
 	assert.True(t, chain.ContainsTimeLock(crypto.HashString("tx"), crypto.HashString("addr")))
 }
@@ -58,13 +59,14 @@ Scenario: Request transaction validation confirmation
 */
 func TestRequestConfirmValidation(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	pubB, _ := pub.Marshal()
 
-	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
+	kp, _ := shared.NewEmitterKeyPair(([]byte("pvkey")), pub)
 
 	techDB := &mockTechDB{}
 	techDB.emKeys = append(techDB.emKeys, kp)
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	pr := NewPoolRequester(techDB)
@@ -77,36 +79,43 @@ func TestRequestConfirmValidation(t *testing.T) {
 	api.RegisterTransactionServiceServer(grpcServer, miningSrv)
 	go grpcServer.Serve(lis)
 
-	data := map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+	data := map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
 	}
 	prop := kp
 	txRaw := map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"type":                    chain.KeychainTransactionType,
-		"timestamp":               time.Now().Unix(),
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
 	}
 	txBytes, _ := json.Marshal(txRaw)
-	sig, _ := crypto.Sign(string(txBytes), pv)
-	txRaw["signature"] = sig
+	sig, _ := pv.Sign(txBytes)
+	txRaw["signature"] = hex.EncodeToString(sig)
 	txByteWithSig, _ := json.Marshal(txRaw)
-	emSig, _ := crypto.Sign(string(txByteWithSig), pv)
-	txRaw["em_signature"] = emSig
+	emSig, _ := pv.Sign(txByteWithSig)
+	txRaw["em_signature"] = hex.EncodeToString(emSig)
 	txBytes, _ = json.Marshal(txRaw)
 
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txBytes))
+	tx, _ := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash(txBytes))
+
 	vBytes, _ := json.Marshal(map[string]interface{}{
 		"status":     chain.ValidationOK,
-		"public_key": pub,
+		"public_key": pubB,
 		"timestamp":  time.Now().Unix(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), pv)
+	vSig, _ := pv.Sign(vBytes)
 	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
-	mv, _ := chain.NewMasterValidation([]string{}, pub, v)
+	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v)
 
 	pool, _ := consensus.FindValidationPool(tx)
 	valids, err := pr.RequestTransactionValidations(pool, tx, 1, mv)
@@ -128,8 +137,9 @@ Scenario: Request transaction store
 */
 func TestRequestStorage(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
-	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	kp, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	pubB, _ := pub.Marshal()
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
@@ -148,43 +158,49 @@ func TestRequestStorage(t *testing.T) {
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
-	data := map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+	data := map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
 	}
 	prop := kp
 	txRaw := map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"type":                    chain.KeychainTransactionType,
-		"timestamp":               time.Now().Unix(),
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
 	}
 	txBytes, _ := json.Marshal(txRaw)
-	sig, _ := crypto.Sign(string(txBytes), pv)
-	txRaw["signature"] = sig
+	sig, _ := pv.Sign(txBytes)
+	txRaw["signature"] = hex.EncodeToString(sig)
 	txByteWithSig, _ := json.Marshal(txRaw)
-	emSig, _ := crypto.Sign(string(txByteWithSig), pv)
-	txRaw["em_signature"] = emSig
+	emSig, _ := pv.Sign(txByteWithSig)
+	txRaw["em_signature"] = hex.EncodeToString(emSig)
 	txBytes, _ = json.Marshal(txRaw)
 
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txBytes))
+	tx, _ := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash(txBytes))
 	vBytes, _ := json.Marshal(map[string]interface{}{
 		"status":     chain.ValidationOK,
-		"public_key": pub,
+		"public_key": pubB,
 		"timestamp":  time.Now().Unix(),
 	})
-	vSig, _ := crypto.Sign(string(vBytes), pv)
+	vSig, _ := pv.Sign(vBytes)
 	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
-	mv, _ := chain.NewMasterValidation([]string{}, pub, v)
+	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v)
 
-	pool, _ := consensus.FindStoragePool("addr")
+	pool, _ := consensus.FindStoragePool([]byte("addr"))
 	tx.Mined(mv, []chain.Validation{v})
 	assert.Nil(t, pr.RequestTransactionStorage(pool, 1, tx))
 
 	assert.Len(t, chainDB.keychains, 1)
-	assert.Equal(t, crypto.HashBytes(txBytes), chainDB.keychains[0].TransactionHash())
+	assert.EqualValues(t, crypto.Hash(txBytes), chainDB.keychains[0].TransactionHash())
 }
 
 /*
@@ -195,7 +211,8 @@ Scenario: Send request to get last transaction
 */
 func TestSendGetLastTransaction(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	pubB, _ := pub.Marshal()
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
@@ -212,36 +229,42 @@ func TestSendGetLastTransaction(t *testing.T) {
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
-	data := map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+	data := map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
 	}
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPV")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPV"), pub)
 	txRaw := map[string]interface{}{
-		"address":                 crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
 	}
 	txBytes, _ := json.Marshal(txRaw)
-	sig, _ := crypto.Sign(string(txBytes), pv)
-	txRaw["signature"] = sig
+	sig, _ := pv.Sign(txBytes)
+	txRaw["signature"] = hex.EncodeToString(sig)
 	txByteWithSig, _ := json.Marshal(txRaw)
-	emSig, _ := crypto.Sign(string(txByteWithSig), pv)
-	txRaw["em_signature"] = emSig
+	emSig, _ := pv.Sign(txByteWithSig)
+	txRaw["em_signature"] = hex.EncodeToString(emSig)
 	txBytes, _ = json.Marshal(txRaw)
 
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashBytes(txBytes))
+	tx, _ := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.Hash(txBytes))
 	keychain, _ := chain.NewKeychain(tx)
 	chainDB.keychains = append(chainDB.keychains, keychain)
 
-	pool, _ := consensus.FindStoragePool("address")
+	pool, _ := consensus.FindStoragePool([]byte("address"))
 
-	txRes, err := pr.RequestLastTransaction(pool, crypto.HashString("addr"), chain.KeychainTransactionType)
+	txRes, err := pr.RequestLastTransaction(pool, crypto.Hash([]byte("addr")), chain.KeychainTransactionType)
 	assert.Nil(t, err)
 	assert.Equal(t, chain.KeychainTransactionType, txRes.TransactionType())
-	assert.Equal(t, crypto.HashBytes(txBytes), txRes.TransactionHash())
+	assert.Equal(t, crypto.Hash(txBytes), txRes.TransactionHash())
 }

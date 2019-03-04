@@ -1,11 +1,13 @@
 package shared
 
+import "github.com/uniris/uniris-core/pkg/crypto"
+
 //TechDatabaseReader wraps the shared emitter and node storage
 type TechDatabaseReader interface {
 	EmitterDatabaseReader
 
 	//NodeLastKeys retrieve the last shared node keys from the Tech DB
-	NodeLastKeys() (KeyPair, error)
+	NodeLastKeys() (NodeKeyPair, error)
 }
 
 //EmitterDatabaseReader handles queries for the shared emitter information
@@ -15,7 +17,7 @@ type EmitterDatabaseReader interface {
 }
 
 //IsEmitterKeyAuthorized checks if the emitter public key is authorized
-func IsEmitterKeyAuthorized(emPubKey string) (bool, error) {
+func IsEmitterKeyAuthorized(emPubKey crypto.PublicKey) (bool, error) {
 	//TODO: request smart contract
 
 	return true, nil

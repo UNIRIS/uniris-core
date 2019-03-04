@@ -1,7 +1,7 @@
 package chain
 
 import (
-	"encoding/hex"
+	"crypto/rand"
 	"testing"
 	"time"
 
@@ -19,26 +19,26 @@ Scenario: Create a new Keychain transaction
 */
 func TestNewKeychain(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
 
-	addr := crypto.HashString("address")
+	addr := crypto.Hash([]byte("address"))
 
-	hash := crypto.HashString("hash")
-	sig, _ := crypto.Sign("data", pv)
+	hash := crypto.Hash([]byte("hash"))
+	sig, _ := pv.Sign([]byte("data"))
 
-	tx, err := NewTransaction(addr, KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+	tx, err := NewTransaction(addr, KeychainTransactionType, map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
 
 	keychain, err := NewKeychain(tx)
 	assert.Nil(t, err)
 
-	assert.Equal(t, hex.EncodeToString([]byte("addr")), keychain.EncryptedAddrBy())
-	assert.Equal(t, hex.EncodeToString([]byte("wallet")), keychain.EncryptedWallet())
+	assert.Equal(t, []byte("addr"), keychain.EncryptedAddrBy())
+	assert.Equal(t, []byte("wallet"), keychain.EncryptedWallet())
 
 }
 
@@ -50,24 +50,24 @@ Scenario: Create a new Keychain transaction with another type of transaction
 */
 func TestNewKeychainWithInvalkeychainType(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
 
-	addr := crypto.HashString("address")
+	addr := crypto.Hash([]byte("address"))
 
-	hash := crypto.HashString("hash")
+	hash := crypto.Hash([]byte("hash"))
 
-	sig, _ := crypto.Sign("data", pv)
+	sig, _ := pv.Sign([]byte("data"))
 
-	tx, err := NewTransaction(addr, IDTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+	tx, err := NewTransaction(addr, IDTransactionType, map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
 
 	_, err = NewKeychain(tx)
-	assert.EqualError(t, err, "transaction: invalid type of transaction")
+	assert.EqualError(t, err, "invalid type of transaction")
 
 }
 
@@ -79,62 +79,29 @@ Scenario: Create a new Keychain transaction with missing data fields
 */
 func TestNewKeychainWithMissingDataFields(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
 
-	addr := crypto.HashString("address")
+	addr := crypto.Hash([]byte("address"))
 
-	hash := crypto.HashString("hash")
+	hash := crypto.Hash([]byte("hash"))
 
-	sig, _ := crypto.Sign("data", pv)
+	sig, _ := pv.Sign([]byte("data"))
 
-	tx, err := NewTransaction(addr, KeychainTransactionType, map[string]string{
-		"encrypted_wallet": hex.EncodeToString([]byte("wallet")),
+	tx, err := NewTransaction(addr, KeychainTransactionType, map[string][]byte{
+		"encrypted_wallet": []byte("wallet"),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
 
 	_, err = NewKeychain(tx)
-	assert.EqualError(t, err, "transaction: missing data keychain: 'encrypted_address_by_node'")
+	assert.EqualError(t, err, "missing keychain data: 'encrypted_address_by_node'")
 
-	tx, err = NewTransaction(addr, KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("wallet")),
+	tx, err = NewTransaction(addr, KeychainTransactionType, map[string][]byte{
+		"encrypted_address_by_node": []byte("wallet"),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
 
 	_, err = NewKeychain(tx)
-	assert.EqualError(t, err, "transaction: missing data keychain: 'encrypted_wallet'")
-}
-
-/*
-Scenario: Create a new Keychain transaction with data fields not in hex
-	Given an transaction with Keychain type and data fields with non hexadecimal
-	When I want to format it to an Keychain transaction
-	Then I get an error
-*/
-func TestNewKeychainWithNotHexDataFields(t *testing.T) {
-
-	pub, pv := crypto.GenerateKeys()
-
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
-
-	addr := crypto.HashString("address")
-
-	hash := crypto.HashString("hash")
-
-	sig, _ := crypto.Sign("data", pv)
-
-	tx, _ := NewTransaction(addr, KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": "addr",
-		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), pub, prop, sig, sig, hash)
-	_, err := NewKeychain(tx)
-	assert.EqualError(t, err, "transaction: keychain encrypted address for node is not in hexadecimal format")
-
-	tx, _ = NewTransaction(addr, KeychainTransactionType, map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":           "wallet",
-	}, time.Now(), pub, prop, sig, sig, hash)
-	_, err = NewKeychain(tx)
-	assert.EqualError(t, err, "transaction: keychain encrypted wallet is not in hexadecimal format")
+	assert.EqualError(t, err, "missing keychain data: 'encrypted_wallet'")
 }

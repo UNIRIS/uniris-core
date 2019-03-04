@@ -2,10 +2,12 @@ package rest
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -28,7 +30,7 @@ import (
 
 /*
 Scenario: Get account request with an ID hash not a valid hash
-	Given an invalid hash (not hexa)
+	Given an invalid hash (not hexadecimal)
 	When I want to request to retrieve an account
 	Then I got a 400 (Bad request) response status and an error message
 */
@@ -45,7 +47,7 @@ func TestGetAccountWhenInvalidHash(t *testing.T) {
 	resBytes, _ := ioutil.ReadAll(w.Body)
 	var err httpError
 	json.Unmarshal(resBytes, &err)
-	assert.Equal(t, "id hash: must be hexadecimal", err.Error)
+	assert.Equal(t, "id hash is not in hexadecimal", err.Error)
 	assert.Equal(t, http.StatusText(http.StatusBadRequest), err.Status)
 	assert.Equal(t, time.Now().Unix(), err.Timestamp)
 }
@@ -57,10 +59,17 @@ Scenario: Get account request with an invalid idSignature
 	Then I got a 400 (Bad request) response status and an error message
 */
 func TestGetAccountWhenInvalidSignature(t *testing.T) {
-	r := gin.New()
-	r.GET("/api/account/:idHash", GetAccountHandler(&mockTechDB{}))
 
-	path1 := fmt.Sprintf("http://localhost/api/account/%s", crypto.HashString("abc"))
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	emK, _ := shared.NewEmitterKeyPair([]byte("enc"), pub)
+
+	r := gin.New()
+	r.GET("/api/account/:idHash", GetAccountHandler(&mockTechDB{
+		emKeys: []shared.EmitterKeyPair{emK},
+	}))
+
+	path1 := fmt.Sprintf("http://localhost/api/account/%s", hex.EncodeToString(crypto.Hash(([]byte("abc")))))
+	log.Print(path1)
 	req1, _ := http.NewRequest("GET", path1, nil)
 	w1 := httptest.NewRecorder()
 	r.ServeHTTP(w1, req1)
@@ -68,11 +77,11 @@ func TestGetAccountWhenInvalidSignature(t *testing.T) {
 	resBytes, _ := ioutil.ReadAll(w1.Body)
 	var err httpError
 	json.Unmarshal(resBytes, &err)
-	assert.Equal(t, "signature request: signature is empty", err.Error)
+	assert.Equal(t, "signature is missing", err.Error)
 	assert.Equal(t, http.StatusText(http.StatusBadRequest), err.Status)
 	assert.Equal(t, time.Now().Unix(), err.Timestamp)
 
-	path2 := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", crypto.HashString("abc"), "idSig")
+	path2 := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", hex.EncodeToString(crypto.Hash([]byte("abc"))), "idSig")
 	req2, _ := http.NewRequest("GET", path2, nil)
 	w2 := httptest.NewRecorder()
 	r.ServeHTTP(w2, req2)
@@ -80,11 +89,11 @@ func TestGetAccountWhenInvalidSignature(t *testing.T) {
 	resBytes2, _ := ioutil.ReadAll(w2.Body)
 	var err2 httpError
 	json.Unmarshal(resBytes2, &err2)
-	assert.Equal(t, "signature request: signature is not in hexadecimal format", err2.Error)
+	assert.Equal(t, "signature is not in hexadecimal", err2.Error)
 	assert.Equal(t, http.StatusText(http.StatusBadRequest), err2.Status)
 	assert.Equal(t, time.Now().Unix(), err2.Timestamp)
 
-	path3 := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", crypto.HashString("abc"), hex.EncodeToString([]byte("idSig")))
+	path3 := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", hex.EncodeToString(crypto.Hash([]byte("abc"))), hex.EncodeToString([]byte("idSig")))
 	req3, _ := http.NewRequest("GET", path3, nil)
 	w3 := httptest.NewRecorder()
 	r.ServeHTTP(w3, req3)
@@ -92,7 +101,7 @@ func TestGetAccountWhenInvalidSignature(t *testing.T) {
 	resBytes3, _ := ioutil.ReadAll(w3.Body)
 	var err3 httpError
 	json.Unmarshal(resBytes3, &err3)
-	assert.Equal(t, "signature request: signature is not valid", err3.Error)
+	assert.Equal(t, "signature is invalid", err3.Error)
 	assert.Equal(t, http.StatusText(http.StatusBadRequest), err3.Status)
 	assert.Equal(t, time.Now().Unix(), err3.Timestamp)
 }
@@ -105,12 +114,12 @@ Scenario: Get account request with an ID not existing
 */
 func TestGetAccountWhenIDNotExist(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
-	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("ov")), pub)
+	emKey, _ := shared.NewEmitterKeyPair([]byte("ov"), pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
 	chainDB := &mockChainDB{}
@@ -127,11 +136,11 @@ func TestGetAccountWhenIDNotExist(t *testing.T) {
 	r := gin.New()
 	r.GET("/api/account/:idHash", GetAccountHandler(techDB))
 
-	idHash := crypto.HashString("abc")
-	encIDHash, _ := crypto.Encrypt(idHash, pub)
-	sig, _ := crypto.Sign(encIDHash, pv)
+	idHash := crypto.Hash([]byte("abc"))
+	encIDHash, _ := pub.Encrypt(idHash)
+	sig, _ := pv.Sign(encIDHash)
 
-	path := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", encIDHash, sig)
+	path := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", hex.EncodeToString(encIDHash), hex.EncodeToString(sig))
 	req, _ := http.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -152,13 +161,13 @@ Scenario: Get account request with a Keychain not existing
 	Then I got a 404 (Not found) response status and an error message
 */
 func TestGetAccountWhenKeychainNotExist(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
-	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("ov")), pub)
+	emKey, _ := shared.NewEmitterKeyPair([]byte("ov"), pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 	pr := &mockPoolRequester{
 		repo: chainDB,
@@ -173,43 +182,55 @@ func TestGetAccountWhenKeychainNotExist(t *testing.T) {
 	//Start API
 	r := gin.New()
 	r.GET("/api/account/:idHash", GetAccountHandler(techDB))
-
 	//Create transactions
-	encAddr, _ := crypto.Encrypt(hex.EncodeToString([]byte("addr")), pub)
 
-	idData := map[string]string{
+	prop, _ := shared.NewEmitterKeyPair([]byte("encpv"), pub)
+	idHash := crypto.Hash([]byte("abc"))
+
+	encAddr, _ := pub.Encrypt([]byte("addr"))
+
+	idData := map[string][]byte{
 		"encrypted_address_by_node": encAddr,
 		"encrypted_address_by_id":   encAddr,
-		"encrypted_aes_key":         hex.EncodeToString([]byte("aes_key")),
+		"encrypted_aes_key":         []byte("aes_key"),
 	}
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPV")), pub)
-	idHash := crypto.HashString("abc")
+
+	pubB, _ := pub.Marshal()
+
 	idTxRaw := map[string]interface{}{
-		"addr":                    idHash,
-		"data":                    idData,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.IDTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
+		"addr": hex.EncodeToString(idHash),
+		"data": map[string]string{
+			"encrypted_address_by_node": hex.EncodeToString(encAddr),
+			"encrypted_address_by_id":   hex.EncodeToString(encAddr),
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aes_key")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.IDTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString(prop.EncryptedPrivateKey()),
+			"public_key":            hex.EncodeToString(pubB),
+		},
 	}
 	idtxBytes, _ := json.Marshal(idTxRaw)
-	idSig, _ := crypto.Sign(string(idtxBytes), pv)
-	idTxRaw["signature"] = idSig
+	idSig, _ := pv.Sign(idtxBytes)
+	idTxRaw["signature"] = hex.EncodeToString(idSig)
 
 	idtxbytesWithSig, _ := json.Marshal(idTxRaw)
-	emSig, _ := crypto.Sign(string(idtxbytesWithSig), pv)
-	idTxRaw["em_signature"] = emSig
+	emSig, _ := pv.Sign(idtxbytesWithSig)
+	idTxRaw["em_signature"] = hex.EncodeToString(emSig)
 
 	idtxBytes, _ = json.Marshal(idTxRaw)
 
-	idTx, _ := chain.NewTransaction(idHash, chain.IDTransactionType, idData, time.Now(), pub, prop, idSig, emSig, crypto.HashBytes(idtxBytes))
+	idTx, _ := chain.NewTransaction(idHash, chain.IDTransactionType, idData, time.Now(), pub, prop, idSig, emSig, crypto.Hash(idtxBytes))
 	id, _ := chain.NewID(idTx)
 	chainDB.WriteID(id)
 
-	encIDHash, _ := crypto.Encrypt(idHash, pub)
-	sig, _ := crypto.Sign(encIDHash, pv)
+	encIDHash, _ := pub.Encrypt(idHash)
+	sig, _ := pv.Sign(encIDHash)
 
-	path := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", encIDHash, sig)
+	path := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", hex.EncodeToString(encIDHash), hex.EncodeToString(sig))
+
 	req, _ := http.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -230,13 +251,14 @@ Scenario: Get an account after its creation
 	Then I can get encrypted wallet and encrypted aes key
 */
 func TestGetAccount(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	pubB, _ := pub.Marshal()
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
-	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("ov")), pub)
+	emKey, _ := shared.NewEmitterKeyPair([]byte("ov"), pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 	pr := &mockPoolRequester{
 		repo: chainDB,
@@ -249,73 +271,86 @@ func TestGetAccount(t *testing.T) {
 	go grpcServer.Serve(lis)
 
 	//Create transactions
-	addr := crypto.HashString("addr")
-	encAddr, _ := crypto.Encrypt(addr, pub)
+	addr := crypto.Hash([]byte("addr"))
+	encAddr, _ := pub.Encrypt(addr)
 
-	idData := map[string]string{
+	idData := map[string][]byte{
 		"encrypted_address_by_node": encAddr,
 		"encrypted_address_by_id":   encAddr,
-		"encrypted_aes_key":         hex.EncodeToString([]byte("aes_key")),
+		"encrypted_aes_key":         []byte("aes_key"),
 	}
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPV")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("encpv"), pub)
 
-	idHash := crypto.HashString("abc")
+	idHash := crypto.Hash([]byte("abc"))
 	idTxRaw := map[string]interface{}{
-		"addr":                    idHash,
-		"data":                    idData,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.IDTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
+		"addr": hex.EncodeToString(idHash),
+		"data": map[string]string{
+			"encrypted_address_by_node": hex.EncodeToString(encAddr),
+			"encrypted_address_by_id":   hex.EncodeToString(encAddr),
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aes_key")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.IDTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString(prop.EncryptedPrivateKey()),
+			"public_key":            hex.EncodeToString(pubB),
+		},
 	}
 	idtxBytes, _ := json.Marshal(idTxRaw)
-	idSig, _ := crypto.Sign(string(idtxBytes), pv)
-	idTxRaw["signature"] = idSig
+	idSig, _ := pv.Sign(idtxBytes)
+	idTxRaw["signature"] = hex.EncodeToString(idSig)
 
 	idtxbytesWithSig, _ := json.Marshal(idTxRaw)
-	emSig, _ := crypto.Sign(string(idtxbytesWithSig), pv)
-	idTxRaw["em_signature"] = emSig
+	emSig, _ := pv.Sign(idtxbytesWithSig)
+	idTxRaw["em_signature"] = hex.EncodeToString(emSig)
 
 	idtxBytes, _ = json.Marshal(idTxRaw)
 
-	idTx, _ := chain.NewTransaction(idHash, chain.IDTransactionType, idData, time.Now(), pub, prop, idSig, emSig, crypto.HashBytes(idtxBytes))
+	idTx, _ := chain.NewTransaction(idHash, chain.IDTransactionType, idData, time.Now(), pub, prop, idSig, emSig, crypto.Hash(idtxBytes))
 	id, _ := chain.NewID(idTx)
 	chainDB.WriteID(id)
 
-	keychainData := map[string]string{
+	keychainData := map[string][]byte{
 		"encrypted_address_by_node": encAddr,
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		"encrypted_wallet":          []byte("wallet"),
 	}
 
 	keychainTxRaw := map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    keychainData,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_address_by_node": hex.EncodeToString(encAddr),
+			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString(prop.EncryptedPrivateKey()),
+			"public_key":            hex.EncodeToString(pubB),
+		},
 	}
 	txKeychainBytes, _ := json.Marshal(keychainTxRaw)
-	keychainSig, _ := crypto.Sign(string(txKeychainBytes), pv)
-	keychainTxRaw["signature"] = keychainSig
+	keychainSig, _ := pv.Sign(txKeychainBytes)
+	keychainTxRaw["signature"] = hex.EncodeToString(keychainSig)
 
 	keychaintxbytesWithSig, _ := json.Marshal(keychainTxRaw)
-	keychainEmSig, _ := crypto.Sign(string(keychaintxbytesWithSig), pv)
-	keychainTxRaw["em_signature"] = keychainEmSig
+	keychainEmSig, _ := pv.Sign(keychaintxbytesWithSig)
+	keychainTxRaw["em_signature"] = hex.EncodeToString(keychainEmSig)
 
 	keychainTxRaw["em_signature"] = keychainSig
 	txKeychainBytes, _ = json.Marshal(keychainTxRaw)
 
-	keychainTx, _ := chain.NewTransaction(addr, chain.KeychainTransactionType, keychainData, time.Now(), pub, prop, keychainSig, keychainEmSig, crypto.HashBytes(txKeychainBytes))
+	keychainTx, _ := chain.NewTransaction(addr, chain.KeychainTransactionType, keychainData, time.Now(), pub, prop, keychainSig, keychainEmSig, crypto.Hash(txKeychainBytes))
 	keychain, _ := chain.NewKeychain(keychainTx)
 	chainDB.WriteKeychain(keychain)
 
-	encIDHash, _ := crypto.Encrypt(idHash, pub)
-	sig, _ := crypto.Sign(encIDHash, pv)
+	encIDHash, _ := pub.Encrypt(idHash)
+	sig, _ := pv.Sign(encIDHash)
 
 	r := gin.New()
 	r.GET("/api/account/:idHash", GetAccountHandler(techDB))
-	path := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", encIDHash, sig)
+	path := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", hex.EncodeToString(encIDHash), hex.EncodeToString(sig))
 
 	req, _ := http.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
@@ -339,84 +374,23 @@ func TestGetAccount(t *testing.T) {
 		EncryptedWallet: res.EncryptedWallet,
 		Timestamp:       res.Timestamp,
 	})
-	assert.Nil(t, crypto.VerifySignature(string(resBytes), techDB.nodeKeys[0].PublicKey(), res.Signature))
-}
-
-/*
-Scenario: Create account request with an invalid encrypted ID
-	Given an invalid encrypted id (not hexa)
-	When I want to request to create an account
-	Then I got a 400 (Bad request) response status and an error message
-*/
-func TestCreationAccountWhenInvalidID(t *testing.T) {
-	r := gin.New()
-	r.POST("/api/account", CreateAccountHandler(&mockTechDB{}))
-
-	form, _ := json.Marshal(map[string]string{
-		"encrypted_id":       "abc",
-		"encrypted_keychain": "abc",
-		"signature":          "abc",
-	})
-
-	path := "http://localhost/api/account"
-	req, _ := http.NewRequest("POST", path, bytes.NewBuffer(form))
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	resBytes, _ := ioutil.ReadAll(w.Body)
-	var err httpError
-	json.Unmarshal(resBytes, &err)
-	assert.Equal(t, "encrypted id: must be hexadecimal", err.Error)
-	assert.Equal(t, http.StatusText(http.StatusBadRequest), err.Status)
-	assert.Equal(t, time.Now().Unix(), err.Timestamp)
-
-}
-
-/*
-Scenario: Create account request with an invalid encrypted Keychain
-	Given an invalid encrypted Keychain (not hexa)
-	When I want to request to create an account
-	Then I got a 400 (Bad request) response status and an error message
-*/
-func TestCreationAccountWhenKeychainInvalid(t *testing.T) {
-	r := gin.New()
-	r.POST("/api/account", CreateAccountHandler(&mockTechDB{}))
-
-	form, _ := json.Marshal(map[string]string{
-		"encrypted_id":       hex.EncodeToString([]byte("id")),
-		"encrypted_keychain": "abc",
-		"signature":          "abc",
-	})
-
-	path := "http://localhost/api/account"
-	req, _ := http.NewRequest("POST", path, bytes.NewBuffer(form))
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	resBytes, _ := ioutil.ReadAll(w.Body)
-	var err httpError
-	json.Unmarshal(resBytes, &err)
-	assert.Equal(t, "encrypted keychain: must be hexadecimal", err.Error)
-	assert.Equal(t, http.StatusText(http.StatusBadRequest), err.Status)
-	assert.Equal(t, time.Now().Unix(), err.Timestamp)
-
+	sigBytes, _ := hex.DecodeString(res.Signature)
+	assert.True(t, techDB.nodeKeys[0].PublicKey().Verify(resBytes, sigBytes))
 }
 
 /*
 Scenario: Create account request with an invalid signature
-	Given an invalid signature (not hexa and not valid)
+	Given an invalid signature (not hexadecimal and not valid)
 	When I want to request to create an account
 	Then I got a 400 (Bad request) response status and an error message
 */
 func TestCreationAccountWhenSignatureInvalid(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
-	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pv")), pub)
+	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
+	emKey, _ := shared.NewEmitterKeyPair([]byte("pv"), pub)
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
@@ -426,7 +400,7 @@ func TestCreationAccountWhenSignatureInvalid(t *testing.T) {
 	form, _ := json.Marshal(map[string]string{
 		"encrypted_id":       hex.EncodeToString([]byte("id")),
 		"encrypted_keychain": hex.EncodeToString([]byte("keychain")),
-		"signature":          "abc",
+		"signature":          hex.EncodeToString([]byte("abc")),
 	})
 
 	path := "http://localhost/api/account"
@@ -439,48 +413,98 @@ func TestCreationAccountWhenSignatureInvalid(t *testing.T) {
 
 	var err httpError
 	json.Unmarshal(resBytes, &err)
-	assert.Equal(t, "signature request: signature is not in hexadecimal format", err.Error)
+	assert.Equal(t, "signature is invalid", err.Error)
+	assert.Equal(t, http.StatusText(http.StatusBadRequest), err.Status)
+	assert.Equal(t, time.Now().Unix(), err.Timestamp)
+}
+
+/*
+Scenario: Create account request with an invalid encrypted transaction raw
+	Given an invalid transaction raw (not encrypted, not JSON or missing fields)
+	When I want to request to create an account
+	Then I got a 400 (Bad request) response status and an error message
+*/
+func TestCreationAccountWhenInvalidTransactionRaw(t *testing.T) {
+
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	emK, _ := shared.NewEmitterKeyPair([]byte("enc"), pub)
+	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
+
+	r := gin.New()
+	r.POST("/api/account", CreateAccountHandler(&mockTechDB{
+		emKeys:   shared.EmitterKeys{emK},
+		nodeKeys: []shared.NodeKeyPair{nodeKey},
+	}))
+
+	form := accountCreationRequest{
+		EncryptedID:       hex.EncodeToString([]byte("abc")),
+		EncryptedKeychain: hex.EncodeToString([]byte("abc")),
+	}
+
+	formBytes, _ := json.Marshal(form)
+	sig, _ := pv.Sign(formBytes)
+	form.Signature = hex.EncodeToString(sig)
+	formBytes, _ = json.Marshal(form)
+
+	path := "http://localhost/api/account"
+	req, _ := http.NewRequest("POST", path, bytes.NewBuffer(formBytes))
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	resBytes, _ := ioutil.ReadAll(w.Body)
+
+	var err httpError
+	json.Unmarshal(resBytes, &err)
+	assert.Equal(t, "invalid message", err.Error)
 	assert.Equal(t, http.StatusText(http.StatusBadRequest), err.Status)
 	assert.Equal(t, time.Now().Unix(), err.Timestamp)
 
-	form2, _ := json.Marshal(map[string]string{
-		"encrypted_id":       hex.EncodeToString([]byte("id")),
-		"encrypted_keychain": hex.EncodeToString([]byte("keychain")),
-		"signature":          hex.EncodeToString([]byte("abc")),
-	})
+	encID, _ := pub.Encrypt([]byte("abc"))
+	form = accountCreationRequest{
+		EncryptedID:       hex.EncodeToString(encID),
+		EncryptedKeychain: hex.EncodeToString([]byte("abc")),
+	}
+	formBytes, _ = json.Marshal(form)
+	sig, _ = pv.Sign(formBytes)
+	form.Signature = hex.EncodeToString(sig)
+	formBytes, _ = json.Marshal(form)
 
-	req2, _ := http.NewRequest("POST", path, bytes.NewBuffer(form2))
+	req2, _ := http.NewRequest("POST", path, bytes.NewBuffer(formBytes))
 	w2 := httptest.NewRecorder()
 	r.ServeHTTP(w2, req2)
-
-	assert.Equal(t, http.StatusBadRequest, w2.Code)
 	resBytes2, _ := ioutil.ReadAll(w2.Body)
+	assert.Equal(t, http.StatusBadRequest, w2.Code)
+
 	var err2 httpError
 	json.Unmarshal(resBytes2, &err2)
-	assert.Equal(t, "signature request: signature is not valid", err2.Error)
+	assert.Equal(t, "invalid JSON", err2.Error)
 	assert.Equal(t, http.StatusText(http.StatusBadRequest), err2.Status)
 	assert.Equal(t, time.Now().Unix(), err2.Timestamp)
 
-	sig, _ := crypto.Sign(hex.EncodeToString([]byte("hello")), pv)
-
-	form3, _ := json.Marshal(map[string]string{
-		"encrypted_id":       hex.EncodeToString([]byte("id")),
-		"encrypted_keychain": hex.EncodeToString([]byte("keychain")),
-		"signature":          sig,
+	fakeJSON, _ := json.Marshal(map[string]string{
+		"hello": "text",
 	})
+	encID, _ = pub.Encrypt(fakeJSON)
+	form = accountCreationRequest{
+		EncryptedID:       hex.EncodeToString(encID),
+		EncryptedKeychain: hex.EncodeToString([]byte("abc")),
+	}
+	formBytes, _ = json.Marshal(form)
+	sig, _ = pv.Sign(formBytes)
+	form.Signature = hex.EncodeToString(sig)
+	formBytes, _ = json.Marshal(form)
 
-	req3, _ := http.NewRequest("POST", path, bytes.NewBuffer(form3))
+	req3, _ := http.NewRequest("POST", path, bytes.NewBuffer(formBytes))
 	w3 := httptest.NewRecorder()
 	r.ServeHTTP(w3, req3)
-
-	assert.Equal(t, http.StatusBadRequest, w3.Code)
 	resBytes3, _ := ioutil.ReadAll(w3.Body)
+	assert.Equal(t, http.StatusBadRequest, w3.Code)
+
 	var err3 httpError
 	json.Unmarshal(resBytes3, &err3)
-	assert.Equal(t, "signature request: signature is not valid", err3.Error)
 	assert.Equal(t, http.StatusText(http.StatusBadRequest), err3.Status)
 	assert.Equal(t, time.Now().Unix(), err3.Timestamp)
-
 }
 
 /*
@@ -490,16 +514,18 @@ Scenario: Create an account including ID and keychain transaction
 	Then two transaction are created (ID/Keychain) and the data is stored
 */
 func TestCreateAccount(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
 
-	encKey, _ := crypto.Encrypt(pv, pub)
+	pvB, _ := pv.Marshal()
+
+	encKey, _ := pub.Encrypt(pvB)
 	emKey, _ := shared.NewEmitterKeyPair(encKey, pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	pr := &mockPoolRequester{
@@ -520,70 +546,72 @@ func TestCreateAccount(t *testing.T) {
 	r.POST("/api/account", CreateAccountHandler(techDB))
 
 	//Create transactions
-	addr := crypto.HashString("addr")
-	encAddr, _ := crypto.Encrypt(addr, pub)
+	addr := crypto.Hash([]byte("addr"))
+	encAddr, _ := pub.Encrypt(addr)
+	pubB, _ := pub.Marshal()
 
 	idTx := map[string]interface{}{
-		"addr": crypto.HashString("abc"),
+		"addr": hex.EncodeToString(crypto.Hash([]byte("abc"))),
 		"data": map[string]string{
-			"encrypted_address_by_node": encAddr,
-			"encrypted_address_by_id":   encAddr,
+			"encrypted_address_by_node": hex.EncodeToString(encAddr),
+			"encrypted_address_by_id":   hex.EncodeToString(encAddr),
 			"encrypted_aes_key":         hex.EncodeToString([]byte("aes_key")),
 		},
 		"timestamp":  time.Now().Unix(),
-		"type":       int(chain.IDTransactionType),
-		"public_key": pub,
+		"type":       chain.IDTransactionType,
+		"public_key": hex.EncodeToString(pubB),
 		"em_shared_keys_proposal": map[string]string{
-			"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
-			"public_key":            pub,
+			"encrypted_private_key": hex.EncodeToString([]byte("encPv")),
+			"public_key":            hex.EncodeToString(pubB),
 		},
 	}
 
 	idTxBytes, _ := json.Marshal(idTx)
-	idSig, _ := crypto.Sign(string(idTxBytes), pv)
-	idTx["signature"] = idSig
+	idSig, _ := pv.Sign(idTxBytes)
+	idTx["signature"] = hex.EncodeToString(idSig)
 
 	idTxByteWithSig, _ := json.Marshal(idTx)
-	emSig, _ := crypto.Sign(string(idTxByteWithSig), pv)
-	idTx["em_signature"] = emSig
+	emSig, _ := pv.Sign(idTxByteWithSig)
+	idTx["em_signature"] = hex.EncodeToString(emSig)
 
 	keychainTx := map[string]interface{}{
-		"addr": addr,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("abc"))),
 		"data": map[string]string{
-			"encrypted_address_by_node": encAddr,
+			"encrypted_address_by_node": hex.EncodeToString(encAddr),
 			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 		},
 		"timestamp":  time.Now().Unix(),
-		"type":       int(chain.KeychainTransactionType),
-		"public_key": pub,
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
 		"em_shared_keys_proposal": map[string]string{
-			"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
-			"public_key":            pub,
+			"encrypted_private_key": hex.EncodeToString([]byte("encpv")),
+			"public_key":            hex.EncodeToString(pubB),
 		},
 	}
 
 	keychainTxBytes, _ := json.Marshal(keychainTx)
-	keychainSig, _ := crypto.Sign(string(keychainTxBytes), pv)
-	keychainTx["signature"] = keychainSig
+	keychainSig, _ := pv.Sign(keychainTxBytes)
+	keychainTx["signature"] = hex.EncodeToString(keychainSig)
 
 	keychainTxByteWithSig, _ := json.Marshal(keychainTx)
-	keychainEmSig, _ := crypto.Sign(string(keychainTxByteWithSig), pv)
-	keychainTx["em_signature"] = keychainEmSig
+	keychainEmSig, _ := pv.Sign(keychainTxByteWithSig)
+	keychainTx["em_signature"] = hex.EncodeToString(keychainEmSig)
 
 	idTxBytes, _ = json.Marshal(idTx)
+
 	keychainTxBytes, _ = json.Marshal(keychainTx)
 
-	encryptedID, _ := crypto.Encrypt(string(idTxBytes), pub)
-	encryptedKeychain, _ := crypto.Encrypt(string(keychainTxBytes), pub)
+	encryptedID, _ := pub.Encrypt(idTxBytes)
+	encryptedKeychain, _ := pub.Encrypt(keychainTxBytes)
 
-	form := map[string]string{
-		"encrypted_id":       encryptedID,
-		"encrypted_keychain": encryptedKeychain,
+	form := accountCreationRequest{
+		EncryptedID:       hex.EncodeToString(encryptedID),
+		EncryptedKeychain: hex.EncodeToString(encryptedKeychain),
 	}
 	formB, _ := json.Marshal(form)
-	sig, _ := crypto.Sign(string(formB), pv)
+	sig, _ := pv.Sign(formB)
 
-	form["signature"] = sig
+	form.Signature = hex.EncodeToString(sig)
 
 	formB, _ = json.Marshal(form)
 
@@ -593,7 +621,6 @@ func TestCreateAccount(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	resBytes, _ := ioutil.ReadAll(w.Body)
-
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	var resTx accountCreationResponse
@@ -604,35 +631,37 @@ func TestCreateAccount(t *testing.T) {
 	assert.NotEmpty(t, resTx.IDTransaction.Signature)
 	assert.Equal(t, time.Now().Unix(), resTx.IDTransaction.Timestamp)
 
-	idTxHash := crypto.HashBytes(idTxBytes)
-	assert.Equal(t, fmt.Sprintf("%s%s", crypto.HashString("abc"), idTxHash), resTx.IDTransaction.TransactionReceipt)
+	idTxHash := crypto.Hash(idTxBytes)
+	assert.EqualValues(t, fmt.Sprintf("%x%x", crypto.Hash([]byte("abc")), idTxHash), resTx.IDTransaction.TransactionReceipt)
 
 	idResBytes, _ := json.Marshal(transactionResponse{
 		TransactionReceipt: resTx.IDTransaction.TransactionReceipt,
 		Timestamp:          resTx.IDTransaction.Timestamp,
 	})
-	assert.Nil(t, crypto.VerifySignature(string(idResBytes), techDB.nodeKeys[0].PublicKey(), resTx.IDTransaction.Signature))
+	idSigBytes, _ := hex.DecodeString(resTx.IDTransaction.Signature)
+	assert.True(t, techDB.nodeKeys[0].PublicKey().Verify(idResBytes, idSigBytes))
 
 	assert.NotEmpty(t, resTx.KeychainTransaction.TransactionReceipt)
 	assert.NotEmpty(t, resTx.KeychainTransaction.Timestamp)
 	assert.NotEmpty(t, resTx.KeychainTransaction.Signature)
 	assert.Equal(t, time.Now().Unix(), resTx.KeychainTransaction.Timestamp)
 
-	keychainTxHash := crypto.HashBytes(keychainTxBytes)
-	assert.Equal(t, fmt.Sprintf("%s%s", addr, keychainTxHash), resTx.KeychainTransaction.TransactionReceipt)
+	keychainTxHash := crypto.Hash(keychainTxBytes)
+	assert.EqualValues(t, fmt.Sprintf("%x%x", crypto.Hash([]byte("abc")), keychainTxHash), resTx.KeychainTransaction.TransactionReceipt)
 
 	keychainResBytes, _ := json.Marshal(transactionResponse{
 		TransactionReceipt: resTx.KeychainTransaction.TransactionReceipt,
 		Timestamp:          resTx.KeychainTransaction.Timestamp,
 	})
-	assert.Nil(t, crypto.VerifySignature(string(keychainResBytes), techDB.nodeKeys[0].PublicKey(), resTx.KeychainTransaction.Signature))
+	keychainSigBytes, _ := hex.DecodeString(resTx.KeychainTransaction.Signature)
+	assert.True(t, techDB.nodeKeys[0].PublicKey().Verify(keychainResBytes, keychainSigBytes))
 
 	time.Sleep(50 * time.Millisecond)
 
 	assert.Len(t, chainDB.keychains, 1)
-	assert.Equal(t, addr, chainDB.keychains[0].Address())
+	assert.EqualValues(t, crypto.Hash([]byte("abc")), chainDB.keychains[0].Address())
 	assert.Len(t, chainDB.ids, 1)
-	assert.Equal(t, crypto.HashString("abc"), chainDB.ids[0].Address())
+	assert.EqualValues(t, crypto.Hash([]byte("abc")), chainDB.ids[0].Address())
 
 }
 
@@ -641,7 +670,7 @@ type mockPoolRequester struct {
 	repo   *mockChainDB
 }
 
-func (pr mockPoolRequester) RequestLastTransaction(pool consensus.Pool, txAddr string, txType chain.TransactionType) (*chain.Transaction, error) {
+func (pr mockPoolRequester) RequestLastTransaction(pool consensus.Pool, txAddr crypto.VersionnedHash, txType chain.TransactionType) (*chain.Transaction, error) {
 	switch txType {
 	case chain.KeychainTransactionType:
 		kc, _ := pr.repo.LastKeychain(txAddr)
@@ -660,24 +689,25 @@ func (pr mockPoolRequester) RequestLastTransaction(pool consensus.Pool, txAddr s
 	return nil, nil
 }
 
-func (pr mockPoolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash string, txAddr string, masterPublicKey string) error {
+func (pr mockPoolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error {
 	return nil
 }
 
-func (pr mockPoolRequester) RequestTransactionUnlock(pool consensus.Pool, txHash string, txAddr string) error {
+func (pr mockPoolRequester) RequestTransactionUnlock(pool consensus.Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash) error {
 	return nil
 }
 
 func (pr mockPoolRequester) RequestTransactionValidations(pool consensus.Pool, tx chain.Transaction, minValids int, masterValid chain.MasterValidation) ([]chain.Validation, error) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
+	pubB, _ := pub.Marshal()
 	vRaw := map[string]interface{}{
 		"status":     chain.ValidationOK,
-		"public_key": pub,
+		"public_key": pubB,
 		"timestamp":  time.Now().Unix(),
 	}
 	vBytes, _ := json.Marshal(vRaw)
-	sig, _ := crypto.Sign(string(vBytes), pv)
+	sig, _ := pv.Sign(vBytes)
 	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, sig)
 
 	return []chain.Validation{v}, nil
@@ -702,7 +732,7 @@ type mockChainDB struct {
 	ids       []chain.ID
 }
 
-func (r mockChainDB) LastKeychain(txAddr string) (*chain.Keychain, error) {
+func (r mockChainDB) LastKeychain(txAddr crypto.VersionnedHash) (*chain.Keychain, error) {
 	sort.Slice(r.keychains, func(i, j int) bool {
 		return r.keychains[i].Timestamp().Unix() > r.keychains[j].Timestamp().Unix()
 	})
@@ -713,7 +743,7 @@ func (r mockChainDB) LastKeychain(txAddr string) (*chain.Keychain, error) {
 	return nil, nil
 }
 
-func (r mockChainDB) FullKeychain(txAddr string) (*chain.Keychain, error) {
+func (r mockChainDB) FullKeychain(txAddr crypto.VersionnedHash) (*chain.Keychain, error) {
 	sort.Slice(r.keychains, func(i, j int) bool {
 		return r.keychains[i].Timestamp().Unix() > r.keychains[j].Timestamp().Unix()
 	})
@@ -724,36 +754,36 @@ func (r mockChainDB) FullKeychain(txAddr string) (*chain.Keychain, error) {
 	return nil, nil
 }
 
-func (r mockChainDB) KeychainByHash(txHash string) (*chain.Keychain, error) {
+func (r mockChainDB) KeychainByHash(txHash crypto.VersionnedHash) (*chain.Keychain, error) {
 	for _, tx := range r.keychains {
-		if tx.TransactionHash() == txHash {
+		if bytes.Equal(tx.TransactionHash(), txHash) {
 			return &tx, nil
 		}
 	}
 	return nil, nil
 }
 
-func (r mockChainDB) IDByHash(txHash string) (*chain.ID, error) {
+func (r mockChainDB) IDByHash(txHash crypto.VersionnedHash) (*chain.ID, error) {
 	for _, tx := range r.ids {
-		if tx.TransactionHash() == txHash {
+		if bytes.Equal(tx.TransactionHash(), txHash) {
 			return &tx, nil
 		}
 	}
 	return nil, nil
 }
 
-func (r mockChainDB) ID(addr string) (*chain.ID, error) {
+func (r mockChainDB) ID(addr crypto.VersionnedHash) (*chain.ID, error) {
 	for _, tx := range r.ids {
-		if tx.Address() == addr {
+		if bytes.Equal(tx.Address(), addr) {
 			return &tx, nil
 		}
 	}
 	return nil, nil
 }
 
-func (r mockChainDB) KOByHash(txHash string) (*chain.Transaction, error) {
+func (r mockChainDB) KOByHash(txHash crypto.VersionnedHash) (*chain.Transaction, error) {
 	for _, tx := range r.kos {
-		if tx.TransactionHash() == txHash {
+		if bytes.Equal(tx.TransactionHash(), txHash) {
 			return &tx, nil
 		}
 	}
