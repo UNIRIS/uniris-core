@@ -39,7 +39,13 @@ func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader
 		return err
 	}
 
+<<<<<<< HEAD
 	if err := poolR.RequestTransactionTimeLock(sPool, tx.TransactionHash(), tx.Address(), nodePub); err != nil {
+=======
+	//TODO: ask storage pool to store in in progress
+
+	if err := poolR.RequestTransactionLock(sPool, tx.TransactionHash(), tx.Address(), nodePub); err != nil {
+>>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 		return fmt.Errorf("transaction lock failed: %s", err.Error())
 	}
 

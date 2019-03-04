@@ -16,6 +16,12 @@ type Database interface {
 //DatabaseReader handles transaction chain queries to retreive a transaction from its related database
 type DatabaseReader interface {
 
+<<<<<<< HEAD
+=======
+	//InProgressByHash retrieves a transaction from the in progress database by hash
+	InProgressByHash(txHash crypto.VersionnedHash) (*Transaction, error)
+
+>>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 	//KOByHash retrieves a transactionfrom the KO database by hash
 	KOByHash(txHash crypto.VersionnedHash) (*Transaction, error)
 
@@ -162,9 +168,19 @@ func LastTransaction(db DatabaseReader, txAddr []byte, txType TransactionType) (
 }
 
 //GetTransactionStatus gets the status of a transaction
+<<<<<<< HEAD
 //It lookups on timelockers, KO DB, Keychain, ID, Smart contracts
 func GetTransactionStatus(db DatabaseReader, txHash crypto.VersionnedHash) (TransactionStatus, error) {
 	if transactionHashTimeLocked(txHash) {
+=======
+//It lookups on In Progress DB, KO DB, Keychain, ID, Smart contracts
+func GetTransactionStatus(db DatabaseReader, txHash []byte) (TransactionStatus, error) {
+	tx, err := db.InProgressByHash(txHash)
+	if err != nil {
+		return TransactionStatusSuccess, err
+	}
+	if tx != nil {
+>>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 		return TransactionStatusInProgress, nil
 	}
 

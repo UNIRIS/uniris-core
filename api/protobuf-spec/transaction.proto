@@ -48,7 +48,11 @@ message StoreTransactionResponse {
     bytes signature_response = 2;
 }
 
+<<<<<<< HEAD
 message TimeLockTransactionRequest {
+=======
+message LockTransactionRequest {
+>>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
     bytes transaction_hash = 1;
     bytes address = 2;
     bytes master_node_public_key = 3;

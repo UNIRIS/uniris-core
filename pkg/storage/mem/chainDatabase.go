@@ -19,6 +19,18 @@ func NewchainDatabase() chain.Database {
 	return &chainDB{}
 }
 
+<<<<<<< HEAD
+=======
+func (db chainDB) InProgressByHash(txHash crypto.VersionnedHash) (*chain.Transaction, error) {
+	for _, tx := range db.inProgressTx {
+		if bytes.Equal(tx.TransactionHash(), txHash) {
+			return &tx, nil
+		}
+	}
+	return nil, nil
+}
+
+>>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 func (db chainDB) KeychainByHash(txHash crypto.VersionnedHash) (*chain.Keychain, error) {
 	for _, tx := range db.keychains {
 		if bytes.Equal(tx.TransactionHash(), txHash) {
