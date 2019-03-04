@@ -141,9 +141,19 @@ Scenario: Get transaction status in progress
 	Then I get in progress
 */
 func TestGetTransactionStatusInProgress(t *testing.T) {
+<<<<<<< HEAD
 	chainDB := &mockChainDB{}
 	pub, _ := crypto.GenerateKeys()
 	TimeLockTransaction(crypto.HashString("hash"), crypto.HashString("addr"), pub)
+=======
+	chainDB := &mockChainDB{
+		inprogress: []Transaction{
+			Transaction{
+				hash: crypto.Hash([]byte("hash")),
+			},
+		},
+	}
+>>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 
 	status, err := GetTransactionStatus(chainDB, crypto.Hash([]byte("hash")))
 	assert.Nil(t, err)
@@ -784,6 +794,23 @@ func (db *mockChainDB) WriteKO(tx Transaction) error {
 	return nil
 }
 
+<<<<<<< HEAD
+=======
+func (db *mockChainDB) WriteInProgress(tx Transaction) error {
+	db.inprogress = append(db.inprogress, tx)
+	return nil
+}
+
+func (db mockChainDB) InProgressByHash(hash crypto.VersionnedHash) (*Transaction, error) {
+	for _, tx := range db.inprogress {
+		if bytes.Equal(tx.hash, hash) {
+			return &tx, nil
+		}
+	}
+	return nil, nil
+}
+
+>>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 func (db mockChainDB) FullKeychain(txAddr crypto.VersionnedHash) (*Keychain, error) {
 	sort.Slice(db.keychains, func(i, j int) bool {
 		return db.keychains[i].Timestamp().Unix() > db.keychains[j].Timestamp().Unix()

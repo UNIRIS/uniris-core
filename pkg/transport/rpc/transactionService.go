@@ -189,7 +189,11 @@ func (s txSrv) TimeLockTransaction(ctx context.Context, req *api.TimeLockTransac
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, "invalid master public key").Err()
 	}
+<<<<<<< HEAD
 	if err := chain.TimeLockTransaction(req.TransactionHash, req.Address, masterKey); err != nil {
+=======
+	if err := chain.LockTransaction(s.locker, req.TransactionHash, req.Address, masterKey); err != nil {
+>>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 

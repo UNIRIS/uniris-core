@@ -292,6 +292,8 @@ func TestHandleLockTransaction(t *testing.T) {
 
 	pubB, _ := pub.Marshal()
 
+	pubB, _ := pub.Marshal()
+
 	req := &api.LockTransactionRequest{
 		Timestamp:           time.Now().Unix(),
 		TransactionHash:     crypto.Hash([]byte("tx")),
@@ -308,7 +310,13 @@ func TestHandleLockTransaction(t *testing.T) {
 		Timestamp: res.Timestamp,
 	})
 	assert.True(t, pub.Verify(resBytes, res.SignatureResponse))
+<<<<<<< HEAD:pkg/transport/rpc/transactionService_test.go
 	assert.True(t, chain.ContainsTimeLock(crypto.HashString("tx1"), crypto.HashString("addr1")))
+=======
+
+	assert.Len(t, locker.locks, 1)
+	assert.EqualValues(t, crypto.Hash([]byte("addr")), locker.locks[0]["transaction_address"])
+>>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash:pkg/transport/rpc/tranasctionService_test.go
 }
 
 /*
@@ -490,7 +498,11 @@ func (pr mockPoolRequester) RequestLastTransaction(pool consensus.Pool, txAddr c
 	return nil, nil
 }
 
+<<<<<<< HEAD:pkg/transport/rpc/transactionService_test.go
 func (pr mockPoolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error {
+=======
+func (pr mockPoolRequester) RequestTransactionLock(pool consensus.Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error {
+>>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash:pkg/transport/rpc/tranasctionService_test.go
 	return nil
 }
 
@@ -528,9 +540,25 @@ func (pr *mockPoolRequester) RequestTransactionStorage(pool consensus.Pool, minR
 }
 
 type mockChainDB struct {
+<<<<<<< HEAD:pkg/transport/rpc/transactionService_test.go
 	kos       []chain.Transaction
 	keychains []chain.Keychain
 	ids       []chain.ID
+=======
+	inprogress []chain.Transaction
+	kos        []chain.Transaction
+	keychains  []chain.Keychain
+	ids        []chain.ID
+}
+
+func (r mockChainDB) InProgressByHash(txHash crypto.VersionnedHash) (*chain.Transaction, error) {
+	for _, tx := range r.inprogress {
+		if bytes.Equal(tx.TransactionHash(), txHash) {
+			return &tx, nil
+		}
+	}
+	return nil, nil
+>>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash:pkg/transport/rpc/tranasctionService_test.go
 }
 
 func (r mockChainDB) FullKeychain(txAddr crypto.VersionnedHash) (*chain.Keychain, error) {
@@ -606,6 +634,47 @@ func (r *mockChainDB) WriteKO(tx chain.Transaction) error {
 	return nil
 }
 
+<<<<<<< HEAD:pkg/transport/rpc/transactionService_test.go
+=======
+func (r *mockChainDB) WriteInProgress(tx chain.Transaction) error {
+	r.inprogress = append(r.inprogress, tx)
+	return nil
+}
+
+type mockLocker struct {
+	locks []map[string][]byte
+}
+
+func (l *mockLocker) WriteLock(txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPubKey crypto.PublicKey) error {
+	masterPubk, _ := masterPubKey.Marshal()
+	l.locks = append(l.locks, map[string][]byte{
+		"transaction_address": txAddr,
+		"transaction_hash":    txHash,
+		"master_public_key":   masterPubk,
+	})
+	return nil
+}
+func (l *mockLocker) RemoveLock(txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash) error {
+	pos := l.findLockPosition(txHash, txAddr)
+	if pos > -1 {
+		l.locks = append(l.locks[:pos], l.locks[pos+1:]...)
+	}
+	return nil
+}
+func (l mockLocker) ContainsLock(txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash) (bool, error) {
+	return l.findLockPosition(txHash, txAddr) > -1, nil
+}
+
+func (l mockLocker) findLockPosition(txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash) int {
+	for i, lock := range l.locks {
+		if bytes.Equal(lock["transaction_hash"], txHash) && bytes.Equal(lock["transaction_address"], txAddr) {
+			return i
+		}
+	}
+	return -1
+}
+
+>>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash:pkg/transport/rpc/tranasctionService_test.go
 type mockTechDB struct {
 	emKeys   shared.EmitterKeys
 	nodeKeys []shared.NodeKeyPair
