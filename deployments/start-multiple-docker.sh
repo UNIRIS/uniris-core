@@ -45,11 +45,34 @@ printf '      - UNIRIS_PUBLIC_KEY=publickey_%d\n' "$i"
 printf '      - UNIRIS_PRIVATE_KEY=privatekey_%d\n' "$i"
 printf '      - UNIRIS_NETWORK_INTERFACE=eth0\n'
 seed=""
-for idx in {1..3}
-do
-    r=$(( $RANDOM % $nb + 1 ))
-    seed="172.16.0.1${r}:5000:publickey_${r};"
-done
+if [ $nb -gt 2 ]; then
+    for idx in {1..2}
+    do
+        ok=0
+        while [ $ok == 0 ]
+        do
+            r=$(( $RANDOM % $nb + 1 ))
+            if [ $r != $i ];
+            then
+                seed+="172.16.0.1${r}:5000:publickey_${r};"
+                ok=1
+            fi
+        done
+    done
+else
+    ok=0
+    prevR=-1
+    while [ $ok == 0 ]
+    do
+        r=$(( $RANDOM % $nb + 1 ))
+        if [ $r != $i ] || [prevR != $r];
+        then
+            seed="172.16.0.1${r}:5000:publickey_${r};"
+            ok=1
+        fi
+    done
+fi
+
 printf '      - UNIRIS_DISCOVERY_SEEDS=%s\n' "$seed"
 printf '    ports:\n'
 printf '      - 4000\n' "$i"
