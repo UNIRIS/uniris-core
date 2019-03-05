@@ -37,22 +37,20 @@ func (s discoverySrv) Synchronize(ctx context.Context, req *api.SynRequest) (*ap
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	//Get the unknowns peers or more recent than the local peers
-	localDiscoveries := make([]*api.PeerDigest, 0)
-	for _, p := range discovery.ExcludedOrRecent(localPeers, receivedPeers) {
-		localDiscoveries = append(localDiscoveries, formatPeerDigestAPI(p))
+	requestedPeers := make([]*api.PeerIdentity, 0)
+	for _, p := range discovery.ComparePeers(localPeers, receivedPeers) {
+		requestedPeers = append(requestedPeers, formatPeerIdentityAPI(p))
 	}
 
-	//get the unknown peers or more recent than the received peers
-	remoteDiscoveries := make([]*api.PeerDiscovered, 0)
-	for _, p := range discovery.ExcludedOrRecent(receivedPeers, localPeers) {
-		remoteDiscoveries = append(remoteDiscoveries, formatPeerDiscoveredAPI(p))
+	discoveries := make([]*api.PeerDiscovered, 0)
+	for _, p := range discovery.ComparePeers(receivedPeers, localPeers) {
+		discoveries = append(discoveries, formatPeerDiscoveredAPI(p))
 	}
 
 	return &api.SynResponse{
-		LocalDiscoveries: localDiscoveries,
-		RemoteDiscoveris: remoteDiscoveries,
-		Timestamp:        time.Now().Unix(),
+		RequestedPeers:  requestedPeers,
+		DiscoveredPeers: discoveries,
+		Timestamp:       time.Now().Unix(),
 	}, nil
 }
 

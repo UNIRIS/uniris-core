@@ -19,6 +19,10 @@ func formatPeerDigest(p *api.PeerDigest) discovery.Peer {
 	)
 }
 
+func formatPeerIdentity(p *api.PeerIdentity) discovery.PeerIdentity {
+	return discovery.NewPeerIdentity(net.ParseIP(p.Ip), int(p.Port), p.PublicKey)
+}
+
 func formatPeerDigestAPI(p discovery.Peer) *api.PeerDigest {
 	return &api.PeerDigest{
 		Identity: &api.PeerIdentity{
@@ -30,6 +34,14 @@ func formatPeerDigestAPI(p discovery.Peer) *api.PeerDigest {
 			ElapsedHeartbeats: p.HeartbeatState().ElapsedHeartbeats(),
 			GenerationTime:    p.HeartbeatState().GenerationTime().Unix(),
 		},
+	}
+}
+
+func formatPeerIdentityAPI(p discovery.Peer) *api.PeerIdentity {
+	return &api.PeerIdentity{
+		Ip:        p.Identity().IP().String(),
+		Port:      int32(p.Identity().Port()),
+		PublicKey: p.Identity().PublicKey(),
 	}
 }
 
@@ -45,9 +57,9 @@ func formatPeerDiscoveredAPI(p discovery.Peer) *api.PeerDiscovered {
 			GenerationTime:    p.HeartbeatState().GenerationTime().Unix(),
 		},
 		AppState: &api.PeerAppState{
-			CpuLoad:               p.AppState().CPULoad(),
-			DiscoveredPeersNumber: int32(p.AppState().DiscoveredPeersNumber()),
-			FreeDiskSpace:         float32(p.AppState().FreeDiskSpace()),
+			CpuLoad:              p.AppState().CPULoad(),
+			ReachablePeersNumber: int32(p.AppState().ReachablePeersNumber()),
+			FreeDiskSpace:        float32(p.AppState().FreeDiskSpace()),
 			GeoPosition: &api.PeerAppState_GeoCoordinates{
 				Latitude:  float32(p.AppState().GeoPosition().Latitude()),
 				Longitude: float32(p.AppState().GeoPosition().Longitude()),
@@ -63,7 +75,7 @@ func formatPeerDiscovered(p *api.PeerDiscovered) discovery.Peer {
 	return discovery.NewDiscoveredPeer(
 		discovery.NewPeerIdentity(net.ParseIP(p.Identity.Ip), int(p.Identity.Port), p.Identity.PublicKey),
 		discovery.NewPeerHeartbeatState(time.Unix(p.HeartbeatState.GenerationTime, 0), p.HeartbeatState.ElapsedHeartbeats),
-		discovery.NewPeerAppState(p.AppState.Version, discovery.PeerStatus(p.AppState.Status), float64(p.AppState.GeoPosition.Longitude), float64(p.AppState.GeoPosition.Longitude), p.AppState.CpuLoad, float64(p.AppState.FreeDiskSpace), int(p.AppState.P2PFactor), int(p.AppState.DiscoveredPeersNumber)),
+		discovery.NewPeerAppState(p.AppState.Version, discovery.PeerStatus(p.AppState.Status), float64(p.AppState.GeoPosition.Longitude), float64(p.AppState.GeoPosition.Longitude), p.AppState.CpuLoad, float64(p.AppState.FreeDiskSpace), int(p.AppState.P2PFactor), int(p.AppState.ReachablePeersNumber)),
 	)
 }
 

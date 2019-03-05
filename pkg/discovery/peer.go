@@ -116,16 +116,6 @@ func (p Peer) Self() bool {
 	return p.isSelf
 }
 
-//SelfRefresh refresh the self peer with metrics and updates the elapsed heartbeats
-func (p *Peer) SelfRefresh(status PeerStatus, disk float64, cpu string, p2pFactor int, discoveryPeersNb int) {
-	if !p.isSelf {
-		return
-	}
-
-	p.appState.refresh(status, disk, cpu, p2pFactor, discoveryPeersNb)
-	p.hbState.refreshElapsedHeartbeats()
-}
-
 func (p Peer) String() string {
 	return fmt.Sprintf("Endpoint: %s, Local: %t, %s, %s",
 		p.Identity().Endpoint(),
@@ -242,13 +232,13 @@ func (p PeerPosition) String() string {
 
 //PeerAppState describes the state of peer and its metrics
 type PeerAppState struct {
-	status                PeerStatus
-	cpuLoad               string
-	freeDiskSpace         float64
-	version               string
-	geoPosition           PeerPosition
-	p2pFactor             int
-	discoveredPeersNumber int
+	status               PeerStatus
+	cpuLoad              string
+	freeDiskSpace        float64
+	version              string
+	geoPosition          PeerPosition
+	p2pFactor            int
+	reachablePeersNumber int
 }
 
 //Status returns the status of the peer
@@ -281,25 +271,25 @@ func (a PeerAppState) GeoPosition() PeerPosition {
 	return a.geoPosition
 }
 
-//DiscoveredPeersNumber returns the number of peers has been discovered
-func (a PeerAppState) DiscoveredPeersNumber() int {
-	return a.discoveredPeersNumber
+//ReachablePeersNumber returns the number of peers has been discovered and are Reachable
+func (a PeerAppState) ReachablePeersNumber() int {
+	return a.reachablePeersNumber
 }
 
 func (a PeerAppState) String() string {
-	return fmt.Sprintf("Status: %s, CPU load: %s, Free disk space: %f, Version: %s, GeoPosition: %s, P2PFactor: %d, Discovered peer number: %d",
+	return fmt.Sprintf("Status: %s, CPU load: %s, Free disk space: %f, Version: %s, GeoPosition: %s, P2PFactor: %d, Reachable peer number: %d",
 		a.Status().String(),
 		a.CPULoad(),
 		a.FreeDiskSpace(),
 		a.Version(),
 		a.GeoPosition().String(),
 		a.P2PFactor(),
-		a.DiscoveredPeersNumber(),
+		a.ReachablePeersNumber(),
 	)
 }
 
 //NewPeerAppState creates a new peer's app state
-func NewPeerAppState(ver string, stat PeerStatus, lon float64, lat float64, cpu string, disk float64, p2pfactor int, discoveredPeersNumber int) PeerAppState {
+func NewPeerAppState(ver string, stat PeerStatus, lon float64, lat float64, cpu string, disk float64, p2pfactor int, reachablePeersNumber int) PeerAppState {
 	return PeerAppState{
 		version: ver,
 		status:  stat,
@@ -307,18 +297,28 @@ func NewPeerAppState(ver string, stat PeerStatus, lon float64, lat float64, cpu 
 			lon: lon,
 			lat: lat,
 		},
-		cpuLoad:               cpu,
-		freeDiskSpace:         disk,
-		p2pFactor:             p2pfactor,
-		discoveredPeersNumber: discoveredPeersNumber,
+		cpuLoad:              cpu,
+		freeDiskSpace:        disk,
+		p2pFactor:            p2pfactor,
+		reachablePeersNumber: reachablePeersNumber,
 	}
 }
 
 //Refresh the peer state
-func (a *PeerAppState) refresh(status PeerStatus, disk float64, cpu string, p2pFactor int, discoveryPeersNb int) {
+func (a *PeerAppState) refresh(status PeerStatus, disk float64, cpu string, p2pFactor int, reachablePeersNb int) {
 	a.cpuLoad = cpu
 	a.status = status
 	a.freeDiskSpace = disk
 	a.p2pFactor = p2pFactor
-	a.discoveredPeersNumber = discoveryPeersNb
+	a.reachablePeersNumber = reachablePeersNb
+}
+
+type peerList []Peer
+
+//identities return the identities of the list of peers.
+func (pl peerList) identities() (list []PeerIdentity) {
+	for _, i := range pl {
+		list = append(list, i.identity)
+	}
+	return
 }

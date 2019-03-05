@@ -28,38 +28,19 @@ func (db *discoveryDB) WriteDiscoveredPeer(peer discovery.Peer) error {
 }
 
 func (db discoveryDB) UnreachablePeers() ([]discovery.PeerIdentity, error) {
-	pp := make([]discovery.PeerIdentity, 0)
-	for i := 0; i < len(db.discoveredPeers); i++ {
-		if exist, _ := db.ContainsUnreachablePeer(db.discoveredPeers[i].Identity()); exist {
-			pp = append(pp, db.discoveredPeers[i].Identity())
-		}
-	}
-	return pp, nil
+	return db.unreachablePeers, nil
 }
 
 func (db *discoveryDB) WriteUnreachablePeer(p discovery.PeerIdentity) error {
-	if exist, _ := db.ContainsUnreachablePeer(p); !exist {
-		db.unreachablePeers = append(db.unreachablePeers, p)
-	}
+	db.unreachablePeers = append(db.unreachablePeers, p)
 	return nil
 }
 
 func (db *discoveryDB) RemoveUnreachablePeer(p discovery.PeerIdentity) error {
-	if exist, _ := db.ContainsUnreachablePeer(p); exist {
-		for i := 0; i < len(db.unreachablePeers); i++ {
-			if db.unreachablePeers[i].PublicKey() == p.PublicKey() {
-				db.unreachablePeers = db.unreachablePeers[:i+copy(db.unreachablePeers[i:], db.unreachablePeers[i+1:])]
-			}
+	for i := 0; i < len(db.unreachablePeers); i++ {
+		if db.unreachablePeers[i].PublicKey() == p.PublicKey() {
+			db.unreachablePeers = db.unreachablePeers[:i+copy(db.unreachablePeers[i:], db.unreachablePeers[i+1:])]
 		}
 	}
 	return nil
-}
-
-func (db discoveryDB) ContainsUnreachablePeer(peerPubK discovery.PeerIdentity) (bool, error) {
-	for _, up := range db.unreachablePeers {
-		if up.PublicKey() == peerPubK.PublicKey() {
-			return true, nil
-		}
-	}
-	return false, nil
 }

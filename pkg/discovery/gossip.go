@@ -3,7 +3,41 @@ package discovery
 import (
 	"errors"
 	"log"
+	"math/rand"
+	"sync"
 )
+
+//ErrUnreachablePeer is returns when no owned peers has been stored
+var ErrUnreachablePeer = errors.New("unreachable peer")
+
+//Database wrap discovery database queries, persistence and removals
+type Database interface {
+	dbReader
+	dbWriter
+	dbRemover
+}
+
+type dbReader interface {
+	//DiscoveredPeers retrieves the discovered peers from the discovery database
+	DiscoveredPeers() ([]Peer, error)
+
+	//UnreachablePeers retrieves the unreachables peers from the unreachables database
+	UnreachablePeers() ([]PeerIdentity, error)
+}
+
+type dbWriter interface {
+
+	//WriteDiscoveredPeer inserts or updates the peer in the discovery database
+	WriteDiscoveredPeer(p Peer) error
+
+	//WriteUnreachablePeer inserts the peer in the unreachable database
+	WriteUnreachablePeer(p PeerIdentity) error
+}
+
+type dbRemover interface {
+	//RemoveUnreachablePeer deletes the peer from the unreachable database
+	RemoveUnreachablePeer(p PeerIdentity) error
+}
 
 //Notifier handle the notification of the gossip events
 type Notifier interface {
@@ -12,79 +46,148 @@ type Notifier interface {
 	NotifyDiscovery(Peer) error
 }
 
-//BootStrapingMinTime is the necessary minimum time on seconds to finish learning about the network
-const BootStrapingMinTime = 1800
+//Messenger represents a gossip client
+type Messenger interface {
+	SendSyn(target PeerIdentity, known []Peer) (requested []PeerIdentity, discovered []Peer, err error)
+	SendAck(target PeerIdentity, requested []Peer) error
+}
 
 //Gossip initialize a cycle to spread the local view by updating its local peer and store the results
-func Gossip(self Peer, seeds []PeerIdentity, db Database, netCheck NetworkChecker, sysR SystemReader, msg RoundMessenger, n Notifier) (Cycle, error) {
+func Gossip(self Peer, seeds []PeerIdentity, db Database, netCheck NetworkChecker, sysR SystemReader, msg Messenger, n Notifier) error {
 	if len(seeds) == 0 {
-		return Cycle{}, errors.New("Cannot start a gossip round without a list seeds")
+		return errors.New("cannot start a gossip round without a list seeds")
 	}
 
 	peers, err := db.DiscoveredPeers()
 	if err != nil {
-		return Cycle{}, err
-	}
-
-	//Refresh ourself and append to the list of discovered peers
-	self, err = updateSelf(self, peers, seeds, db, netCheck, sysR)
-	if err != nil {
-		return Cycle{}, err
-	}
-	peers = append(peers, self)
-
-	reaches, err := reachablePeers(db)
-	if err != nil {
-		return Cycle{}, err
+		return err
 	}
 
 	unreaches, err := db.UnreachablePeers()
 	if err != nil {
-		return Cycle{}, err
+		return err
+	}
+	reaches := reachablePeers(unreaches, peers)
+
+	if err := updateSelf(self, reaches, seeds, db, netCheck, sysR); err != nil {
+		return err
 	}
 
-	//Start the gossip Cycle
-	c := Cycle{}
-	if err := c.run(self, msg, seeds, peers, reaches, unreaches); err != nil {
-		return Cycle{}, err
+	cDiscoveries, cReachables, cUnreachables, err := startCycle(self, msg, seeds, peers, reaches.identities(), unreaches)
+	if err != nil {
+		return err
 	}
 
-	//GossipStores and notifies the gossip Cycle result
-	if err := addDiscoveries(c, db, n); err != nil {
-		return c, err
+	if err := addDiscoveries(cDiscoveries, db, n); err != nil {
+		return err
 	}
-	if err := addReaches(c, db, n); err != nil {
-		return c, err
+	if err := addReaches(cReachables, unreaches, db, n); err != nil {
+		return err
 	}
-	if err := addUnreaches(c, db, n); err != nil {
-		return c, err
+	if err := addUnreaches(cUnreachables, unreaches, db, n); err != nil {
+		return err
 	}
 
-	return c, nil
+	return nil
 }
 
-func updateSelf(self Peer, discoveries []Peer, seeds []PeerIdentity, db DatabaseWriter, netCheck NetworkChecker, sysR SystemReader) (Peer, error) {
-	status, err := localStatus(self, seedDiscoveryAverage(seeds, discoveries), netCheck)
-	if err != nil {
-		return self, err
-	}
+//startCycle initiate a gossip cycle by creating rounds from a peer selection to spread the known peers and discover new peers
+func startCycle(self Peer, msg Messenger, seeds []PeerIdentity, peers []Peer, reaches []PeerIdentity, unreaches []PeerIdentity) (discoveries []Peer, reachables []PeerIdentity, unreachables []PeerIdentity, err error) {
 
-	_, _, _, cpu, space, err := systemInfo(sysR)
-	if err != nil {
-		if err == ErrGeoPosition {
-			status = FaultyPeer
-			log.Println(ErrGeoPosition)
-		} else {
-			return self, err
+	//Pick the peers to gossip with
+	selectedPeers := make([]PeerIdentity, 0)
+
+	//We always pick a seed peer (as boostraping peer)
+	selectedPeers = append(selectedPeers, randomPeer(seeds))
+
+	//Because the self peer is included inside the database, we need to filter it out to not gossip with ourself
+	reachFiltered := make([]PeerIdentity, 0)
+	for _, r := range reaches {
+		if r.publicKey != self.identity.publicKey {
+			reachFiltered = append(reachFiltered, r)
 		}
 	}
+	if len(reachFiltered) > 0 {
+		selectedPeers = append(selectedPeers, randomPeer(reachFiltered))
+	}
 
-	self.SelfRefresh(status, space, cpu, p2pFactor(discoveries), len(discoveries))
-	return self, nil
+	//We include also a random unreachable peer to try to set it as reachable
+	if len(unreaches) > 0 {
+		selectedPeers = append(selectedPeers, randomPeer(unreaches))
+	}
+
+	//Need to wait the gossip with the selected peers to complete the cycle
+	var wg sync.WaitGroup
+	wg.Add(len(selectedPeers))
+
+	//Start gossip for every selected peers
+	for _, p := range selectedPeers {
+		go func(target PeerIdentity) {
+			defer wg.Done()
+
+			//We initiate a gossip round and stores as discovery and reachable when the peers answers.
+			//Otherwise it the peer cannot be reached, it will stored as unreachable for a later retry
+			pp, err := startRound(target, peers, msg)
+			if err != nil {
+				if err == ErrUnreachablePeer {
+					unreachables = append(unreachables, target)
+					return
+				}
+				log.Printf("unexpected error during round execution: %s", err.Error())
+				return
+			}
+			discoveries = append(discoveries, pp...)
+			reachables = append(reachables, target)
+		}(p)
+	}
+
+	wg.Wait()
+
+	return
 }
 
-func addDiscoveries(c Cycle, db DatabaseWriter, n Notifier) error {
-	for _, p := range c.Discoveries {
+func randomPeer(items []PeerIdentity) PeerIdentity {
+	if len(items) > 1 {
+		rnd := rand.Intn(len(items))
+		return items[rnd]
+	}
+	return items[0]
+}
+
+//startRound initiate the gossip round by messenging with the target peer
+func startRound(target PeerIdentity, peers []Peer, msg Messenger) ([]Peer, error) {
+	reqPeers, discoveries, err := msg.SendSyn(target, peers)
+	if err != nil {
+		return nil, err
+	}
+	//if some peers are requested, we send back the details of these peers
+	if len(reqPeers) > 0 {
+		reqDetailed := make([]Peer, 0)
+
+		//Find details of the requested peers from the known peers
+		for i := 0; i < len(reqPeers); i++ {
+			var found bool
+			var j int
+			for !found && j < len(peers) {
+				if peers[j].identity.publicKey == reqPeers[i].publicKey {
+					reqDetailed = append(reqDetailed, peers[j])
+					found = true
+				}
+				j++
+			}
+		}
+
+		//Send to the SYN receiver an ACK with the peer detailed requested
+		if err := msg.SendAck(target, reqDetailed); err != nil {
+			return nil, err
+		}
+	}
+	return discoveries, nil
+}
+
+//addDiscoveries persists the cycle discoveries in the database and are notified
+func addDiscoveries(cDiscoveries []Peer, db dbWriter, n Notifier) error {
+	for _, p := range cDiscoveries {
 		if err := db.WriteDiscoveredPeer(p); err != nil {
 			return err
 		}
@@ -95,31 +198,25 @@ func addDiscoveries(c Cycle, db DatabaseWriter, n Notifier) error {
 	return nil
 }
 
-func addReaches(c Cycle, db Database, n Notifier) error {
-	for _, p := range c.Reaches {
-		exist, err := db.ContainsUnreachablePeer(p)
-		if err != nil {
-			return err
-		}
-		if exist {
+//addReaches removes the reachables peers from the unreachables in the database and are notified
+func addReaches(cReaches []PeerIdentity, unreaches []PeerIdentity, db dbRemover, n Notifier) error {
+	for _, p := range cReaches {
+		if isUnreachable(p, unreaches) {
 			if err := db.RemoveUnreachablePeer(p); err != nil {
 				return err
 			}
-		}
-		if err := n.NotifyReachable(p); err != nil {
-			return err
+			if err := n.NotifyReachable(p); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-func addUnreaches(c Cycle, db Database, n Notifier) error {
-	for _, p := range c.Unreaches {
-		exist, err := db.ContainsUnreachablePeer(p)
-		if err != nil {
-			return err
-		}
-		if !exist {
+//addUnreaches persist the unreachables if is not present in the database and are notified
+func addUnreaches(cUnreachables []PeerIdentity, unreaches []PeerIdentity, db dbWriter, n Notifier) error {
+	for _, p := range cUnreachables {
+		if !isUnreachable(p, unreaches) {
 			if err := db.WriteUnreachablePeer(p); err != nil {
 				return err
 			}
@@ -129,4 +226,77 @@ func addUnreaches(c Cycle, db Database, n Notifier) error {
 		}
 	}
 	return nil
+}
+
+//ComparePeers compares a source of peers with an other list of peers
+//and returns the peers that are not included inside the source or
+func ComparePeers(source []Peer, comparees []Peer) []Peer {
+
+	diff := make([]Peer, 0)
+
+	for i := 0; i < len(comparees); i++ {
+		var found bool
+		var j int
+
+		for !found && j < len(source) {
+			//Add it to the list if the compared peer is include inside the source and if it's more recent
+			if source[j].identity.publicKey == comparees[i].identity.publicKey {
+				if comparees[i].hbState.MoreRecentThan(source[j].hbState) {
+					diff = append(diff, comparees[i])
+					found = true
+				}
+				found = true
+			}
+			j++
+		}
+
+		if !found {
+			diff = append(diff, comparees[i])
+		}
+	}
+
+	return diff
+}
+
+//isUnreachable determinates if a peer is contained inside the unreachable peer list
+func isUnreachable(p PeerIdentity, unreaches []PeerIdentity) (found bool) {
+	var i int
+	for !found && i < len(unreaches) {
+		if unreaches[i].publicKey == p.publicKey {
+			found = true
+		}
+		i++
+	}
+	return
+}
+
+//reachablePeers filters known peers based on the unreachables list
+//if there is not unreachables, the reachables are the known peers
+func reachablePeers(unreachables []PeerIdentity, knownPeers []Peer) peerList {
+
+	if len(unreachables) == 0 {
+		return knownPeers
+	}
+
+	reachables := make([]Peer, 0)
+
+	for i := range knownPeers {
+		var found bool
+		var j int
+
+		//detect if the peers is unreachable
+		for !found && j < len(unreachables) {
+			if unreachables[j].publicKey == knownPeers[i].identity.publicKey {
+				found = true
+			}
+			j++
+		}
+
+		//if not we add it to the list of reachables
+		if !found {
+			reachables = append(reachables, knownPeers[j])
+		}
+	}
+
+	return reachables
 }

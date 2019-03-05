@@ -39,8 +39,8 @@ func TestHandleSynchronizeRequestWithoutKnownPeers(t *testing.T) {
 		},
 	})
 	assert.Nil(t, err)
-	assert.NotEmpty(t, res.LocalDiscoveries)
-	assert.Equal(t, "pubkey", res.LocalDiscoveries[0].Identity.PublicKey)
+	assert.NotEmpty(t, res.RequestedPeers)
+	assert.Equal(t, "pubkey", res.RequestedPeers[0].PublicKey)
 }
 
 /*
@@ -78,10 +78,10 @@ func TestHandleSynchronizeRequestByKnowingPeer(t *testing.T) {
 		},
 	})
 	assert.Nil(t, err)
-	assert.NotEmpty(t, res.LocalDiscoveries)
-	assert.Equal(t, "pubkey", res.LocalDiscoveries[0].Identity.PublicKey)
-	assert.NotEmpty(t, res.RemoteDiscoveris)
-	assert.Equal(t, "pubkey000", res.RemoteDiscoveris[0].Identity.PublicKey)
+	assert.NotEmpty(t, res.RequestedPeers)
+	assert.Equal(t, "pubkey", res.RequestedPeers[0].PublicKey)
+	assert.NotEmpty(t, res.DiscoveredPeers)
+	assert.Equal(t, "pubkey000", res.DiscoveredPeers[0].Identity.PublicKey)
 }
 
 /*
@@ -108,9 +108,9 @@ func TestHandleAcknowledgeRequest(t *testing.T) {
 					GenerationTime:    time.Now().Unix(),
 				},
 				AppState: &api.PeerAppState{
-					CpuLoad:               "",
-					DiscoveredPeersNumber: 100,
-					FreeDiskSpace:         300,
+					CpuLoad:              "",
+					ReachablePeersNumber: 100,
+					FreeDiskSpace:        300,
 					GeoPosition: &api.PeerAppState_GeoCoordinates{
 						Latitude:  30.0,
 						Longitude: 20.0,

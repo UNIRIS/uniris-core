@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/uniris/uniris-core/pkg/shared"
+	"github.com/uniris/uniris-core/pkg/system"
 
 	"github.com/uniris/uniris-core/pkg/transport/amqp"
 
@@ -20,7 +22,6 @@ import (
 	"github.com/uniris/uniris-core/pkg/discovery"
 	memstorage "github.com/uniris/uniris-core/pkg/storage/mem"
 	"github.com/uniris/uniris-core/pkg/storage/redis"
-	"github.com/uniris/uniris-core/pkg/system"
 	memtransport "github.com/uniris/uniris-core/pkg/transport/mem"
 	"github.com/uniris/uniris-core/pkg/transport/rest"
 	"github.com/uniris/uniris-core/pkg/transport/rpc"
@@ -34,6 +35,8 @@ const (
 )
 
 func main() {
+
+	rand.Seed(time.Now().Unix())
 
 	conf := unirisConf{}
 
@@ -282,27 +285,23 @@ func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Noti
 	if err != nil {
 		log.Println(discovery.ErrGeoPosition)
 	}
-
 	selfPeer := discovery.NewSelfPeer(conf.publicKey, ip, conf.grpcPort, conf.version, lon, lat)
+
+	seeds := getSeeds(conf)
 
 	timer := time.NewTicker(time.Second * 3)
 	log.Print("Gossip running...")
-	seeds := getSeeds(conf)
+
+	//Store local peer
+	if err := db.WriteDiscoveredPeer(selfPeer); err != nil {
+		panic(err)
+	}
+
 	for range timer.C {
 		go func() {
-			c, err := discovery.Gossip(selfPeer, seeds, db, netCheck, systemReader, roundMessenger, notif)
-			if err != nil {
+			if err := discovery.Gossip(selfPeer, seeds, db, netCheck, systemReader, roundMessenger, notif); err != nil {
 				timer.Stop()
 				panic(err)
-			}
-			for _, p := range c.Discoveries {
-				log.Printf("New peer discovered: %s", p.String())
-			}
-			for _, pID := range c.Reaches {
-				log.Printf("New peer reached: %s", pID.Endpoint())
-			}
-			for _, pID := range c.Unreaches {
-				log.Printf("Peer unreachable: %s", pID.Endpoint())
 			}
 		}()
 	}
@@ -311,11 +310,16 @@ func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Noti
 func getSeeds(conf unirisConf) (seeds []discovery.PeerIdentity) {
 	seedsConf := strings.Split(conf.discoverySeeds, ";")
 	for _, s := range seedsConf {
-		seedItems := strings.Split(s, ":")
-		ip := net.ParseIP(seedItems[0])
-		port, _ := strconv.Atoi(seedItems[1])
-		key := seedItems[2]
-		seeds = append(seeds, discovery.NewPeerIdentity(ip, port, key))
+		if s != "" {
+			seedProps := strings.Split(s, ":")
+			if len(seedProps) == 0 {
+				panic("invalid seed")
+			}
+			ip := net.ParseIP(seedProps[0])
+			port, _ := strconv.Atoi(seedProps[1])
+			key := seedProps[2]
+			seeds = append(seeds, discovery.NewPeerIdentity(ip, port, key))
+		}
 	}
 	return
 }

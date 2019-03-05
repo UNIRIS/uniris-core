@@ -15,11 +15,11 @@ import (
 type rndMsg struct{}
 
 //NewGossipRoundMessenger creates a new round messenger with GRPC
-func NewGossipRoundMessenger() discovery.RoundMessenger {
+func NewGossipRoundMessenger() discovery.Messenger {
 	return rndMsg{}
 }
 
-func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (localDiscoveries []discovery.Peer, remoteDiscoveries []discovery.Peer, err error) {
+func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (requestedPeers []discovery.PeerIdentity, discoveredPeers []discovery.Peer, err error) {
 	serverAddr := fmt.Sprintf("%s:%d", target.IP().String(), target.Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
@@ -46,13 +46,13 @@ func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (
 		return nil, nil, err
 	}
 
-	fmt.Printf("SYNC RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+	fmt.Printf("SYN RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
-	for _, p := range res.RemoteDiscoveris {
-		remoteDiscoveries = append(remoteDiscoveries, formatPeerDiscovered(p))
+	for _, p := range res.DiscoveredPeers {
+		discoveredPeers = append(discoveredPeers, formatPeerDiscovered(p))
 	}
-	for _, p := range res.LocalDiscoveries {
-		localDiscoveries = append(localDiscoveries, formatPeerDigest(p))
+	for _, p := range res.RequestedPeers {
+		requestedPeers = append(requestedPeers, formatPeerIdentity(p))
 	}
 
 	return

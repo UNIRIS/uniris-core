@@ -3,6 +3,7 @@ package amqp
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/streadway/amqp"
@@ -45,13 +46,16 @@ func (n notifier) NotifyDiscovery(p discovery.Peer) error {
 				"latitude":  p.AppState().GeoPosition().Latitude(),
 				"longitude": p.AppState().GeoPosition().Longitude(),
 			},
-			"p2p_factor":             p.AppState().P2PFactor(),
-			"discovered_peer_number": p.AppState().DiscoveredPeersNumber(),
+			"p2p_factor":            p.AppState().P2PFactor(),
+			"reachable_peer_number": p.AppState().ReachablePeersNumber(),
 		},
 	})
 	if err != nil {
 		return err
 	}
+
+	log.Printf("Discovered peer: %s\n", p.String())
+
 	return n.notifyQueue(b, "application/json", queueNameDiscoveries)
 }
 
@@ -64,6 +68,8 @@ func (n notifier) NotifyReachable(p discovery.PeerIdentity) error {
 	if err != nil {
 		return err
 	}
+	log.Printf("Reachable peer: %s\n", p.Endpoint())
+
 	return n.notifyQueue(pBytes, "application/json", queueNameReachable)
 }
 
@@ -76,6 +82,9 @@ func (n notifier) NotifyUnreachable(p discovery.PeerIdentity) error {
 	if err != nil {
 		return err
 	}
+
+	log.Printf("Unreachable peer: %s\n", p.Endpoint())
+
 	return n.notifyQueue(pBytes, "application/json", queueNameUnreachable)
 }
 
@@ -112,5 +121,6 @@ func (n notifier) notifyQueue(data []byte, contentType string, queueName string)
 	}); err != nil {
 		return err
 	}
+
 	return nil
 }
