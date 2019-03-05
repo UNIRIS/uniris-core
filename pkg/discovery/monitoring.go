@@ -7,9 +7,6 @@ import (
 	"net"
 )
 
-//BootStrapingMinTime is the necessary minimum time on seconds to finish learning about the network
-const BootStrapingMinTime = 1800
-
 //ErrNTPShift is returned when the NTP clock drift to much
 var ErrNTPShift = errors.New("system Clock have a big Offset check the ntp configuration of the system")
 
