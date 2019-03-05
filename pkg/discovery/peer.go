@@ -116,16 +116,6 @@ func (p Peer) Self() bool {
 	return p.isSelf
 }
 
-//SelfRefresh refresh the self peer with metrics and updates the elapsed heartbeats
-func (p *Peer) SelfRefresh(status PeerStatus, disk float64, cpu string, p2pFactor int, discoveryPeersNb int) {
-	if !p.isSelf {
-		return
-	}
-
-	p.appState.refresh(status, disk, cpu, p2pFactor, discoveryPeersNb)
-	p.hbState.refreshElapsedHeartbeats()
-}
-
 func (p Peer) String() string {
 	return fmt.Sprintf("Endpoint: %s, Local: %t, %s, %s",
 		p.Identity().Endpoint(),
@@ -321,7 +311,6 @@ func (a *PeerAppState) refresh(status PeerStatus, disk float64, cpu string, p2pF
 	a.freeDiskSpace = disk
 	a.p2pFactor = p2pFactor
 	a.reachablePeersNumber = reachablePeersNb
-	a.reachablePeersNumber = 10
 }
 
 type peerList []Peer

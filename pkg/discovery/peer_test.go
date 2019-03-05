@@ -29,21 +29,6 @@ func TestNewSelfPeer(t *testing.T) {
 }
 
 /*
-Scenario: Refreshes a peer
-	Given a local  peer
-	When we refresh the peer
-	Then the new info are stored
-*/
-func TestRefreshPeer(t *testing.T) {
-	p := NewSelfPeer("key", net.ParseIP("127.0.0.1"), 3000, "1.0", 3.0, 50.0)
-	p.SelfRefresh(OkPeerStatus, 600.10, "300.200.100", 50.0, 1)
-	assert.Equal(t, OkPeerStatus, p.AppState().Status())
-	assert.Equal(t, 600.10, p.AppState().FreeDiskSpace())
-	assert.Equal(t, "300.200.100", p.AppState().CPULoad())
-	assert.Equal(t, 1, p.AppState().ReachablePeersNumber())
-}
-
-/*
 Scenario: Create a discovered peer
 	Given all information related to a peer (identity, heartbeat, app state)
 	When we want theses information

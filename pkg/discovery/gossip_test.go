@@ -273,9 +273,10 @@ func TestGossip(t *testing.T) {
 
 	err := Gossip(self, seeds, db, mockNetworkChecker{}, mockSystemReader{}, mockMessenger{}, notif)
 	assert.Nil(t, err)
-	assert.Len(t, db.discoveredPeers, 1)
+	assert.Len(t, db.discoveredPeers, 2)
 	assert.Len(t, db.unreachablePeers, 0)
-	assert.Equal(t, "dKey1", db.discoveredPeers[0].Identity().PublicKey())
+	assert.Equal(t, "key", db.discoveredPeers[0].Identity().PublicKey())
+	assert.Equal(t, "dKey1", db.discoveredPeers[1].Identity().PublicKey())
 	assert.Len(t, notif.discoveries, 1)
 	assert.Len(t, notif.reaches, 0)
 	assert.Len(t, notif.unreaches, 0)

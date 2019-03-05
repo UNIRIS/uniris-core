@@ -291,6 +291,12 @@ func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Noti
 
 	timer := time.NewTicker(time.Second * 3)
 	log.Print("Gossip running...")
+
+	//Store local peer
+	if err := db.WriteDiscoveredPeer(selfPeer); err != nil {
+		panic(err)
+	}
+
 	for range timer.C {
 		go func() {
 			if err := discovery.Gossip(selfPeer, seeds, db, netCheck, systemReader, roundMessenger, notif); err != nil {

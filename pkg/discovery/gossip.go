@@ -68,11 +68,8 @@ func Gossip(self Peer, seeds []PeerIdentity, db Database, netCheck NetworkChecke
 		return err
 	}
 	reaches := reachablePeers(unreaches, peers)
-	log.Print(reaches)
 
-	//Refresh ourself and append to the list of discovered peers
-	self, err = updateSelf(self, reaches, seeds, db, netCheck, sysR)
-	if err != nil {
+	if err := updateSelf(self, reaches, seeds, db, netCheck, sysR); err != nil {
 		return err
 	}
 
@@ -99,10 +96,22 @@ func startCycle(self Peer, msg Messenger, seeds []PeerIdentity, peers []Peer, re
 
 	//Pick the peers to gossip with
 	selectedPeers := make([]PeerIdentity, 0)
+
+	//We always pick a seed peer (as boostraping peer)
 	selectedPeers = append(selectedPeers, randomPeer(seeds))
-	if len(reaches) > 0 {
-		selectedPeers = append(selectedPeers, randomPeer(reaches))
+
+	//Because the self peer is included inside the database, we need to filter it out to not gossip with ourself
+	reachFiltered := make([]PeerIdentity, 0)
+	for _, r := range reaches {
+		if r.publicKey != self.identity.publicKey {
+			reachFiltered = append(reachFiltered, r)
+		}
 	}
+	if len(reachFiltered) > 0 {
+		selectedPeers = append(selectedPeers, randomPeer(reachFiltered))
+	}
+
+	//We include also a random unreachable peer to try to set it as reachable
 	if len(unreaches) > 0 {
 		selectedPeers = append(selectedPeers, randomPeer(unreaches))
 	}
@@ -111,13 +120,13 @@ func startCycle(self Peer, msg Messenger, seeds []PeerIdentity, peers []Peer, re
 	var wg sync.WaitGroup
 	wg.Add(len(selectedPeers))
 
-	//add local peer to the peers to gossip
-	peers = append(peers, self)
-
 	//Start gossip for every selected peers
 	for _, p := range selectedPeers {
 		go func(target PeerIdentity) {
 			defer wg.Done()
+
+			//We initiate a gossip round and stores as discovery and reachable when the peers answers.
+			//Otherwise it the peer cannot be reached, it will stored as unreachable for a later retry
 			pp, err := startRound(target, peers, msg)
 			if err != nil {
 				if err == ErrUnreachablePeer {
@@ -151,10 +160,11 @@ func startRound(target PeerIdentity, peers []Peer, msg Messenger) ([]Peer, error
 	if err != nil {
 		return nil, err
 	}
-
 	//if some peers are requested, we send back the details of these peers
 	if len(reqPeers) > 0 {
 		reqDetailed := make([]Peer, 0)
+
+		//Find details of the requested peers from the known peers
 		for i := 0; i < len(reqPeers); i++ {
 			var found bool
 			var j int
@@ -228,7 +238,7 @@ func ComparePeers(source []Peer, comparees []Peer) []Peer {
 		var found bool
 		var j int
 
-		for !false && j < len(source) {
+		for !found && j < len(source) {
 			//Add it to the list if the compared peer is include inside the source and if it's more recent
 			if source[j].identity.publicKey == comparees[i].identity.publicKey {
 				if comparees[i].hbState.MoreRecentThan(source[j].hbState) {

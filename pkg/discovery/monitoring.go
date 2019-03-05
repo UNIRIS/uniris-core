@@ -44,10 +44,11 @@ type SystemReader interface {
 	IP() (net.IP, error)
 }
 
-func updateSelf(self Peer, reachables []Peer, seeds []PeerIdentity, db dbWriter, netCheck NetworkChecker, sysR SystemReader) (Peer, error) {
+func updateSelf(self Peer, reachables []Peer, seeds []PeerIdentity, db dbWriter, netCheck NetworkChecker, sysR SystemReader) error {
+
 	status, err := localStatus(self, seedReachableAverage(seeds, reachables), netCheck)
 	if err != nil {
-		return self, err
+		return err
 	}
 
 	_, _, _, cpu, space, err := systemInfo(sysR)
@@ -56,12 +57,14 @@ func updateSelf(self Peer, reachables []Peer, seeds []PeerIdentity, db dbWriter,
 			status = FaultyPeer
 			log.Println(ErrGeoPosition)
 		} else {
-			return self, err
+			return err
 		}
 	}
 
-	self.SelfRefresh(status, space, cpu, p2pFactor(reachables), len(reachables))
-	return self, nil
+	self.appState.refresh(status, space, cpu, p2pFactor(reachables), len(reachables))
+	self.hbState.refreshElapsedHeartbeats()
+
+	return db.WriteDiscoveredPeer(self)
 }
 
 //systemInfo retrieves system information such geo position, IP, CPU load and free disk space
