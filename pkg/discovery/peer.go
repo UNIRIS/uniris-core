@@ -287,7 +287,7 @@ func (a PeerAppState) ReachablePeersNumber() int {
 }
 
 func (a PeerAppState) String() string {
-	return fmt.Sprintf("Status: %s, CPU load: %s, Free disk space: %f, Version: %s, GeoPosition: %s, P2PFactor: %d, Discovered peer number: %d",
+	return fmt.Sprintf("Status: %s, CPU load: %s, Free disk space: %f, Version: %s, GeoPosition: %s, P2PFactor: %d, Reachable peer number: %d",
 		a.Status().String(),
 		a.CPULoad(),
 		a.FreeDiskSpace(),
