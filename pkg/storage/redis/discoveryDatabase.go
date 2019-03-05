@@ -88,33 +88,12 @@ func (r discoveryDb) UnreachablePeers() ([]discovery.PeerIdentity, error) {
 	return peers, nil
 }
 
-func (r discoveryDb) ContainsUnreachablePeer(pID discovery.PeerIdentity) (bool, error) {
-	id := fmt.Sprintf("%s:%s", unreachablesKey, pID.PublicKey())
-	cmd := r.client.HKeys(id)
-	if cmd.Err() != nil {
-		return false, cmd.Err()
-	}
-	res, err := cmd.Result()
-	if err != nil {
-		return false, err
-	}
-
-	return len(res) > 0, nil
-}
-
 func (r discoveryDb) RemoveUnreachablePeer(pID discovery.PeerIdentity) error {
 	id := fmt.Sprintf("%s:%s", unreachablesKey, pID.PublicKey())
 
-	exist, err := r.ContainsUnreachablePeer(pID)
-	if err != nil {
-		return err
-	}
-	if exist {
-		cmd := r.client.Del(id)
-		if cmd.Err() != nil {
-			return cmd.Err()
-		}
-		return nil
+	cmd := r.client.Del(id)
+	if cmd.Err() != nil {
+		return cmd.Err()
 	}
 	return nil
 }
