@@ -46,7 +46,7 @@ func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (
 		return nil, nil, err
 	}
 
-	fmt.Printf("SYNC RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+	fmt.Printf("SYN RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
 	for _, p := range res.DiscoveredPeers {
 		discoveredPeers = append(discoveredPeers, formatPeerDiscovered(p))
