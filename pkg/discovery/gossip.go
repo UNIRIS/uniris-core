@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"math/rand"
+	"reflect"
 	"sync"
 )
 
@@ -213,8 +214,8 @@ func addDiscoveries(cDiscoveries []Peer, peers []Peer, db dbWriter, n Notifier) 
 		}
 
 		if oldFound {
-			s := DetectAppstateChanges(dp, comparee)
-			if s {
+			s := compareAppstate(dp, comparee)
+			if !s {
 				if err := n.NotifyDiscovery(dp); err != nil {
 					return err
 				}
@@ -327,19 +328,15 @@ func reachablePeers(unreachables []PeerIdentity, knownPeers []Peer) peerList {
 	return reachables
 }
 
-//DetectAppstateChanges compares a source of peers with an other list of peers
-//and returns true if at least on appstate is different between the source and the comparee
-func DetectAppstateChanges(source Peer, comparee Peer) bool {
+//compareAppstate compares a source of peers with an other list of peers
+//and returns false if at least on appstate is different between the source and the comparee
+func compareAppstate(source Peer, comparee Peer) bool {
 
 	//We only compare two version of the same peer
 	if source.identity.publicKey != comparee.identity.publicKey {
 		return false
 	}
 
-	if source.appState != comparee.appState {
-		return true
-	}
-
-	return false
+	return reflect.DeepEqual(source.appState, comparee.appState)
 
 }

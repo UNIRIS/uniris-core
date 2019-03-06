@@ -408,14 +408,14 @@ func TestComparePeerAppstate(t *testing.T) {
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
 
-	r1 := DetectAppstateChanges(p1, p2)
-	assert.Equal(t, true, r1)
+	r1 := compareAppstate(p1, p2)
+	assert.Equal(t, false, r1)
 
-	r2 := DetectAppstateChanges(p2, p3)
+	r2 := compareAppstate(p2, p3)
 	assert.Equal(t, false, r2)
 
-	r3 := DetectAppstateChanges(p1, p4)
-	assert.Equal(t, false, r3)
+	r3 := compareAppstate(p1, p4)
+	assert.Equal(t, true, r3)
 
 }
 
