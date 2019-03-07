@@ -1,9 +1,7 @@
 package amqp
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/streadway/amqp"
@@ -27,65 +25,28 @@ type notifier struct {
 }
 
 func (n notifier) NotifyDiscovery(p discovery.Peer) error {
-	b, err := json.Marshal(map[string]interface{}{
-		"identity": map[string]interface{}{
-			"ip":         p.Identity().IP().String(),
-			"port":       p.Identity().Port(),
-			"public_key": p.Identity().PublicKey(),
-		},
-		"heartbeat_state": map[string]interface{}{
-			"generation_time":    p.HeartbeatState().GenerationTime(),
-			"elapsed_heartbeats": p.HeartbeatState().ElapsedHeartbeats(),
-		},
-		"app_state": map[string]interface{}{
-			"version":         p.AppState().Version(),
-			"status":          p.AppState().Status(),
-			"cpu_load":        p.AppState().CPULoad(),
-			"free_disk_space": p.AppState().FreeDiskSpace(),
-			"geo_position": map[string]float64{
-				"latitude":  p.AppState().GeoPosition().Latitude(),
-				"longitude": p.AppState().GeoPosition().Longitude(),
-			},
-			"p2p_factor":            p.AppState().P2PFactor(),
-			"reachable_peer_number": p.AppState().ReachablePeersNumber(),
-		},
-	})
+	b, err := marshalDiscoveredPeer(p)
 	if err != nil {
 		return err
 	}
-
-	log.Printf("Discovered peer: %s\n", p.String())
-
 	return n.notifyQueue(b, "application/json", queueNameDiscoveries)
 }
 
 func (n notifier) NotifyReachable(p discovery.PeerIdentity) error {
-	pBytes, err := json.Marshal(map[string]interface{}{
-		"ip":         p.IP().String(),
-		"port":       p.Port(),
-		"public_key": p.PublicKey(),
-	})
+	b, err := marshalPeerIdentity(p)
 	if err != nil {
 		return err
 	}
-	log.Printf("Reachable peer: %s\n", p.Endpoint())
-
-	return n.notifyQueue(pBytes, "application/json", queueNameReachable)
+	return n.notifyQueue(b, "application/json", queueNameReachable)
 }
 
 func (n notifier) NotifyUnreachable(p discovery.PeerIdentity) error {
-	pBytes, err := json.Marshal(map[string]interface{}{
-		"ip":         p.IP().String(),
-		"port":       p.Port(),
-		"public_key": p.PublicKey(),
-	})
+	b, err := marshalPeerIdentity(p)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Unreachable peer: %s\n", p.Endpoint())
-
-	return n.notifyQueue(pBytes, "application/json", queueNameUnreachable)
+	return n.notifyQueue(b, "application/json", queueNameUnreachable)
 }
 
 func (n notifier) notifyQueue(data []byte, contentType string, queueName string) error {

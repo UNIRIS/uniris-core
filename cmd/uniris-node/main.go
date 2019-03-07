@@ -246,6 +246,11 @@ func startGRPCServer(conf unirisConf, techDB shared.TechDatabaseReader) {
 	var notif discovery.Notifier
 	if conf.bus.busType == "amqp" {
 		notif = amqp.NewDiscoveryNotifier(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port)
+		go func() {
+			if err := amqp.ConsumeDiscoveryNotifications(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port); err != nil {
+				panic(err)
+			}
+		}()
 	} else {
 		notif = &memtransport.DiscoveryNotifier{}
 	}
@@ -304,6 +309,7 @@ func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Noti
 			}
 		}()
 	}
+
 }
 
 func getSeeds(conf unirisConf) (seeds []discovery.PeerIdentity) {

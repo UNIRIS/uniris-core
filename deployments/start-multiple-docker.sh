@@ -65,7 +65,7 @@ else
     while [ $ok == 0 ]
     do
         r=$(( $RANDOM % $nb + 1 ))
-        if [ $r != $i ] || [prevR != $r];
+        if [ $r != $i ] || [ $prevR != $r ];
         then
             seed="172.16.0.1${r}:5000:publickey_${r};"
             ok=1
