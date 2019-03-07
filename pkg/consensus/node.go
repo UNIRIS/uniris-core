@@ -55,9 +55,6 @@ const (
 
 	//NodeFaulty identifies a peer with some errors (NTP drifts, DNS unfound, GeoPosition failed, GRPC not running)
 	NodeFaulty
-
-	//NodeStorageOnly identifies a peer with the only capacity to store
-	NodeStorageOnly
 )
 
 //NewNode creates a new enhanced discovered peers with geo patch
