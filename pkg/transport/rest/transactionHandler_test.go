@@ -83,11 +83,10 @@ func TestGetTransactionStatusUnknown(t *testing.T) {
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
-	locker := &mockLocker{}
 
 	pr := rpc.NewPoolRequester(techDB)
 
-	txSrv := rpc.NewTransactionService(chainDB, locker, techDB, pr, pub, pv)
+	txSrv := rpc.NewTransactionService(chainDB, techDB, pr, pub, pv)
 
 	//Start transaction server
 	lisTx, _ := net.Listen("tcp", ":5000")

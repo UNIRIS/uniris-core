@@ -17,7 +17,6 @@ import (
 
 type txSrv struct {
 	chainDB        chain.Database
-	locker         chain.Locker
 	techDB         shared.TechDatabaseReader
 	poolR          consensus.PoolRequester
 	nodePublicKey  string
@@ -25,10 +24,9 @@ type txSrv struct {
 }
 
 //NewTransactionService creates service handler for the GRPC Transaction service
-func NewTransactionService(cDB chain.Database, l chain.Locker, tDB shared.TechDatabaseReader, pR consensus.PoolRequester, nodePublicKeyk, nodePrivateKeyk string) api.TransactionServiceServer {
+func NewTransactionService(cDB chain.Database, tDB shared.TechDatabaseReader, pR consensus.PoolRequester, nodePublicKeyk, nodePrivateKeyk string) api.TransactionServiceServer {
 	return txSrv{
 		chainDB:        cDB,
-		locker:         l,
 		techDB:         tDB,
 		poolR:          pR,
 		nodePublicKey:  nodePublicKeyk,
@@ -147,7 +145,7 @@ func (s txSrv) StoreTransaction(ctx context.Context, req *api.StoreTransactionRe
 		return nil, status.New(codes.PermissionDenied, "not authorized to store this data").Err()
 	}
 
-	if err := chain.WriteTransaction(s.chainDB, s.locker, tx, int(req.MinimumValidations)); err != nil {
+	if err := chain.WriteTransaction(s.chainDB, tx, int(req.MinimumValidations)); err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
@@ -166,14 +164,15 @@ func (s txSrv) StoreTransaction(ctx context.Context, req *api.StoreTransactionRe
 	return res, nil
 }
 
-func (s txSrv) LockTransaction(ctx context.Context, req *api.LockTransactionRequest) (*api.LockTransactionResponse, error) {
-	fmt.Printf("LOCK TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
+func (s txSrv) TimeLockTransaction(ctx context.Context, req *api.TimeLockTransactionRequest) (*api.TimeLockTransactionResponse, error) {
+	fmt.Printf("TIMELOCK TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
 
-	reqBytes, err := json.Marshal(&api.LockTransactionRequest{
+	reqBytes, err := json.Marshal(&api.TimeLockTransactionRequest{
 		TransactionHash:     req.TransactionHash,
-		MasterNodePublicKey: req.MasterNodePublicKey,
-		Timestamp:           req.Timestamp,
 		Address:             req.Address,
+		MasterNodePublicKey: req.MasterNodePublicKey,
+		EndTime:             req.EndTime,
+		Timestamp:           req.Timestamp,
 	})
 	nodeLastKeys, err := s.techDB.NodeLastKeys()
 	if err != nil {
@@ -183,11 +182,12 @@ func (s txSrv) LockTransaction(ctx context.Context, req *api.LockTransactionRequ
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	if err := chain.LockTransaction(s.locker, req.TransactionHash, req.Address, req.MasterNodePublicKey); err != nil {
+	endTimer := time.Unix(req.EndTime, 0)
+	if err := chain.TimeLockTransaction(req.TransactionHash, req.Address, req.MasterNodePublicKey, endTimer); err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	res := &api.LockTransactionResponse{
+	res := &api.TimeLockTransactionResponse{
 		Timestamp: time.Now().Unix(),
 	}
 	resBytes, err := json.Marshal(res)

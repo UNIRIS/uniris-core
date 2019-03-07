@@ -35,9 +35,8 @@ func TestRequestTransactionLock(t *testing.T) {
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
-	locker := &mockLocker{}
 	pr := NewPoolRequester(techDB)
-	txSrv := NewTransactionService(chainDB, locker, techDB, pr, pub, pv)
+	txSrv := NewTransactionService(chainDB, techDB, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -46,10 +45,9 @@ func TestRequestTransactionLock(t *testing.T) {
 	go grpcServer.Serve(lis)
 
 	pool, _ := consensus.FindStoragePool("addr")
-	assert.Nil(t, pr.RequestTransactionLock(pool, crypto.HashString("tx"), crypto.HashString("addr"), pub))
+	assert.Nil(t, pr.RequestTransactionTimeLock(pool, crypto.HashString("tx"), crypto.HashString("addr"), pub, time.Now().Add(2*time.Second)))
 
-	assert.Len(t, locker.locks, 1)
-	assert.Equal(t, crypto.HashString("addr"), locker.locks[0]["transaction_address"])
+	assert.True(t, chain.ContainsTimeLock(crypto.HashString("tx"), crypto.HashString("addr")))
 }
 
 /*
@@ -71,7 +69,7 @@ func TestRequestConfirmValidation(t *testing.T) {
 
 	pr := NewPoolRequester(techDB)
 
-	miningSrv := NewTransactionService(nil, nil, techDB, pr, pub, pv)
+	miningSrv := NewTransactionService(nil, techDB, pr, pub, pv)
 
 	lis, err := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -135,7 +133,6 @@ func TestRequestStorage(t *testing.T) {
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
-	locker := &mockLocker{}
 	nodeKey, _ := shared.NewKeyPair(pub, pv)
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
@@ -143,7 +140,7 @@ func TestRequestStorage(t *testing.T) {
 
 	pr := NewPoolRequester(techDB)
 
-	txSrv := NewTransactionService(chainDB, locker, techDB, pr, pub, pv)
+	txSrv := NewTransactionService(chainDB, techDB, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -202,13 +199,12 @@ func TestSendGetLastTransaction(t *testing.T) {
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
-	locker := &mockLocker{}
 	nodeKey, _ := shared.NewKeyPair(pub, pv)
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	pr := NewPoolRequester(techDB)
 
-	txSrv := NewTransactionService(chainDB, locker, techDB, pr, pub, pv)
+	txSrv := NewTransactionService(chainDB, techDB, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
