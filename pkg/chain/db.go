@@ -14,9 +14,6 @@ type Database interface {
 //DatabaseReader handles transaction chain queries to retreive a transaction from its related database
 type DatabaseReader interface {
 
-	//InProgressByHash retrieves a transaction from the in progress database by hash
-	InProgressByHash(txHash string) (*Transaction, error)
-
 	//KOByHash retrieves a transactionfrom the KO database by hash
 	KOByHash(txHash string) (*Transaction, error)
 
@@ -38,8 +35,6 @@ type DatabaseReader interface {
 
 //DatabaseWriter handles transaction persistence by writing in the right database the related transaction
 type DatabaseWriter interface {
-	//WriteInProgress stores the transaction in the in progress storage
-	WriteInProgress(tx Transaction) error
 
 	//WriteKO stores the transaction in the KO storage
 	WriteKO(tx Transaction) error
@@ -60,7 +55,7 @@ var ErrUnknownTransaction = errors.New("unknown transaction")
 //It checks the transaction validations (master and confirmations)
 //It's building the transaction chain and verify its integrity
 //Then finally store in the right database
-func WriteTransaction(chainDB Database, l Locker, tx Transaction, minValids int) error {
+func WriteTransaction(chainDB Database, tx Transaction, minValids int) error {
 	if err := checkTransactionBeforeStorage(tx, minValids); err != nil {
 		return err
 	}
@@ -83,16 +78,21 @@ func WriteTransaction(chainDB Database, l Locker, tx Transaction, minValids int)
 		if err != nil {
 			return err
 		}
-		return chainDB.WriteKeychain(keychain)
+		if err := chainDB.WriteKeychain(keychain); err != nil {
+			return err
+		}
 	case IDTransactionType:
 		id, err := NewID(tx)
 		if err != nil {
 			return err
 		}
-		return chainDB.WriteID(id)
+		if err := chainDB.WriteID(id); err != nil {
+			return err
+		}
 	}
 
-	return unlockTransaction(l, tx.TransactionHash(), tx.Address())
+	removeTimeLock(tx.TransactionHash(), tx.Address())
+	return nil
 }
 
 func checkTransactionBeforeStorage(tx Transaction, minValids int) error {
@@ -160,17 +160,14 @@ func LastTransaction(db DatabaseReader, txAddr string, txType TransactionType) (
 }
 
 //GetTransactionStatus gets the status of a transaction
-//It lookups on In Progress DB, KO DB, Keychain, ID, Smart contracts
+//It lookups on timelockers, KO DB, Keychain, ID, Smart contracts
 func GetTransactionStatus(db DatabaseReader, txHash string) (TransactionStatus, error) {
-	tx, err := db.InProgressByHash(txHash)
-	if err != nil {
-		return TransactionStatusSuccess, err
-	}
-	if tx != nil {
+
+	if transactionHashTimeLocked(txHash) {
 		return TransactionStatusInProgress, nil
 	}
 
-	tx, err = db.KOByHash(txHash)
+	tx, err := db.KOByHash(txHash)
 	if err != nil {
 		return TransactionStatusUnknown, err
 	}

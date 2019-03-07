@@ -381,7 +381,7 @@ func (pr mockPoolRequester) RequestLastTransaction(pool Pool, txAddr string, txT
 	return nil, nil
 }
 
-func (pr mockPoolRequester) RequestTransactionLock(pool Pool, txHash string, txAddr string, masterPublicKey string) error {
+func (pr mockPoolRequester) RequestTransactionTimeLock(pool Pool, txHash string, txAddr string, masterPublicKey string, end time.Time) error {
 	return nil
 }
 

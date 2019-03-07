@@ -140,17 +140,12 @@ Scenario: Get transaction status in progress
 	Then I get in progress
 */
 func TestGetTransactionStatusInProgress(t *testing.T) {
-	chainDB := &mockChainDB{
-		inprogress: []Transaction{
-			Transaction{
-				hash: crypto.HashString("hash"),
-			},
-		},
-	}
-
-	status, err := GetTransactionStatus(chainDB, crypto.HashString("hash"))
+	pub, _ := crypto.GenerateKeys()
+	TimeLockTransaction(crypto.HashString("hash"), crypto.HashString("addr"), pub, time.Now())
+	status, err := GetTransactionStatus(nil, crypto.HashString("hash"))
 	assert.Nil(t, err)
 	assert.Equal(t, TransactionStatusInProgress, status)
+	removeTimeLock(crypto.HashString("hash"), crypto.HashString("addr"))
 }
 
 /*
@@ -643,7 +638,7 @@ func TestStoreKOTransaction(t *testing.T) {
 
 	chainDB := &mockChainDB{}
 
-	assert.Nil(t, WriteTransaction(chainDB, &mockLocker{}, tx, 1))
+	assert.Nil(t, WriteTransaction(chainDB, tx, 1))
 	assert.Len(t, chainDB.kos, 1)
 	assert.Equal(t, crypto.HashBytes(txBytes), chainDB.kos[0].hash)
 }
@@ -704,7 +699,7 @@ func TestStoreKeychainTransaction(t *testing.T) {
 
 	chainDB := &mockChainDB{}
 
-	assert.Nil(t, WriteTransaction(chainDB, &mockLocker{}, tx, 1))
+	assert.Nil(t, WriteTransaction(chainDB, tx, 1))
 	assert.Len(t, chainDB.keychains, 1)
 	assert.Equal(t, crypto.HashBytes(txBytes), chainDB.keychains[0].hash)
 }
@@ -766,16 +761,15 @@ func TestStoreIDTransaction(t *testing.T) {
 
 	chainDB := &mockChainDB{}
 
-	assert.Nil(t, WriteTransaction(chainDB, &mockLocker{}, tx, 1))
+	assert.Nil(t, WriteTransaction(chainDB, tx, 1))
 	assert.Len(t, chainDB.ids, 1)
 	assert.Equal(t, crypto.HashBytes(txBytes), chainDB.ids[0].hash)
 }
 
 type mockChainDB struct {
-	inprogress []Transaction
-	kos        []Transaction
-	keychains  []Keychain
-	ids        []ID
+	kos       []Transaction
+	keychains []Keychain
+	ids       []ID
 }
 
 func (db *mockChainDB) WriteKeychain(kc Keychain) error {
@@ -791,20 +785,6 @@ func (db *mockChainDB) WriteID(id ID) error {
 func (db *mockChainDB) WriteKO(tx Transaction) error {
 	db.kos = append(db.kos, tx)
 	return nil
-}
-
-func (db *mockChainDB) WriteInProgress(tx Transaction) error {
-	db.inprogress = append(db.inprogress, tx)
-	return nil
-}
-
-func (db mockChainDB) InProgressByHash(hash string) (*Transaction, error) {
-	for _, tx := range db.inprogress {
-		if tx.hash == hash {
-			return &tx, nil
-		}
-	}
-	return nil, nil
 }
 
 func (db mockChainDB) FullKeychain(txAddr string) (*Keychain, error) {
