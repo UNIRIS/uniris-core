@@ -397,12 +397,6 @@ func TestComparePeerAppstate(t *testing.T) {
 	)
 
 	p3 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key2"),
-		NewPeerHeartbeatState(time.Now(), 0),
-		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 2, 2, 2),
-	)
-
-	p4 := NewDiscoveredPeer(
 		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key3"),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
@@ -411,11 +405,8 @@ func TestComparePeerAppstate(t *testing.T) {
 	r1 := compareAppstate(p1, p2)
 	assert.Equal(t, false, r1)
 
-	r2 := compareAppstate(p2, p3)
-	assert.Equal(t, false, r2)
-
-	r3 := compareAppstate(p1, p4)
-	assert.Equal(t, true, r3)
+	r2 := compareAppstate(p1, p3)
+	assert.Equal(t, true, r2)
 
 }
 
