@@ -9,7 +9,7 @@ import (
 	"github.com/uniris/uniris-core/pkg/crypto"
 )
 
-var timeLockCountdown time.Duration = 1 * time.Minute
+var timeLockCountdown time.Duration = 60 * time.Second
 
 type timeLocker struct {
 	txHash          string
