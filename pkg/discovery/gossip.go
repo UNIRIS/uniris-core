@@ -196,29 +196,26 @@ func addDiscoveries(cDiscoveries []Peer, peers []Peer, db dbWriter, n Notifier) 
 
 		oldFound = false
 
-		for _, p := range peers {
-			if p.identity.publicKey == dp.identity.publicKey {
-				comparee = p
-				oldFound = true
-				break
-			}
-		}
-
 		if err := db.WriteDiscoveredPeer(dp); err != nil {
 			return err
 		}
 
+		for _, p := range peers {
+			if p.identity.publicKey == dp.identity.publicKey {
+				comparee = p
+				oldFound = true
+				if !compareAppstate(dp, comparee) {
+					if err := n.NotifyDiscovery(dp); err != nil {
+						return err
+					}
+				}
+				break
+			}
+		}
+		
 		if !oldFound {
 			if err := n.NotifyDiscovery(dp); err != nil {
 				return err
-			}
-		}
-
-		if oldFound {
-			if !compareAppstate(dp, comparee) {
-				if err := n.NotifyDiscovery(dp); err != nil {
-					return err
-				}
 			}
 		}
 	}
