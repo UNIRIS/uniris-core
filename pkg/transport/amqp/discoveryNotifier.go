@@ -29,6 +29,7 @@ func (n notifier) NotifyDiscovery(p discovery.Peer) error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("Discovered peer: %s\n", p)
 	return n.notifyQueue(b, "application/json", queueNameDiscoveries)
 }
 

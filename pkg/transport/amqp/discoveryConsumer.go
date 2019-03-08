@@ -113,7 +113,7 @@ func consumeDiscoveryHandler(w consensus.NodeWriter, data []byte) error {
 
 func consumeReachableHandler(w consensus.NodeWriter, publicKey []byte) error {
 	if err := w.WriteReachableNode(string(publicKey)); err != nil {
-
+		return err
 	}
 	fmt.Printf("Node %s stored as reachable\n", publicKey)
 	return nil

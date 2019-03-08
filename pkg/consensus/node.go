@@ -46,7 +46,6 @@ type Node struct {
 type NodeStatus int
 
 const (
-
 	//NodeBootstraping identifies a node which is not fully synchronized and ready
 	NodeBootstraping NodeStatus = iota
 
