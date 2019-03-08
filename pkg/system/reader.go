@@ -49,7 +49,7 @@ func (i sysReader) CPULoad() (string, error) {
 	var cmd *exec.Cmd
 
 	if runtime.GOOS == "linux" {
-		cmd = exec.Command("cat", "/proc/loadavg")
+		cmd = exec.Command("/bin/sh", "-c", "cat /proc/loadavg | awk -F \" \" '{print \"{\"$1,$2,$3\"}\"}'")
 	} else if runtime.GOOS == "darwin" {
 		cmd = exec.Command("sysctl", "-n", "vm.loadavg")
 	} else {

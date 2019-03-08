@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"math/rand"
+	"reflect"
 	"sync"
 )
 
@@ -78,7 +79,7 @@ func Gossip(self Peer, seeds []PeerIdentity, db Database, netCheck NetworkChecke
 		return err
 	}
 
-	if err := addDiscoveries(cDiscoveries, db, n); err != nil {
+	if err := addDiscoveries(cDiscoveries, peers, db, n); err != nil {
 		return err
 	}
 	if err := addReaches(cReachables, unreaches, db, n); err != nil {
@@ -185,20 +186,43 @@ func startRound(target PeerIdentity, peers []Peer, msg Messenger) ([]Peer, error
 	return discoveries, nil
 }
 
-//addDiscoveries persists the cycle discoveries in the database and are notified
-func addDiscoveries(cDiscoveries []Peer, db dbWriter, n Notifier) error {
-	for _, p := range cDiscoveries {
-		if err := db.WriteDiscoveredPeer(p); err != nil {
+//addDiscoveries persists the cycle discoveries in the database and send notifcation
+func addDiscoveries(cDiscoveries []Peer, peers []Peer, db dbWriter, n Notifier) error {
+
+	var oldFound bool
+	var comparee Peer
+
+	for _, dp := range cDiscoveries {
+
+		oldFound = false
+
+		if err := db.WriteDiscoveredPeer(dp); err != nil {
 			return err
 		}
-		if err := n.NotifyDiscovery(p); err != nil {
-			return err
+
+		for _, p := range peers {
+			if p.identity.publicKey == dp.identity.publicKey {
+				comparee = p
+				oldFound = true
+				if !compareAppstate(dp, comparee) {
+					if err := n.NotifyDiscovery(dp); err != nil {
+						return err
+					}
+				}
+				break
+			}
+		}
+		
+		if !oldFound {
+			if err := n.NotifyDiscovery(dp); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-//addReaches removes the reachables peers from the unreachables in the database and are notified
+//addReaches removes the reachables peers from the unreachables in the database and send notification
 func addReaches(cReaches []PeerIdentity, unreaches []PeerIdentity, db dbRemover, n Notifier) error {
 	for _, p := range cReaches {
 		if isUnreachable(p, unreaches) {
@@ -213,7 +237,7 @@ func addReaches(cReaches []PeerIdentity, unreaches []PeerIdentity, db dbRemover,
 	return nil
 }
 
-//addUnreaches persist the unreachables if is not present in the database and are notified
+//addUnreaches persist the unreachables if is not present in the database and  send notification
 func addUnreaches(cUnreachables []PeerIdentity, unreaches []PeerIdentity, db dbWriter, n Notifier) error {
 	for _, p := range cUnreachables {
 		if !isUnreachable(p, unreaches) {
@@ -299,4 +323,12 @@ func reachablePeers(unreachables []PeerIdentity, knownPeers []Peer) peerList {
 	}
 
 	return reachables
+}
+
+//compareAppstate compares a source of peers with an other list of peers
+//and returns false if at least on appstate is different between the source and the comparee
+func compareAppstate(source Peer, comparee Peer) bool {
+
+	return reflect.DeepEqual(source.appState, comparee.appState)
+
 }

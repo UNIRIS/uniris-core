@@ -200,17 +200,36 @@ func TestAddDiscoveries(t *testing.T) {
 	store := &mockDatabase{}
 	notif := &mockNotifier{}
 
+	p1 := NewDiscoveredPeer(
+		NewPeerIdentity(net.ParseIP("192.168.1.1"), 3000, "key"),
+		NewPeerHeartbeatState(time.Now(), 0),
+		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
+	)
+
 	err := addDiscoveries([]Peer{
 		NewDiscoveredPeer(
-			NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
+			NewPeerIdentity(net.ParseIP("192.168.1.1"), 3000, "key"),
 			NewPeerHeartbeatState(time.Now(), 0),
-			NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 200, 1, 0),
+			NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 		),
-	}, store, notif)
+	}, []Peer{p1}, store, notif)
 	assert.Nil(t, err)
 
 	assert.Len(t, store.discoveredPeers, 1)
 	assert.Equal(t, "key", store.discoveredPeers[0].identity.publicKey)
+	assert.Equal(t, 0, len(notif.discoveries))
+
+	err = addDiscoveries([]Peer{
+		NewDiscoveredPeer(
+			NewPeerIdentity(net.ParseIP("192.168.1.1"), 3000, "key"),
+			NewPeerHeartbeatState(time.Now(), 0),
+			NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 10, 10, 10),
+		),
+	}, []Peer{p1}, store, notif)
+	assert.Nil(t, err)
+	assert.Len(t, store.discoveredPeers, 1)
+	assert.Equal(t, "key", store.discoveredPeers[0].identity.publicKey)
+	assert.Equal(t, 1, len(notif.discoveries))
 	assert.Equal(t, "key", notif.discoveries[0].identity.publicKey)
 }
 
@@ -354,6 +373,41 @@ func TestCompareMoreRecent(t *testing.T) {
 	assert.Len(t, unknown, 1)
 	assert.Equal(t, "key1", unknown[0].Identity().PublicKey())
 	assert.Equal(t, int64(1200), unknown[0].HeartbeatState().ElapsedHeartbeats())
+}
+
+/*
+Scenario: Compare 2 version of a peer with a different appstate
+	Given a source peer and comparee peers with different appstate
+	When I want to compare appstate
+	Then I get wanted result
+*/
+
+func TestComparePeerAppstate(t *testing.T) {
+
+	p1 := NewDiscoveredPeer(
+		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key3"),
+		NewPeerHeartbeatState(time.Now(), 0),
+		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
+	)
+
+	p2 := NewDiscoveredPeer(
+		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key3"),
+		NewPeerHeartbeatState(time.Now(), 0),
+		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 2, 2, 2),
+	)
+
+	p3 := NewDiscoveredPeer(
+		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key3"),
+		NewPeerHeartbeatState(time.Now(), 0),
+		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
+	)
+
+	r1 := compareAppstate(p1, p2)
+	assert.Equal(t, false, r1)
+
+	r2 := compareAppstate(p1, p3)
+	assert.Equal(t, true, r2)
+
 }
 
 type mockDatabase struct {
