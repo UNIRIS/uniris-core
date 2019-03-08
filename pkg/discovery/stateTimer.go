@@ -21,6 +21,6 @@ func checktimerState() bool {
 		return true
 	}
 	t := time.Now()
-	endtime := timerState.Add(time.Hour*time.Duration(0) + time.Minute*time.Duration(0) + time.Second*time.Duration(BootstrapingMinTime))
+	endtime := timerState.Add(time.Second * time.Duration(BootstrapingMinTime))
 	return endtime.Before(t)
 }
