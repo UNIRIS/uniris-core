@@ -16,6 +16,7 @@ Scenario: Get peer status when no peer has been discovered yet by it
 	Then I get a boostraping status
 */
 func TestPeerStatusWithNoDiscoveries(t *testing.T) {
+	resettimerState()
 	p := NewPeerDigest(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
@@ -32,6 +33,7 @@ Scenario: Gets peer status when no access to internet
 	Then we get a faulty status
 */
 func TestPeerStatusWithNotInternet(t *testing.T) {
+	resettimerState()
 	p := NewPeerDigest(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
@@ -40,17 +42,41 @@ func TestPeerStatusWithNotInternet(t *testing.T) {
 }
 
 /*
+Scenario: Gets peer status when no access to internet and get the state after the internet problem is resolved
+	Given a peer without internet connection
+	When we checks its status
+	Then we get the good state depending on the timerState
+*/
+func TestPeerStatusWithNotInternetWithTimerStateEnabled(t *testing.T) {
+	BootstrapingMinTime = 5
+	p := NewPeerDigest(
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
+		NewPeerHeartbeatState(time.Now(), 0))
+	status, _ := localStatus(p, 1, mockFailInternetNetworker{})
+	assert.Equal(t, FaultyPeer, status)
+	ts := checktimerState()
+	assert.Equal(t, false, ts)
+	status2, _ := localStatus(p, 1, mockNetworkChecker{})
+	assert.Equal(t, BootstrapingPeer, status2)
+	time.Sleep(5 * time.Second)
+	status3, _ := localStatus(p, 1, mockNetworkChecker{})
+	assert.Equal(t, OkPeerStatus, status3)
+
+}
+
+/*
 Scenario: Gets peer status when no NTP synchro
 	Given a peer without NTP synchro
 	When we checks its status
-	Then we get a storage only status
+	Then we get a faulty status
 */
 func TestPeerStatusWithBadNTP(t *testing.T) {
+	resettimerState()
 	p := NewPeerDigest(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
 	status, _ := localStatus(p, 1, mockFailNTPNetworker{})
-	assert.Equal(t, StorageOnlyPeer, status)
+	assert.Equal(t, FaultyPeer, status)
 }
 
 /*
@@ -60,6 +86,7 @@ Scenario: Gets peer status when no GRPC are reached
 	Then we get a faulty status
 */
 func TestPeerStatusWithNoGRPC(t *testing.T) {
+	resettimerState()
 	p := NewPeerDigest(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
@@ -74,6 +101,7 @@ Scenario: Gets peer status when the elapsed time lower than the bootstraping tim
 	Then I get a bootstraping status
 */
 func TestPeerStatusWithElapsedTimeLowerBootstrapingTime(t *testing.T) {
+	resettimerState()
 	p := NewPeerDigest(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
@@ -89,6 +117,7 @@ Scenario: Gets peer status when the average of discoveries is greater than the p
 	Then I get a bootstraping status
 */
 func TestPeerStatusWithAvgDiscoveriesGreaterThanPeerDiscovery(t *testing.T) {
+	resettimerState()
 	p := NewDiscoveredPeer(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0),
@@ -105,6 +134,7 @@ Scenario: Gets peer status when the peer time it less than the boostraping and a
 	Then I get a OK status
 */
 func TestPeerStatusWithAvgDiscoveriesLessThanPeerDiscovery(t *testing.T) {
+	resettimerState()
 	p := NewDiscoveredPeer(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0),
@@ -121,6 +151,7 @@ Scenario: Gets peer status a peer live longer than the bootstraping time
 	Then I get a OK status
 */
 func TestPeerStatusWithLongTTL(t *testing.T) {
+	resettimerState()
 	p := NewDiscoveredPeer(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 5000),

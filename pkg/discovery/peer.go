@@ -193,9 +193,6 @@ const (
 
 	//FaultyPeer defines if the peer is not started
 	FaultyPeer
-
-	//StorageOnlyPeer defines if the peer only accept storage request
-	StorageOnlyPeer
 )
 
 func (s PeerStatus) String() string {
@@ -203,10 +200,8 @@ func (s PeerStatus) String() string {
 		return "Ok"
 	} else if s == BootstrapingPeer {
 		return "Bootstraping"
-	} else if s == FaultyPeer {
-		return "Faulty"
 	}
-	return "StorageOnly"
+	return "Faulty"
 }
 
 //PeerPosition wraps the geo coordinates of a peer

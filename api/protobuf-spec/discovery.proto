@@ -55,7 +55,6 @@ message PeerAppState {
         BOOTSTRAPING = 0;
         OK = 1;
         FAULTY = 2;
-        STORAGE_ONLY = 3;
     };
 
     PeerStatus status = 1;
