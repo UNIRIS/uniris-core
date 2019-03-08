@@ -113,7 +113,7 @@ func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr strin
 	return &txRes[0], nil
 }
 
-func (pr poolRequester) RequestTransactionLock(pool consensus.Pool, txHash string, txAddress string, masterPublicKey string) error {
+func (pr poolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash string, txAddress string, masterPublicKey string) error {
 
 	lastKeys, err := pr.techDB.NodeLastKeys()
 	if err != nil {
@@ -123,9 +123,9 @@ func (pr poolRequester) RequestTransactionLock(pool consensus.Pool, txHash strin
 	var wg sync.WaitGroup
 	wg.Add(len(pool))
 
-	var ackUnlock int32
+	var ackTimelocks int32
 
-	req := &api.LockTransactionRequest{
+	req := &api.TimeLockTransactionRequest{
 		Address:             txAddress,
 		TransactionHash:     txHash,
 		MasterNodePublicKey: masterPublicKey,
@@ -149,43 +149,42 @@ func (pr poolRequester) RequestTransactionLock(pool consensus.Pool, txHash strin
 			conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 			if err != nil {
 				grpcErr, _ := status.FromError(err)
-				fmt.Printf("LOCK TRANSACTION REQUEST - ERROR: %s\n", grpcErr.Message())
+				fmt.Printf("TIMELOCK TRANSACTION REQUEST - ERROR: %s\n", grpcErr.Message())
 				return
 			}
 			defer conn.Close()
 			cli := api.NewTransactionServiceClient(conn)
-			res, err := cli.LockTransaction(context.Background(), req)
+			res, err := cli.TimeLockTransaction(context.Background(), req)
 			if err != nil {
 				grpcErr, _ := status.FromError(err)
-				fmt.Printf("LOCK TRANSACTION RESPONSE - ERROR: %s\n", grpcErr.Message())
+				fmt.Printf("TIMELOCK TRANSACTION RESPONSE - ERROR: %s\n", grpcErr.Message())
 				return
 			}
 
-			fmt.Printf("LOCK TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+			fmt.Printf("TIMELOCK TRANSACTION RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
 
-			resBytes, err := json.Marshal(&api.LockTransactionResponse{
+			resBytes, err := json.Marshal(&api.TimeLockTransactionResponse{
 				Timestamp: req.Timestamp,
 			})
 			if err != nil {
-				fmt.Printf("LOCK TRANSACTION RESPONSE - ERROR: %s", err.Error())
+				fmt.Printf("TIMELOCK TRANSACTION RESPONSE - ERROR: %s", err.Error())
 				return
 			}
 			if err := crypto.VerifySignature(string(resBytes), lastKeys.PublicKey(), res.SignatureResponse); err != nil {
-				fmt.Printf("LOCK TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
+				fmt.Printf("TIMELOCK TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 				return
 			}
 
-			atomic.AddInt32(&ackUnlock, 1)
+			atomic.AddInt32(&ackTimelocks, 1)
 		}(p)
 	}
 
 	wg.Wait()
 
-	//TODO: specify minium required locks
-	minLocks := 1
-	lockFinal := atomic.LoadInt32(&ackUnlock)
-	if int(lockFinal) < minLocks {
-		return errors.New("number of locks are not reached")
+	//TODO: specify minium required timelocks
+	minTimeLocks := 1
+	if int(atomic.LoadInt32(&ackTimelocks)) < minTimeLocks {
+		return errors.New("number of timelocks are not reached")
 	}
 
 	return nil

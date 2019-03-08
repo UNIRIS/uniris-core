@@ -37,12 +37,11 @@ func TestHandleGetLastTransactionWhenNotExist(t *testing.T) {
 	techR.nodeKeys = append(techR.nodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
-	locker := &mockLocker{}
 
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, locker, techR, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, techR, poolR, pub, pv)
 
 	req := &api.GetLastTransactionRequest{
 		Timestamp:          time.Now().Unix(),
@@ -79,8 +78,7 @@ func TestHandleGetLastTransaction(t *testing.T) {
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	locker := &mockLocker{}
-	txSrv := NewTransactionService(chainDB, locker, techR, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, techR, poolR, pub, pv)
 
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
@@ -151,12 +149,11 @@ func TestHandleGetTransactionStatus(t *testing.T) {
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	locker := &mockLocker{}
-	txSrv := NewTransactionService(chainDB, locker, techR, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, techR, poolR, pub, pv)
 
 	req := &api.GetTransactionStatusRequest{
 		Timestamp:       time.Now().Unix(),
-		TransactionHash: crypto.HashString("tx"),
+		TransactionHash: crypto.HashString("tx1"),
 	}
 	reqBytes, _ := json.Marshal(req)
 	sig, _ := crypto.Sign(string(reqBytes), pv)
@@ -191,8 +188,7 @@ func TestHandleStoreTransaction(t *testing.T) {
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	locker := &mockLocker{}
-	txSrv := NewTransactionService(chainDB, locker, techR, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, techR, poolR, pub, pv)
 
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
 
@@ -272,29 +268,26 @@ func TestHandleLockTransaction(t *testing.T) {
 	nodeKey, _ := shared.NewKeyPair(pub, pv)
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
-	locker := &mockLocker{}
 	poolR := &mockPoolRequester{}
-	txSrv := NewTransactionService(chainDB, locker, techDB, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, techDB, poolR, pub, pv)
 
-	req := &api.LockTransactionRequest{
+	req := &api.TimeLockTransactionRequest{
 		Timestamp:           time.Now().Unix(),
-		TransactionHash:     crypto.HashString("tx"),
+		TransactionHash:     crypto.HashString("tx1"),
 		MasterNodePublicKey: pub,
-		Address:             crypto.HashString("addr"),
+		Address:             crypto.HashString("addr1"),
 	}
 	reqBytes, _ := json.Marshal(req)
 	sig, _ := crypto.Sign(string(reqBytes), pv)
 	req.SignatureRequest = sig
 
-	res, err := txSrv.LockTransaction(context.TODO(), req)
+	res, err := txSrv.TimeLockTransaction(context.TODO(), req)
 	assert.Nil(t, err)
-	resBytes, _ := json.Marshal(&api.LockTransactionResponse{
+	resBytes, _ := json.Marshal(&api.TimeLockTransactionResponse{
 		Timestamp: res.Timestamp,
 	})
 	assert.Nil(t, crypto.VerifySignature(string(resBytes), pub, res.SignatureResponse))
-
-	assert.Len(t, locker.locks, 1)
-	assert.Equal(t, crypto.HashString("addr"), locker.locks[0]["transaction_address"])
+	assert.True(t, chain.ContainsTimeLock(crypto.HashString("tx1"), crypto.HashString("addr1")))
 }
 
 /*
@@ -313,13 +306,12 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpv")), pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
-	locker := &mockLocker{}
 	chainDB := &mockChainDB{}
 
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, locker, techDB, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, techDB, poolR, pub, pv)
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
@@ -390,8 +382,7 @@ func TestHandleConfirmValiation(t *testing.T) {
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	locker := &mockLocker{}
-	txSrv := NewTransactionService(chainDB, locker, techDB, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, techDB, poolR, pub, pv)
 
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
 	data := map[string]string{
@@ -459,7 +450,7 @@ func (pr mockPoolRequester) RequestLastTransaction(pool consensus.Pool, txAddr s
 	return nil, nil
 }
 
-func (pr mockPoolRequester) RequestTransactionLock(pool consensus.Pool, txHash string, txAddr string, masterPublicKey string) error {
+func (pr mockPoolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash string, txAddr string, masterPublicKey string) error {
 	return nil
 }
 
@@ -497,19 +488,9 @@ func (pr *mockPoolRequester) RequestTransactionStorage(pool consensus.Pool, minR
 }
 
 type mockChainDB struct {
-	inprogress []chain.Transaction
-	kos        []chain.Transaction
-	keychains  []chain.Keychain
-	ids        []chain.ID
-}
-
-func (r mockChainDB) InProgressByHash(txHash string) (*chain.Transaction, error) {
-	for _, tx := range r.inprogress {
-		if tx.TransactionHash() == txHash {
-			return &tx, nil
-		}
-	}
-	return nil, nil
+	kos       []chain.Transaction
+	keychains []chain.Keychain
+	ids       []chain.ID
 }
 
 func (r mockChainDB) FullKeychain(txAddr string) (*chain.Keychain, error) {
@@ -583,43 +564,6 @@ func (r *mockChainDB) WriteID(id chain.ID) error {
 func (r *mockChainDB) WriteKO(tx chain.Transaction) error {
 	r.kos = append(r.kos, tx)
 	return nil
-}
-
-func (r *mockChainDB) WriteInProgress(tx chain.Transaction) error {
-	r.inprogress = append(r.inprogress, tx)
-	return nil
-}
-
-type mockLocker struct {
-	locks []map[string]string
-}
-
-func (l *mockLocker) WriteLock(txHash string, txAddr string, masterPubKey string) error {
-	l.locks = append(l.locks, map[string]string{
-		"transaction_address": txAddr,
-		"transaction_hash":    txHash,
-		"master_public_key":   masterPubKey,
-	})
-	return nil
-}
-func (l *mockLocker) RemoveLock(txHash string, txAddr string) error {
-	pos := l.findLockPosition(txHash, txAddr)
-	if pos > -1 {
-		l.locks = append(l.locks[:pos], l.locks[pos+1:]...)
-	}
-	return nil
-}
-func (l mockLocker) ContainsLock(txHash string, txAddr string) (bool, error) {
-	return l.findLockPosition(txHash, txAddr) > -1, nil
-}
-
-func (l mockLocker) findLockPosition(txHash string, txAddr string) int {
-	for i, lock := range l.locks {
-		if lock["transaction_hash"] == txHash && lock["transaction_address"] == txAddr {
-			return i
-		}
-	}
-	return -1
 }
 
 type mockTechDB struct {

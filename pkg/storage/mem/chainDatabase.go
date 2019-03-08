@@ -7,24 +7,14 @@ import (
 )
 
 type chainDB struct {
-	keychains    []chain.Keychain
-	ids          []chain.ID
-	koTxs        []chain.Transaction
-	inProgressTx []chain.Transaction
+	keychains []chain.Keychain
+	ids       []chain.ID
+	koTxs     []chain.Transaction
 }
 
 //NewchainDatabase creates a new chain database in memory
 func NewchainDatabase() chain.Database {
 	return &chainDB{}
-}
-
-func (db chainDB) InProgressByHash(txHash string) (*chain.Transaction, error) {
-	for _, tx := range db.inProgressTx {
-		if tx.TransactionHash() == txHash {
-			return &tx, nil
-		}
-	}
-	return nil, nil
 }
 
 func (db chainDB) KeychainByHash(txHash string) (*chain.Keychain, error) {
@@ -109,10 +99,5 @@ func (db *chainDB) WriteID(id chain.ID) error {
 
 func (db *chainDB) WriteKO(tx chain.Transaction) error {
 	db.koTxs = append(db.koTxs, tx)
-	return nil
-}
-
-func (db *chainDB) WriteInProgress(tx chain.Transaction) error {
-	db.inProgressTx = append(db.inProgressTx, tx)
 	return nil
 }

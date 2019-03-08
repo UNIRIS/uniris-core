@@ -6,7 +6,7 @@ service TransactionService {
     rpc GetLastTransaction(GetLastTransactionRequest) returns (GetLastTransactionResponse);
     rpc GetTransactionStatus(GetTransactionStatusRequest) returns (GetTransactionStatusResponse);
     rpc StoreTransaction(StoreTransactionRequest) returns (StoreTransactionResponse);
-    rpc LockTransaction(LockTransactionRequest) returns (LockTransactionResponse);
+    rpc TimeLockTransaction(TimeLockTransactionRequest) returns (TimeLockTransactionResponse);
     rpc LeadTransactionMining(LeadTransactionMiningRequest) returns (LeadTransactionMiningResponse);
     rpc ConfirmTransactionValidation(ConfirmTransactionValidationRequest) returns (ConfirmTransactionValidationResponse);
 }
@@ -48,7 +48,7 @@ message StoreTransactionResponse {
     string signature_response = 2;
 }
 
-message LockTransactionRequest {
+message TimeLockTransactionRequest {
     string transaction_hash = 1;
     string address = 2;
     string master_node_public_key = 3;
@@ -56,7 +56,7 @@ message LockTransactionRequest {
     string signature_request = 5;
 }
 
-message LockTransactionResponse {
+message TimeLockTransactionResponse {
     int64 timestamp = 1;
     string signature_response = 2;
 }

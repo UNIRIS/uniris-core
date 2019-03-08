@@ -3,11 +3,9 @@
 
 package api
 
-import (
-	fmt "fmt"
-	proto "github.com/golang/protobuf/proto"
-	math "math"
-)
+import proto "github.com/golang/protobuf/proto"
+import fmt "fmt"
+import math "math"
 
 import (
 	context "golang.org/x/net/context"
@@ -38,7 +36,6 @@ var TransactionType_name = map[int32]string{
 	1: "ID",
 	2: "CONTRACT_CREATION",
 }
-
 var TransactionType_value = map[string]int32{
 	"KEYCHAIN":          0,
 	"ID":                1,
@@ -48,9 +45,8 @@ var TransactionType_value = map[string]int32{
 func (x TransactionType) String() string {
 	return proto.EnumName(TransactionType_name, int32(x))
 }
-
 func (TransactionType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{0}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{0}
 }
 
 type TransactionStatus int32
@@ -68,7 +64,6 @@ var TransactionStatus_name = map[int32]string{
 	2: "SUCCESS",
 	3: "FAILURE",
 }
-
 var TransactionStatus_value = map[string]int32{
 	"UNKNOWN":     0,
 	"IN_PROGRESS": 1,
@@ -79,9 +74,8 @@ var TransactionStatus_value = map[string]int32{
 func (x TransactionStatus) String() string {
 	return proto.EnumName(TransactionStatus_name, int32(x))
 }
-
 func (TransactionStatus) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{1}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{1}
 }
 
 type Validation_ValidationStatus int32
@@ -95,7 +89,6 @@ var Validation_ValidationStatus_name = map[int32]string{
 	0: "NO",
 	1: "OK",
 }
-
 var Validation_ValidationStatus_value = map[string]int32{
 	"NO": 0,
 	"OK": 1,
@@ -104,9 +97,8 @@ var Validation_ValidationStatus_value = map[string]int32{
 func (x Validation_ValidationStatus) String() string {
 	return proto.EnumName(Validation_ValidationStatus_name, int32(x))
 }
-
 func (Validation_ValidationStatus) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{15, 0}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{15, 0}
 }
 
 type GetLastTransactionRequest struct {
@@ -123,17 +115,16 @@ func (m *GetLastTransactionRequest) Reset()         { *m = GetLastTransactionReq
 func (m *GetLastTransactionRequest) String() string { return proto.CompactTextString(m) }
 func (*GetLastTransactionRequest) ProtoMessage()    {}
 func (*GetLastTransactionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{0}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{0}
 }
-
 func (m *GetLastTransactionRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetLastTransactionRequest.Unmarshal(m, b)
 }
 func (m *GetLastTransactionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetLastTransactionRequest.Marshal(b, m, deterministic)
 }
-func (m *GetLastTransactionRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetLastTransactionRequest.Merge(m, src)
+func (dst *GetLastTransactionRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetLastTransactionRequest.Merge(dst, src)
 }
 func (m *GetLastTransactionRequest) XXX_Size() int {
 	return xxx_messageInfo_GetLastTransactionRequest.Size(m)
@@ -185,17 +176,16 @@ func (m *GetLastTransactionResponse) Reset()         { *m = GetLastTransactionRe
 func (m *GetLastTransactionResponse) String() string { return proto.CompactTextString(m) }
 func (*GetLastTransactionResponse) ProtoMessage()    {}
 func (*GetLastTransactionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{1}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{1}
 }
-
 func (m *GetLastTransactionResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetLastTransactionResponse.Unmarshal(m, b)
 }
 func (m *GetLastTransactionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetLastTransactionResponse.Marshal(b, m, deterministic)
 }
-func (m *GetLastTransactionResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetLastTransactionResponse.Merge(m, src)
+func (dst *GetLastTransactionResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetLastTransactionResponse.Merge(dst, src)
 }
 func (m *GetLastTransactionResponse) XXX_Size() int {
 	return xxx_messageInfo_GetLastTransactionResponse.Size(m)
@@ -240,17 +230,16 @@ func (m *GetTransactionStatusRequest) Reset()         { *m = GetTransactionStatu
 func (m *GetTransactionStatusRequest) String() string { return proto.CompactTextString(m) }
 func (*GetTransactionStatusRequest) ProtoMessage()    {}
 func (*GetTransactionStatusRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{2}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{2}
 }
-
 func (m *GetTransactionStatusRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetTransactionStatusRequest.Unmarshal(m, b)
 }
 func (m *GetTransactionStatusRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetTransactionStatusRequest.Marshal(b, m, deterministic)
 }
-func (m *GetTransactionStatusRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetTransactionStatusRequest.Merge(m, src)
+func (dst *GetTransactionStatusRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetTransactionStatusRequest.Merge(dst, src)
 }
 func (m *GetTransactionStatusRequest) XXX_Size() int {
 	return xxx_messageInfo_GetTransactionStatusRequest.Size(m)
@@ -295,17 +284,16 @@ func (m *GetTransactionStatusResponse) Reset()         { *m = GetTransactionStat
 func (m *GetTransactionStatusResponse) String() string { return proto.CompactTextString(m) }
 func (*GetTransactionStatusResponse) ProtoMessage()    {}
 func (*GetTransactionStatusResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{3}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{3}
 }
-
 func (m *GetTransactionStatusResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_GetTransactionStatusResponse.Unmarshal(m, b)
 }
 func (m *GetTransactionStatusResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_GetTransactionStatusResponse.Marshal(b, m, deterministic)
 }
-func (m *GetTransactionStatusResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetTransactionStatusResponse.Merge(m, src)
+func (dst *GetTransactionStatusResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetTransactionStatusResponse.Merge(dst, src)
 }
 func (m *GetTransactionStatusResponse) XXX_Size() int {
 	return xxx_messageInfo_GetTransactionStatusResponse.Size(m)
@@ -351,17 +339,16 @@ func (m *StoreTransactionRequest) Reset()         { *m = StoreTransactionRequest
 func (m *StoreTransactionRequest) String() string { return proto.CompactTextString(m) }
 func (*StoreTransactionRequest) ProtoMessage()    {}
 func (*StoreTransactionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{4}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{4}
 }
-
 func (m *StoreTransactionRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_StoreTransactionRequest.Unmarshal(m, b)
 }
 func (m *StoreTransactionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_StoreTransactionRequest.Marshal(b, m, deterministic)
 }
-func (m *StoreTransactionRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_StoreTransactionRequest.Merge(m, src)
+func (dst *StoreTransactionRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StoreTransactionRequest.Merge(dst, src)
 }
 func (m *StoreTransactionRequest) XXX_Size() int {
 	return xxx_messageInfo_StoreTransactionRequest.Size(m)
@@ -412,17 +399,16 @@ func (m *StoreTransactionResponse) Reset()         { *m = StoreTransactionRespon
 func (m *StoreTransactionResponse) String() string { return proto.CompactTextString(m) }
 func (*StoreTransactionResponse) ProtoMessage()    {}
 func (*StoreTransactionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{5}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{5}
 }
-
 func (m *StoreTransactionResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_StoreTransactionResponse.Unmarshal(m, b)
 }
 func (m *StoreTransactionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_StoreTransactionResponse.Marshal(b, m, deterministic)
 }
-func (m *StoreTransactionResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_StoreTransactionResponse.Merge(m, src)
+func (dst *StoreTransactionResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StoreTransactionResponse.Merge(dst, src)
 }
 func (m *StoreTransactionResponse) XXX_Size() int {
 	return xxx_messageInfo_StoreTransactionResponse.Size(m)
@@ -447,7 +433,7 @@ func (m *StoreTransactionResponse) GetSignatureResponse() string {
 	return ""
 }
 
-type LockTransactionRequest struct {
+type TimeLockTransactionRequest struct {
 	TransactionHash      string   `protobuf:"bytes,1,opt,name=transaction_hash,json=transactionHash,proto3" json:"transaction_hash,omitempty"`
 	Address              string   `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
 	MasterNodePublicKey  string   `protobuf:"bytes,3,opt,name=master_node_public_key,json=masterNodePublicKey,proto3" json:"master_node_public_key,omitempty"`
@@ -458,67 +444,66 @@ type LockTransactionRequest struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *LockTransactionRequest) Reset()         { *m = LockTransactionRequest{} }
-func (m *LockTransactionRequest) String() string { return proto.CompactTextString(m) }
-func (*LockTransactionRequest) ProtoMessage()    {}
-func (*LockTransactionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{6}
+func (m *TimeLockTransactionRequest) Reset()         { *m = TimeLockTransactionRequest{} }
+func (m *TimeLockTransactionRequest) String() string { return proto.CompactTextString(m) }
+func (*TimeLockTransactionRequest) ProtoMessage()    {}
+func (*TimeLockTransactionRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{6}
+}
+func (m *TimeLockTransactionRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TimeLockTransactionRequest.Unmarshal(m, b)
+}
+func (m *TimeLockTransactionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TimeLockTransactionRequest.Marshal(b, m, deterministic)
+}
+func (dst *TimeLockTransactionRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TimeLockTransactionRequest.Merge(dst, src)
+}
+func (m *TimeLockTransactionRequest) XXX_Size() int {
+	return xxx_messageInfo_TimeLockTransactionRequest.Size(m)
+}
+func (m *TimeLockTransactionRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_TimeLockTransactionRequest.DiscardUnknown(m)
 }
 
-func (m *LockTransactionRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_LockTransactionRequest.Unmarshal(m, b)
-}
-func (m *LockTransactionRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_LockTransactionRequest.Marshal(b, m, deterministic)
-}
-func (m *LockTransactionRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_LockTransactionRequest.Merge(m, src)
-}
-func (m *LockTransactionRequest) XXX_Size() int {
-	return xxx_messageInfo_LockTransactionRequest.Size(m)
-}
-func (m *LockTransactionRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_LockTransactionRequest.DiscardUnknown(m)
-}
+var xxx_messageInfo_TimeLockTransactionRequest proto.InternalMessageInfo
 
-var xxx_messageInfo_LockTransactionRequest proto.InternalMessageInfo
-
-func (m *LockTransactionRequest) GetTransactionHash() string {
+func (m *TimeLockTransactionRequest) GetTransactionHash() string {
 	if m != nil {
 		return m.TransactionHash
 	}
 	return ""
 }
 
-func (m *LockTransactionRequest) GetAddress() string {
+func (m *TimeLockTransactionRequest) GetAddress() string {
 	if m != nil {
 		return m.Address
 	}
 	return ""
 }
 
-func (m *LockTransactionRequest) GetMasterNodePublicKey() string {
+func (m *TimeLockTransactionRequest) GetMasterNodePublicKey() string {
 	if m != nil {
 		return m.MasterNodePublicKey
 	}
 	return ""
 }
 
-func (m *LockTransactionRequest) GetTimestamp() int64 {
+func (m *TimeLockTransactionRequest) GetTimestamp() int64 {
 	if m != nil {
 		return m.Timestamp
 	}
 	return 0
 }
 
-func (m *LockTransactionRequest) GetSignatureRequest() string {
+func (m *TimeLockTransactionRequest) GetSignatureRequest() string {
 	if m != nil {
 		return m.SignatureRequest
 	}
 	return ""
 }
 
-type LockTransactionResponse struct {
+type TimeLockTransactionResponse struct {
 	Timestamp            int64    `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	SignatureResponse    string   `protobuf:"bytes,2,opt,name=signature_response,json=signatureResponse,proto3" json:"signature_response,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -526,39 +511,38 @@ type LockTransactionResponse struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *LockTransactionResponse) Reset()         { *m = LockTransactionResponse{} }
-func (m *LockTransactionResponse) String() string { return proto.CompactTextString(m) }
-func (*LockTransactionResponse) ProtoMessage()    {}
-func (*LockTransactionResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{7}
+func (m *TimeLockTransactionResponse) Reset()         { *m = TimeLockTransactionResponse{} }
+func (m *TimeLockTransactionResponse) String() string { return proto.CompactTextString(m) }
+func (*TimeLockTransactionResponse) ProtoMessage()    {}
+func (*TimeLockTransactionResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{7}
+}
+func (m *TimeLockTransactionResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_TimeLockTransactionResponse.Unmarshal(m, b)
+}
+func (m *TimeLockTransactionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_TimeLockTransactionResponse.Marshal(b, m, deterministic)
+}
+func (dst *TimeLockTransactionResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TimeLockTransactionResponse.Merge(dst, src)
+}
+func (m *TimeLockTransactionResponse) XXX_Size() int {
+	return xxx_messageInfo_TimeLockTransactionResponse.Size(m)
+}
+func (m *TimeLockTransactionResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_TimeLockTransactionResponse.DiscardUnknown(m)
 }
 
-func (m *LockTransactionResponse) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_LockTransactionResponse.Unmarshal(m, b)
-}
-func (m *LockTransactionResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_LockTransactionResponse.Marshal(b, m, deterministic)
-}
-func (m *LockTransactionResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_LockTransactionResponse.Merge(m, src)
-}
-func (m *LockTransactionResponse) XXX_Size() int {
-	return xxx_messageInfo_LockTransactionResponse.Size(m)
-}
-func (m *LockTransactionResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_LockTransactionResponse.DiscardUnknown(m)
-}
+var xxx_messageInfo_TimeLockTransactionResponse proto.InternalMessageInfo
 
-var xxx_messageInfo_LockTransactionResponse proto.InternalMessageInfo
-
-func (m *LockTransactionResponse) GetTimestamp() int64 {
+func (m *TimeLockTransactionResponse) GetTimestamp() int64 {
 	if m != nil {
 		return m.Timestamp
 	}
 	return 0
 }
 
-func (m *LockTransactionResponse) GetSignatureResponse() string {
+func (m *TimeLockTransactionResponse) GetSignatureResponse() string {
 	if m != nil {
 		return m.SignatureResponse
 	}
@@ -579,17 +563,16 @@ func (m *LeadTransactionMiningRequest) Reset()         { *m = LeadTransactionMin
 func (m *LeadTransactionMiningRequest) String() string { return proto.CompactTextString(m) }
 func (*LeadTransactionMiningRequest) ProtoMessage()    {}
 func (*LeadTransactionMiningRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{8}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{8}
 }
-
 func (m *LeadTransactionMiningRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LeadTransactionMiningRequest.Unmarshal(m, b)
 }
 func (m *LeadTransactionMiningRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_LeadTransactionMiningRequest.Marshal(b, m, deterministic)
 }
-func (m *LeadTransactionMiningRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_LeadTransactionMiningRequest.Merge(m, src)
+func (dst *LeadTransactionMiningRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LeadTransactionMiningRequest.Merge(dst, src)
 }
 func (m *LeadTransactionMiningRequest) XXX_Size() int {
 	return xxx_messageInfo_LeadTransactionMiningRequest.Size(m)
@@ -640,17 +623,16 @@ func (m *LeadTransactionMiningResponse) Reset()         { *m = LeadTransactionMi
 func (m *LeadTransactionMiningResponse) String() string { return proto.CompactTextString(m) }
 func (*LeadTransactionMiningResponse) ProtoMessage()    {}
 func (*LeadTransactionMiningResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{9}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{9}
 }
-
 func (m *LeadTransactionMiningResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LeadTransactionMiningResponse.Unmarshal(m, b)
 }
 func (m *LeadTransactionMiningResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_LeadTransactionMiningResponse.Marshal(b, m, deterministic)
 }
-func (m *LeadTransactionMiningResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_LeadTransactionMiningResponse.Merge(m, src)
+func (dst *LeadTransactionMiningResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LeadTransactionMiningResponse.Merge(dst, src)
 }
 func (m *LeadTransactionMiningResponse) XXX_Size() int {
 	return xxx_messageInfo_LeadTransactionMiningResponse.Size(m)
@@ -689,17 +671,16 @@ func (m *ConfirmTransactionValidationRequest) Reset()         { *m = ConfirmTran
 func (m *ConfirmTransactionValidationRequest) String() string { return proto.CompactTextString(m) }
 func (*ConfirmTransactionValidationRequest) ProtoMessage()    {}
 func (*ConfirmTransactionValidationRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{10}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{10}
 }
-
 func (m *ConfirmTransactionValidationRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ConfirmTransactionValidationRequest.Unmarshal(m, b)
 }
 func (m *ConfirmTransactionValidationRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ConfirmTransactionValidationRequest.Marshal(b, m, deterministic)
 }
-func (m *ConfirmTransactionValidationRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ConfirmTransactionValidationRequest.Merge(m, src)
+func (dst *ConfirmTransactionValidationRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ConfirmTransactionValidationRequest.Merge(dst, src)
 }
 func (m *ConfirmTransactionValidationRequest) XXX_Size() int {
 	return xxx_messageInfo_ConfirmTransactionValidationRequest.Size(m)
@@ -751,17 +732,16 @@ func (m *ConfirmTransactionValidationResponse) Reset()         { *m = ConfirmTra
 func (m *ConfirmTransactionValidationResponse) String() string { return proto.CompactTextString(m) }
 func (*ConfirmTransactionValidationResponse) ProtoMessage()    {}
 func (*ConfirmTransactionValidationResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{11}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{11}
 }
-
 func (m *ConfirmTransactionValidationResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ConfirmTransactionValidationResponse.Unmarshal(m, b)
 }
 func (m *ConfirmTransactionValidationResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ConfirmTransactionValidationResponse.Marshal(b, m, deterministic)
 }
-func (m *ConfirmTransactionValidationResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ConfirmTransactionValidationResponse.Merge(m, src)
+func (dst *ConfirmTransactionValidationResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ConfirmTransactionValidationResponse.Merge(dst, src)
 }
 func (m *ConfirmTransactionValidationResponse) XXX_Size() int {
 	return xxx_messageInfo_ConfirmTransactionValidationResponse.Size(m)
@@ -805,17 +785,16 @@ func (m *SharedKeyPair) Reset()         { *m = SharedKeyPair{} }
 func (m *SharedKeyPair) String() string { return proto.CompactTextString(m) }
 func (*SharedKeyPair) ProtoMessage()    {}
 func (*SharedKeyPair) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{12}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{12}
 }
-
 func (m *SharedKeyPair) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SharedKeyPair.Unmarshal(m, b)
 }
 func (m *SharedKeyPair) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SharedKeyPair.Marshal(b, m, deterministic)
 }
-func (m *SharedKeyPair) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SharedKeyPair.Merge(m, src)
+func (dst *SharedKeyPair) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SharedKeyPair.Merge(dst, src)
 }
 func (m *SharedKeyPair) XXX_Size() int {
 	return xxx_messageInfo_SharedKeyPair.Size(m)
@@ -859,17 +838,16 @@ func (m *Transaction) Reset()         { *m = Transaction{} }
 func (m *Transaction) String() string { return proto.CompactTextString(m) }
 func (*Transaction) ProtoMessage()    {}
 func (*Transaction) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{13}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{13}
 }
-
 func (m *Transaction) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Transaction.Unmarshal(m, b)
 }
 func (m *Transaction) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Transaction.Marshal(b, m, deterministic)
 }
-func (m *Transaction) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Transaction.Merge(m, src)
+func (dst *Transaction) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Transaction.Merge(dst, src)
 }
 func (m *Transaction) XXX_Size() int {
 	return xxx_messageInfo_Transaction.Size(m)
@@ -956,17 +934,16 @@ func (m *MasterValidation) Reset()         { *m = MasterValidation{} }
 func (m *MasterValidation) String() string { return proto.CompactTextString(m) }
 func (*MasterValidation) ProtoMessage()    {}
 func (*MasterValidation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{14}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{14}
 }
-
 func (m *MasterValidation) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MasterValidation.Unmarshal(m, b)
 }
 func (m *MasterValidation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_MasterValidation.Marshal(b, m, deterministic)
 }
-func (m *MasterValidation) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MasterValidation.Merge(m, src)
+func (dst *MasterValidation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MasterValidation.Merge(dst, src)
 }
 func (m *MasterValidation) XXX_Size() int {
 	return xxx_messageInfo_MasterValidation.Size(m)
@@ -1012,17 +989,16 @@ func (m *Validation) Reset()         { *m = Validation{} }
 func (m *Validation) String() string { return proto.CompactTextString(m) }
 func (*Validation) ProtoMessage()    {}
 func (*Validation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{15}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{15}
 }
-
 func (m *Validation) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Validation.Unmarshal(m, b)
 }
 func (m *Validation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Validation.Marshal(b, m, deterministic)
 }
-func (m *Validation) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Validation.Merge(m, src)
+func (dst *Validation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Validation.Merge(dst, src)
 }
 func (m *Validation) XXX_Size() int {
 	return xxx_messageInfo_Validation.Size(m)
@@ -1074,17 +1050,16 @@ func (m *MinedTransaction) Reset()         { *m = MinedTransaction{} }
 func (m *MinedTransaction) String() string { return proto.CompactTextString(m) }
 func (*MinedTransaction) ProtoMessage()    {}
 func (*MinedTransaction) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2cc4e03d2c28c490, []int{16}
+	return fileDescriptor_transaction_7f6439bdf7b91f11, []int{16}
 }
-
 func (m *MinedTransaction) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MinedTransaction.Unmarshal(m, b)
 }
 func (m *MinedTransaction) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_MinedTransaction.Marshal(b, m, deterministic)
 }
-func (m *MinedTransaction) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MinedTransaction.Merge(m, src)
+func (dst *MinedTransaction) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MinedTransaction.Merge(dst, src)
 }
 func (m *MinedTransaction) XXX_Size() int {
 	return xxx_messageInfo_MinedTransaction.Size(m)
@@ -1117,17 +1092,14 @@ func (m *MinedTransaction) GetConfirmValidations() []*Validation {
 }
 
 func init() {
-	proto.RegisterEnum("api.TransactionType", TransactionType_name, TransactionType_value)
-	proto.RegisterEnum("api.TransactionStatus", TransactionStatus_name, TransactionStatus_value)
-	proto.RegisterEnum("api.Validation_ValidationStatus", Validation_ValidationStatus_name, Validation_ValidationStatus_value)
 	proto.RegisterType((*GetLastTransactionRequest)(nil), "api.GetLastTransactionRequest")
 	proto.RegisterType((*GetLastTransactionResponse)(nil), "api.GetLastTransactionResponse")
 	proto.RegisterType((*GetTransactionStatusRequest)(nil), "api.GetTransactionStatusRequest")
 	proto.RegisterType((*GetTransactionStatusResponse)(nil), "api.GetTransactionStatusResponse")
 	proto.RegisterType((*StoreTransactionRequest)(nil), "api.StoreTransactionRequest")
 	proto.RegisterType((*StoreTransactionResponse)(nil), "api.StoreTransactionResponse")
-	proto.RegisterType((*LockTransactionRequest)(nil), "api.LockTransactionRequest")
-	proto.RegisterType((*LockTransactionResponse)(nil), "api.LockTransactionResponse")
+	proto.RegisterType((*TimeLockTransactionRequest)(nil), "api.TimeLockTransactionRequest")
+	proto.RegisterType((*TimeLockTransactionResponse)(nil), "api.TimeLockTransactionResponse")
 	proto.RegisterType((*LeadTransactionMiningRequest)(nil), "api.LeadTransactionMiningRequest")
 	proto.RegisterType((*LeadTransactionMiningResponse)(nil), "api.LeadTransactionMiningResponse")
 	proto.RegisterType((*ConfirmTransactionValidationRequest)(nil), "api.ConfirmTransactionValidationRequest")
@@ -1138,6 +1110,9 @@ func init() {
 	proto.RegisterType((*MasterValidation)(nil), "api.MasterValidation")
 	proto.RegisterType((*Validation)(nil), "api.Validation")
 	proto.RegisterType((*MinedTransaction)(nil), "api.MinedTransaction")
+	proto.RegisterEnum("api.TransactionType", TransactionType_name, TransactionType_value)
+	proto.RegisterEnum("api.TransactionStatus", TransactionStatus_name, TransactionStatus_value)
+	proto.RegisterEnum("api.Validation_ValidationStatus", Validation_ValidationStatus_name, Validation_ValidationStatus_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1155,7 +1130,7 @@ type TransactionServiceClient interface {
 	GetLastTransaction(ctx context.Context, in *GetLastTransactionRequest, opts ...grpc.CallOption) (*GetLastTransactionResponse, error)
 	GetTransactionStatus(ctx context.Context, in *GetTransactionStatusRequest, opts ...grpc.CallOption) (*GetTransactionStatusResponse, error)
 	StoreTransaction(ctx context.Context, in *StoreTransactionRequest, opts ...grpc.CallOption) (*StoreTransactionResponse, error)
-	LockTransaction(ctx context.Context, in *LockTransactionRequest, opts ...grpc.CallOption) (*LockTransactionResponse, error)
+	TimeLockTransaction(ctx context.Context, in *TimeLockTransactionRequest, opts ...grpc.CallOption) (*TimeLockTransactionResponse, error)
 	LeadTransactionMining(ctx context.Context, in *LeadTransactionMiningRequest, opts ...grpc.CallOption) (*LeadTransactionMiningResponse, error)
 	ConfirmTransactionValidation(ctx context.Context, in *ConfirmTransactionValidationRequest, opts ...grpc.CallOption) (*ConfirmTransactionValidationResponse, error)
 }
@@ -1195,9 +1170,9 @@ func (c *transactionServiceClient) StoreTransaction(ctx context.Context, in *Sto
 	return out, nil
 }
 
-func (c *transactionServiceClient) LockTransaction(ctx context.Context, in *LockTransactionRequest, opts ...grpc.CallOption) (*LockTransactionResponse, error) {
-	out := new(LockTransactionResponse)
-	err := c.cc.Invoke(ctx, "/api.TransactionService/LockTransaction", in, out, opts...)
+func (c *transactionServiceClient) TimeLockTransaction(ctx context.Context, in *TimeLockTransactionRequest, opts ...grpc.CallOption) (*TimeLockTransactionResponse, error) {
+	out := new(TimeLockTransactionResponse)
+	err := c.cc.Invoke(ctx, "/api.TransactionService/TimeLockTransaction", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1227,7 +1202,7 @@ type TransactionServiceServer interface {
 	GetLastTransaction(context.Context, *GetLastTransactionRequest) (*GetLastTransactionResponse, error)
 	GetTransactionStatus(context.Context, *GetTransactionStatusRequest) (*GetTransactionStatusResponse, error)
 	StoreTransaction(context.Context, *StoreTransactionRequest) (*StoreTransactionResponse, error)
-	LockTransaction(context.Context, *LockTransactionRequest) (*LockTransactionResponse, error)
+	TimeLockTransaction(context.Context, *TimeLockTransactionRequest) (*TimeLockTransactionResponse, error)
 	LeadTransactionMining(context.Context, *LeadTransactionMiningRequest) (*LeadTransactionMiningResponse, error)
 	ConfirmTransactionValidation(context.Context, *ConfirmTransactionValidationRequest) (*ConfirmTransactionValidationResponse, error)
 }
@@ -1290,20 +1265,20 @@ func _TransactionService_StoreTransaction_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
-func _TransactionService_LockTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LockTransactionRequest)
+func _TransactionService_TimeLockTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TimeLockTransactionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TransactionServiceServer).LockTransaction(ctx, in)
+		return srv.(TransactionServiceServer).TimeLockTransaction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api.TransactionService/LockTransaction",
+		FullMethod: "/api.TransactionService/TimeLockTransaction",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactionServiceServer).LockTransaction(ctx, req.(*LockTransactionRequest))
+		return srv.(TransactionServiceServer).TimeLockTransaction(ctx, req.(*TimeLockTransactionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1361,8 +1336,8 @@ var _TransactionService_serviceDesc = grpc.ServiceDesc{
 			Handler:    _TransactionService_StoreTransaction_Handler,
 		},
 		{
-			MethodName: "LockTransaction",
-			Handler:    _TransactionService_LockTransaction_Handler,
+			MethodName: "TimeLockTransaction",
+			Handler:    _TransactionService_TimeLockTransaction_Handler,
 		},
 		{
 			MethodName: "LeadTransactionMining",
@@ -1377,79 +1352,79 @@ var _TransactionService_serviceDesc = grpc.ServiceDesc{
 	Metadata: "transaction.proto",
 }
 
-func init() { proto.RegisterFile("transaction.proto", fileDescriptor_2cc4e03d2c28c490) }
+func init() { proto.RegisterFile("transaction.proto", fileDescriptor_transaction_7f6439bdf7b91f11) }
 
-var fileDescriptor_2cc4e03d2c28c490 = []byte{
-	// 1122 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x57, 0x4d, 0x6f, 0x23, 0x45,
-	0x13, 0x7e, 0xdb, 0xe3, 0x24, 0xeb, 0xf2, 0x9b, 0x64, 0xdc, 0xf9, 0x58, 0xaf, 0xd7, 0x01, 0x33,
-	0x70, 0xf0, 0x2e, 0xc2, 0x2b, 0x79, 0x25, 0x58, 0x21, 0x84, 0x08, 0x5e, 0x93, 0x8d, 0x9c, 0xb5,
-	0xa3, 0x71, 0xc2, 0x0a, 0x21, 0x31, 0xea, 0xd8, 0x9d, 0x64, 0x94, 0xcc, 0x07, 0xdd, 0xed, 0x20,
-	0xff, 0x0e, 0x8e, 0x88, 0x1b, 0x47, 0x7e, 0x02, 0x17, 0x90, 0xb8, 0x21, 0xee, 0x1c, 0xb8, 0xf3,
-	0x33, 0xd0, 0x74, 0x8f, 0xed, 0xf6, 0x78, 0xec, 0x35, 0x90, 0xd5, 0x9e, 0xec, 0xee, 0xaa, 0xae,
-	0x7e, 0xea, 0xa9, 0x8f, 0xae, 0x81, 0x82, 0x60, 0xc4, 0xe7, 0xa4, 0x27, 0xdc, 0xc0, 0xaf, 0x85,
-	0x2c, 0x10, 0x01, 0x36, 0x48, 0xe8, 0x5a, 0x3f, 0x23, 0xb8, 0x77, 0x40, 0xc5, 0x11, 0xe1, 0xe2,
-	0x64, 0xa2, 0x61, 0xd3, 0xaf, 0x07, 0x94, 0x0b, 0xfc, 0x08, 0xb6, 0xb4, 0x73, 0x0e, 0xe9, 0xf7,
-	0x19, 0xe5, 0xbc, 0x88, 0x2a, 0xa8, 0x9a, 0xb3, 0xb1, 0x26, 0xda, 0x57, 0x12, 0x5c, 0x85, 0xac,
-	0x18, 0x86, 0xb4, 0x98, 0xa9, 0xa0, 0xea, 0x46, 0x7d, 0xbb, 0x46, 0x42, 0xb7, 0xa6, 0xd9, 0x3d,
-	0x19, 0x86, 0xd4, 0x96, 0x1a, 0xb8, 0x0c, 0x39, 0xe1, 0x7a, 0x94, 0x0b, 0xe2, 0x85, 0x45, 0xa3,
-	0x82, 0xaa, 0x86, 0x3d, 0xd9, 0xc0, 0xef, 0x42, 0x81, 0xbb, 0x17, 0x3e, 0x11, 0x03, 0x46, 0x1d,
-	0xa6, 0xd0, 0x14, 0xb3, 0xf2, 0x5a, 0x73, 0x2c, 0x88, 0x51, 0x5a, 0xdf, 0x23, 0x28, 0xa5, 0xf9,
-	0xc0, 0xc3, 0xc0, 0xe7, 0x14, 0xd7, 0x21, 0xaf, 0x21, 0x95, 0xe0, 0xf3, 0x75, 0x33, 0x09, 0xcd,
-	0xd6, 0x95, 0xa6, 0xd1, 0x65, 0x92, 0xe8, 0xde, 0x03, 0xac, 0xa3, 0x53, 0xf7, 0x48, 0x27, 0x72,
-	0x76, 0x41, 0x83, 0xa7, 0x04, 0xd6, 0xb7, 0x08, 0xee, 0x1f, 0x50, 0x1d, 0x5b, 0x57, 0x10, 0x31,
-	0xe0, 0x23, 0x96, 0x1f, 0x80, 0xa9, 0xb3, 0x7c, 0x49, 0xf8, 0x65, 0x4c, 0xf1, 0xa6, 0xb6, 0xff,
-	0x8c, 0xf0, 0xcb, 0x97, 0xe0, 0x4a, 0x65, 0xcd, 0x98, 0xc3, 0xda, 0x77, 0x08, 0xca, 0xe9, 0xa8,
-	0x62, 0xde, 0x6a, 0xb0, 0xca, 0xe5, 0x8e, 0x04, 0xb3, 0x51, 0xdf, 0x4d, 0x52, 0x16, 0xeb, 0xc7,
-	0x5a, 0xb7, 0xcb, 0xd9, 0x1f, 0x08, 0xee, 0x76, 0x45, 0xc0, 0x68, 0x4a, 0x56, 0x7e, 0x0a, 0x05,
-	0xcf, 0xf5, 0x69, 0xdf, 0x99, 0x0d, 0xeb, 0x8e, 0xc4, 0xf8, 0x3c, 0x92, 0xea, 0x07, 0x4d, 0x2f,
-	0xb1, 0x13, 0x65, 0xb6, 0xe7, 0xfa, 0xae, 0x37, 0xf0, 0x9c, 0x1b, 0x72, 0xed, 0xf6, 0x49, 0xb4,
-	0xcb, 0x25, 0xec, 0x15, 0x1b, 0xc7, 0xa2, 0xcf, 0x27, 0x92, 0xdb, 0xcc, 0xd7, 0x0b, 0x28, 0xce,
-	0xba, 0x16, 0x93, 0x3e, 0x75, 0x0d, 0x5a, 0x8e, 0xc4, 0xcc, 0x3c, 0x12, 0xff, 0x44, 0xb0, 0x7b,
-	0x14, 0xf4, 0xae, 0x52, 0x38, 0xfc, 0x07, 0x39, 0x57, 0x84, 0xb5, 0x51, 0xe1, 0xab, 0x9b, 0x46,
-	0x4b, 0xfc, 0x18, 0x76, 0x3d, 0xc2, 0x05, 0x65, 0x8e, 0x1f, 0xf4, 0xa9, 0x13, 0x0e, 0xce, 0xae,
-	0xdd, 0x9e, 0x73, 0x45, 0x87, 0x71, 0x5c, 0xb7, 0x94, 0xb4, 0x1d, 0xf4, 0xe9, 0xb1, 0x94, 0xb5,
-	0xe8, 0x70, 0xda, 0xc3, 0xec, 0x52, 0x44, 0xae, 0xcc, 0x21, 0xf2, 0x1c, 0xee, 0xce, 0xb8, 0xf7,
-	0x2a, 0x78, 0xfc, 0x1d, 0x41, 0xf9, 0x88, 0x12, 0x3d, 0x81, 0x9e, 0xbb, 0xbe, 0xeb, 0x5f, 0x8c,
-	0xd8, 0xfc, 0x37, 0x2d, 0xe6, 0x75, 0x66, 0xe0, 0x35, 0xec, 0xcd, 0xf1, 0xe7, 0x55, 0xd0, 0xf7,
-	0x17, 0x82, 0xb7, 0x1b, 0x81, 0x7f, 0xee, 0x32, 0x4f, 0xbb, 0x71, 0xe2, 0xda, 0x7f, 0x61, 0x31,
-	0xea, 0x05, 0x2a, 0x05, 0x27, 0x24, 0x4a, 0x24, 0xe3, 0x5e, 0x20, 0xa5, 0xda, 0x65, 0xa6, 0x97,
-	0xd8, 0xb9, 0x4d, 0x62, 0x7f, 0x40, 0xf0, 0xce, 0x62, 0x57, 0x63, 0x82, 0x1f, 0x01, 0x68, 0x80,
-	0x95, 0xab, 0x9b, 0x12, 0xb0, 0xa6, 0xac, 0xa9, 0xdc, 0x6e, 0x77, 0x3d, 0x83, 0xf5, 0xee, 0x25,
-	0x61, 0xb4, 0xdf, 0xa2, 0xc3, 0x63, 0xe2, 0x32, 0x5c, 0x87, 0x1d, 0xea, 0xf7, 0xd8, 0x30, 0x14,
-	0xb4, 0xef, 0x84, 0xcc, 0xbd, 0x21, 0x82, 0xca, 0x42, 0x56, 0x3d, 0x61, 0x6b, 0x2c, 0x3c, 0x56,
-	0xb2, 0xa8, 0x90, 0xf7, 0x00, 0xb4, 0x8a, 0x57, 0xd1, 0xcf, 0x85, 0xa3, 0x3a, 0xb7, 0x7e, 0x31,
-	0x20, 0xaf, 0x77, 0x5c, 0xad, 0x8d, 0xa0, 0xe9, 0x36, 0xb2, 0xfc, 0xd0, 0x50, 0x83, 0x6c, 0x9f,
-	0x08, 0x52, 0x34, 0x2a, 0x46, 0x35, 0x5f, 0x2f, 0x25, 0x35, 0x6b, 0x4f, 0x89, 0x20, 0x4d, 0x5f,
-	0xb0, 0xa1, 0x2d, 0xf5, 0x5e, 0xd2, 0x6b, 0xa6, 0x1d, 0x58, 0x49, 0x38, 0x10, 0x1d, 0x1e, 0x33,
-	0x57, 0x5c, 0x55, 0xd2, 0xf1, 0x46, 0x94, 0x16, 0xd4, 0x73, 0x45, 0x94, 0x79, 0x13, 0xad, 0x35,
-	0x95, 0x16, 0xb1, 0xa0, 0x3b, 0x56, 0xee, 0x42, 0x99, 0x4b, 0xbe, 0xa3, 0x9b, 0xb8, 0x33, 0x3a,
-	0x18, 0xb2, 0x20, 0x0c, 0x38, 0xb9, 0x2e, 0xde, 0x91, 0xf1, 0xc7, 0xd2, 0x9f, 0xa9, 0xc0, 0xd8,
-	0xf7, 0xf8, 0x68, 0xc9, 0x9b, 0xea, 0xd4, 0x71, 0x7c, 0x28, 0xb5, 0x85, 0xe7, 0x52, 0x5b, 0x78,
-	0xe9, 0x03, 0xc8, 0x8d, 0xa9, 0xc1, 0x26, 0x18, 0x93, 0xc8, 0x46, 0x7f, 0xf1, 0x36, 0xac, 0xdc,
-	0x90, 0xeb, 0xc1, 0xa8, 0x84, 0xd5, 0xe2, 0xc3, 0xcc, 0x13, 0x64, 0xfd, 0x88, 0xc0, 0x4c, 0x56,
-	0x10, 0xfe, 0x08, 0x4a, 0x21, 0xa3, 0x37, 0x6e, 0x30, 0xe0, 0xfa, 0x13, 0x2c, 0x1f, 0x81, 0x28,
-	0xb8, 0x46, 0x35, 0x67, 0x17, 0x47, 0x1a, 0x5a, 0x78, 0xa2, 0x77, 0x80, 0x63, 0x0b, 0xd6, 0x43,
-	0x16, 0x04, 0xe7, 0x4e, 0x70, 0xee, 0x7c, 0x13, 0xb0, 0xab, 0xf8, 0xd2, 0xbc, 0xdc, 0xec, 0x9c,
-	0xbf, 0x08, 0xd8, 0x15, 0x7e, 0x1f, 0x36, 0x42, 0x46, 0xf5, 0x92, 0x36, 0xd2, 0x2b, 0x64, 0x3d,
-	0x64, 0x74, 0xb2, 0xb4, 0x7e, 0x45, 0x00, 0x1a, 0xd0, 0xe9, 0x00, 0xa3, 0x64, 0x80, 0x9f, 0x8c,
-	0x07, 0x1c, 0x95, 0x79, 0x95, 0x84, 0x75, 0xed, 0xef, 0xa2, 0x51, 0x67, 0xa6, 0x63, 0x4c, 0x25,
-	0x4e, 0x36, 0x91, 0x38, 0x96, 0x05, 0x66, 0xd2, 0x2e, 0x5e, 0x85, 0x4c, 0xbb, 0x63, 0xfe, 0x2f,
-	0xfa, 0xed, 0xb4, 0x4c, 0x64, 0xfd, 0x16, 0xd1, 0x9e, 0x1c, 0x59, 0x5e, 0x57, 0x7b, 0xfc, 0x04,
-	0xb6, 0x7a, 0xaa, 0xa5, 0x4d, 0x3d, 0x54, 0xaa, 0x06, 0x67, 0x22, 0x82, 0x63, 0x5d, 0xed, 0xe5,
-	0x7a, 0xf8, 0x31, 0x6c, 0x26, 0xea, 0x19, 0xff, 0x1f, 0xee, 0xb4, 0x9a, 0x5f, 0x34, 0x9e, 0xed,
-	0x1f, 0xb6, 0x95, 0xdf, 0x87, 0x4f, 0x4d, 0x84, 0x77, 0xa0, 0xd0, 0xe8, 0xb4, 0x4f, 0xec, 0xfd,
-	0xc6, 0x89, 0xd3, 0xb0, 0x9b, 0xfb, 0x27, 0x87, 0x9d, 0xb6, 0x99, 0x79, 0xd8, 0x82, 0xc2, 0xcc,
-	0xd8, 0x89, 0xf3, 0xb0, 0x76, 0xda, 0x6e, 0xb5, 0x3b, 0x2f, 0x22, 0x03, 0x9b, 0x90, 0x3f, 0x6c,
-	0x3b, 0xc7, 0x76, 0xe7, 0xc0, 0x6e, 0x76, 0xbb, 0x26, 0x8a, 0xa4, 0xdd, 0xd3, 0x46, 0x23, 0x5a,
-	0x64, 0xa2, 0xc5, 0x67, 0xfb, 0x87, 0x47, 0xa7, 0x76, 0xd3, 0x34, 0xea, 0x3f, 0x65, 0x01, 0xeb,
-	0xd6, 0x28, 0xbb, 0x71, 0x7b, 0x14, 0x9f, 0x02, 0x9e, 0xfd, 0x86, 0xc0, 0x6f, 0x48, 0xf7, 0xe6,
-	0x7e, 0x20, 0x95, 0xde, 0x9c, 0x2b, 0x8f, 0xfb, 0xfc, 0x97, 0xb0, 0x9d, 0x36, 0x64, 0xe3, 0xca,
-	0xe8, 0xe0, 0xbc, 0xaf, 0x82, 0xd2, 0x5b, 0x0b, 0x34, 0x62, 0xe3, 0x1d, 0x30, 0x93, 0x83, 0x24,
-	0x2e, 0xab, 0x26, 0x92, 0x3e, 0x3a, 0x97, 0xf6, 0xe6, 0x48, 0x63, 0x83, 0x47, 0xb0, 0x99, 0x18,
-	0xa8, 0xf0, 0x7d, 0x79, 0x22, 0x7d, 0x8a, 0x2c, 0x95, 0xd3, 0x85, 0xb1, 0xb5, 0xaf, 0x60, 0x27,
-	0x75, 0xca, 0xc0, 0xca, 0xb5, 0x45, 0x13, 0x55, 0xc9, 0x5a, 0xa4, 0x12, 0xdb, 0xe7, 0x50, 0x5e,
-	0xf4, 0xd6, 0xe2, 0xaa, 0xb4, 0xb1, 0xc4, 0xe4, 0x51, 0x7a, 0xb0, 0x84, 0xa6, 0xba, 0xf4, 0x6c,
-	0x55, 0x7e, 0x3c, 0x3f, 0xfe, 0x3b, 0x00, 0x00, 0xff, 0xff, 0x6f, 0x6e, 0x4f, 0x49, 0x51, 0x0f,
-	0x00, 0x00,
+var fileDescriptor_transaction_7f6439bdf7b91f11 = []byte{
+	// 1124 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x57, 0x4f, 0x6f, 0x1b, 0x45,
+	0x14, 0x67, 0xbc, 0x4e, 0x52, 0x3f, 0x93, 0x64, 0x3d, 0x49, 0x8a, 0xbb, 0x75, 0xc0, 0x2c, 0x1c,
+	0xdc, 0x22, 0x5c, 0xc9, 0x95, 0xa0, 0x42, 0x08, 0x11, 0x5c, 0x93, 0x46, 0x4e, 0xed, 0x68, 0xed,
+	0x50, 0x10, 0x12, 0xab, 0x89, 0x3d, 0x49, 0x96, 0x64, 0xff, 0x30, 0xb3, 0x0e, 0xf2, 0xe7, 0xe0,
+	0x88, 0xb8, 0x71, 0xe4, 0x4b, 0x80, 0x84, 0xc4, 0x01, 0x71, 0xe7, 0xc8, 0x8d, 0x8f, 0x81, 0x76,
+	0x66, 0x6d, 0x8f, 0xd7, 0xbb, 0x6e, 0x80, 0x54, 0x3d, 0xd9, 0x33, 0xef, 0xcd, 0x9b, 0xdf, 0xfb,
+	0xbd, 0x3f, 0xf3, 0x16, 0x4a, 0x21, 0x23, 0x1e, 0x27, 0x83, 0xd0, 0xf1, 0xbd, 0x7a, 0xc0, 0xfc,
+	0xd0, 0xc7, 0x1a, 0x09, 0x1c, 0xf3, 0x67, 0x04, 0x77, 0xf6, 0x69, 0x78, 0x48, 0x78, 0xd8, 0x9f,
+	0x69, 0x58, 0xf4, 0x9b, 0x11, 0xe5, 0x21, 0x7e, 0x00, 0x5b, 0xca, 0x39, 0x9b, 0x0c, 0x87, 0x8c,
+	0x72, 0x5e, 0x46, 0x55, 0x54, 0x2b, 0x58, 0x58, 0x11, 0xed, 0x49, 0x09, 0xae, 0x41, 0x3e, 0x1c,
+	0x07, 0xb4, 0x9c, 0xab, 0xa2, 0xda, 0x46, 0x63, 0xbb, 0x4e, 0x02, 0xa7, 0xae, 0xd8, 0xed, 0x8f,
+	0x03, 0x6a, 0x09, 0x0d, 0x5c, 0x81, 0x42, 0xe8, 0xb8, 0x94, 0x87, 0xc4, 0x0d, 0xca, 0x5a, 0x15,
+	0xd5, 0x34, 0x6b, 0xb6, 0x81, 0xdf, 0x81, 0x12, 0x77, 0xce, 0x3c, 0x12, 0x8e, 0x18, 0xb5, 0x99,
+	0x44, 0x53, 0xce, 0x8b, 0x6b, 0xf5, 0xa9, 0x20, 0x46, 0x69, 0xfe, 0x80, 0xc0, 0x48, 0xf3, 0x81,
+	0x07, 0xbe, 0xc7, 0x29, 0x6e, 0x40, 0x51, 0x41, 0x2a, 0xc0, 0x17, 0x1b, 0x7a, 0x12, 0x9a, 0xa5,
+	0x2a, 0xcd, 0xa3, 0xcb, 0x25, 0xd1, 0xbd, 0x0b, 0x58, 0x45, 0x27, 0xef, 0x11, 0x4e, 0x14, 0xac,
+	0x92, 0x02, 0x4f, 0x0a, 0xcc, 0xef, 0x10, 0xdc, 0xdd, 0xa7, 0x2a, 0xb6, 0x5e, 0x48, 0xc2, 0x11,
+	0x9f, 0xb0, 0x7c, 0x0f, 0x74, 0x95, 0xe5, 0x73, 0xc2, 0xcf, 0x63, 0x8a, 0x37, 0x95, 0xfd, 0x27,
+	0x84, 0x9f, 0x3f, 0x07, 0x57, 0x2a, 0x6b, 0x5a, 0x06, 0x6b, 0xdf, 0x23, 0xa8, 0xa4, 0xa3, 0x8a,
+	0x79, 0xab, 0xc3, 0x2a, 0x17, 0x3b, 0x02, 0xcc, 0x46, 0xe3, 0x76, 0x92, 0xb2, 0x58, 0x3f, 0xd6,
+	0xba, 0x59, 0xce, 0xfe, 0x44, 0xf0, 0x5a, 0x2f, 0xf4, 0x19, 0x4d, 0xc9, 0xca, 0x4f, 0xa0, 0xe4,
+	0x3a, 0x1e, 0x1d, 0xda, 0x8b, 0x61, 0xdd, 0x11, 0x18, 0x9f, 0x46, 0x52, 0xf5, 0xa0, 0xee, 0x26,
+	0x76, 0xa2, 0xcc, 0x76, 0x1d, 0xcf, 0x71, 0x47, 0xae, 0x7d, 0x45, 0x2e, 0x9d, 0x21, 0x89, 0x76,
+	0xb9, 0x80, 0xbd, 0x62, 0xe1, 0x58, 0xf4, 0xd9, 0x4c, 0x72, 0x93, 0xf9, 0x7a, 0x06, 0xe5, 0x45,
+	0xd7, 0x62, 0xd2, 0xe7, 0xae, 0x41, 0xd7, 0x23, 0x31, 0x97, 0x45, 0xe2, 0x5f, 0x08, 0x8c, 0xbe,
+	0xe3, 0xd2, 0x43, 0x7f, 0x70, 0x91, 0xc2, 0xe3, 0xbf, 0xc8, 0xbb, 0x32, 0xac, 0x4d, 0x8a, 0x5f,
+	0xde, 0x36, 0x59, 0xe2, 0x87, 0x70, 0xdb, 0x25, 0x3c, 0xa4, 0xcc, 0xf6, 0xfc, 0x21, 0xb5, 0x83,
+	0xd1, 0xc9, 0xa5, 0x33, 0xb0, 0x2f, 0xe8, 0x38, 0x8e, 0xed, 0x96, 0x94, 0x76, 0xfc, 0x21, 0x3d,
+	0x12, 0xb2, 0x36, 0x1d, 0xcf, 0x7b, 0x99, 0xbf, 0x16, 0x99, 0x2b, 0x19, 0x64, 0x7e, 0x0d, 0x77,
+	0x53, 0x5d, 0x7c, 0x11, 0x7c, 0xfe, 0x81, 0xa0, 0x72, 0x48, 0x89, 0x9a, 0x48, 0x4f, 0x1d, 0xcf,
+	0xf1, 0xce, 0x26, 0x8c, 0xfe, 0x97, 0x56, 0xf3, 0x32, 0x33, 0xf1, 0x12, 0x76, 0x33, 0xfc, 0x79,
+	0x11, 0xf4, 0xfd, 0x8d, 0xe0, 0xad, 0xa6, 0xef, 0x9d, 0x3a, 0xcc, 0x55, 0x6e, 0x9c, 0xb9, 0xf6,
+	0x7f, 0x58, 0x8c, 0x7a, 0x82, 0x4c, 0xc3, 0x19, 0x89, 0x02, 0xc9, 0xb4, 0x27, 0x08, 0xa9, 0x72,
+	0x99, 0xee, 0x26, 0x76, 0x6e, 0x92, 0xd8, 0x1f, 0x11, 0xbc, 0xbd, 0xdc, 0xd5, 0x98, 0xe0, 0x07,
+	0x00, 0x0a, 0x60, 0xe9, 0xea, 0xa6, 0x00, 0xac, 0x28, 0x2b, 0x2a, 0x37, 0xdb, 0x65, 0x4f, 0x60,
+	0xbd, 0x77, 0x4e, 0x18, 0x1d, 0xb6, 0xe9, 0xf8, 0x88, 0x38, 0x0c, 0x37, 0x60, 0x87, 0x7a, 0x03,
+	0x36, 0x0e, 0x42, 0x3a, 0xb4, 0x03, 0xe6, 0x5c, 0x91, 0x90, 0x8a, 0x62, 0x96, 0x7d, 0x61, 0x6b,
+	0x2a, 0x3c, 0x92, 0xb2, 0xa8, 0x98, 0x77, 0x01, 0x94, 0xaa, 0x97, 0xd1, 0x2f, 0x04, 0x93, 0x5a,
+	0x37, 0x7f, 0xd1, 0xa0, 0xa8, 0x76, 0x5e, 0xa5, 0x95, 0xa0, 0xf9, 0x56, 0x72, 0xfd, 0xe1, 0xa1,
+	0x0e, 0xf9, 0x21, 0x09, 0x49, 0x59, 0xab, 0x6a, 0xb5, 0x62, 0xc3, 0x48, 0x6a, 0xd6, 0x1f, 0x93,
+	0x90, 0xb4, 0xbc, 0x90, 0x8d, 0x2d, 0xa1, 0xf7, 0x9c, 0x7e, 0x33, 0xef, 0xc0, 0x4a, 0xc2, 0x81,
+	0xe8, 0xf0, 0x94, 0xb9, 0xf2, 0xaa, 0x94, 0x4e, 0x37, 0xa2, 0xb4, 0xa0, 0xae, 0x13, 0x46, 0x99,
+	0x37, 0xd3, 0x5a, 0x93, 0x69, 0x11, 0x0b, 0x7a, 0x53, 0xe5, 0x1e, 0x54, 0xb8, 0xe0, 0x3b, 0xba,
+	0x89, 0xdb, 0x93, 0x83, 0x01, 0xf3, 0x03, 0x9f, 0x93, 0xcb, 0xf2, 0x2d, 0x11, 0x7f, 0x2c, 0xfc,
+	0x99, 0x0b, 0x8c, 0x75, 0x87, 0x4f, 0x96, 0xbc, 0x25, 0x4f, 0x1d, 0xc5, 0x87, 0x52, 0xdb, 0x78,
+	0x21, 0xb5, 0x8d, 0x1b, 0xef, 0x43, 0x61, 0x4a, 0x0d, 0xd6, 0x41, 0x9b, 0x45, 0x36, 0xfa, 0x8b,
+	0xb7, 0x61, 0xe5, 0x8a, 0x5c, 0x8e, 0x26, 0x25, 0x2c, 0x17, 0x1f, 0xe4, 0x1e, 0x21, 0xf3, 0x27,
+	0x04, 0x7a, 0xb2, 0x82, 0xf0, 0x87, 0x60, 0x04, 0x8c, 0x5e, 0x39, 0xfe, 0x88, 0xab, 0x4f, 0xb1,
+	0x78, 0x08, 0xa2, 0xe0, 0x6a, 0xb5, 0x82, 0x55, 0x9e, 0x68, 0x28, 0xe1, 0x89, 0xde, 0x02, 0x8e,
+	0x4d, 0x58, 0x0f, 0x98, 0xef, 0x9f, 0xda, 0xfe, 0xa9, 0xfd, 0xad, 0xcf, 0x2e, 0xe2, 0x4b, 0x8b,
+	0x62, 0xb3, 0x7b, 0xfa, 0xcc, 0x67, 0x17, 0xf8, 0x3d, 0xd8, 0x08, 0x18, 0x55, 0x4b, 0x5a, 0x4b,
+	0xaf, 0x90, 0xf5, 0x80, 0xd1, 0xd9, 0xd2, 0xfc, 0x15, 0x01, 0x28, 0x40, 0xe7, 0x03, 0x8c, 0x92,
+	0x01, 0x7e, 0x34, 0x1d, 0x74, 0x64, 0xe6, 0x55, 0x13, 0xd6, 0x95, 0xbf, 0xcb, 0x46, 0x9e, 0x85,
+	0x8e, 0x31, 0x97, 0x38, 0xf9, 0x44, 0xe2, 0x98, 0x26, 0xe8, 0x49, 0xbb, 0x78, 0x15, 0x72, 0x9d,
+	0xae, 0xfe, 0x4a, 0xf4, 0xdb, 0x6d, 0xeb, 0xc8, 0xfc, 0x3d, 0xa2, 0x3d, 0x39, 0xba, 0xbc, 0xac,
+	0xf6, 0xf8, 0x31, 0x6c, 0x0d, 0x64, 0x4b, 0x9b, 0x7b, 0xa8, 0x64, 0x0d, 0x2e, 0x44, 0x04, 0xc7,
+	0xba, 0xca, 0xcb, 0x75, 0xff, 0x23, 0xd8, 0x4c, 0xd4, 0x33, 0x7e, 0x15, 0x6e, 0xb5, 0x5b, 0x5f,
+	0x34, 0x9f, 0xec, 0x1d, 0x74, 0xa4, 0xdf, 0x07, 0x8f, 0x75, 0x84, 0x77, 0xa0, 0xd4, 0xec, 0x76,
+	0xfa, 0xd6, 0x5e, 0xb3, 0x6f, 0x37, 0xad, 0xd6, 0x5e, 0xff, 0xa0, 0xdb, 0xd1, 0x73, 0xf7, 0xdb,
+	0x50, 0x5a, 0x18, 0x3f, 0x71, 0x11, 0xd6, 0x8e, 0x3b, 0xed, 0x4e, 0xf7, 0x59, 0x64, 0x60, 0x13,
+	0x8a, 0x07, 0x1d, 0xfb, 0xc8, 0xea, 0xee, 0x5b, 0xad, 0x5e, 0x4f, 0x47, 0x91, 0xb4, 0x77, 0xdc,
+	0x6c, 0x46, 0x8b, 0x5c, 0xb4, 0xf8, 0x74, 0xef, 0xe0, 0xf0, 0xd8, 0x6a, 0xe9, 0x5a, 0xe3, 0xb7,
+	0x3c, 0x60, 0xd5, 0x1a, 0x65, 0x57, 0xce, 0x80, 0xe2, 0x63, 0xc0, 0x8b, 0xdf, 0x12, 0xf8, 0x75,
+	0xe1, 0x5e, 0xe6, 0x87, 0x92, 0xf1, 0x46, 0xa6, 0x3c, 0xee, 0xf3, 0x5f, 0xc2, 0x76, 0xda, 0xb0,
+	0x8d, 0xab, 0x93, 0x83, 0x59, 0x5f, 0x07, 0xc6, 0x9b, 0x4b, 0x34, 0x62, 0xe3, 0x5d, 0xd0, 0x93,
+	0x03, 0x25, 0xae, 0xc8, 0x26, 0x92, 0x3e, 0x42, 0x1b, 0xbb, 0x19, 0xd2, 0xd8, 0xe0, 0xe7, 0xb0,
+	0x95, 0x32, 0x54, 0x61, 0xe9, 0x65, 0xf6, 0x44, 0x69, 0x54, 0xb3, 0x15, 0x62, 0xcb, 0x5f, 0xc1,
+	0x4e, 0xea, 0xc4, 0x81, 0xa5, 0x9b, 0xcb, 0xa6, 0x2b, 0xc3, 0x5c, 0xa6, 0x12, 0xdb, 0xe7, 0x50,
+	0x59, 0xf6, 0xee, 0xe2, 0x9a, 0xb0, 0x71, 0x8d, 0x29, 0xc4, 0xb8, 0x77, 0x0d, 0x4d, 0x79, 0xe9,
+	0xc9, 0xaa, 0xf8, 0xa0, 0x7e, 0xf8, 0x4f, 0x00, 0x00, 0x00, 0xff, 0xff, 0xb6, 0xea, 0x90, 0xf2,
+	0x65, 0x0f, 0x00, 0x00,
 }
