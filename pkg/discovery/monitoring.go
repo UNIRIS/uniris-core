@@ -20,7 +20,7 @@ var ErrGRPCServer = errors.New("GRPC servers are not running")
 var ErrGeoPosition = errors.New("geographic position cannot be found")
 
 //BootstrapingMinTime is the necessary minimum time on seconds to finish learning about the network
-const BootstrapingMinTime = 1800
+var BootstrapingMinTime int64 = 1800
 
 //NetworkChecker is the interface that provides methods to get the peer network monrmation
 type NetworkChecker interface {
@@ -97,27 +97,27 @@ func systemInfo(sr SystemReader) (lon float64, lat float64, ip net.IP, cpu strin
 func localStatus(p Peer, seedAvgDiscovery int, nv NetworkChecker) (PeerStatus, error) {
 	if err := nv.CheckInternetState(); err != nil {
 		fmt.Printf("networking error: %s\n", err.Error())
-		newtimerState()
+		refreshtimerState()
 		return FaultyPeer, nil
 	}
 
 	if err := nv.CheckNtpState(); err != nil {
 		if err == ErrNTPShift || err == ErrNTPFailure {
 			fmt.Printf("networking error: %s\n", err.Error())
-			newtimerState()
+			refreshtimerState()
 			return FaultyPeer, nil
 		}
-		newtimerState()
+		refreshtimerState()
 		return FaultyPeer, err
 	}
 
 	if err := nv.CheckGRPCServer(); err != nil {
 		if err == ErrGRPCServer {
 			fmt.Printf("networking error: %s\n", err.Error())
-			newtimerState()
+			refreshtimerState()
 			return FaultyPeer, nil
 		}
-		newtimerState()
+		refreshtimerState()
 		return FaultyPeer, err
 	}
 
@@ -125,7 +125,7 @@ func localStatus(p Peer, seedAvgDiscovery int, nv NetworkChecker) (PeerStatus, e
 		return BootstrapingPeer, nil
 	}
 
-	if isEnabledtimerState() {
+	if !checktimerState() {
 		return BootstrapingPeer, nil
 	}
 
