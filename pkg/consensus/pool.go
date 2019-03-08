@@ -25,7 +25,7 @@ type PoolRequester interface {
 //TODO: To implement with AI algorithms
 func FindMasterNodes(txHash string) (Pool, error) {
 	return Pool{
-		PoolMember{
+		Node{
 			ip:   net.ParseIP("127.0.0.1"),
 			port: 5000,
 		},
@@ -36,7 +36,7 @@ func FindMasterNodes(txHash string) (Pool, error) {
 //TODO: Implements AI lookups to identify the right storage pool
 func FindStoragePool(address string) (Pool, error) {
 	return Pool{
-		PoolMember{
+		Node{
 			ip:   net.ParseIP("127.0.0.1"),
 			port: 5000,
 		},
@@ -47,7 +47,7 @@ func FindStoragePool(address string) (Pool, error) {
 //TODO: Implements AI lookups to identify the right validation pool
 func FindValidationPool(tx chain.Transaction) (Pool, error) {
 	return Pool{
-		PoolMember{
+		Node{
 			ip:   net.ParseIP("127.0.0.1"),
 			port: 5000,
 		},
@@ -55,26 +55,4 @@ func FindValidationPool(tx chain.Transaction) (Pool, error) {
 }
 
 //Pool represent a pool either for sharding or validation
-type Pool []PoolMember
-
-//PoolMember represent a node member of a pool
-type PoolMember struct {
-	ip   net.IP
-	port int
-	pubK string
-}
-
-//IP returns the pool member IP addres
-func (pm PoolMember) IP() net.IP {
-	return pm.ip
-}
-
-//Port returns the pool member port
-func (pm PoolMember) Port() int {
-	return pm.port
-}
-
-//PublicKey returns the pool member public key
-func (pm PoolMember) PublicKey() string {
-	return pm.pubK
-}
+type Pool []Node

@@ -251,7 +251,7 @@ func TestAddUnreachable(t *testing.T) {
 
 	assert.Len(t, db.unreachablePeers, 1)
 	assert.Equal(t, "key", db.unreachablePeers[0].publicKey)
-	assert.Equal(t, "key", notif.unreaches[0].publicKey)
+	assert.Equal(t, "key", notif.unreaches[0])
 
 }
 
@@ -272,7 +272,7 @@ func TestAddReachable(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
 	}, db, notif)
 	assert.Nil(t, err)
-	assert.Equal(t, "key", notif.reaches[0].publicKey)
+	assert.Equal(t, "key", notif.reaches[0])
 }
 
 /*
@@ -481,17 +481,17 @@ func (db *mockDatabase) containsPeer(p Peer) bool {
 }
 
 type mockNotifier struct {
-	reaches     []PeerIdentity
-	unreaches   []PeerIdentity
+	reaches     []string
+	unreaches   []string
 	discoveries []Peer
 }
 
-func (n *mockNotifier) NotifyReachable(p PeerIdentity) error {
-	n.reaches = append(n.reaches, p)
+func (n *mockNotifier) NotifyReachable(pk string) error {
+	n.reaches = append(n.reaches, pk)
 	return nil
 }
-func (n *mockNotifier) NotifyUnreachable(p PeerIdentity) error {
-	n.unreaches = append(n.unreaches, p)
+func (n *mockNotifier) NotifyUnreachable(pk string) error {
+	n.unreaches = append(n.unreaches, pk)
 	return nil
 }
 

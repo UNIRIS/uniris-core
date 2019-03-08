@@ -11,17 +11,20 @@ type DiscoveryNotifier struct {
 	discovery.Notifier
 }
 
+//NotifyDiscovery notifies the peer's which has been discovered
 func (n DiscoveryNotifier) NotifyDiscovery(p discovery.Peer) error {
 	log.Printf("New peer discovered %s", p.String())
 	return nil
 }
 
-func (n DiscoveryNotifier) NotifyReachable(p discovery.PeerIdentity) error {
-	log.Printf("Peer reached %s", p.Endpoint())
+//NotifyReachable notifies the peer's public key which became reachable
+func (n DiscoveryNotifier) NotifyReachable(pk string) error {
+	log.Printf("Peer reached %s", pk)
 	return nil
 }
 
-func (n DiscoveryNotifier) NotifyUnreachable(p discovery.PeerIdentity) error {
-	log.Printf("Peer unreached %s", p.Endpoint())
+//NotifyUnreachable notifies the peer's public key which became unreachable
+func (n DiscoveryNotifier) NotifyUnreachable(pk string) error {
+	log.Printf("Peer unreached %s", pk)
 	return nil
 }

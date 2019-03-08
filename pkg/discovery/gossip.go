@@ -42,8 +42,14 @@ type dbRemover interface {
 
 //Notifier handle the notification of the gossip events
 type Notifier interface {
-	NotifyReachable(PeerIdentity) error
-	NotifyUnreachable(PeerIdentity) error
+
+	//NotifyReachable notifies the peer's public key which became reachable
+	NotifyReachable(publicKey string) error
+
+	//NotifyUnreachable notifies the peer's public key which became unreachable
+	NotifyUnreachable(publicKey string) error
+
+	//NotifyDiscovery notifies the peer's which has been discovered
 	NotifyDiscovery(Peer) error
 }
 
@@ -229,7 +235,7 @@ func addReaches(cReaches []PeerIdentity, unreaches []PeerIdentity, db dbRemover,
 			if err := db.RemoveUnreachablePeer(p); err != nil {
 				return err
 			}
-			if err := n.NotifyReachable(p); err != nil {
+			if err := n.NotifyReachable(p.publicKey); err != nil {
 				return err
 			}
 		}
@@ -244,7 +250,7 @@ func addUnreaches(cUnreachables []PeerIdentity, unreaches []PeerIdentity, db dbW
 			if err := db.WriteUnreachablePeer(p); err != nil {
 				return err
 			}
-			if err := n.NotifyUnreachable(p); err != nil {
+			if err := n.NotifyUnreachable(p.publicKey); err != nil {
 				return err
 			}
 		}

@@ -186,17 +186,17 @@ func (db mockDiscoveryDB) ContainsUnreachablePeer(peerPubK discovery.PeerIdentit
 }
 
 type mockDiscoveryNotifier struct {
-	reaches     []discovery.PeerIdentity
-	unreaches   []discovery.PeerIdentity
+	reaches     []string
+	unreaches   []string
 	discoveries []discovery.Peer
 }
 
-func (n *mockDiscoveryNotifier) NotifyReachable(p discovery.PeerIdentity) error {
-	n.reaches = append(n.reaches, p)
+func (n *mockDiscoveryNotifier) NotifyReachable(pk string) error {
+	n.reaches = append(n.reaches, pk)
 	return nil
 }
-func (n *mockDiscoveryNotifier) NotifyUnreachable(p discovery.PeerIdentity) error {
-	n.unreaches = append(n.unreaches, p)
+func (n *mockDiscoveryNotifier) NotifyUnreachable(pk string) error {
+	n.unreaches = append(n.unreaches, pk)
 	return nil
 }
 

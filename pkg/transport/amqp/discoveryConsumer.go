@@ -1,14 +1,18 @@
 package amqp
 
 import (
+	"encoding/json"
 	"fmt"
+	"net"
+
+	"github.com/uniris/uniris-core/pkg/consensus"
 
 	"github.com/streadway/amqp"
 )
 
 //ConsumeDiscoveryNotifications intercepts the RabbitMQ discovery notifications and store them into a specific database
 //These data will be used by the consensus layer to identify peers and pools
-func ConsumeDiscoveryNotifications(host string, user string, pwd string, port int) error {
+func ConsumeDiscoveryNotifications(host string, user string, pwd string, port int, w consensus.NodeWriter) error {
 	amqpURI := fmt.Sprintf("amqp://%s:%s@%s:%d", user, pwd, host, port)
 
 	conn, err := amqp.Dial(amqpURI)
@@ -23,37 +27,37 @@ func ConsumeDiscoveryNotifications(host string, user string, pwd string, port in
 		return err
 	}
 
-	for err := range consumeQueues(ch) {
+	for err := range consumeQueues(ch, w) {
 		fmt.Println(err)
 	}
 
 	return nil
 }
 
-type consumeFuncHandler func(data []byte) error
+type consumeFuncHandler func(w consensus.NodeWriter, data []byte) error
 
-func consumeQueues(ch *amqp.Channel) (errChan chan error) {
+func consumeQueues(ch *amqp.Channel, w consensus.NodeWriter) (errChan chan error) {
 	go func() {
-		if err := consumeQueue(ch, queueNameDiscoveries, consumeDiscoveryHandler); err != nil {
+		if err := consumeQueue(ch, queueNameDiscoveries, consumeDiscoveryHandler, w); err != nil {
 			errChan <- err
 		}
 	}()
 
 	go func() {
-		if err := consumeQueue(ch, queueNameReachable, consumeReachableHandler); err != nil {
+		if err := consumeQueue(ch, queueNameReachable, consumeReachableHandler, w); err != nil {
 			errChan <- err
 		}
 	}()
 
 	go func() {
-		if err := consumeQueue(ch, queueNameUnreachable, consumeUnreachableHandler); err != nil {
+		if err := consumeQueue(ch, queueNameUnreachable, consumeUnreachableHandler, w); err != nil {
 			errChan <- err
 		}
 	}()
 	return
 }
 
-func consumeQueue(ch *amqp.Channel, queueName string, h consumeFuncHandler) error {
+func consumeQueue(ch *amqp.Channel, queueName string, h consumeFuncHandler, w consensus.NodeWriter) error {
 	q, err := ch.QueueDeclare(
 		queueName, // name
 		true,      // durable
@@ -82,7 +86,7 @@ func consumeQueue(ch *amqp.Channel, queueName string, h consumeFuncHandler) erro
 	forever := make(chan bool)
 	go func() {
 		for msg := range msgs {
-			h(msg.Body)
+			h(w, msg.Body)
 		}
 	}()
 
@@ -91,29 +95,34 @@ func consumeQueue(ch *amqp.Channel, queueName string, h consumeFuncHandler) erro
 	return nil
 }
 
-func consumeDiscoveryHandler(data []byte) error {
-	p, err := unmarshalPeer(data)
-	if err != nil {
+func consumeDiscoveryHandler(w consensus.NodeWriter, data []byte) error {
+	var n node
+	if err := json.Unmarshal(data, &n); err != nil {
 		return err
 	}
-	fmt.Printf("Discovered peer: %s\n", p)
+
+	patch := consensus.ComputeGeoPatch(n.AppState.GeoPosition.Latitude, n.AppState.GeoPosition.Longitude)
+	if err := w.WriteDiscoveredNode(
+		consensus.NewNode(net.ParseIP(n.Identity.IP), n.Identity.Port, n.Identity.PublicKey, consensus.NodeStatus(n.AppState.Status), n.AppState.CPULoad, n.AppState.FreeDiskSpace,
+			n.AppState.Version, n.AppState.P2PFactor, n.AppState.ReachablePeersNumber, patch, true)); err != nil {
+		return err
+	}
+	fmt.Printf("Discovered node stored: %s\n", n.Identity.PublicKey)
 	return nil
 }
 
-func consumeReachableHandler(data []byte) error {
-	p, err := unmarshalPeerIdentity(data)
-	if err != nil {
-		return err
+func consumeReachableHandler(w consensus.NodeWriter, publicKey []byte) error {
+	if err := w.WriteReachableNode(string(publicKey)); err != nil {
+
 	}
-	fmt.Printf("Reachable peer: %s\n", p.Endpoint())
+	fmt.Printf("Node %s stored as reachable\n", publicKey)
 	return nil
 }
 
-func consumeUnreachableHandler(data []byte) error {
-	p, err := unmarshalPeerIdentity(data)
-	if err != nil {
+func consumeUnreachableHandler(w consensus.NodeWriter, publicKey []byte) error {
+	if err := w.WriteUnreachableNode(string(publicKey)); err != nil {
 		return err
 	}
-	fmt.Printf("Unreachable peer: %s\n", p.Endpoint())
+	fmt.Printf("Node %s stored as unreachable\n", publicKey)
 	return nil
 }

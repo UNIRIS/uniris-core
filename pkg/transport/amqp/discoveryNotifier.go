@@ -25,28 +25,22 @@ type notifier struct {
 }
 
 func (n notifier) NotifyDiscovery(p discovery.Peer) error {
-	b, err := marshalDiscoveredPeer(p)
+	b, err := marshalNode(p)
 	if err != nil {
 		return err
 	}
+	fmt.Printf("Discovered peer: %s\n", p)
 	return n.notifyQueue(b, "application/json", queueNameDiscoveries)
 }
 
-func (n notifier) NotifyReachable(p discovery.PeerIdentity) error {
-	b, err := marshalPeerIdentity(p)
-	if err != nil {
-		return err
-	}
-	return n.notifyQueue(b, "application/json", queueNameReachable)
+func (n notifier) NotifyReachable(publicKey string) error {
+	fmt.Printf("Reachable peer: %s\n", publicKey)
+	return n.notifyQueue([]byte(publicKey), "text/plain", queueNameReachable)
 }
 
-func (n notifier) NotifyUnreachable(p discovery.PeerIdentity) error {
-	b, err := marshalPeerIdentity(p)
-	if err != nil {
-		return err
-	}
-
-	return n.notifyQueue(b, "application/json", queueNameUnreachable)
+func (n notifier) NotifyUnreachable(publicKey string) error {
+	fmt.Printf("Unreachable peer: %s\n", publicKey)
+	return n.notifyQueue([]byte(publicKey), "text/plain", queueNameUnreachable)
 }
 
 func (n notifier) notifyQueue(data []byte, contentType string, queueName string) error {

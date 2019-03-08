@@ -243,11 +243,13 @@ func startGRPCServer(conf unirisConf, techDB shared.TechDatabaseReader) {
 		discoveryDB = memstorage.NewDiscoveryDatabase()
 	}
 
+	nodeDB := &memstorage.NodeDatabase{}
+
 	var notif discovery.Notifier
 	if conf.bus.busType == "amqp" {
 		notif = amqp.NewDiscoveryNotifier(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port)
 		go func() {
-			if err := amqp.ConsumeDiscoveryNotifications(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port); err != nil {
+			if err := amqp.ConsumeDiscoveryNotifications(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port, nodeDB); err != nil {
 				panic(err)
 			}
 		}()

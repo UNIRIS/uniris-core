@@ -59,7 +59,7 @@ func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr strin
 	txRes := make([]chain.Transaction, 0)
 
 	for _, p := range pool {
-		go func(p consensus.PoolMember) {
+		go func(p consensus.Node) {
 			defer wg.Done()
 
 			serverAddr := fmt.Sprintf("%s:%d", p.IP(), p.Port())
@@ -142,7 +142,7 @@ func (pr poolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash s
 	req.SignatureRequest = sig
 
 	for _, p := range pool {
-		go func(p consensus.PoolMember) {
+		go func(p consensus.Node) {
 			defer wg.Done()
 
 			serverAddr := fmt.Sprintf("%s:%d", p.IP(), p.Port())
@@ -219,7 +219,7 @@ func (pr poolRequester) RequestTransactionValidations(pool consensus.Pool, tx ch
 
 	for _, p := range pool {
 
-		go func(p consensus.PoolMember) {
+		go func(p consensus.Node) {
 			defer wg.Done()
 
 			serverAddr := fmt.Sprintf("%s:%d", p.IP().String(), p.Port())
@@ -302,7 +302,7 @@ func (pr poolRequester) RequestTransactionStorage(pool consensus.Pool, minStorag
 	wg.Add(minStorage)
 
 	for _, p := range pool {
-		go func(p consensus.PoolMember) {
+		go func(p consensus.Node) {
 
 			defer wg.Done()
 
