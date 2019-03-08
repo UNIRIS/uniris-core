@@ -113,7 +113,7 @@ func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr strin
 	return &txRes[0], nil
 }
 
-func (pr poolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash string, txAddress string, masterPublicKey string, end time.Time) error {
+func (pr poolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash string, txAddress string, masterPublicKey string) error {
 
 	lastKeys, err := pr.techDB.NodeLastKeys()
 	if err != nil {
@@ -129,7 +129,6 @@ func (pr poolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash s
 		Address:             txAddress,
 		TransactionHash:     txHash,
 		MasterNodePublicKey: masterPublicKey,
-		EndTime:             end.Unix(),
 		Timestamp:           time.Now().Unix(),
 	}
 	reqBytes, err := json.Marshal(req)

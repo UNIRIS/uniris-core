@@ -9,6 +9,8 @@ import (
 	"github.com/uniris/uniris-core/pkg/crypto"
 )
 
+var timeLockCountdown time.Duration = 1 * time.Minute
+
 type timeLocker struct {
 	txHash          string
 	txAddress       string
@@ -23,7 +25,7 @@ var timerLockMux = &sync.Mutex{}
 //TimeLockTransaction write a timelock.
 //if a lock exists already an error is returned
 //the timelock will be removed when the countdown is reached
-func TimeLockTransaction(txHash string, txAddr string, masterPubk string, end time.Time) error {
+func TimeLockTransaction(txHash string, txAddr string, masterPubk string) error {
 	if _, err := crypto.IsHash(txHash); err != nil {
 		return fmt.Errorf("lock transaction hash: %s", err.Error())
 	}
@@ -41,6 +43,7 @@ func TimeLockTransaction(txHash string, txAddr string, masterPubk string, end ti
 	}
 
 	ticker := time.NewTicker(1 * time.Second)
+	end := time.Now().Add(timeLockCountdown)
 	tLocker := timeLocker{
 		txAddress:       txAddr,
 		txHash:          txHash,

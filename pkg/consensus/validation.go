@@ -14,8 +14,6 @@ import (
 	"github.com/uniris/uniris-core/pkg/crypto"
 )
 
-const timeLockDuration time.Duration = 5 * time.Second
-
 //LeadMining lead the mining workflow
 //
 //The workflow includes:
@@ -37,7 +35,7 @@ func LeadMining(tx chain.Transaction, minValids int, poolR PoolRequester, pub, p
 		return err
 	}
 
-	if err := poolR.RequestTransactionTimeLock(sPool, tx.TransactionHash(), tx.Address(), pub, time.Now().Add(timeLockDuration)); err != nil {
+	if err := poolR.RequestTransactionTimeLock(sPool, tx.TransactionHash(), tx.Address(), pub); err != nil {
 		return fmt.Errorf("transaction lock failed: %s", err.Error())
 	}
 

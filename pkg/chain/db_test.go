@@ -141,7 +141,7 @@ Scenario: Get transaction status in progress
 */
 func TestGetTransactionStatusInProgress(t *testing.T) {
 	pub, _ := crypto.GenerateKeys()
-	TimeLockTransaction(crypto.HashString("hash"), crypto.HashString("addr"), pub, time.Now())
+	TimeLockTransaction(crypto.HashString("hash"), crypto.HashString("addr"), pub)
 	status, err := GetTransactionStatus(nil, crypto.HashString("hash"))
 	assert.Nil(t, err)
 	assert.Equal(t, TransactionStatusInProgress, status)
