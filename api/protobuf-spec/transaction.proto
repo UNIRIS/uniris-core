@@ -52,9 +52,8 @@ message TimeLockTransactionRequest {
     string transaction_hash = 1;
     string address = 2;
     string master_node_public_key = 3;
-    int64 end_time = 4;
-    int64 timestamp = 5;
-    string signature_request = 6;
+    int64 timestamp = 4;
+    string signature_request = 5;
 }
 
 message TimeLockTransactionResponse {

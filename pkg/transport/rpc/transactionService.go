@@ -171,7 +171,6 @@ func (s txSrv) TimeLockTransaction(ctx context.Context, req *api.TimeLockTransac
 		TransactionHash:     req.TransactionHash,
 		Address:             req.Address,
 		MasterNodePublicKey: req.MasterNodePublicKey,
-		EndTime:             req.EndTime,
 		Timestamp:           req.Timestamp,
 	})
 	nodeLastKeys, err := s.techDB.NodeLastKeys()
@@ -182,8 +181,7 @@ func (s txSrv) TimeLockTransaction(ctx context.Context, req *api.TimeLockTransac
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	endTimer := time.Unix(req.EndTime, 0)
-	if err := chain.TimeLockTransaction(req.TransactionHash, req.Address, req.MasterNodePublicKey, endTimer); err != nil {
+	if err := chain.TimeLockTransaction(req.TransactionHash, req.Address, req.MasterNodePublicKey); err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 

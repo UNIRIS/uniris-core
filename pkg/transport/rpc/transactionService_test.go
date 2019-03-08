@@ -450,7 +450,7 @@ func (pr mockPoolRequester) RequestLastTransaction(pool consensus.Pool, txAddr s
 	return nil, nil
 }
 
-func (pr mockPoolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash string, txAddr string, masterPublicKey string, end time.Time) error {
+func (pr mockPoolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash string, txAddr string, masterPublicKey string) error {
 	return nil
 }
 

@@ -17,7 +17,7 @@ Scenario: Create transaction timelock
 func TestStoreTimeLock(t *testing.T) {
 	pub, _ := crypto.GenerateKeys()
 
-	assert.Nil(t, TimeLockTransaction(crypto.HashString("hash1"), crypto.HashString("addr1"), pub, time.Now().Add(2*time.Second)))
+	assert.Nil(t, TimeLockTransaction(crypto.HashString("hash1"), crypto.HashString("addr1"), pub))
 	assert.Len(t, timeLockers, 1)
 	assert.Equal(t, crypto.HashString("hash1"), timeLockers[0].txHash)
 	assert.Equal(t, crypto.HashString("addr1"), timeLockers[0].txAddress)
@@ -31,8 +31,8 @@ Scenario: Create two timelock identicals
 */
 func TestCreatedExistingLock(t *testing.T) {
 	pub, _ := crypto.GenerateKeys()
-	assert.Nil(t, TimeLockTransaction(crypto.HashString("hash2"), crypto.HashString("addr2"), pub, time.Now().Add(2*time.Second)))
-	assert.EqualError(t, TimeLockTransaction(crypto.HashString("hash2"), crypto.HashString("addr2"), pub, time.Now().Add(2*time.Second)), "a lock already exist for this transaction")
+	assert.Nil(t, TimeLockTransaction(crypto.HashString("hash2"), crypto.HashString("addr2"), pub))
+	assert.EqualError(t, TimeLockTransaction(crypto.HashString("hash2"), crypto.HashString("addr2"), pub), "a lock already exist for this transaction")
 }
 
 /*
@@ -43,7 +43,7 @@ Scenario: Remove a timelock
 */
 func TestRemoveLock(t *testing.T) {
 	pub, _ := crypto.GenerateKeys()
-	TimeLockTransaction(crypto.HashString("hash3"), crypto.HashString("addr3"), pub, time.Now().Add(10*time.Second))
+	TimeLockTransaction(crypto.HashString("hash3"), crypto.HashString("addr3"), pub)
 	removeTimeLock(crypto.HashString("hash3"), crypto.HashString("addr3"))
 
 	_, found, _ := findTimelock(crypto.HashString("hash3"), crypto.HashString("addr3"))
@@ -57,8 +57,9 @@ Scenario: Remove a timelock after countdown
 	Then the timelock is removed
 */
 func TestRemoveLockAfterCountdown(t *testing.T) {
+	timeLockCountdown = 1 * time.Second
 	pub, _ := crypto.GenerateKeys()
-	TimeLockTransaction(crypto.HashString("hash4"), crypto.HashString("addr4"), pub, time.Now().Add(1*time.Second))
+	TimeLockTransaction(crypto.HashString("hash4"), crypto.HashString("addr4"), pub)
 	time.Sleep(2 * time.Second)
 	_, found, _ := findTimelock(crypto.HashString("hash4"), crypto.HashString("addr4"))
 	assert.False(t, found)

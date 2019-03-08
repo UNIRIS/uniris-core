@@ -2,7 +2,6 @@ package consensus
 
 import (
 	"net"
-	"time"
 
 	"github.com/uniris/uniris-core/pkg/chain"
 )
@@ -10,7 +9,7 @@ import (
 //PoolRequester handles the request to perform on a pool during the mining
 type PoolRequester interface {
 	//RequestTransactionTimeLock asks a pool to timelock a transaction using the address related
-	RequestTransactionTimeLock(pool Pool, txHash string, txAddr string, masterPublicKey string, end time.Time) error
+	RequestTransactionTimeLock(pool Pool, txHash string, txAddr string, masterPublicKey string) error
 
 	//RequestTransactionValidations asks a pool to validation a transaction
 	RequestTransactionValidations(pool Pool, tx chain.Transaction, minValid int, masterValid chain.MasterValidation) ([]chain.Validation, error)
