@@ -43,14 +43,14 @@ func TestPeerStatusWithNotInternet(t *testing.T) {
 Scenario: Gets peer status when no NTP synchro
 	Given a peer without NTP synchro
 	When we checks its status
-	Then we get a storage only status
+	Then we get a faulty status
 */
 func TestPeerStatusWithBadNTP(t *testing.T) {
 	p := NewPeerDigest(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
 	status, _ := localStatus(p, 1, mockFailNTPNetworker{})
-	assert.Equal(t, StorageOnlyPeer, status)
+	assert.Equal(t, FaultyPeer, status)
 }
 
 /*

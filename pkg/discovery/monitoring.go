@@ -97,26 +97,35 @@ func systemInfo(sr SystemReader) (lon float64, lat float64, ip net.IP, cpu strin
 func localStatus(p Peer, seedAvgDiscovery int, nv NetworkChecker) (PeerStatus, error) {
 	if err := nv.CheckInternetState(); err != nil {
 		fmt.Printf("networking error: %s\n", err.Error())
+		newtimerState()
 		return FaultyPeer, nil
 	}
 
 	if err := nv.CheckNtpState(); err != nil {
 		if err == ErrNTPShift || err == ErrNTPFailure {
 			fmt.Printf("networking error: %s\n", err.Error())
-			return StorageOnlyPeer, nil
+			newtimerState()
+			return FaultyPeer, nil
 		}
+		newtimerState()
 		return FaultyPeer, err
 	}
 
 	if err := nv.CheckGRPCServer(); err != nil {
 		if err == ErrGRPCServer {
 			fmt.Printf("networking error: %s\n", err.Error())
+			newtimerState()
 			return FaultyPeer, nil
 		}
+		newtimerState()
 		return FaultyPeer, err
 	}
 
 	if seedAvgDiscovery == 0 {
+		return BootstrapingPeer, nil
+	}
+
+	if isEnabledtimerState() {
 		return BootstrapingPeer, nil
 	}
 
