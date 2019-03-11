@@ -641,10 +641,10 @@ func TestCheckMasterValidation(t *testing.T) {
 	txHash := crypto.Hash(txBytes)
 	tx.hash = txHash
 
-	wHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
-	vHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
-	sHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
-	masterValid, _ := NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
+	wHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	vHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	masterValid, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 	tx.masterV = masterValid
 
 	assert.Nil(t, tx.CheckMasterValidation())
@@ -659,7 +659,6 @@ Scenario: Check master validation with invalid POW
 func TestCheckMasterValidationWithInvalidPOW(t *testing.T) {
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
-	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	v := Validation{
 		nodePubk:  pub,
@@ -686,10 +685,10 @@ func TestCheckMasterValidationWithInvalidPOW(t *testing.T) {
 	sigTx, _ := pv.Sign(raw)
 	hash := crypto.Hash(raw)
 
-	wHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
-	vHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
-	sHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
-	masterValid, _ := NewMasterValidation([]string{}, pub2, v, wHeaders, vHeaders, sHeaders)
+	wHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	vHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	masterValid, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 	tx := Transaction{
 		masterV: masterValid,
 		addr:    crypto.Hash([]byte("addr")),
@@ -815,8 +814,7 @@ func TestNewTransactionMasterValidation(t *testing.T) {
 	wHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	vHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
-
-	masterValid, err := NewMasterValidation([]crypto.PublicKey, pub, v, wHeaders, vHeaders, sHeaders)
+	masterValid, err := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 	assert.Nil(t, err)
 	assert.Equal(t, pub, masterValid.ProofOfWork())
 	assert.Equal(t, v.PublicKey(), masterValid.Validation().PublicKey())

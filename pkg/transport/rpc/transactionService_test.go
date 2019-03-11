@@ -240,10 +240,10 @@ func TestHandleStoreTransaction(t *testing.T) {
 	vBytes, _ := json.Marshal(vRaw)
 	vSig, _ := pv.Sign(vBytes)
 	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 
 	txf, _ := formatAPITransaction(tx)
 	mvf, _ := formatAPIMasterValidation(mv)
@@ -377,10 +377,10 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 				IsMaster:      true,
 				IsUnreachable: false,
 				PatchNumber:   1,
-				PublicKey:     pub,
+				PublicKey:     pubB,
 			},
 		},
-		Transaction: formatAPITransaction(tx),
+		Transaction: txf,
 	}
 
 	reqBytes, _ := json.Marshal(req)
@@ -466,7 +466,7 @@ func TestHandleConfirmValiation(t *testing.T) {
 	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
 	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
-	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
+	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 
 	txv, _ := formatAPITransaction(tx)
 	mvf, _ := formatAPIMasterValidation(mv)

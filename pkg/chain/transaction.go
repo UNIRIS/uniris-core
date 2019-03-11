@@ -482,7 +482,7 @@ func (v Validation) IsValid() (bool, error) {
 		return false, err
 	}
 
-	if ok := v.nodePubk.Verify(vBytes, v.nodeSig); !ok {
+	if !v.nodePubk.Verify(vBytes, v.nodeSig) {
 		return false, errors.New("validation signature is not valid")
 	}
 

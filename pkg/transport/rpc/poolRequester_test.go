@@ -113,11 +113,12 @@ func TestRequestConfirmValidation(t *testing.T) {
 		"timestamp":  time.Now().Unix(),
 	})
 	vSig, _ := pv.Sign(vBytes)
-	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
+	v, err := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
+
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 
 	pool, _ := consensus.FindValidationPool(tx)
 	valids, err := pr.RequestTransactionValidations(pool, tx, 1, mv)
@@ -195,10 +196,10 @@ func TestRequestStorage(t *testing.T) {
 	})
 	vSig, _ := pv.Sign(vBytes)
 	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 	pool, _ := consensus.FindStoragePool([]byte("addr"))
 	tx.Mined(mv, []chain.Validation{v})
 	assert.Nil(t, pr.RequestTransactionStorage(pool, 1, tx))

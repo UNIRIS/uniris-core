@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"encoding/hex"
 	"net"
 
 	"github.com/uniris/uniris-core/pkg/chain"
@@ -26,10 +27,11 @@ type PoolRequester interface {
 //TODO: To implement with AI algorithms
 func FindMasterNodes(txHash crypto.VersionnedHash, txType chain.TransactionType) (Pool, error) {
 
-	pub, err := crypto.ParsePublicKey([]byte("3059301306072a8648ce3d020106082a8648ce3d0301070342000408f4b4026d2560aaa552244bdf8ec421bb41378b56487d9d4ca5a57fd6e64ef7ae2f2c6530f18bd0f359342b4fa7fdaeaa60c45a1197260eb1c267cc996bec81"))
+	b, err := hex.DecodeString("0044657dab453d34f9adc2100a2cb8f38f644ef48e34b1d99d7c4d9371068e9438")
 	if err != nil {
 		return Pool{}, err
 	}
+	pub, err := crypto.ParsePublicKey(b)
 
 	return Pool{
 		Node{
@@ -43,10 +45,11 @@ func FindMasterNodes(txHash crypto.VersionnedHash, txType chain.TransactionType)
 //FindStoragePool searches a storage pool for the given address
 //TODO: Implements AI lookups to identify the right storage pool
 func FindStoragePool(address []byte) (Pool, error) {
-	pub, err := crypto.ParsePublicKey([]byte("3059301306072a8648ce3d020106082a8648ce3d0301070342000408f4b4026d2560aaa552244bdf8ec421bb41378b56487d9d4ca5a57fd6e64ef7ae2f2c6530f18bd0f359342b4fa7fdaeaa60c45a1197260eb1c267cc996bec81"))
+	b, err := hex.DecodeString("0044657dab453d34f9adc2100a2cb8f38f644ef48e34b1d99d7c4d9371068e9438")
 	if err != nil {
 		return Pool{}, err
 	}
+	pub, err := crypto.ParsePublicKey(b)
 
 	return Pool{
 		Node{
@@ -60,7 +63,11 @@ func FindStoragePool(address []byte) (Pool, error) {
 //FindValidationPool searches a validation pool from a transaction hash
 //TODO: Implements AI lookups to identify the right validation pool
 func FindValidationPool(tx chain.Transaction) (Pool, error) {
-	pub, err := crypto.ParsePublicKey([]byte("3059301306072a8648ce3d020106082a8648ce3d0301070342000408f4b4026d2560aaa552244bdf8ec421bb41378b56487d9d4ca5a57fd6e64ef7ae2f2c6530f18bd0f359342b4fa7fdaeaa60c45a1197260eb1c267cc996bec81"))
+	b, err := hex.DecodeString("0044657dab453d34f9adc2100a2cb8f38f644ef48e34b1d99d7c4d9371068e9438")
+	if err != nil {
+		return Pool{}, err
+	}
+	pub, err := crypto.ParsePublicKey(b)
 	if err != nil {
 		return Pool{}, err
 	}

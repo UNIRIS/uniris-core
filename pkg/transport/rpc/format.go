@@ -167,7 +167,7 @@ func formatMasterValidation(mv *api.MasterValidation) (chain.MasterValidation, e
 	}
 
 	previousNodeKeys := make([]crypto.PublicKey, 0)
-	for _, prevNodeKey := range mv.PreviousTransactionNodes {
+	for _, prevNodeKey := range mv.PreviousValidationNodes {
 		nodePubKey, err := crypto.ParsePublicKey(prevNodeKey)
 		if err != nil {
 			return chain.MasterValidation{}, errors.New("invalid previous transaction node public key")
@@ -239,7 +239,7 @@ func formatAPIMasterValidation(masterValid chain.MasterValidation) (*api.MasterV
 	}
 
 	prevNodeKeys := make([][]byte, 0)
-	for _, k := range masterValid.PreviousTransactionNodes() {
+	for _, k := range masterValid.PreviousValidationNodes() {
 		nodeKey, err := k.Marshal()
 		if err != nil {
 			return nil, err
@@ -252,42 +252,55 @@ func formatAPIMasterValidation(masterValid chain.MasterValidation) (*api.MasterV
 		return nil, err
 	}
 
+	wHeaders, err := formatNodeHeadersAPI(masterValid.WelcomeHeaders())
+	if err != nil {
+		return nil, err
+	}
+	vHeaders, err := formatNodeHeadersAPI(masterValid.ValidationHeaders())
+	if err != nil {
+		return nil, err
+	}
+	sHeaders, err := formatNodeHeadersAPI(masterValid.StorageHeaders())
+	if err != nil {
+		return nil, err
+	}
+
 	return &api.MasterValidation{
-		ProofOfWork:              powKey,
-		PreviousTransactionNodes: prevNodeKeys,
-		PreValidation:            v,
-		WelcomeHeaders:           formatNodeHeadersAPI(masterValid.WelcomeHeaders()),
-		ValidationHeaders:        formatNodeHeadersAPI(masterValid.ValidationHeaders()),
-		StorageHeaders:           formatNodeHeadersAPI(masterValid.StorageHeaders()),
+		ProofOfWork:             powKey,
+		PreviousValidationNodes: prevNodeKeys,
+		PreValidation:           v,
+		WelcomeHeaders:          wHeaders,
+		ValidationHeaders:       vHeaders,
+		StorageHeaders:          sHeaders,
 	}, nil
 }
 
-func formatNodeHeadersAPI(headers []chain.NodeHeader) (apiHeaders []*api.NodeHeader, error) {
+func formatNodeHeadersAPI(headers []chain.NodeHeader) (apiHeaders []*api.NodeHeader, err error) {
 	for _, h := range headers {
 
 		pubBytes, err := h.PublicKey().Marshal()
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		headers = append(headers, &api.NodeHeader{
-			IsMaster: h.IsMaster(),
-			IsOK: h.IsOK(),
+		apiHeaders = append(apiHeaders, &api.NodeHeader{
+			IsMaster:      h.IsMaster(),
+			IsOK:          h.IsOk(),
 			IsUnreachable: h.IsUnreachable(),
-			PatchNumber: h.PatchNumber(),
-			PublicKey: pubBytes,
+			PatchNumber:   int32(h.PatchNumber()),
+			PublicKey:     pubBytes,
 		})
 	}
-	return nil
+	return
 }
 
-func formatNodeHeaders(apiHeaders []*api.NodeHeader) (headers []chain.NodeHeader, error) {
+func formatNodeHeaders(apiHeaders []*api.NodeHeader) (headers []chain.NodeHeader, err error) {
 
 	for _, h := range apiHeaders {
 
 		pubKey, err := crypto.ParsePublicKey(h.PublicKey)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		headers = append(headers, chain.NewNodeHeader(
@@ -298,5 +311,5 @@ func formatNodeHeaders(apiHeaders []*api.NodeHeader) (headers []chain.NodeHeader
 			h.IsOK,
 		))
 	}
-	return nil
+	return
 }

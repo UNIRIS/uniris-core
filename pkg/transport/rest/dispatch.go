@@ -31,10 +31,21 @@ func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubK
 
 	wHeaders := make([]*api.NodeHeader, 0)
 	for _, n := range masterNodes {
+
+		pubKey, err := n.PublicKey().Marshal()
+		if err != nil {
+			return transactionResponse{}, &httpError{
+				code:      http.StatusInternalServerError,
+				Error:     err.Error(),
+				Timestamp: time.Now().Unix(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+			}
+		}
+
 		wHeaders = append(wHeaders, &api.NodeHeader{
 			IsMaster:      true,
 			IsUnreachable: true, //TODO: ensures it
-			PublicKey:     n.PublicKey(),
+			PublicKey:     pubKey,
 			PatchNumber:   0,    //TODO:
 			IsOK:          true, //TODO:
 		})
