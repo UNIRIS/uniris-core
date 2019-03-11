@@ -138,14 +138,43 @@ func (n Node) Patch() GeoPatch {
 
 //GeoPatch represents a geographic section on the earth based on latitude and longitude
 type GeoPatch struct {
-	left   float64
-	right  float64
-	top    float64
-	bottom float64
+	patchid int
+	left    float64
+	right   float64
+	top     float64
+	bottom  float64
+}
+
+func createMapPatches(xDegree float64, yDegree float64) []GeoPatch {
+
+	geoPatches := make([]GeoPatch, 0)
+	i := 0
+	for x := -180.0; x < 180.0; x += xDegree {
+		for y := -90.0; y < 90.0; y += yDegree {
+			geoPatches = append(geoPatches, GeoPatch{
+				patchid: i,
+				left:    x,
+				right:   x + 10,
+				bottom:  y,
+				top:     y + 10,
+			})
+			i++
+		}
+	}
+	return geoPatches
 }
 
 //ComputeGeoPatch identifies a geographic patch from a given geographic peer position
-//TODO
-func ComputeGeoPatch(lat float64, lon float64) GeoPatch {
-	return GeoPatch{}
+func ComputeGeoPatch(lat float64, lon float64) (p GeoPatch) {
+	geoPatches := createMapPatches(10, 10)
+
+	for _, patch := range geoPatches {
+
+		if lon >= patch.left && lon <= patch.right && lat >= patch.bottom && lat <= patch.top {
+			p = patch
+			break
+		}
+	}
+
+	return p
 }
