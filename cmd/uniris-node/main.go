@@ -250,12 +250,7 @@ func startGRPCServer(conf unirisConf, techDB shared.TechDatabaseReader) {
 
 	poolR := rpc.NewPoolRequester(techDB)
 	chainDB := memstorage.NewchainDatabase()
-<<<<<<< HEAD
-	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, techDB, poolR, conf.publicKey, conf.privateKey))
-=======
-	locker := memstorage.NewLocker()
-	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, locker, techDB, poolR, publicKey, privateKey))
->>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, techDB, poolR, publicKey, privateKey))
 
 	var discoveryDB discovery.Database
 	if conf.discoveryDatabase.dbType == "redis" {

@@ -385,15 +385,9 @@ Scenario: Create account request with an invalid signature
 	Then I got a 400 (Bad request) response status and an error message
 */
 func TestCreationAccountWhenSignatureInvalid(t *testing.T) {
-<<<<<<< HEAD
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-=======
-
-	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
-
->>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 	techDB := &mockTechDB{}
 	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
 	emKey, _ := shared.NewEmitterKeyPair([]byte("pv"), pub)
@@ -695,11 +689,7 @@ func (pr mockPoolRequester) RequestLastTransaction(pool consensus.Pool, txAddr c
 	return nil, nil
 }
 
-<<<<<<< HEAD
 func (pr mockPoolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error {
-=======
-func (pr mockPoolRequester) RequestTransactionLock(pool consensus.Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error {
->>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 	return nil
 }
 
@@ -737,25 +727,9 @@ func (pr *mockPoolRequester) RequestTransactionStorage(pool consensus.Pool, minR
 }
 
 type mockChainDB struct {
-<<<<<<< HEAD
 	kos       []chain.Transaction
 	keychains []chain.Keychain
 	ids       []chain.ID
-=======
-	inprogress []chain.Transaction
-	kos        []chain.Transaction
-	keychains  []chain.Keychain
-	ids        []chain.ID
-}
-
-func (r mockChainDB) InProgressByHash(txHash crypto.VersionnedHash) (*chain.Transaction, error) {
-	for _, tx := range r.inprogress {
-		if bytes.Equal(tx.TransactionHash(), txHash) {
-			return &tx, nil
-		}
-	}
-	return nil, nil
->>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 }
 
 func (r mockChainDB) LastKeychain(txAddr crypto.VersionnedHash) (*chain.Keychain, error) {
@@ -830,44 +804,3 @@ func (r *mockChainDB) WriteKO(tx chain.Transaction) error {
 	r.kos = append(r.kos, tx)
 	return nil
 }
-<<<<<<< HEAD
-=======
-
-func (r *mockChainDB) WriteInProgress(tx chain.Transaction) error {
-	r.inprogress = append(r.inprogress, tx)
-	return nil
-}
-
-type mockLocker struct {
-	locks []map[string][]byte
-}
-
-func (l *mockLocker) WriteLock(txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error {
-	masterKey, _ := masterPublicKey.Marshal()
-	l.locks = append(l.locks, map[string][]byte{
-		"transaction_address": txAddr,
-		"transaction_hash":    txHash,
-		"master_public_key":   masterKey,
-	})
-	return nil
-}
-func (l *mockLocker) RemoveLock(txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash) error {
-	pos := l.findLockPosition(txHash, txAddr)
-	if pos > -1 {
-		l.locks = append(l.locks[:pos], l.locks[pos+1:]...)
-	}
-	return nil
-}
-func (l mockLocker) ContainsLock(txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash) (bool, error) {
-	return l.findLockPosition(txHash, txAddr) > -1, nil
-}
-
-func (l mockLocker) findLockPosition(txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash) int {
-	for i, lock := range l.locks {
-		if bytes.Equal(lock["transaction_hash"], txHash) && bytes.Equal(lock["transaction_address"], txAddr) {
-			return i
-		}
-	}
-	return -1
-}
->>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash

@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/uniris/uniris-core/pkg/consensus"
+	"github.com/uniris/uniris-core/pkg/crypto"
 
 	"github.com/streadway/amqp"
 )
@@ -102,9 +103,15 @@ func consumeDiscoveryHandler(w consensus.NodeWriter, data []byte) error {
 	}
 
 	patch := consensus.ComputeGeoPatch(n.AppState.GeoPosition.Latitude, n.AppState.GeoPosition.Longitude)
+
+	publicKey, err := crypto.ParsePublicKey([]byte(n.Identity.PublicKey))
+	if err != nil {
+		return err
+	}
+
 	node := consensus.NewNode(net.ParseIP(n.Identity.IP),
 		n.Identity.Port,
-		n.Identity.PublicKey,
+		publicKey,
 		consensus.NodeStatus(n.AppState.Status),
 		n.AppState.CPULoad,
 		n.AppState.FreeDiskSpace,
@@ -123,7 +130,11 @@ func consumeDiscoveryHandler(w consensus.NodeWriter, data []byte) error {
 }
 
 func consumeReachableHandler(w consensus.NodeWriter, publicKey []byte) error {
-	if err := w.WriteReachableNode(string(publicKey)); err != nil {
+	pub, err := crypto.ParsePublicKey(publicKey)
+	if err != nil {
+		return err
+	}
+	if err := w.WriteReachableNode(pub); err != nil {
 		return err
 	}
 	fmt.Printf("Node %s stored as reachable\n", publicKey)
@@ -131,7 +142,11 @@ func consumeReachableHandler(w consensus.NodeWriter, publicKey []byte) error {
 }
 
 func consumeUnreachableHandler(w consensus.NodeWriter, publicKey []byte) error {
-	if err := w.WriteUnreachableNode(string(publicKey)); err != nil {
+	pub, err := crypto.ParsePublicKey(publicKey)
+	if err != nil {
+		return err
+	}
+	if err := w.WriteUnreachableNode(pub); err != nil {
 		return err
 	}
 	fmt.Printf("Node %s stored as unreachable\n", publicKey)
