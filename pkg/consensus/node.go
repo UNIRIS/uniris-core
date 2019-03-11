@@ -38,6 +38,8 @@ type Node struct {
 	version              string
 	p2pFactor            int
 	reachablePeersNumber int
+	latitude             float64
+	longitude            float64
 	patch                GeoPatch
 	isReachable          bool
 }
@@ -57,7 +59,7 @@ const (
 )
 
 //NewNode creates a new enhanced discovered peers with geo patch
-func NewNode(ip net.IP, port int, pubK string, status NodeStatus, cpu string, disk float64, ver string, p2pFactor int, reachNumbers int, patch GeoPatch, isReachable bool) Node {
+func NewNode(ip net.IP, port int, pubK string, status NodeStatus, cpu string, disk float64, ver string, p2pFactor int, reachNumbers int, lat float64, lon float64, patch GeoPatch, isReachable bool) Node {
 	return Node{
 		ip:                   ip,
 		port:                 port,
@@ -68,6 +70,8 @@ func NewNode(ip net.IP, port int, pubK string, status NodeStatus, cpu string, di
 		version:              ver,
 		p2pFactor:            p2pFactor,
 		reachablePeersNumber: reachNumbers,
+		latitude:             lat,
+		longitude:            lon,
 		patch:                patch,
 	}
 }
@@ -115,6 +119,16 @@ func (n Node) ReachablePeersNumber() int {
 //P2PFactor returns the node's p2p factor
 func (n Node) P2PFactor() int {
 	return n.p2pFactor
+}
+
+//Longitude returns the node's longitude coordinates
+func (n Node) Longitude() float64 {
+	return n.longitude
+}
+
+//Latitude returns the node's latitude coordinates
+func (n Node) Latitude() float64 {
+	return n.latitude
 }
 
 //Patch returns the geo patch of the peer

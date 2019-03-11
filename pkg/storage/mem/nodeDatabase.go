@@ -13,8 +13,13 @@ type NodeDatabase struct {
 }
 
 //WriteDiscoveredNode stores a new discovered node
-func (db *NodeDatabase) WriteDiscoveredNode(n consensus.Node) error {
-	db.nodes = append(db.nodes, n)
+func (db *NodeDatabase) WriteDiscoveredNode(node consensus.Node) error {
+	for _, n := range db.nodes {
+		if node.PublicKey() == n.PublicKey() {
+			return nil
+		}
+	}
+	db.nodes = append(db.nodes, node)
 	return nil
 }
 
@@ -22,7 +27,8 @@ func (db *NodeDatabase) WriteDiscoveredNode(n consensus.Node) error {
 func (db *NodeDatabase) WriteReachableNode(publicKey string) error {
 	for i, n := range db.nodes {
 		if n.PublicKey() == publicKey {
-			db.nodes[i] = consensus.NewNode(n.IP(), n.Port(), n.PublicKey(), n.Status(), n.CPULoad(), n.FreeDiskSpace(), n.Version(), n.P2PFactor(), n.ReachablePeersNumber(), n.Patch(), true)
+			node := consensus.NewNode(n.IP(), n.Port(), n.PublicKey(), n.Status(), n.CPULoad(), n.FreeDiskSpace(), n.Version(), n.P2PFactor(), n.ReachablePeersNumber(), n.Latitude(), n.Longitude(), n.Patch(), true)
+			db.nodes[i] = node
 			break
 		}
 	}
@@ -33,7 +39,8 @@ func (db *NodeDatabase) WriteReachableNode(publicKey string) error {
 func (db *NodeDatabase) WriteUnreachableNode(publicKey string) error {
 	for i, n := range db.nodes {
 		if n.PublicKey() == publicKey {
-			db.nodes[i] = consensus.NewNode(n.IP(), n.Port(), n.PublicKey(), n.Status(), n.CPULoad(), n.FreeDiskSpace(), n.Version(), n.P2PFactor(), n.ReachablePeersNumber(), n.Patch(), false)
+			node := consensus.NewNode(n.IP(), n.Port(), n.PublicKey(), n.Status(), n.CPULoad(), n.FreeDiskSpace(), n.Version(), n.P2PFactor(), n.ReachablePeersNumber(), n.Latitude(), n.Longitude(), n.Patch(), false)
+			db.nodes[i] = node
 			break
 		}
 	}

@@ -102,9 +102,20 @@ func consumeDiscoveryHandler(w consensus.NodeWriter, data []byte) error {
 	}
 
 	patch := consensus.ComputeGeoPatch(n.AppState.GeoPosition.Latitude, n.AppState.GeoPosition.Longitude)
-	if err := w.WriteDiscoveredNode(
-		consensus.NewNode(net.ParseIP(n.Identity.IP), n.Identity.Port, n.Identity.PublicKey, consensus.NodeStatus(n.AppState.Status), n.AppState.CPULoad, n.AppState.FreeDiskSpace,
-			n.AppState.Version, n.AppState.P2PFactor, n.AppState.ReachablePeersNumber, patch, true)); err != nil {
+	node := consensus.NewNode(net.ParseIP(n.Identity.IP),
+		n.Identity.Port,
+		n.Identity.PublicKey,
+		consensus.NodeStatus(n.AppState.Status),
+		n.AppState.CPULoad,
+		n.AppState.FreeDiskSpace,
+		n.AppState.Version,
+		n.AppState.P2PFactor,
+		n.AppState.ReachablePeersNumber,
+		n.AppState.GeoPosition.Latitude,
+		n.AppState.GeoPosition.Longitude,
+		patch,
+		true)
+	if err := w.WriteDiscoveredNode(node); err != nil {
 		return err
 	}
 	fmt.Printf("Discovered node stored: %s\n", n.Identity.PublicKey)
