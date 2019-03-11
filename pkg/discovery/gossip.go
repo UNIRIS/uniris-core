@@ -210,7 +210,7 @@ func addDiscoveries(cDiscoveries []Peer, peers []Peer, db dbWriter, n Notifier) 
 			if p.identity.publicKey == dp.identity.publicKey {
 				comparee = p
 				oldFound = true
-				if !compareAppstate(dp, comparee) {
+				if !comparePeerIDAndState(dp, comparee) {
 					if err := n.NotifyDiscovery(dp); err != nil {
 						return err
 					}
@@ -218,7 +218,7 @@ func addDiscoveries(cDiscoveries []Peer, peers []Peer, db dbWriter, n Notifier) 
 				break
 			}
 		}
-		
+
 		if !oldFound {
 			if err := n.NotifyDiscovery(dp); err != nil {
 				return err
@@ -331,10 +331,10 @@ func reachablePeers(unreachables []PeerIdentity, knownPeers []Peer) peerList {
 	return reachables
 }
 
-//compareAppstate compares a source of peers with an other list of peers
-//and returns false if at least on appstate is different between the source and the comparee
-func compareAppstate(source Peer, comparee Peer) bool {
-
-	return reflect.DeepEqual(source.appState, comparee.appState)
-
+//comparePeerIDAndState compares a peer with an other peer
+//and returns false if at least identity and app state is different between the source and the comparee
+func comparePeerIDAndState(source Peer, comparee Peer) bool {
+	return source.identity.ip.Equal(comparee.identity.ip) &&
+		source.identity.port == source.identity.port &&
+		reflect.DeepEqual(source.appState, comparee.appState)
 }

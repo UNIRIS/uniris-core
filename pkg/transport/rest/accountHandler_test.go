@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -389,7 +388,6 @@ func TestCreationAccountWhenKeychainInvalid(t *testing.T) {
 		"encrypted_keychain": "abc",
 		"signature":          "abc",
 	})
-	log.Print(string(form))
 
 	path := "http://localhost/api/account"
 	req, _ := http.NewRequest("POST", path, bytes.NewBuffer(form))
@@ -692,8 +690,7 @@ func (pr *mockPoolRequester) RequestTransactionStorage(pool consensus.Pool, minR
 		pr.repo.keychains = append(pr.repo.keychains, k)
 	}
 	if tx.TransactionType() == chain.IDTransactionType {
-		id, err := chain.NewID(tx)
-		log.Print(err)
+		id, _ := chain.NewID(tx)
 		pr.repo.ids = append(pr.repo.ids, id)
 	}
 	return nil
