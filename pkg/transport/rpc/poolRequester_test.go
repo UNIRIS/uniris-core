@@ -46,16 +46,8 @@ func TestRequestTransactionLock(t *testing.T) {
 	go grpcServer.Serve(lis)
 
 	pool, _ := consensus.FindStoragePool([]byte("addr"))
-<<<<<<< HEAD
 	assert.Nil(t, pr.RequestTransactionTimeLock(pool, crypto.Hash([]byte("tx")), crypto.Hash([]byte("addr")), pub))
-
-	assert.True(t, chain.ContainsTimeLock(crypto.HashString("tx"), crypto.HashString("addr")))
-=======
-	assert.Nil(t, pr.RequestTransactionLock(pool, crypto.Hash([]byte("tx")), crypto.Hash([]byte("addr")), pub))
-
-	assert.Len(t, locker.locks, 1)
-	assert.EqualValues(t, crypto.Hash([]byte("addr")), locker.locks[0]["transaction_address"])
->>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
+	assert.True(t, chain.ContainsTimeLock(crypto.Hash([]byte("tx")), crypto.Hash([]byte("addr"))))
 }
 
 /*
@@ -153,12 +145,7 @@ func TestRequestStorage(t *testing.T) {
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
-<<<<<<< HEAD
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
-=======
-	locker := &mockLocker{}
 	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
->>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	techDB.emKeys = append(techDB.emKeys, kp)
@@ -233,12 +220,7 @@ func TestSendGetLastTransaction(t *testing.T) {
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
-<<<<<<< HEAD
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
-=======
-	locker := &mockLocker{}
 	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
->>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	pr := NewPoolRequester(techDB)

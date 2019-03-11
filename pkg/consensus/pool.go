@@ -9,13 +9,8 @@ import (
 
 //PoolRequester handles the request to perform on a pool during the mining
 type PoolRequester interface {
-<<<<<<< HEAD
-	//RequestTransactionTimeLock asks a pool to lock a transaction using the address related
-	RequestTransactionTimeLock(pool Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error
-=======
 	//RequestTransactionLock asks a pool to lock a transaction using the address related
-	RequestTransactionLock(pool Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error
->>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
+	RequestTransactionTimeLock(pool Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error
 
 	//RequestTransactionValidations asks a pool to validation a transaction
 	RequestTransactionValidations(pool Pool, tx chain.Transaction, minValid int, masterValid chain.MasterValidation) ([]chain.Validation, error)
@@ -80,30 +75,4 @@ func FindValidationPool(tx chain.Transaction) (Pool, error) {
 }
 
 //Pool represent a pool either for sharding or validation
-<<<<<<< HEAD
 type Pool []Node
-=======
-type Pool []PoolMember
-
-//PoolMember represent a node member of a pool
-type PoolMember struct {
-	ip   net.IP
-	port int
-	pubK crypto.PublicKey
-}
-
-//IP returns the pool member IP addres
-func (pm PoolMember) IP() net.IP {
-	return pm.ip
-}
-
-//Port returns the pool member port
-func (pm PoolMember) Port() int {
-	return pm.port
-}
-
-//PublicKey returns the pool member public key
-func (pm PoolMember) PublicKey() crypto.PublicKey {
-	return pm.pubK
-}
->>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash

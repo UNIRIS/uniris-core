@@ -114,11 +114,7 @@ func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr crypt
 	return &txRes[0], nil
 }
 
-<<<<<<< HEAD
 func (pr poolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash crypto.VersionnedHash, txAddress crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error {
-=======
-func (pr poolRequester) RequestTransactionLock(pool consensus.Pool, txHash crypto.VersionnedHash, txAddress crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error {
->>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 
 	lastKeys, err := pr.techDB.NodeLastKeys()
 	if err != nil {
@@ -134,11 +130,7 @@ func (pr poolRequester) RequestTransactionLock(pool consensus.Pool, txHash crypt
 	if err != nil {
 		return err
 	}
-<<<<<<< HEAD
 	req := &api.TimeLockTransactionRequest{
-=======
-	req := &api.LockTransactionRequest{
->>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 		Address:             txAddress,
 		TransactionHash:     txHash,
 		MasterNodePublicKey: masterKey,

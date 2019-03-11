@@ -24,7 +24,7 @@ type txSrv struct {
 }
 
 //NewTransactionService creates service handler for the GRPC Transaction service
-func NewTransactionService(cDB chain.Database, l chain.Locker, tDB shared.TechDatabaseReader, pR consensus.PoolRequester, nodePublicKeyk crypto.PublicKey, nodePrivateKeyk crypto.PrivateKey) api.TransactionServiceServer {
+func NewTransactionService(cDB chain.Database, tDB shared.TechDatabaseReader, pR consensus.PoolRequester, nodePublicKeyk crypto.PublicKey, nodePrivateKeyk crypto.PrivateKey) api.TransactionServiceServer {
 	return txSrv{
 		chainDB:        cDB,
 		techDB:         tDB,
@@ -189,11 +189,8 @@ func (s txSrv) TimeLockTransaction(ctx context.Context, req *api.TimeLockTransac
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, "invalid master public key").Err()
 	}
-<<<<<<< HEAD
+
 	if err := chain.TimeLockTransaction(req.TransactionHash, req.Address, masterKey); err != nil {
-=======
-	if err := chain.LockTransaction(s.locker, req.TransactionHash, req.Address, masterKey); err != nil {
->>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 

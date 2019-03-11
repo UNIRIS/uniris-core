@@ -524,11 +524,7 @@ func (pr mockPoolRequester) RequestLastTransaction(pool Pool, txAddr crypto.Vers
 	return nil, nil
 }
 
-<<<<<<< HEAD
 func (pr mockPoolRequester) RequestTransactionTimeLock(pool Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error {
-=======
-func (pr mockPoolRequester) RequestTransactionLock(pool Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error {
->>>>>>> Enable ed25519 curve, adaptative signature/encryption based on multi-crypto algo key and multi-support of hash
 	return nil
 }
 

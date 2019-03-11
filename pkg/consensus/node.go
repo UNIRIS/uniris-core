@@ -13,10 +13,10 @@ type NodeWriter interface {
 	WriteDiscoveredNode(n Node) error
 
 	//WriteReachableNode defines a node by its public key as reachable
-	WriteReachableNode(publicKey string) error
+	WriteReachableNode(publicKey crypto.PublicKey) error
 
 	//WriteUnreachableNode defines a node by its public key as unreachable
-	WriteUnreachableNode(publicKey string) error
+	WriteUnreachableNode(publicKey crypto.PublicKey) error
 }
 
 //NodeReader provides queries to fetch network nodes

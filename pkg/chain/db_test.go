@@ -150,13 +150,6 @@ func TestGetTransactionStatusInProgress(t *testing.T) {
 	chainDB := &mockChainDB{}
 	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	TimeLockTransaction(crypto.Hash([]byte("hash")), crypto.Hash([]byte("addr")), pub)
-	chainDB := &mockChainDB{
-		inprogress: []Transaction{
-			Transaction{
-				hash: crypto.Hash([]byte("hash")),
-			},
-		},
-	}
 
 	status, err := GetTransactionStatus(chainDB, crypto.Hash([]byte("hash")))
 	assert.Nil(t, err)
