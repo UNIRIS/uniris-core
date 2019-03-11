@@ -251,7 +251,7 @@ func TestAddUnreachable(t *testing.T) {
 
 	assert.Len(t, db.unreachablePeers, 1)
 	assert.Equal(t, "key", db.unreachablePeers[0].publicKey)
-	assert.Equal(t, "key", notif.unreaches[0].publicKey)
+	assert.Equal(t, "key", notif.unreaches[0])
 
 }
 
@@ -272,7 +272,7 @@ func TestAddReachable(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
 	}, db, notif)
 	assert.Nil(t, err)
-	assert.Equal(t, "key", notif.reaches[0].publicKey)
+	assert.Equal(t, "key", notif.reaches[0])
 }
 
 /*
@@ -382,7 +382,7 @@ Scenario: Compare 2 version of a peer with a different appstate
 	Then I get wanted result
 */
 
-func TestComparePeerAppstate(t *testing.T) {
+func TestComparePeerIDAndState(t *testing.T) {
 
 	p1 := NewDiscoveredPeer(
 		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key3"),
@@ -402,12 +402,22 @@ func TestComparePeerAppstate(t *testing.T) {
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
 
-	r1 := compareAppstate(p1, p2)
-	assert.Equal(t, false, r1)
+	assert.False(t, comparePeerIDAndState(p1, p2))
+	assert.True(t, comparePeerIDAndState(p1, p3))
 
-	r2 := compareAppstate(p1, p3)
-	assert.Equal(t, true, r2)
+	p4 := NewDiscoveredPeer(
+		NewPeerIdentity(net.ParseIP("50.20.100.1"), 3000, "key3"),
+		NewPeerHeartbeatState(time.Now(), 0),
+		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
+	)
 
+	p5 := NewDiscoveredPeer(
+		NewPeerIdentity(net.ParseIP("50.20.100.4"), 3000, "key3"),
+		NewPeerHeartbeatState(time.Now(), 0),
+		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
+	)
+
+	assert.False(t, comparePeerIDAndState(p4, p5))
 }
 
 type mockDatabase struct {
@@ -481,17 +491,17 @@ func (db *mockDatabase) containsPeer(p Peer) bool {
 }
 
 type mockNotifier struct {
-	reaches     []PeerIdentity
-	unreaches   []PeerIdentity
+	reaches     []string
+	unreaches   []string
 	discoveries []Peer
 }
 
-func (n *mockNotifier) NotifyReachable(p PeerIdentity) error {
-	n.reaches = append(n.reaches, p)
+func (n *mockNotifier) NotifyReachable(pk string) error {
+	n.reaches = append(n.reaches, pk)
 	return nil
 }
-func (n *mockNotifier) NotifyUnreachable(p PeerIdentity) error {
-	n.unreaches = append(n.unreaches, p)
+func (n *mockNotifier) NotifyUnreachable(pk string) error {
+	n.unreaches = append(n.unreaches, pk)
 	return nil
 }
 

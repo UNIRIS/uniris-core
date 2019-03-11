@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"log"
 	"sort"
 	"testing"
 	"time"
@@ -480,8 +479,7 @@ func (pr *mockPoolRequester) RequestTransactionStorage(pool consensus.Pool, minR
 		pr.repo.keychains = append(pr.repo.keychains, k)
 	}
 	if tx.TransactionType() == chain.IDTransactionType {
-		id, err := chain.NewID(tx)
-		log.Print(err)
+		id, _ := chain.NewID(tx)
 		pr.repo.ids = append(pr.repo.ids, id)
 	}
 	return nil

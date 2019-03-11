@@ -174,13 +174,13 @@ func findLastValidationPool(txAddr string, txType chain.TransactionType, req Poo
 		return nil, nil
 	}
 
-	pm := make([]PoolMember, 0)
+	pm := make([]Node, 0)
 	for _, key := range tx.MasterValidation().PreviousTransactionNodes() {
 		//TODO: find ip address and port
-		pm = append(pm, PoolMember{
-			pubK: key,
-			ip:   net.ParseIP("127.0.0.1"),
-			port: 5000,
+		pm = append(pm, Node{
+			publicKey: key,
+			ip:        net.ParseIP("127.0.0.1"),
+			port:      5000,
 		})
 
 	}
