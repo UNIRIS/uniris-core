@@ -63,7 +63,7 @@ Scenario: Find master validation node
 */
 func TestFindMasterValidationNode(t *testing.T) {
 
-	masterNodess, err := FindMasterNodes("hash")
+	masterNodess, err := FindMasterNodes("hash", chain.KeychainTransactionType)
 	assert.Nil(t, err)
 	assert.Len(t, masterNodess, 1)
 	assert.Equal(t, "127.0.0.1", masterNodess[0].IP().String())

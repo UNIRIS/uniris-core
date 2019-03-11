@@ -106,9 +106,9 @@ func TestRequestConfirmValidation(t *testing.T) {
 	})
 	vSig, _ := crypto.Sign(string(vBytes), pv)
 	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0)}
-	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0)}
-	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0)}
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
 	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
 
 	pool, _ := consensus.FindValidationPool(tx)
@@ -180,9 +180,9 @@ func TestRequestStorage(t *testing.T) {
 	})
 	vSig, _ := crypto.Sign(string(vBytes), pv)
 	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0)}
-	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0)}
-	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0)}
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
 	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
 
 	pool, _ := consensus.FindStoragePool("addr")

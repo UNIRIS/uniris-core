@@ -194,6 +194,7 @@ func formatNodeHeadersAPI(headers []chain.NodeHeader) (apiHeaders []*api.NodeHea
 			IsUnreachable: h.IsUnreachable(),
 			PublicKey:     h.PublicKey(),
 			PatchNumber:   int32(h.PatchNumber()),
+			IsOK:          h.IsOk(),
 		})
 	}
 	return
@@ -206,6 +207,7 @@ func formatNodeHeaders(apiHeaders []*api.NodeHeader) (headers []chain.NodeHeader
 			h.IsUnreachable,
 			h.IsMaster,
 			int(h.PatchNumber),
+			h.IsOK,
 		))
 	}
 	return

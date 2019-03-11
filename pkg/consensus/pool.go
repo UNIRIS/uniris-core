@@ -23,7 +23,7 @@ type PoolRequester interface {
 
 //FindMasterNodes finds a list of master node from a transaction hash
 //TODO: To implement with AI algorithms
-func FindMasterNodes(txHash string) (Pool, error) {
+func FindMasterNodes(txHash string, txType chain.TransactionType) (Pool, error) {
 	return Pool{
 		PoolMember{
 			ip:   net.ParseIP("127.0.0.1"),

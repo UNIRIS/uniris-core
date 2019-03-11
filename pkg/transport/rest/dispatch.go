@@ -8,6 +8,7 @@ import (
 	"time"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
+	"github.com/uniris/uniris-core/pkg/chain"
 	"github.com/uniris/uniris-core/pkg/consensus"
 	"github.com/uniris/uniris-core/pkg/crypto"
 	"google.golang.org/grpc"
@@ -15,7 +16,7 @@ import (
 
 func requestTransactionMining(tx *api.Transaction, pvKey string, pubKey string) (transactionResponse, *httpError) {
 
-	masterNodes, err := consensus.FindMasterNodes(tx.TransactionHash)
+	masterNodes, err := consensus.FindMasterNodes(tx.TransactionHash, chain.TransactionType(tx.Type))
 	if err != nil {
 		return transactionResponse{}, &httpError{
 			code:      http.StatusInternalServerError,
@@ -33,7 +34,8 @@ func requestTransactionMining(tx *api.Transaction, pvKey string, pubKey string) 
 			IsMaster:      true,
 			IsUnreachable: true, //TODO: ensures it
 			PublicKey:     n.PublicKey(),
-			PatchNumber:   0, //TODO:
+			PatchNumber:   0,    //TODO:
+			IsOK:          true, //TODO:
 		})
 	}
 

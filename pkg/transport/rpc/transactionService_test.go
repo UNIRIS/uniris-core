@@ -225,9 +225,9 @@ func TestHandleStoreTransaction(t *testing.T) {
 	vBytes, _ := json.Marshal(vRaw)
 	vSig, _ := crypto.Sign(string(vBytes), pv)
 	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0)}
-	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0)}
-	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0)}
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
 	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
 
 	req := &api.StoreTransactionRequest{
@@ -427,9 +427,9 @@ func TestHandleConfirmValiation(t *testing.T) {
 	vBytes, _ := json.Marshal(vRaw)
 	vSig, _ := crypto.Sign(string(vBytes), pv)
 	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0)}
-	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0)}
-	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0)}
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
 	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
 	req := &api.ConfirmTransactionValidationRequest{
 		Transaction:      formatAPITransaction(tx),
