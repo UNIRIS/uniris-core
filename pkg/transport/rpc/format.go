@@ -248,68 +248,12 @@ func formatAPIMasterValidation(masterValid chain.MasterValidation) (*api.MasterV
 	}
 
 	v, err := formatAPIValidation(masterValid.Validation())
-	if err != nil {
-		return nil, err
-	}
-
-	wHeaders, err := formatNodeHeadersAPI(masterValid.WelcomeHeaders())
-	if err != nil {
-		return nil, err
-	}
-	vHeaders, err := formatNodeHeadersAPI(masterValid.ValidationHeaders())
-	if err != nil {
-		return nil, err
-	}
-	sHeaders, err := formatNodeHeadersAPI(masterValid.StorageHeaders())
-	if err != nil {
 		return nil, err
 	}
 
 	return &api.MasterValidation{
-		ProofOfWork:             powKey,
-		PreviousValidationNodes: prevNodeKeys,
-		PreValidation:           v,
-		WelcomeHeaders:          wHeaders,
-		ValidationHeaders:       vHeaders,
-		StorageHeaders:          sHeaders,
+		ProofOfWork:              powKey,
+		PreviousTransactionNodes: prevNodeKeys,
+		PreValidation:            v,
 	}, nil
-}
-
-func formatNodeHeadersAPI(headers []chain.NodeHeader) (apiHeaders []*api.NodeHeader, err error) {
-	for _, h := range headers {
-
-		pubBytes, err := h.PublicKey().Marshal()
-		if err != nil {
-			return nil, err
-		}
-
-		apiHeaders = append(apiHeaders, &api.NodeHeader{
-			IsMaster:      h.IsMaster(),
-			IsOK:          h.IsOk(),
-			IsUnreachable: h.IsUnreachable(),
-			PatchNumber:   int32(h.PatchNumber()),
-			PublicKey:     pubBytes,
-		})
-	}
-	return
-}
-
-func formatNodeHeaders(apiHeaders []*api.NodeHeader) (headers []chain.NodeHeader, err error) {
-
-	for _, h := range apiHeaders {
-
-		pubKey, err := crypto.ParsePublicKey(h.PublicKey)
-		if err != nil {
-			return nil, err
-		}
-
-		headers = append(headers, chain.NewNodeHeader(
-			pubKey,
-			h.IsUnreachable,
-			h.IsMaster,
-			int(h.PatchNumber),
-			h.IsOK,
-		))
-	}
-	return
 }
