@@ -1,8 +1,6 @@
 package memstorage
 
 import (
-	"reflect"
-
 	"github.com/uniris/uniris-core/pkg/crypto"
 
 	"github.com/uniris/uniris-core/pkg/consensus"
@@ -19,7 +17,7 @@ type NodeDatabase struct {
 //WriteDiscoveredNode stores a new discovered node
 func (db *NodeDatabase) WriteDiscoveredNode(node consensus.Node) error {
 	for i, n := range db.nodes {
-		if n.PublicKey() == node.PublicKey() && !reflect.DeepEqual(n, node) {
+		if n.PublicKey() == node.PublicKey() {
 			db.nodes[i] = node
 			return nil
 		}
