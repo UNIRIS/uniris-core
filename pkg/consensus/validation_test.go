@@ -24,7 +24,10 @@ func TestRequestValidations(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
 	v, _ := buildValidation(chain.ValidationOK, pub, pv)
-	mv, _ := chain.NewMasterValidation([]string{}, pub, v)
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
 
 	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
@@ -140,7 +143,10 @@ func TestValidateTransaction(t *testing.T) {
 	assert.Nil(t, err)
 
 	v, _ := buildValidation(chain.ValidationOK, pub, pv)
-	mv, _ := chain.NewMasterValidation([]string{}, pub, v)
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
 
 	valid, err := ConfirmTransactionValidation(tx, mv, pub, pv)
 	assert.Nil(t, err)
@@ -168,7 +174,10 @@ func TestValidateTransactionWithBadIntegrity(t *testing.T) {
 	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.IDTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashString("hash"))
 
 	v, _ := buildValidation(chain.ValidationOK, pub, pv)
-	mv, _ := chain.NewMasterValidation([]string{}, pub, v)
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
 	valid, err := ConfirmTransactionValidation(tx, mv, pub, pv)
 	assert.Nil(t, err)
 	assert.Equal(t, chain.ValidationKO, valid.Status())
@@ -286,7 +295,8 @@ func TestPreValidateTransaction(t *testing.T) {
 	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txEmSigned))
 	assert.Nil(t, err)
 
-	mv, err := preValidateTransaction(tx, Pool{}, 1, pub, pv, emReader)
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	mv, err := preValidateTransaction(tx, wHeaders, Pool{Node{publicKey: "pub"}}, Pool{Node{publicKey: "pub"}}, Pool{}, 1, pub, pv, emReader)
 	assert.Nil(t, err)
 	assert.Equal(t, pub, mv.ProofOfWork())
 	assert.Equal(t, pub, mv.Validation().PublicKey())
@@ -349,7 +359,8 @@ func TestLeadMining(t *testing.T) {
 	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txEmSigned))
 	assert.Nil(t, err)
 	poolR := &mockPoolRequester{}
-	assert.Nil(t, LeadMining(tx, 1, poolR, pub, pv, emReader))
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
+	assert.Nil(t, LeadMining(tx, 1, wHeaders, poolR, pub, pv, emReader))
 
 	time.Sleep(1 * time.Second)
 

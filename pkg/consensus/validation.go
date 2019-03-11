@@ -22,7 +22,7 @@ import (
 // - Executes the proof of work
 // - Requests validation confirmations
 // - Requests storage
-func LeadMining(tx chain.Transaction, minValids int, poolR PoolRequester, pub, pv string, emR shared.EmitterDatabaseReader) error {
+func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader, poolR PoolRequester, pub, pv string, emR shared.EmitterDatabaseReader) error {
 	log.Printf("transaction %s is in progress\n", tx.TransactionHash())
 
 	lastVPool, err := findLastValidationPool(tx.Address(), tx.TransactionType(), poolR)
@@ -42,7 +42,7 @@ func LeadMining(tx chain.Transaction, minValids int, poolR PoolRequester, pub, p
 	log.Printf("transaction %s is locked\n", tx.TransactionHash())
 
 	go func() {
-		minedTx, err := mineTransaction(tx, lastVPool, minValids, pub, pv, emR, poolR)
+		minedTx, err := mineTransaction(tx, wHeaders, sPool, lastVPool, minValids, pub, pv, emR, poolR)
 		if err != nil {
 			fmt.Printf("transaction mining failed: %s\n", err.Error())
 			return
@@ -56,14 +56,14 @@ func LeadMining(tx chain.Transaction, minValids int, poolR PoolRequester, pub, p
 	return nil
 }
 
-func mineTransaction(tx chain.Transaction, lastVPool Pool, minValids int, nodePub, nodePv string, emR shared.EmitterDatabaseReader, poolR PoolRequester) (chain.Transaction, error) {
+func mineTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, lastVPool Pool, minValids int, nodePub, nodePv string, emR shared.EmitterDatabaseReader, poolR PoolRequester) (chain.Transaction, error) {
 
 	vPool, err := FindValidationPool(tx)
 	if err != nil {
 		return tx, fmt.Errorf("transaction find validation pool failed: %s", err.Error())
 	}
 
-	masterValid, err := preValidateTransaction(tx, lastVPool, minValids, nodePub, nodePv, emR)
+	masterValid, err := preValidateTransaction(tx, wHeaders, sPool, vPool, lastVPool, minValids, nodePub, nodePv, emR)
 	if err != nil {
 		return tx, fmt.Errorf("transaction pre-validation failed: %s", err.Error())
 	}
@@ -108,7 +108,7 @@ func findPools(tx chain.Transaction, poolR PoolRequester) (lastValidationPool, v
 }
 
 //preValidateTransaction checks the incoming transaction as master node by ensure the transaction integrity and perform the proof of work. A valiation will result from this action
-func preValidateTransaction(tx chain.Transaction, lastVPool Pool, minValids int, pub, pv string, emR shared.EmitterDatabaseReader) (chain.MasterValidation, error) {
+func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, vPool Pool, lastVPool Pool, minValids int, pub, pv string, emR shared.EmitterDatabaseReader) (chain.MasterValidation, error) {
 	if _, err := tx.IsValid(); err != nil {
 		return chain.MasterValidation{}, err
 	}
@@ -130,12 +130,28 @@ func preValidateTransaction(tx chain.Transaction, lastVPool Pool, minValids int,
 	for _, pm := range lastVPool {
 		lastsKeys = append(lastsKeys, pm.PublicKey())
 	}
-	masterValid, err := chain.NewMasterValidation(lastsKeys, pow, preValid)
+
+	vHeaders, sHeaders := buildHeaders(vPool, sPool)
+	masterValid, err := chain.NewMasterValidation(lastsKeys, pow, preValid, wHeaders, vHeaders, sHeaders)
 	if err != nil {
 		return chain.MasterValidation{}, err
 	}
 
 	return masterValid, nil
+}
+
+func buildHeaders(vPool Pool, sPool Pool) (vHeaders []chain.NodeHeader, sHeaders []chain.NodeHeader) {
+	for _, n := range vPool {
+		//TODO: retrieve real value (patch, is unreachable, is OK)
+		vHeaders = append(vHeaders, chain.NewNodeHeader(n.PublicKey(), true, true, 0, true))
+	}
+
+	for _, n := range sPool {
+		//TODO: retrieve real value (patch, is unreachable)
+		sHeaders = append(sHeaders, chain.NewNodeHeader(n.PublicKey(), true, true, 0, true))
+	}
+
+	return
 }
 
 func proofOfWork(tx chain.Transaction, emR shared.EmitterDatabaseReader) (pow string, err error) {
@@ -175,7 +191,7 @@ func findLastValidationPool(txAddr string, txType chain.TransactionType, req Poo
 	}
 
 	pm := make([]Node, 0)
-	for _, key := range tx.MasterValidation().PreviousTransactionNodes() {
+	for _, key := range tx.MasterValidation().PreviousValidationNodes() {
 		//TODO: find ip address and port
 		pm = append(pm, Node{
 			publicKey: key,

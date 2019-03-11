@@ -332,7 +332,10 @@ func TestMined(t *testing.T) {
 	sig, _ = crypto.Sign(string(b), pv)
 	v, _ := NewValidation(ValidationOK, time.Now(), pub, sig)
 
-	masterValid, _ := NewMasterValidation([]string{}, pub, v)
+	wHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	vHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	sHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	masterValid, _ := NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
 	assert.Nil(t, tx.Mined(masterValid, []Validation{v}))
 
 	assert.Equal(t, sig, tx.MasterValidation().Validation().Signature())
@@ -376,7 +379,10 @@ func TestMinedWithoutConfirmations(t *testing.T) {
 	sig, _ = crypto.Sign(string(b), pv)
 	v, _ := NewValidation(ValidationOK, time.Now(), pub, sig)
 
-	masterValid, _ := NewMasterValidation([]string{}, pub, v)
+	wHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	vHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	sHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	masterValid, _ := NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
 	assert.EqualError(t, tx.Mined(masterValid, []Validation{}), "transaction: missing confirmation validations")
 }
 
@@ -650,10 +656,12 @@ func TestCheckMasterValidation(t *testing.T) {
 	txBytes, _ := tx.MarshalHash()
 	txHash := crypto.HashBytes(txBytes)
 	tx.hash = txHash
-	tx.masterV = MasterValidation{
-		pow:        pub,
-		validation: v,
-	}
+
+	wHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	vHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	sHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	masterValid, _ := NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
+	tx.masterV = masterValid
 
 	assert.Nil(t, tx.CheckMasterValidation())
 }
@@ -694,12 +702,13 @@ func TestCheckMasterValidationWithInvalidPOW(t *testing.T) {
 	sigTx, _ := crypto.Sign(string(raw), pv)
 	hash := crypto.HashBytes(raw)
 
+	wHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	vHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	sHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	masterValid, _ := NewMasterValidation([]string{}, pub2, v, wHeaders, vHeaders, sHeaders)
 	tx := Transaction{
-		masterV: MasterValidation{
-			pow:        pub2,
-			validation: v,
-		},
-		addr: crypto.HashString("addr"),
+		masterV: masterValid,
+		addr:    crypto.HashString("addr"),
 		data: map[string]string{
 			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
@@ -822,12 +831,16 @@ func TestNewMasterValidation(t *testing.T) {
 	sig, _ := crypto.Sign(string(b), pv)
 
 	v, _ := NewValidation(ValidationOK, time.Now(), pub, sig)
-	mv, err := NewMasterValidation([]string{}, pub, v)
+
+	wHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	vHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	sHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	masterValid, err := NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
 	assert.Nil(t, err)
-	assert.Equal(t, pub, mv.ProofOfWork())
-	assert.Equal(t, v.PublicKey(), mv.Validation().PublicKey())
-	assert.Equal(t, v.Timestamp(), mv.Validation().Timestamp())
-	assert.Empty(t, mv.PreviousTransactionNodes())
+	assert.Equal(t, pub, masterValid.ProofOfWork())
+	assert.Equal(t, v.PublicKey(), masterValid.Validation().PublicKey())
+	assert.Equal(t, v.Timestamp(), masterValid.Validation().Timestamp())
+	assert.Empty(t, masterValid.PreviousValidationNodes())
 }
 
 /*
@@ -837,13 +850,18 @@ Scenario: Create a master validation with POW invalid
 	Then I get an error
 */
 func TestCreateMasterWithInvalidPOW(t *testing.T) {
-	_, err := NewMasterValidation([]string{}, "", Validation{})
+
+	wHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	vHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	sHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+
+	_, err := NewMasterValidation([]string{}, "", Validation{}, wHeaders, vHeaders, sHeaders)
 	assert.EqualError(t, err, "master validation POW: public key is empty")
 
-	_, err = NewMasterValidation([]string{}, "key", Validation{})
+	_, err = NewMasterValidation([]string{}, "key", Validation{}, wHeaders, vHeaders, sHeaders)
 	assert.EqualError(t, err, "master validation POW: public key is not in hexadecimal format")
 
-	_, err = NewMasterValidation([]string{}, hex.EncodeToString([]byte("key")), Validation{})
+	_, err = NewMasterValidation([]string{}, hex.EncodeToString([]byte("key")), Validation{}, wHeaders, vHeaders, sHeaders)
 	assert.EqualError(t, err, "master validation POW: public key is not valid")
 }
 
@@ -857,6 +875,10 @@ func TestCreateMasterWithoutValidation(t *testing.T) {
 
 	pub, _ := crypto.GenerateKeys()
 
-	_, err := NewMasterValidation([]string{}, pub, Validation{})
+	wHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	vHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+	sHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
+
+	_, err := NewMasterValidation([]string{}, pub, Validation{}, wHeaders, vHeaders, sHeaders)
 	assert.EqualError(t, err, "master validation: node validation: public key is empty")
 }
