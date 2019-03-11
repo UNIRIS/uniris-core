@@ -296,7 +296,6 @@ func TestPreValidateTransaction(t *testing.T) {
 	assert.Nil(t, err)
 
 	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-
 	mv, err := preValidateTransaction(tx, wHeaders, Pool{Node{publicKey: "pub"}}, Pool{Node{publicKey: "pub"}}, Pool{}, 1, pub, pv, emReader)
 	assert.Nil(t, err)
 	assert.Equal(t, pub, mv.ProofOfWork())
