@@ -207,6 +207,7 @@ func (s txSrv) LeadTransactionMining(ctx context.Context, req *api.LeadTransacti
 		Transaction:        req.Transaction,
 		MinimumValidations: req.MinimumValidations,
 		Timestamp:          req.Timestamp,
+		WelcomeHeaders:     req.WelcomeHeaders,
 	})
 	nodeLastKeys, err := s.techDB.NodeLastKeys()
 	if err != nil {
@@ -221,7 +222,7 @@ func (s txSrv) LeadTransactionMining(ctx context.Context, req *api.LeadTransacti
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	if err := consensus.LeadMining(tx, int(req.MinimumValidations), s.poolR, s.nodePublicKey, s.nodePrivateKey, s.techDB); err != nil {
+	if err := consensus.LeadMining(tx, int(req.MinimumValidations), formatNodeHeaders(req.WelcomeHeaders), s.poolR, s.nodePublicKey, s.nodePrivateKey, s.techDB); err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 

@@ -64,8 +64,9 @@ message TimeLockTransactionResponse {
 message LeadTransactionMiningRequest {
     Transaction transaction = 1;
     int32 minimum_validations = 2;
-    int64 timestamp = 3;
-    string signature_request = 4;
+    repeated NodeHeader welcome_headers = 3;
+    int64 timestamp = 4;
+    string signature_request = 5;
 }
 
 message LeadTransactionMiningResponse {
@@ -111,9 +112,19 @@ message Transaction {
 }
 
 message MasterValidation {
-    repeated string previous_transaction_nodes = 1;
+    repeated string previous_validation_nodes = 1;
     string proof_of_work = 2;
     Validation pre_validation = 3;
+    repeated NodeHeader welcome_headers = 4;
+    repeated NodeHeader validation_headers = 5;
+    repeated NodeHeader storage_headers = 6;
+}
+
+message NodeHeader {
+    string public_key = 1;
+    bool isUnreachable = 2;
+    bool isMaster = 3;
+    int32 patchNumber = 4;
 }
 
 message Validation {

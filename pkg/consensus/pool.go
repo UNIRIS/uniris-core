@@ -28,6 +28,7 @@ func FindMasterNodes(txHash string) (Pool, error) {
 		Node{
 			ip:   net.ParseIP("127.0.0.1"),
 			port: 5000,
+			pubK: "3059301306072a8648ce3d020106082a8648ce3d0301070342000408f4b4026d2560aaa552244bdf8ec421bb41378b56487d9d4ca5a57fd6e64ef7ae2f2c6530f18bd0f359342b4fa7fdaeaa60c45a1197260eb1c267cc996bec81",
 		},
 	}, nil
 }
@@ -39,6 +40,7 @@ func FindStoragePool(address string) (Pool, error) {
 		Node{
 			ip:   net.ParseIP("127.0.0.1"),
 			port: 5000,
+			pubK: "3059301306072a8648ce3d020106082a8648ce3d0301070342000408f4b4026d2560aaa552244bdf8ec421bb41378b56487d9d4ca5a57fd6e64ef7ae2f2c6530f18bd0f359342b4fa7fdaeaa60c45a1197260eb1c267cc996bec81",
 		},
 	}, nil
 }
@@ -50,6 +52,7 @@ func FindValidationPool(tx chain.Transaction) (Pool, error) {
 		Node{
 			ip:   net.ParseIP("127.0.0.1"),
 			port: 5000,
+			pubK: "3059301306072a8648ce3d020106082a8648ce3d0301070342000408f4b4026d2560aaa552244bdf8ec421bb41378b56487d9d4ca5a57fd6e64ef7ae2f2c6530f18bd0f359342b4fa7fdaeaa60c45a1197260eb1c267cc996bec81",
 		},
 	}, nil
 }

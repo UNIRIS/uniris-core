@@ -138,7 +138,11 @@ func formatMasterValidation(mv *api.MasterValidation) (chain.MasterValidation, e
 		return chain.MasterValidation{}, err
 	}
 
-	masterValidation, err := chain.NewMasterValidation(mv.PreviousTransactionNodes, mv.ProofOfWork, preValid)
+	wHeaders := formatNodeHeaders(mv.WelcomeHeaders)
+	vHeaders := formatNodeHeaders(mv.ValidationHeaders)
+	sHeaders := formatNodeHeaders(mv.StorageHeaders)
+
+	masterValidation, err := chain.NewMasterValidation(mv.PreviousValidationNodes, mv.ProofOfWork, preValid, wHeaders, vHeaders, sHeaders)
 	return masterValidation, err
 }
 
@@ -174,8 +178,35 @@ func formatAPITransaction(tx chain.Transaction) *api.Transaction {
 
 func formatAPIMasterValidation(masterValid chain.MasterValidation) *api.MasterValidation {
 	return &api.MasterValidation{
-		ProofOfWork:              masterValid.ProofOfWork(),
-		PreviousTransactionNodes: masterValid.PreviousTransactionNodes(),
-		PreValidation:            formatAPIValidation(masterValid.Validation()),
+		ProofOfWork:             masterValid.ProofOfWork(),
+		PreviousValidationNodes: masterValid.PreviousValidationNodes(),
+		PreValidation:           formatAPIValidation(masterValid.Validation()),
+		WelcomeHeaders:          formatNodeHeadersAPI(masterValid.WelcomeHeaders()),
+		ValidationHeaders:       formatNodeHeadersAPI(masterValid.ValidationHeaders()),
+		StorageHeaders:          formatNodeHeadersAPI(masterValid.StorageHeaders()),
 	}
+}
+
+func formatNodeHeadersAPI(headers []chain.NodeHeader) (apiHeaders []*api.NodeHeader) {
+	for _, h := range headers {
+		apiHeaders = append(apiHeaders, &api.NodeHeader{
+			IsMaster:      h.IsMaster(),
+			IsUnreachable: h.IsUnreachable(),
+			PublicKey:     h.PublicKey(),
+			PatchNumber:   int32(h.PatchNumber()),
+		})
+	}
+	return
+}
+
+func formatNodeHeaders(apiHeaders []*api.NodeHeader) (headers []chain.NodeHeader) {
+	for _, h := range apiHeaders {
+		headers = append(headers, chain.NewNodeHeader(
+			h.PublicKey,
+			h.IsUnreachable,
+			h.IsMaster,
+			int(h.PatchNumber),
+		))
+	}
+	return
 }
