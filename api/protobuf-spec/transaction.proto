@@ -125,6 +125,7 @@ message NodeHeader {
     bool isUnreachable = 2;
     bool isMaster = 3;
     int32 patchNumber = 4;
+    bool isOK = 5;
 }
 
 message Validation {

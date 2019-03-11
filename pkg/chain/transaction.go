@@ -445,6 +445,18 @@ type NodeHeader struct {
 	isUnreachable bool
 	isMaster      bool
 	patchNumber   int
+	isOK          bool
+}
+
+//NewNodeHeader creates a new node header
+func NewNodeHeader(pubK string, isUnreachable bool, isMaster bool, patchNumber int, isOk bool) NodeHeader {
+	return NodeHeader{
+		pubKey:        pubK,
+		isUnreachable: isUnreachable,
+		isMaster:      isMaster,
+		patchNumber:   patchNumber,
+		isOK:          isOk,
+	}
 }
 
 //PublicKey returns the node public key
@@ -467,14 +479,9 @@ func (h NodeHeader) PatchNumber() int {
 	return h.patchNumber
 }
 
-//NewNodeHeader creates a new node header
-func NewNodeHeader(pubK string, isUnreachable bool, isMaster bool, patchNumber int) NodeHeader {
-	return NodeHeader{
-		pubKey:        pubK,
-		isUnreachable: isUnreachable,
-		isMaster:      isMaster,
-		patchNumber:   patchNumber,
-	}
+//IsOk determinates if the node is in status OK not faulty and not in bootstraping
+func (h NodeHeader) IsOk() bool {
+	return h.isOK
 }
 
 //NewMasterValidation creates a new master Transaction validation

@@ -142,13 +142,13 @@ func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, s
 
 func buildHeaders(vPool Pool, sPool Pool) (vHeaders []chain.NodeHeader, sHeaders []chain.NodeHeader) {
 	for _, n := range vPool {
-		//TODO: retrieve real value (patch, is unreachable)
-		vHeaders = append(vHeaders, chain.NewNodeHeader(n.PublicKey(), true, true, 0))
+		//TODO: retrieve real value (patch, is unreachable, is OK)
+		vHeaders = append(vHeaders, chain.NewNodeHeader(n.PublicKey(), true, true, 0, true))
 	}
 
 	for _, n := range sPool {
 		//TODO: retrieve real value (patch, is unreachable)
-		sHeaders = append(sHeaders, chain.NewNodeHeader(n.PublicKey(), true, true, 0))
+		sHeaders = append(sHeaders, chain.NewNodeHeader(n.PublicKey(), true, true, 0, true))
 	}
 
 	return
