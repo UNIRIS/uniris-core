@@ -27,10 +27,21 @@ func requestTransactionMining(tx *api.Transaction, pvKey string, pubKey string) 
 
 	minValidations := consensus.GetMinimumValidation(tx.TransactionHash)
 
+	wHeaders := make([]*api.NodeHeader, 0)
+	for _, n := range masterNodes {
+		wHeaders = append(wHeaders, &api.NodeHeader{
+			IsMaster:      true,
+			IsUnreachable: true, //TODO: ensures it
+			PublicKey:     n.PublicKey(),
+			PatchNumber:   0, //TODO:
+		})
+	}
+
 	req := &api.LeadTransactionMiningRequest{
 		Transaction:        tx,
 		MinimumValidations: int32(minValidations),
 		Timestamp:          time.Now().Unix(),
+		WelcomeHeaders:     wHeaders,
 	}
 	reqBytes, err := json.Marshal(req)
 	if err != nil {

@@ -431,17 +431,61 @@ func (v Validation) MarshalJSON() ([]byte, error) {
 
 //MasterValidation describe the master Transaction validation
 type MasterValidation struct {
-	prevs      []string
-	pow        string
-	validation Validation
+	prevValidNodes []string
+	pow            string
+	validation     Validation
+	wHeaders       []NodeHeader
+	vHeaders       []NodeHeader
+	sHeaders       []NodeHeader
+}
+
+//NodeHeader identifies a node entry in the transaction headers
+type NodeHeader struct {
+	pubKey        string
+	isUnreachable bool
+	isMaster      bool
+	patchNumber   int
+}
+
+//PublicKey returns the node public key
+func (h NodeHeader) PublicKey() string {
+	return h.pubKey
+}
+
+//IsUnreachable determinates if the node is unreachable
+func (h NodeHeader) IsUnreachable() bool {
+	return h.isUnreachable
+}
+
+//IsMaster returns determinates if the node is a master
+func (h NodeHeader) IsMaster() bool {
+	return h.isMaster
+}
+
+//PatchNumber returns the node geo patch number
+func (h NodeHeader) PatchNumber() int {
+	return h.patchNumber
+}
+
+//NewNodeHeader creates a new node header
+func NewNodeHeader(pubK string, isUnreachable bool, isMaster bool, patchNumber int) NodeHeader {
+	return NodeHeader{
+		pubKey:        pubK,
+		isUnreachable: isUnreachable,
+		isMaster:      isMaster,
+		patchNumber:   patchNumber,
+	}
 }
 
 //NewMasterValidation creates a new master Transaction validation
-func NewMasterValidation(prevs []string, pow string, valid Validation) (MasterValidation, error) {
+func NewMasterValidation(prevValidNodes []string, pow string, valid Validation, wHeaders []NodeHeader, vHeaders []NodeHeader, sHeaders []NodeHeader) (MasterValidation, error) {
 	mv := MasterValidation{
-		prevs:      prevs,
-		pow:        pow,
-		validation: valid,
+		prevValidNodes: prevValidNodes,
+		pow:            pow,
+		validation:     valid,
+		wHeaders:       wHeaders,
+		vHeaders:       vHeaders,
+		sHeaders:       sHeaders,
 	}
 	if _, err := mv.IsValid(); err != nil {
 		return MasterValidation{}, err
@@ -449,9 +493,9 @@ func NewMasterValidation(prevs []string, pow string, valid Validation) (MasterVa
 	return mv, nil
 }
 
-//PreviousTransactionNodes returns the nodes for the previous Transaction
-func (mv MasterValidation) PreviousTransactionNodes() []string {
-	return mv.prevs
+//PreviousValidationNodes returns the validation nodes for the previous transaction
+func (mv MasterValidation) PreviousValidationNodes() []string {
+	return mv.prevValidNodes
 }
 
 //ProofOfWork returns the Transaction proof of work (emitter public key) validated the emitter signature
@@ -464,17 +508,46 @@ func (mv MasterValidation) Validation() Validation {
 	return mv.validation
 }
 
+//WelcomeHeaders returns the headers determining the master nodes election
+func (mv MasterValidation) WelcomeHeaders() []NodeHeader {
+	return mv.wHeaders
+}
+
+//ValidationHeaders returns the headers determining the validation nodes election
+func (mv MasterValidation) ValidationHeaders() []NodeHeader {
+	return mv.vHeaders
+}
+
+//StorageHeaders returns the node headers determining the storage nodes election
+func (mv MasterValidation) StorageHeaders() []NodeHeader {
+	return mv.sHeaders
+}
+
 //IsValid check is the master validation is correct
 func (mv MasterValidation) IsValid() (bool, error) {
 
 	//Ensure the previous nodes are public keys
-	if len(mv.prevs) > 0 {
-		for _, m := range mv.prevs {
+	if len(mv.prevValidNodes) > 0 {
+		for _, m := range mv.prevValidNodes {
 			if _, err := crypto.IsPublicKey(m); err != nil {
 				return false, err
 			}
 		}
 	}
+
+	if len(mv.wHeaders) == 0 {
+		return false, fmt.Errorf("master validation: missing welcome node headers")
+	}
+
+	if len(mv.vHeaders) == 0 {
+		return false, fmt.Errorf("master validation: missing validation pool headers")
+	}
+
+	if len(mv.sHeaders) == 0 {
+		return false, fmt.Errorf("master validation: missing storage pool headers")
+	}
+
+	//TODO: ensure the validaty of the headers
 
 	if _, err := crypto.IsPublicKey(mv.ProofOfWork()); err != nil {
 		return false, fmt.Errorf("master validation POW: %s", err.Error())
