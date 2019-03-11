@@ -310,7 +310,7 @@ func reachablePeers(unreachables []PeerIdentity, knownPeers []Peer) peerList {
 
 	reachables := make([]Peer, 0)
 
-	for i := range knownPeers {
+	for i := 0; i < len(knownPeers); i++ {
 		var found bool
 		var j int
 
@@ -324,7 +324,7 @@ func reachablePeers(unreachables []PeerIdentity, knownPeers []Peer) peerList {
 
 		//if not we add it to the list of reachables
 		if !found {
-			reachables = append(reachables, knownPeers[j])
+			reachables = append(reachables, knownPeers[i])
 		}
 	}
 
