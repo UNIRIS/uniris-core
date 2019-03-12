@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/uniris/uniris-core/pkg/consensus"
+
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/shared"
 
@@ -135,7 +137,7 @@ func GetAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context
 }
 
 //CreateAccountHandler is an HTTP handler which forwards ID and Keychain transaction to master nodes and reply with the transaction receipts
-func CreateAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context) {
+func CreateAccountHandler(techReader shared.TechDatabaseReader, p2pNodeReader consensus.NodeReader) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		var form accountCreationRequest
@@ -216,7 +218,7 @@ func CreateAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Cont
 				Timestamp: time.Now().Unix(),
 			})
 		}
-		idTxRes, httpErr := requestTransactionMining(idTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey())
+		idTxRes, httpErr := requestTransactionMining(idTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey(), p2pNodeReader, techReader)
 		if httpErr != nil {
 			c.JSON(httpErr.code, httpErr)
 			return
@@ -230,7 +232,7 @@ func CreateAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Cont
 				Timestamp: time.Now().Unix(),
 			})
 		}
-		keychainTxRes, httpErr := requestTransactionMining(keychainTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey())
+		keychainTxRes, httpErr := requestTransactionMining(keychainTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey(), p2pNodeReader, techReader)
 		if httpErr != nil {
 			c.JSON(httpErr.code, httpErr)
 			return

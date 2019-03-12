@@ -47,3 +47,43 @@ func (db *NodeDatabase) WriteUnreachableNode(publicKey string) error {
 	}
 	return nil
 }
+
+//Reachables retrieves the nodes flagged as reachable
+func (db NodeDatabase) Reachables() (reachables []consensus.Node, err error) {
+	for _, n := range db.nodes {
+		if n.IsReachable() {
+			reachables = append(reachables, n)
+		}
+	}
+	return
+}
+
+//Unreachables retrieves the nodes flagged as unreachable
+func (db NodeDatabase) Unreachables() (unreachables []consensus.Node, err error) {
+	for _, n := range db.nodes {
+		if !n.IsReachable() {
+			unreachables = append(unreachables, n)
+		}
+	}
+	return
+}
+
+//CountReachables retrieves the number of reachable nodes
+func (db NodeDatabase) CountReachables() (nb int, err error) {
+	for _, n := range db.nodes {
+		if n.IsReachable() {
+			nb++
+		}
+	}
+	return
+}
+
+//FindByPublicKey retrieves a node from a public key
+func (db *NodeDatabase) FindByPublicKey(publicKey string) (found consensus.Node, err error) {
+	for _, n := range db.nodes {
+		if n.PublicKey() == publicKey {
+			return n, nil
+		}
+	}
+	return
+}

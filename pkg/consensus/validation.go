@@ -22,7 +22,7 @@ import (
 // - Executes the proof of work
 // - Requests validation confirmations
 // - Requests storage
-func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader, poolR PoolRequester, pub, pv string, emR shared.EmitterDatabaseReader) error {
+func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader, poolR PoolRequester, pub, pv string, emR shared.EmitterReader) error {
 	log.Printf("transaction %s is in progress\n", tx.TransactionHash())
 
 	lastVPool, err := findLastValidationPool(tx.Address(), tx.TransactionType(), poolR)
@@ -56,7 +56,7 @@ func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader
 	return nil
 }
 
-func mineTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, lastVPool Pool, minValids int, nodePub, nodePv string, emR shared.EmitterDatabaseReader, poolR PoolRequester) (chain.Transaction, error) {
+func mineTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, lastVPool Pool, minValids int, nodePub, nodePv string, emR shared.EmitterReader, poolR PoolRequester) (chain.Transaction, error) {
 
 	vPool, err := FindValidationPool(tx)
 	if err != nil {
@@ -108,7 +108,7 @@ func findPools(tx chain.Transaction, poolR PoolRequester) (lastValidationPool, v
 }
 
 //preValidateTransaction checks the incoming transaction as master node by ensure the transaction integrity and perform the proof of work. A valiation will result from this action
-func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, vPool Pool, lastVPool Pool, minValids int, pub, pv string, emR shared.EmitterDatabaseReader) (chain.MasterValidation, error) {
+func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, vPool Pool, lastVPool Pool, minValids int, pub, pv string, emR shared.EmitterReader) (chain.MasterValidation, error) {
 	if _, err := tx.IsValid(); err != nil {
 		return chain.MasterValidation{}, err
 	}
@@ -154,7 +154,7 @@ func buildHeaders(vPool Pool, sPool Pool) (vHeaders []chain.NodeHeader, sHeaders
 	return
 }
 
-func proofOfWork(tx chain.Transaction, emR shared.EmitterDatabaseReader) (pow string, err error) {
+func proofOfWork(tx chain.Transaction, emR shared.EmitterReader) (pow string, err error) {
 	emKeys, err := emR.EmitterKeys()
 	if err != nil {
 		return

@@ -2,14 +2,26 @@ package shared
 
 //TechDatabaseReader wraps the shared emitter and node storage
 type TechDatabaseReader interface {
-	EmitterDatabaseReader
-
-	//NodeLastKeys retrieve the last shared node keys from the Tech DB
-	NodeLastKeys() (KeyPair, error)
+	EmitterReader
+	NodeReader
 }
 
-//EmitterDatabaseReader handles queries for the shared emitter information
-type EmitterDatabaseReader interface {
+//NodeReader performs queries to retrieve shared nodes information
+type NodeReader interface {
+
+	//NodeFirstKeys retrieves the first shared node keys
+	NodeFirstKeys() (KeyPair, error)
+
+	//NodeLastKeys retrieve the last shared node keys
+	NodeLastKeys() (KeyPair, error)
+
+	//AuthorizedPublicKeys retrieves the list of all the authorized node public keys
+	AuthorizedPublicKeys() ([]string, error)
+}
+
+//EmitterReader handles queries for the shared emitter information
+type EmitterReader interface {
+
 	//EmitterKeys retrieve the shared emitter key from the Tech DB
 	EmitterKeys() (EmitterKeys, error)
 }

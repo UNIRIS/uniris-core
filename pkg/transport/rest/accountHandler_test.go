@@ -350,7 +350,7 @@ Scenario: Create account request with an invalid encrypted ID
 */
 func TestCreationAccountWhenInvalidID(t *testing.T) {
 	r := gin.New()
-	r.POST("/api/account", CreateAccountHandler(&mockTechDB{}))
+	r.POST("/api/account", CreateAccountHandler(&mockTechDB{}, mockNodeDatabase{}))
 
 	form, _ := json.Marshal(map[string]string{
 		"encrypted_id":       "abc",
@@ -381,7 +381,7 @@ Scenario: Create account request with an invalid encrypted Keychain
 */
 func TestCreationAccountWhenKeychainInvalid(t *testing.T) {
 	r := gin.New()
-	r.POST("/api/account", CreateAccountHandler(&mockTechDB{}))
+	r.POST("/api/account", CreateAccountHandler(&mockTechDB{}, mockNodeDatabase{}))
 
 	form, _ := json.Marshal(map[string]string{
 		"encrypted_id":       hex.EncodeToString([]byte("id")),
@@ -421,7 +421,7 @@ func TestCreationAccountWhenSignatureInvalid(t *testing.T) {
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
 	r := gin.New()
-	r.POST("/api/account", CreateAccountHandler(techDB))
+	r.POST("/api/account", CreateAccountHandler(techDB, mockNodeDatabase{}))
 
 	form, _ := json.Marshal(map[string]string{
 		"encrypted_id":       hex.EncodeToString([]byte("id")),
@@ -517,7 +517,13 @@ func TestCreateAccount(t *testing.T) {
 
 	//Start API
 	r := gin.New()
-	r.POST("/api/account", CreateAccountHandler(techDB))
+	r.POST("/api/account", CreateAccountHandler(techDB, mockNodeDatabase{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, "pub1", consensus.NodeOK, "", 100, "1.0", 1, 1, 12.5, -100, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, "pub2", consensus.NodeOK, "", 500, "1.0", 1, 1, 50.5, -80, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, "pub3", consensus.NodeOK, "", 300, "1.0", 1, 1, -30, 20.5, consensus.GeoPatch{}, true),
+		},
+	}))
 
 	//Create transactions
 	addr := crypto.HashString("addr")
@@ -773,4 +779,44 @@ func (r *mockChainDB) WriteID(id chain.ID) error {
 func (r *mockChainDB) WriteKO(tx chain.Transaction) error {
 	r.kos = append(r.kos, tx)
 	return nil
+}
+
+type mockNodeDatabase struct {
+	nodes []consensus.Node
+}
+
+func (db mockNodeDatabase) Reachables() (reachables []consensus.Node, err error) {
+	for _, n := range db.nodes {
+		if n.IsReachable() {
+			reachables = append(reachables, n)
+		}
+	}
+	return
+}
+
+func (db mockNodeDatabase) Unreachables() (unreachables []consensus.Node, err error) {
+	for _, n := range db.nodes {
+		if !n.IsReachable() {
+			unreachables = append(unreachables, n)
+		}
+	}
+	return
+}
+
+func (db mockNodeDatabase) CountReachables() (nb int, err error) {
+	for _, n := range db.nodes {
+		if n.IsReachable() {
+			nb++
+		}
+	}
+	return
+}
+
+func (db mockNodeDatabase) FindByPublicKey(publicKey string) (found consensus.Node, err error) {
+	for _, n := range db.nodes {
+		if n.PublicKey() == publicKey {
+			return n, nil
+		}
+	}
+	return
 }

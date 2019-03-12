@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uniris/uniris-core/pkg/consensus"
+
 	"github.com/uniris/uniris-core/pkg/shared"
 	"github.com/uniris/uniris-core/pkg/system"
 
@@ -84,9 +86,10 @@ func main() {
 		fmt.Printf("Network interface: %s\n", conf.networkInterface)
 
 		techDB := memstorage.NewTechDatabase()
+		nodeDB := &memstorage.NodeDatabase{}
 
-		go startGRPCServer(conf, techDB)
-		startHTTPServer(conf, techDB)
+		go startGRPCServer(conf, techDB, nodeDB)
+		startHTTPServer(conf, techDB, nodeDB)
 
 		return nil
 	}
@@ -206,7 +209,7 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 	}
 }
 
-func startHTTPServer(conf unirisConf, techDB shared.TechDatabaseReader) {
+func startHTTPServer(conf unirisConf, techDB shared.TechDatabaseReader, nodeReader consensus.NodeReader) {
 	r := gin.Default()
 
 	staticDir, _ := filepath.Abs("../../web/static")
@@ -218,14 +221,14 @@ func startHTTPServer(conf unirisConf, techDB shared.TechDatabaseReader) {
 	r.StaticFile("/swagger.yaml", swaggerFile)
 
 	r.GET("/api/account/:idHash", rest.GetAccountHandler(techDB))
-	r.POST("/api/account", rest.CreateAccountHandler(techDB))
+	r.POST("/api/account", rest.CreateAccountHandler(techDB, nodeReader))
 	r.GET("/api/transaction/:txReceipt/status", rest.GetTransactionStatusHandler(techDB))
 	r.GET("/api/sharedkeys", rest.GetSharedKeysHandler(techDB))
 
 	r.Run(":80")
 }
 
-func startGRPCServer(conf unirisConf, techDB shared.TechDatabaseReader) {
+func startGRPCServer(conf unirisConf, techDB shared.TechDatabaseReader, nodeWriter consensus.NodeWriter) {
 	grpcServer := grpc.NewServer()
 
 	poolR := rpc.NewPoolRequester(techDB)
@@ -243,13 +246,11 @@ func startGRPCServer(conf unirisConf, techDB shared.TechDatabaseReader) {
 		discoveryDB = memstorage.NewDiscoveryDatabase()
 	}
 
-	nodeDB := &memstorage.NodeDatabase{}
-
 	var notif discovery.Notifier
 	if conf.bus.busType == "amqp" {
 		notif = amqp.NewDiscoveryNotifier(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port)
 		go func() {
-			if err := amqp.ConsumeDiscoveryNotifications(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port, nodeDB); err != nil {
+			if err := amqp.ConsumeDiscoveryNotifications(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port, nodeWriter); err != nil {
 				panic(err)
 			}
 		}()

@@ -8,15 +8,15 @@ import (
 	"time"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
-	"github.com/uniris/uniris-core/pkg/chain"
 	"github.com/uniris/uniris-core/pkg/consensus"
 	"github.com/uniris/uniris-core/pkg/crypto"
+	"github.com/uniris/uniris-core/pkg/shared"
 	"google.golang.org/grpc"
 )
 
-func requestTransactionMining(tx *api.Transaction, pvKey string, pubKey string) (transactionResponse, *httpError) {
+func requestTransactionMining(tx *api.Transaction, pvKey string, pubKey string, p2pNodeReader consensus.NodeReader, sharedNodeReader shared.NodeReader) (transactionResponse, *httpError) {
 
-	masterNodes, err := consensus.FindMasterNodes(tx.TransactionHash, chain.TransactionType(tx.Type))
+	masterNodes, err := consensus.FindMasterNodes(tx.TransactionHash, p2pNodeReader, sharedNodeReader)
 	if err != nil {
 		return transactionResponse{}, &httpError{
 			code:      http.StatusInternalServerError,
@@ -28,14 +28,15 @@ func requestTransactionMining(tx *api.Transaction, pvKey string, pubKey string) 
 
 	minValidations := consensus.GetMinimumValidation(tx.TransactionHash)
 
+	//Building the welcome node headers
 	wHeaders := make([]*api.NodeHeader, 0)
 	for _, n := range masterNodes {
 		wHeaders = append(wHeaders, &api.NodeHeader{
 			IsMaster:      true,
-			IsUnreachable: true, //TODO: ensures it
+			IsUnreachable: !n.IsReachable(),
 			PublicKey:     n.PublicKey(),
-			PatchNumber:   0,    //TODO:
-			IsOK:          true, //TODO:
+			PatchNumber:   int32(n.Patch().ID()),
+			IsOK:          n.Status() == consensus.NodeOK,
 		})
 	}
 

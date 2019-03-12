@@ -590,3 +590,15 @@ func (db mockTechDB) EmitterKeys() (shared.EmitterKeys, error) {
 func (db mockTechDB) NodeLastKeys() (shared.KeyPair, error) {
 	return db.nodeKeys[len(db.nodeKeys)-1], nil
 }
+
+func (db mockTechDB) NodeFirstKeys() (shared.KeyPair, error) {
+	return db.nodeKeys[0], nil
+}
+
+func (db mockTechDB) AuthorizedPublicKeys() ([]string, error) {
+	return []string{
+		"pub1",
+		"pub2",
+		"pub3",
+	}, nil
+}

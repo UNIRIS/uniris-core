@@ -19,12 +19,17 @@ type NodeWriter interface {
 
 //NodeReader provides queries to fetch network nodes
 type NodeReader interface {
+	//CountReachables retrieves the number of reachable nodes
+	CountReachables() (int, error)
 
 	//Reachables retrieves the nodes flagged as reachable
 	Reachables() ([]Node, error)
 
 	//Unreachables retrieves the nodes flagged as unreachable
 	Unreachables() ([]Node, error)
+
+	//FindByPublicKey retrieves a node from a public key
+	FindByPublicKey(publicKey string) (Node, error)
 }
 
 //Node represents a discovered peers with some additional computed data
@@ -73,6 +78,7 @@ func NewNode(ip net.IP, port int, pubK string, status NodeStatus, cpu string, di
 		latitude:             lat,
 		longitude:            lon,
 		patch:                patch,
+		isReachable:          isReachable,
 	}
 }
 
@@ -136,6 +142,11 @@ func (n Node) Patch() GeoPatch {
 	return n.patch
 }
 
+//IsReachable returns true if the node has been reached recently
+func (n Node) IsReachable() bool {
+	return n.isReachable
+}
+
 //GeoPatch represents a geographic section on the earth based on latitude and longitude
 type GeoPatch struct {
 	patchid int
@@ -143,6 +154,11 @@ type GeoPatch struct {
 	right   float64
 	top     float64
 	bottom  float64
+}
+
+//ID returns the geo patch ID
+func (p GeoPatch) ID() int {
+	return p.patchid
 }
 
 func createMapPatches(xDegree float64, yDegree float64) []GeoPatch {
