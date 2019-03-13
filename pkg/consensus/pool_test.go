@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/uniris/uniris-core/pkg/chain"
 	"github.com/uniris/uniris-core/pkg/crypto"
 
 	"github.com/stretchr/testify/assert"
@@ -120,7 +119,7 @@ func TestFindMasterValidationNode(t *testing.T) {
 	_, pub7, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	_, pub8, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	nodeDB := &mockNodeReader{
+	nodeReader := &mockNodeReader{
 		nodes: []Node{
 			Node{publicKey: pub1, isReachable: false},
 			Node{publicKey: pub2, isReachable: true},
@@ -136,14 +135,14 @@ func TestFindMasterValidationNode(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	crossNodeKeys, _ := shared.NewNodeCrossKeyPair(pub, pv)
 
-	masterNodes, err := FindMasterNodes([]byte("hash"), nodeDB, &mockSharedKeyReader{
+	masterNodes, err := FindMasterNodes([]byte("hash"), nodeReader, &mockSharedKeyReader{
 		authKeys:      []crypto.PublicKey{pub1, pub2, pub3, pub4, pub5, pub6, pub7, pub8},
 		crossNodeKeys: []shared.NodeCrossKeyPair{crossNodeKeys},
 	})
 	assert.Nil(t, err)
 
 	var nbReachables int
-	for _, n := range masterNodes {
+	for _, n := range masterNodes.nodes {
 		if n.isReachable {
 			nbReachables++
 		}
@@ -156,14 +155,70 @@ Scenario: Find validation pool
 	Given a transaction address
 	When I want to find the validation pool
 	Then I get a pool including a least one member
-
-	TODO: To improve when the implementation will be provided
 */
 func TestFindValidationPool(t *testing.T) {
-	pool, err := FindValidationPool(chain.Transaction{})
+
+	_, masterPub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub3, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub4, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub5, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub6, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub7, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub8, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub9, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub10, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub11, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub12, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	nodeReader := &mockNodeReader{
+		nodes: []Node{
+			Node{publicKey: pub1, isReachable: false, patch: GeoPatch{patchid: 1}},
+			Node{publicKey: pub2, isReachable: true, patch: GeoPatch{patchid: 2}},
+			Node{publicKey: pub3, isReachable: true, patch: GeoPatch{patchid: 5}},
+			Node{publicKey: pub4, isReachable: true, patch: GeoPatch{patchid: 2}},
+			Node{publicKey: pub5, isReachable: false, patch: GeoPatch{patchid: 4}},
+			Node{publicKey: pub6, isReachable: true, patch: GeoPatch{patchid: 3}},
+			Node{publicKey: pub7, isReachable: true, patch: GeoPatch{patchid: 2}},
+			Node{publicKey: pub8, isReachable: false, patch: GeoPatch{patchid: 1}},
+			Node{publicKey: pub9, isReachable: true, patch: GeoPatch{patchid: 1}},
+			Node{publicKey: pub10, isReachable: true, patch: GeoPatch{patchid: 2}},
+			Node{publicKey: pub11, isReachable: true, patch: GeoPatch{patchid: 3}},
+			Node{publicKey: pub12, isReachable: true, patch: GeoPatch{patchid: 4}},
+		},
+	}
+
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	crossNodeKeys, _ := shared.NewNodeCrossKeyPair(pub, pv)
+
+	sharedKeyReader := &mockSharedKeyReader{
+		authKeys:      []crypto.PublicKey{pub1, pub2, pub3, pub4, pub5, pub6, pub7, pub8, pub9, pub10, pub11, pub12},
+		crossNodeKeys: []shared.NodeCrossKeyPair{crossNodeKeys},
+	}
+
+	pool, err := FindValidationPool(crypto.Hash([]byte("address")), 5, masterPub, nodeReader, sharedKeyReader)
 	assert.Nil(t, err)
-	assert.Len(t, pool, 1)
-	assert.Equal(t, "127.0.0.1", pool[0].IP().String())
+	assert.True(t, len(pool.nodes) >= 7)   //5 + (5/2)
+	assert.True(t, len(pool.headers) >= 6) //min: 5 validation node + 1 master node
+
+	minPatches, _ := validationRequiredPatchNumber(5, nodeReader)
+	distinctPatches := make([]int, 0)
+	for _, h := range pool.headers {
+		var found bool
+		for _, p := range distinctPatches {
+			if p == h.PatchNumber() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			distinctPatches = append(distinctPatches, h.PatchNumber())
+		}
+	}
+
+	assert.True(t, len(distinctPatches) >= minPatches)
 }
 
 /*
@@ -254,7 +309,7 @@ func (db mockNodeReader) CountReachables() (nb int, err error) {
 	return
 }
 
-func (db *mockNodeReader) FindByPublicKey(publicKey crypto.PublicKey) (found Node, err error) {
+func (db mockNodeReader) FindByPublicKey(publicKey crypto.PublicKey) (found Node, err error) {
 	for _, n := range db.nodes {
 		if n.publicKey.Equals(publicKey) {
 			return n, nil

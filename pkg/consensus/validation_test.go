@@ -386,7 +386,7 @@ func TestPreValidateTransaction(t *testing.T) {
 	assert.Nil(t, err)
 
 	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
-	mv, err := preValidateTransaction(tx, wHeaders, Pool{Node{publicKey: pub}}, Pool{Node{publicKey: pub}}, Pool{}, 1, pub, pv, sharedKeyReader)
+	mv, err := preValidateTransaction(tx, wHeaders, Pool{nodes: []Node{Node{publicKey: pub}}}, Pool{nodes: []Node{Node{publicKey: pub}}}, Pool{}, 1, pub, pv, sharedKeyReader)
 	assert.Nil(t, err)
 	assert.Equal(t, pub, mv.ProofOfWork())
 	assert.EqualValues(t, pub, mv.Validation().PublicKey())
@@ -488,6 +488,150 @@ func TestLeadMining(t *testing.T) {
 	assert.Len(t, poolR.stores, 1)
 }
 
+/*
+Scenario: Get the minimum validation number for a system transaction with tiny network
+	Given a system transaction with 1 nodes and 1 reachable
+	When I want to get the validation required number
+	Then I get 1
+*/
+func TestTestValidationNumberNetworkBasedWithTinyNetwork(t *testing.T) {
+	nbValidations, err := requiredValidationNumberForSysTX(1, 1)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, nbValidations)
+}
+
+/*
+Scenario: Get the minimum validation number for a system transaction with small network
+	Given a system transaction with less than 5 nodes and 2 reachables
+	When I want to get the validation required number
+	Then I get 2
+*/
+func TestTestValidationNumberNetworkBasedWithSmallNetwork(t *testing.T) {
+
+	nbValidations, err := requiredValidationNumberForSysTX(5, 2)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, nbValidations)
+}
+
+/*
+Scenario: Get the minimum validation number for a system transaction with normal network
+	Given a system transaction with 10 nodes and 10 reachables
+	When I want to get the validation required number
+	Then I get 2
+*/
+func TestValidationNumberNetworkBasedWithNormalNetwork(t *testing.T) {
+	nbValidations, err := requiredValidationNumberForSysTX(10, 10)
+	assert.Nil(t, err)
+	assert.Equal(t, 5, nbValidations)
+}
+
+/*
+Scenario: Get the minimum validation number for a system transaction with too less nodes
+	Given a system transaction with 5 nodes and 1 reachable
+	When I want to get the validation required number
+	Then I get an error
+*/
+func TestValidationNumberNetworkBasedWithUnsufficientNetwork(t *testing.T) {
+	_, err := requiredValidationNumberForSysTX(6, 1)
+	assert.EqualError(t, err, "no enough nodes in the network to validate this transaction")
+}
+
+/*
+SCenario: Get the minimum validation number for transaction with fees
+	Given a transaction fees as 1 UCO and 10 reachables nodes
+	When I want to get the validation required number
+	Then I get 9 validations neeed
+*/
+func TestValidationNumberFeesBasedFor1UCOFeesWith10Nodes(t *testing.T) {
+	assert.Equal(t, 9, requiredValidationNumberWithFees(1, 10))
+}
+
+/*
+SCenario: Get the minimum validation number for transaction with fees
+	Given a transaction fees as 1 UCO and 8 reachables nodes
+	When I want to get the validation required number
+	Then I get 9 validations neeed
+*/
+func TestValidationNumberFeesBasedFor1UCOFeesWith8Nodes(t *testing.T) {
+	assert.Equal(t, 8, requiredValidationNumberWithFees(1, 8))
+}
+
+/*
+Scenario: Get the minimum validation for normal transaction with less 3 nodes
+	Given a system transaction and less 3 nodes
+	When I want to get the validation required number
+	Then I get an error
+*/
+func TestRequiredValidationNumberNormalTxWithLess3Nodes(t *testing.T) {
+
+	nodeReader := mockNodeReader{
+		nodes: []Node{
+			Node{isReachable: true},
+			Node{isReachable: true},
+		},
+	}
+
+	keyReader := mockSharedKeyReader{
+		authKeys: make([]crypto.PublicKey, 2),
+	}
+
+	_, err := RequiredValidationNumber(chain.KeychainTransactionType, 0.001, nodeReader, keyReader)
+	assert.EqualError(t, err, "no enough nodes in the network to validate this transaction")
+}
+
+/*
+Scenario: Get the minimum validation for system transaction
+	Given a system transaction and 5 nodes and 5 reachables
+	When I want to get the validation required number
+	Then I get 5 validation
+*/
+func TestRequiredValidationNumberSystemTxWith5Nodes(t *testing.T) {
+	nodeReader := mockNodeReader{
+		nodes: []Node{
+			Node{isReachable: true},
+			Node{isReachable: true},
+			Node{isReachable: true},
+			Node{isReachable: true},
+			Node{isReachable: true},
+		},
+	}
+
+	keyReader := mockSharedKeyReader{
+		authKeys: make([]crypto.PublicKey, 5),
+	}
+
+	nbValidations, err := RequiredValidationNumber(chain.SystemTransactionType, 0, nodeReader, keyReader)
+	assert.Nil(t, err)
+	assert.Equal(t, 5, nbValidations)
+}
+
+/*
+Scenario: Get the minimum validation  for normal transaction
+	Given a normal transaction (minium fees: 0.001 => 3 validations)
+	When I want to get the validation required number
+	Then I get 3 validation
+*/
+func TestRequiredValidationNumberWith5UCO(t *testing.T) {
+
+	nodeReader := mockNodeReader{
+		nodes: []Node{
+			Node{isReachable: true},
+			Node{isReachable: true},
+			Node{isReachable: true},
+			Node{isReachable: true},
+			Node{isReachable: true},
+		},
+	}
+
+	keyReader := mockSharedKeyReader{
+		authKeys: make([]crypto.PublicKey, 5),
+	}
+
+	nbValidations, err := RequiredValidationNumber(chain.ContractTransactionType, 0.001, nodeReader, keyReader)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, nbValidations)
+}
+
 type mockPoolRequester struct {
 	stores []chain.Transaction
 	ko     []chain.Transaction
@@ -511,15 +655,4 @@ func (pr mockPoolRequester) RequestTransactionValidations(pool Pool, tx chain.Tr
 func (pr *mockPoolRequester) RequestTransactionStorage(pool Pool, minReplicas int, tx chain.Transaction) error {
 	pr.stores = append(pr.stores, tx)
 	return nil
-}
-
-/*
-Scenario: Get the minimum validation number
-	Given a transaction hash
-	When I want to get the validation required number
-	Then I get a number  valid
-	//TODO: to improve when the implementation will be defined
-*/
-func TestGetMinimumTransactionValidation(t *testing.T) {
-	assert.Equal(t, 1, GetMinimumValidation([]byte("")))
 }

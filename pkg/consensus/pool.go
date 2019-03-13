@@ -3,8 +3,8 @@ package consensus
 import (
 	"crypto/hmac"
 	"encoding/hex"
+	"errors"
 	"fmt"
-	"net"
 	"sort"
 
 	"github.com/uniris/uniris-core/pkg/shared"
@@ -14,7 +14,15 @@ import (
 )
 
 //Pool represent a pool either for sharding or validation
-type Pool []Node
+type Pool struct {
+	nodes   []Node
+	headers []chain.NodeHeader
+}
+
+//Nodes returns the nodes of the pool
+func (p Pool) Nodes() []Node {
+	return p.nodes
+}
 
 //PoolRequester handles the request to perform on a pool during the mining
 type PoolRequester interface {
@@ -31,35 +39,34 @@ type PoolRequester interface {
 	RequestLastTransaction(pool Pool, txAddr crypto.VersionnedHash, txType chain.TransactionType) (*chain.Transaction, error)
 }
 
-//FindMasterNodes finds a list of master nodes by using an entropy sorting based on the transaction and minimum number of master
-func FindMasterNodes(txHash crypto.VersionnedHash, nodeReader NodeReader, sharedKeyReader shared.KeyReader) (Pool, error) {
+//FindMasterNodes finds a list of master nodes by using an entropy sKeysing based on the transaction and minimum number of master
+func FindMasterNodes(txHash crypto.VersionnedHash, nodeReader NodeReader, sharedKeyReader shared.KeyReader) (mPool Pool, err error) {
 	authKeys, err := sharedKeyReader.AuthorizedNodesPublicKeys()
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	firstKeys, err := sharedKeyReader.FirstNodeCrossKeypair()
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	sort, err := entropySort(txHash, authKeys, firstKeys.PrivateKey())
+	sKeys, err := entropySort(txHash, authKeys, firstKeys.PrivateKey())
 	if err != nil {
-		return nil, err
+		return
 	}
 	nbReachables, err := nodeReader.CountReachables()
 	if err != nil {
-		return nil, err
+		return
 	}
 	nbMasters := requiredNumberOfMaster(len(authKeys), nbReachables)
 
-	masters := make([]Node, 0)
 	nbReachableMasters := 0
 
 	for i := 0; nbReachableMasters < nbMasters && i < len(sort); i++ {
 		n, err := nodeReader.FindByPublicKey(sort[i])
 		if err != nil {
-			return nil, err
+			return Pool{}, err
 		}
 
 		//check if the node exists, happens only when there is some networking issues
@@ -76,7 +83,7 @@ func FindMasterNodes(txHash crypto.VersionnedHash, nodeReader NodeReader, shared
 	if nbReachableMasters != nbMasters {
 		return nil, fmt.Errorf("cannot proceed transaction with an invalid number of reachables master nodes (%d)", nbReachableMasters)
 	}
-	return masters, nil
+	return
 }
 
 //requiredNumberOfMaster returns the number of master based on the network capacity
@@ -100,8 +107,8 @@ func buildStartingPoint(txHash crypto.VersionnedHash, nodeMinerPrivateKey crypto
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-//entropySort sorts a list of nodes public keys using a "starting point" (HMAC of the transaction hash with the first node shared private key) and the hashes of the node public keys
-func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, nodeFirstKey crypto.PrivateKey) (sortedKeys []crypto.PublicKey, err error) {
+//entropySort sKeyss a list of nodes public keys using a "starting point" (HMAC of the transaction hash with the first node shared private key) and the hashes of the node public keys
+func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, nodeFirstKey crypto.PrivateKey) (sKeysedKeys []crypto.PublicKey, err error) {
 	startingPoint, err := buildStartingPoint(txHash, nodeFirstKey)
 	if err != nil {
 		return nil, err
@@ -148,7 +155,7 @@ func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, node
 					}
 				}
 				if !contains {
-					sortedKeys = append(sortedKeys, mHashKeys[hashKeys[i]])
+					sKeysedKeys = append(sKeysedKeys, mHashKeys[hashKeys[i]])
 				}
 			}
 		}
@@ -165,14 +172,14 @@ func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, node
 					}
 				}
 				if !contains {
-					sortedKeys = append(sortedKeys, mHashKeys[hashKeys[i]])
+					sKeysedKeys = append(sKeysedKeys, mHashKeys[hashKeys[i]])
 				}
 			}
 		}
 	}
 
-	//We have tested all the characters of the staring point and not yet finished the sorting operation, we will loop on all the hex characters to finish sorting
-	if len(sortedKeys) < len(hashKeys)-1 {
+	//We have tested all the characters of the staring point and not yet finished the sKeysing operation, we will loop on all the hex characters to finish sKeysing
+	if len(sKeysedKeys) < len(hashKeys)-1 {
 		hexChar := []rune{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
 		for p := 0; len(sortedKeys) < len(hashKeys)-1 && p < len(hexChar); p++ {
 
@@ -188,7 +195,7 @@ func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, node
 						}
 					}
 					if !contains {
-						sortedKeys = append(sortedKeys, mHashKeys[hashKeys[i]])
+						sKeysedKeys = append(sKeysedKeys, mHashKeys[hashKeys[i]])
 					}
 				}
 			}
@@ -205,7 +212,7 @@ func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, node
 						}
 					}
 					if !contains {
-						sortedKeys = append(sortedKeys, mHashKeys[hashKeys[i]])
+						sKeysedKeys = append(sKeysedKeys, mHashKeys[hashKeys[i]])
 					}
 				}
 			}
@@ -224,23 +231,89 @@ func FindStoragePool(address crypto.VersionnedHash, r NodeReader) (Pool, error) 
 	return r.Reachables()
 }
 
-//FindValidationPool searches a validation pool from a transaction hash
-//TODO: Implements AI lookups to identify the right validation pool
-func FindValidationPool(tx chain.Transaction) (Pool, error) {
-	b, err := hex.DecodeString("0044657dab453d34f9adc2100a2cb8f38f644ef48e34b1d99d7c4d9371068e9438")
+//FindValidationPool lookups a validation pool from a transaction hash and a required number using the entropy sKeys
+func FindValidationPool(txHash crypto.VersionnedHash, minValidations int, masterNodeKey crypto.PublicKey, nodeReader NodeReader, sharedKeyReader shared.KeyReader) (vPool Pool, err error) {
+	authKeys, err := sharedKeyReader.AuthorizedNodesPublicKeys()
 	if err != nil {
-		return Pool{}, err
-	}
-	pub, err := crypto.ParsePublicKey(b)
-	if err != nil {
-		return Pool{}, err
+		return
 	}
 
-	return Pool{
-		Node{
-			ip:        net.ParseIP("127.0.0.1"),
-			port:      5000,
-			publicKey: pub,
-		},
-	}, nil
+	firstKeys, err := sharedKeyReader.FirstNodeCrossKeypair()
+	if err != nil {
+		return
+	}
+
+	sKeys, err := entropySort(txHash, authKeys, firstKeys.PrivateKey())
+	if err != nil {
+		return
+	}
+
+	requiredPatchNb, err := validationRequiredPatchNumber(minValidations, nodeReader)
+	if err != nil {
+		return
+	}
+
+	nbReachables := 0
+	patchIds := make([]int, 0)
+
+	var i int
+
+	//challenge the validations nodes by providing more nodes validations
+	maxNbValidations := minValidations + (minValidations / 2)
+
+	//adding the master node to the validation headers
+	masterNode, err := nodeReader.FindByPublicKey(masterNodeKey)
+	if err != nil {
+		return
+	}
+	vPool.headers = append(vPool.headers, chain.NewNodeHeader(masterNodeKey, false, true, masterNode.patch.patchid, masterNode.status == NodeOK))
+
+	for nbReachables < maxNbValidations && len(patchIds) < requiredPatchNb && i < len(sKeys) {
+		n, err := nodeReader.FindByPublicKey(sKeys[i])
+		if err != nil {
+			return Pool{}, err
+		}
+
+		//Add a validation headers
+		vPool.headers = append(vPool.headers,
+			chain.NewNodeHeader(sKeys[i],
+				!n.isReachable,
+				false,
+				n.patch.patchid,
+				n.status == NodeOK))
+
+		//Add the node to the pool
+		vPool.nodes = append(vPool.nodes, n)
+
+		//Need a view of the reachable and unreachables for a better validation
+		if n.isReachable {
+
+			//Reference the patch of the node if it's not already insert by helping to determinate
+			//the number of distinct patches retrieved for the check of the required number of patches
+			var existingPatch bool
+			for _, id := range patchIds {
+				if id == n.patch.patchid {
+					existingPatch = true
+					break
+				}
+			}
+			if !existingPatch {
+				patchIds = append(patchIds, n.patch.patchid)
+			}
+
+			nbReachables++
+		}
+
+		i++
+	}
+
+	if nbReachables != maxNbValidations {
+		return Pool{}, errors.New("cannot proceed transaction with an invalid number of reachables validation nodes")
+	}
+
+	if len(patchIds) != requiredPatchNb {
+		return Pool{}, errors.New("cannot proceed transaction with missing patches validation nodes")
+	}
+
+	return vPool, nil
 }
