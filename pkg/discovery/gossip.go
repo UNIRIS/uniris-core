@@ -310,21 +310,20 @@ func reachablePeers(unreachables []PeerIdentity, knownPeers []Peer) peerList {
 
 	reachables := make([]Peer, 0)
 
-	for i := range knownPeers {
+	for _, p := range knownPeers {
 		var found bool
-		var j int
 
 		//detect if the peers is unreachable
-		for !found && j < len(unreachables) {
-			if unreachables[j].publicKey == knownPeers[i].identity.publicKey {
+		for _, u := range unreachables {
+			if u.publicKey == p.identity.publicKey {
 				found = true
+				break
 			}
-			j++
 		}
 
 		//if not we add it to the list of reachables
 		if !found {
-			reachables = append(reachables, knownPeers[j])
+			reachables = append(reachables, p)
 		}
 	}
 
