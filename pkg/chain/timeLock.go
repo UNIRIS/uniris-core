@@ -2,6 +2,7 @@ package chain
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
@@ -92,5 +93,5 @@ func removeTimeLock(txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash) 
 	timeLockers = timeLockers[:len(timeLockers)-1]
 	timerLockMux.Unlock()
 
-	fmt.Printf("transaction %s is unlocked\n", txHash)
+	fmt.Printf("transaction %s is unlocked\n", hex.EncodeToString(txHash))
 }
