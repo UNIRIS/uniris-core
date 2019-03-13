@@ -85,11 +85,11 @@ func main() {
 		fmt.Printf("Network: %s\n", conf.networkType)
 		fmt.Printf("Network interface: %s\n", conf.networkInterface)
 
-		keyDB := memstorage.NewSharedKeyDatabase()
+		sharedDB := memstorage.NewSharedDatabase()
 		nodeDB := &memstorage.NodeDatabase{}
 
-		go startGRPCServer(conf, keyDB, nodeDB)
-		startHTTPServer(conf, keyDB, nodeDB)
+		go startGRPCServer(conf, sharedDB, nodeDB)
+		startHTTPServer(conf, sharedDB, nodeDB)
 
 		return nil
 	}
