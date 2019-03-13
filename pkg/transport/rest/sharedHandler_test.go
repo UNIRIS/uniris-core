@@ -1,6 +1,8 @@
 package rest
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -34,7 +36,7 @@ func TestGetSharedKeysWhenMissingPublicKey(t *testing.T) {
 	resBytes, _ := ioutil.ReadAll(w.Body)
 	var err httpError
 	json.Unmarshal(resBytes, &err)
-	assert.Equal(t, "emitter_public_key: public key is empty", err.Error)
+	assert.Equal(t, "emitter public key is missing", err.Error)
 	assert.Equal(t, http.StatusText(http.StatusBadRequest), err.Status)
 	assert.Equal(t, time.Now().Unix(), err.Timestamp)
 }
@@ -58,7 +60,7 @@ func TestGetSharedKeysWithInvalidPublicKey(t *testing.T) {
 	resBytes, _ := ioutil.ReadAll(w.Body)
 	var err httpError
 	json.Unmarshal(resBytes, &err)
-	assert.Equal(t, "emitter_public_key: public key is not in hexadecimal format", err.Error)
+	assert.Equal(t, "emitter public key is not in hexadecimal", err.Error)
 	assert.Equal(t, http.StatusText(http.StatusBadRequest), err.Status)
 	assert.Equal(t, time.Now().Unix(), err.Timestamp)
 }
@@ -71,19 +73,24 @@ Scenario: Get shared keys
 */
 func TestGetSharedKeys(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	sharedKeyReader := &mockSharedKeyReader{}
-	encPv, _ := crypto.Encrypt(pv, pub)
+
+	pvB, _ := pv.Marshal()
+
+	encPv, _ := pub.Encrypt(pvB)
 	emKP, _ := shared.NewEmitterCrossKeyPair(encPv, pub)
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
 	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKP)
 
+	pubB, _ := pub.Marshal()
+
 	r := gin.New()
 	r.GET("/api/sharedkeys", GetSharedKeysHandler(sharedKeyReader))
 
-	path := fmt.Sprintf("http://localhost/api/sharedkeys?emitter_public_key=%s", pub)
+	path := fmt.Sprintf("http://localhost/api/sharedkeys?emitter_public_key=%s", hex.EncodeToString(pubB))
 	req, _ := http.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -95,13 +102,14 @@ func TestGetSharedKeys(t *testing.T) {
 	assert.NotEmpty(t, res.NodePublicKey)
 	assert.NotEmpty(t, res.EmitterKeys)
 
-	assert.Equal(t, pub, res.NodePublicKey)
+	assert.EqualValues(t, hex.EncodeToString(pubB), res.NodePublicKey)
 
 	assert.Len(t, res.EmitterKeys, 1)
-	assert.Equal(t, pub, res.EmitterKeys[0].PublicKey)
+	assert.EqualValues(t, hex.EncodeToString(pubB), res.EmitterKeys[0].PublicKey)
 
-	emPvKey, _ := crypto.Decrypt(res.EmitterKeys[0].EncryptedPrivateKey, pv)
-	assert.Equal(t, pv, emPvKey)
+	encPvBytes, _ := hex.DecodeString(res.EmitterKeys[0].EncryptedPrivateKey)
+	emPvKey, _ := pv.Decrypt(encPvBytes)
+	assert.EqualValues(t, pvB, emPvKey)
 }
 
 type mockSharedKeyReader struct {

@@ -2,6 +2,8 @@ package consensus
 
 import (
 	"net"
+
+	"github.com/uniris/uniris-core/pkg/crypto"
 )
 
 //NodeWriter persists network node
@@ -11,10 +13,10 @@ type NodeWriter interface {
 	WriteDiscoveredNode(n Node) error
 
 	//WriteReachableNode defines a node by its public key as reachable
-	WriteReachableNode(publicKey string) error
+	WriteReachableNode(publicKey crypto.PublicKey) error
 
 	//WriteUnreachableNode defines a node by its public key as unreachable
-	WriteUnreachableNode(publicKey string) error
+	WriteUnreachableNode(publicKey crypto.PublicKey) error
 }
 
 //NodeReader provides queries to fetch network nodes
@@ -36,7 +38,7 @@ type NodeReader interface {
 type Node struct {
 	ip                   net.IP
 	port                 int
-	publicKey            string
+	publicKey            crypto.PublicKey
 	status               NodeStatus
 	cpuLoad              string
 	freeDiskSpace        float64
@@ -64,7 +66,7 @@ const (
 )
 
 //NewNode creates a new enhanced discovered peers with geo patch
-func NewNode(ip net.IP, port int, pubK string, status NodeStatus, cpu string, disk float64, ver string, p2pFactor int, reachNumbers int, lat float64, lon float64, patch GeoPatch, isReachable bool) Node {
+func NewNode(ip net.IP, port int, pubK crypto.PublicKey, status NodeStatus, cpu string, disk float64, ver string, p2pFactor int, reachNumbers int, lat float64, lon float64, patch GeoPatch, isReachable bool) Node {
 	return Node{
 		ip:                   ip,
 		port:                 port,
@@ -93,7 +95,7 @@ func (n Node) Port() int {
 }
 
 //PublicKey returns the node's public key
-func (n Node) PublicKey() string {
+func (n Node) PublicKey() crypto.PublicKey {
 	return n.publicKey
 }
 

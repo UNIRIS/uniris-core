@@ -3,58 +3,125 @@ package crypto
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/x509"
-	"encoding/hex"
 	"errors"
+	"io"
 )
 
-//IsPublicKey checks if the given string is a public key
-func IsPublicKey(pubKey string) (bool, error) {
-	if pubKey == "" {
-		return false, errors.New("public key is empty")
-	}
-	decodedkey, err := hex.DecodeString(pubKey)
-	if err != nil {
-		return false, errors.New("public key is not in hexadecimal format")
-	}
+//Curve identifies a supported elliptic curve used for keys
+type Curve int
 
-	pu, err := x509.ParsePKIXPublicKey(decodedkey)
-	if err != nil {
-		return false, errors.New("public key is not valid")
-	}
+const (
 
-	switch pu.(type) {
-	case *ecdsa.PublicKey:
-		return true, nil
+	//Ed25519Curve identifies the Ed25519 elliptic curve
+	Ed25519Curve Curve = 0
+
+	//P256Curve identifies the NIST-P256 elliptic curve
+	P256Curve Curve = 1
+)
+
+type generateSharedFunc func(pub PublicKey, pv PrivateKey) (secret []byte, err error)
+
+//VersionnedKey represents an elliptic key versionned by its curve
+type VersionnedKey []byte
+
+//Curve returns the elliptic curve of the key
+func (k VersionnedKey) Curve() Curve {
+	return Curve(k[0])
+}
+
+//Marshalling returns the marshalled key
+func (k VersionnedKey) Marshalling() []byte {
+	return k[1:]
+}
+
+type key interface {
+
+	//Marshal exports the key using marshalling and versionning based on the elliptic curve
+	//First byte identify the curve and the rest the key marshalling
+	Marshal() (VersionnedKey, error)
+
+	bytes() []byte
+	curve() Curve
+}
+
+//PrivateKey represents an elliptic private key
+type PrivateKey interface {
+	key
+
+	//Sign creates a new signature from a given data
+	//The signing algorithm will be choose depending from the private key elliptic curve
+	Sign(data []byte) ([]byte, error)
+
+	//Decrypt uses ECIES to decipher the encrypted data
+	//An extract of the ECDH shared key, the encrypted message and the message authentication code is made
+	//Finally the authentication code is check and the encrypted message is decrypted with AES
+	Decrypt(Cipher) ([]byte, error)
+}
+
+//PublicKey represents an elliptic public key
+type PublicKey interface {
+	key
+
+	//Verifies check the signature for the given data
+	//The verfying algorithm will be choose depending from the public key elliptic curve
+	Verify(data []byte, sig []byte) bool
+
+	//Encrypt uses ECIES to cipher the given data
+	//ECDH shared key is generated, the data is encrypted with AES and an message authentication code is made
+	//Finally the all these fields are encoded
+	Encrypt(data []byte) (Cipher, error)
+}
+
+func versionKey(c Curve, marshalling []byte) VersionnedKey {
+	out := make(VersionnedKey, 1+len(marshalling))
+	out[0] = byte(int(c))
+	copy(out[1:], marshalling)
+	return out
+}
+
+//GenerateECKeyPair creates a new elliptic keypair from a given specific curve
+func GenerateECKeyPair(c Curve, src io.Reader) (PrivateKey, PublicKey, error) {
+	switch c {
+	case P256Curve:
+		return generateECDSAKeys(src, elliptic.P256())
+	case Ed25519Curve:
+		return generateEd25519Keys(src)
 	default:
-		return false, errors.New("public key is not from an elliptic curve")
+		return nil, nil, errors.New("unsupported EC curve")
 	}
 }
 
-//IsPrivateKey checks if the given is a private key
-func IsPrivateKey(pvKey string) (bool, error) {
-	if pvKey == "" {
-		return false, errors.New("private key is empty")
+//ParsePublicKey converts a marshalled versionned public key into a PublicKey
+func ParsePublicKey(key VersionnedKey) (PublicKey, error) {
+	switch key.Curve() {
+	case P256Curve:
+		pub, err := x509.ParsePKIXPublicKey(key.Marshalling())
+		if err != nil {
+			return nil, err
+		}
+		ecdsaPub := pub.(*ecdsa.PublicKey)
+		return ecdsaPublicKey{ecdsaPub}, nil
+	case Ed25519Curve:
+		//TODO: need a way to check if it's valid
+		return ed25519PublicKey{key.Marshalling()}, nil
+	default:
+		return nil, errors.New("unsupported curve")
 	}
-	decodedkey, err := hex.DecodeString(pvKey)
-	if err != nil {
-		return false, errors.New("private key is not in hexadecimal format")
-	}
-
-	_, err = x509.ParseECPrivateKey(decodedkey)
-	if err != nil {
-		return false, errors.New("private key is not valid")
-	}
-
-	return true, nil
 }
 
-//GenerateKeys (TEST PURPOSE)
-func GenerateKeys() (string, string) {
-	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	pub, _ := x509.MarshalPKIXPublicKey(key.Public())
-	pv, _ := x509.MarshalECPrivateKey(key)
-
-	return hex.EncodeToString(pub), hex.EncodeToString(pv)
+//ParsePrivateKey converts a marshalled versionned private key into a Private key
+func ParsePrivateKey(key VersionnedKey) (PrivateKey, error) {
+	switch key.Curve() {
+	case P256Curve:
+		ecdsaPriv, err := x509.ParseECPrivateKey(key.Marshalling())
+		if err != nil {
+			return nil, err
+		}
+		return ecdsaPrivateKey{ecdsaPriv}, nil
+	case Ed25519Curve:
+		return ed25519PrivateKey{key.Marshalling()}, nil
+	default:
+		return nil, errors.New("unsupported curve")
+	}
 }

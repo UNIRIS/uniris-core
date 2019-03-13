@@ -1,9 +1,11 @@
 package memstorage
 
 import (
+	"bytes"
 	"sort"
 
 	"github.com/uniris/uniris-core/pkg/chain"
+	"github.com/uniris/uniris-core/pkg/crypto"
 )
 
 type chainDB struct {
@@ -17,16 +19,16 @@ func NewchainDatabase() chain.Database {
 	return &chainDB{}
 }
 
-func (db chainDB) KeychainByHash(txHash string) (*chain.Keychain, error) {
+func (db chainDB) KeychainByHash(txHash crypto.VersionnedHash) (*chain.Keychain, error) {
 	for _, tx := range db.keychains {
-		if tx.TransactionHash() == txHash {
+		if bytes.Equal(tx.TransactionHash(), txHash) {
 			return &tx, nil
 		}
 	}
 	return nil, nil
 }
 
-func (db chainDB) FullKeychain(addr string) (*chain.Keychain, error) {
+func (db chainDB) FullKeychain(addr crypto.VersionnedHash) (*chain.Keychain, error) {
 	sort.Slice(db.keychains, func(i, j int) bool {
 		return db.keychains[i].Timestamp().Unix() > db.keychains[j].Timestamp().Unix()
 	})
@@ -37,7 +39,7 @@ func (db chainDB) FullKeychain(addr string) (*chain.Keychain, error) {
 	return nil, nil
 }
 
-func (db chainDB) LastKeychain(addr string) (*chain.Keychain, error) {
+func (db chainDB) LastKeychain(addr crypto.VersionnedHash) (*chain.Keychain, error) {
 
 	sort.Slice(db.keychains, func(i, j int) bool {
 		iTimestamp := db.keychains[i].Timestamp().Unix()
@@ -46,23 +48,23 @@ func (db chainDB) LastKeychain(addr string) (*chain.Keychain, error) {
 	})
 
 	for _, tx := range db.keychains {
-		if tx.Address() == addr {
+		if bytes.Equal(tx.Address(), addr) {
 			return &tx, nil
 		}
 	}
 	return nil, nil
 }
 
-func (db chainDB) IDByHash(txHash string) (*chain.ID, error) {
+func (db chainDB) IDByHash(txHash crypto.VersionnedHash) (*chain.ID, error) {
 	for _, tx := range db.ids {
-		if tx.TransactionHash() == txHash {
+		if bytes.Equal(tx.TransactionHash(), txHash) {
 			return &tx, nil
 		}
 	}
 	return nil, nil
 }
 
-func (db chainDB) ID(addr string) (*chain.ID, error) {
+func (db chainDB) ID(addr crypto.VersionnedHash) (*chain.ID, error) {
 
 	sort.Slice(db.ids, func(i, j int) bool {
 		iTimestamp := db.ids[i].Timestamp().Unix()
@@ -71,16 +73,16 @@ func (db chainDB) ID(addr string) (*chain.ID, error) {
 	})
 
 	for _, tx := range db.ids {
-		if tx.Address() == addr {
+		if bytes.Equal(tx.Address(), addr) {
 			return &tx, nil
 		}
 	}
 	return nil, nil
 }
 
-func (db chainDB) KOByHash(txHash string) (*chain.Transaction, error) {
+func (db chainDB) KOByHash(txHash crypto.VersionnedHash) (*chain.Transaction, error) {
 	for _, tx := range db.koTxs {
-		if tx.TransactionHash() == txHash {
+		if bytes.Equal(tx.TransactionHash(), txHash) {
 			return &tx, nil
 		}
 	}

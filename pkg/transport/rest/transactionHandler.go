@@ -2,6 +2,7 @@ package rest
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/consensus"
-	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/shared"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
@@ -23,7 +23,7 @@ func GetTransactionStatusHandler(sharedKeyReader shared.KeyReader) func(c *gin.C
 		txAddress, txHash, err := decodeTxReceipt(txReceipt)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, httpError{
-				Error:     fmt.Sprintf("tx receipt decoding: %s", err.Error()),
+				Error:     err.Error(),
 				Status:    http.StatusText(http.StatusBadRequest),
 				Timestamp: time.Now().Unix(),
 			})
@@ -77,7 +77,8 @@ func GetTransactionStatusHandler(sharedKeyReader shared.KeyReader) func(c *gin.C
 			})
 			return
 		}
-		sig, err := crypto.Sign(string(reqBytes), nodeLastKeys.PrivateKey())
+
+		sig, err := nodeLastKeys.PrivateKey().Sign(reqBytes)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, httpError{
 				Error:     err.Error(),
@@ -114,9 +115,10 @@ func GetTransactionStatusHandler(sharedKeyReader shared.KeyReader) func(c *gin.C
 			return
 		}
 
-		if err := crypto.VerifySignature(string(resBytes), nodeLastKeys.PublicKey(), res.SignatureResponse); err != nil {
+		nodeLastKeys.PublicKey().Verify(resBytes, res.SignatureResponse)
+		if ok := nodeLastKeys.PublicKey().Verify(resBytes, res.SignatureResponse); !ok {
 			c.JSON(http.StatusInternalServerError, httpError{
-				Error:     err.Error(),
+				Error:     "invalid signature response",
 				Status:    http.StatusText(http.StatusInternalServerError),
 				Timestamp: time.Now().Unix(),
 			})
@@ -126,7 +128,7 @@ func GetTransactionStatusHandler(sharedKeyReader shared.KeyReader) func(c *gin.C
 		c.JSON(http.StatusOK, transactionStatusResponse{
 			Status:    res.Status.String(),
 			Timestamp: res.Timestamp,
-			Signature: res.SignatureResponse,
+			Signature: hex.EncodeToString(res.SignatureResponse),
 		})
 	}
 }

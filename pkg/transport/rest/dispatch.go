@@ -2,6 +2,7 @@ package rest
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,7 +15,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func requestTransactionMining(tx *api.Transaction, pvKey string, pubKey string, nodeReader consensus.NodeReader, sharedKeyReader shared.KeyReader) (transactionResponse, *httpError) {
+func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubKey crypto.PublicKey, nodeReader consensus.NodeReader, sharedKeyReader shared.KeyReader) (transactionResponse, *httpError) {
 
 	masterNodes, err := consensus.FindMasterNodes(tx.TransactionHash, nodeReader, sharedKeyReader)
 	if err != nil {
@@ -31,6 +32,17 @@ func requestTransactionMining(tx *api.Transaction, pvKey string, pubKey string, 
 	//Building the welcome node headers
 	wHeaders := make([]*api.NodeHeader, 0)
 	for _, n := range masterNodes {
+
+		pubKey, err := n.PublicKey().Marshal()
+		if err != nil {
+			return transactionResponse{}, &httpError{
+				code:      http.StatusInternalServerError,
+				Error:     err.Error(),
+				Timestamp: time.Now().Unix(),
+				Status:    http.StatusText(http.StatusInternalServerError),
+			}
+		}
+
 		wHeaders = append(wHeaders, &api.NodeHeader{
 			IsMaster:      true,
 			IsUnreachable: !n.IsReachable(),
@@ -55,7 +67,7 @@ func requestTransactionMining(tx *api.Transaction, pvKey string, pubKey string, 
 			Status:    http.StatusText(http.StatusInternalServerError),
 		}
 	}
-	reqSig, err := crypto.Sign(string(reqBytes), pvKey)
+	reqSig, err := pvKey.Sign(reqBytes)
 	if err != nil {
 		return transactionResponse{}, &httpError{
 			code:      http.StatusInternalServerError,
@@ -104,10 +116,10 @@ func requestTransactionMining(tx *api.Transaction, pvKey string, pubKey string, 
 			Status:    http.StatusText(http.StatusInternalServerError),
 		}
 	}
-	if err := crypto.VerifySignature(string(resBytes), pubKey, res.SignatureResponse); err != nil {
+	if !pubKey.Verify(resBytes, res.SignatureResponse) {
 		return transactionResponse{}, &httpError{
 			code:      http.StatusInternalServerError,
-			Error:     err.Error(),
+			Error:     "invalid signature",
 			Timestamp: time.Now().Unix(),
 			Status:    http.StatusText(http.StatusInternalServerError),
 		}
@@ -126,7 +138,7 @@ func requestTransactionMining(tx *api.Transaction, pvKey string, pubKey string, 
 			Status:    http.StatusText(http.StatusInternalServerError),
 		}
 	}
-	sig, err := crypto.Sign(string(txResBytes), pvKey)
+	sig, err := pvKey.Sign(txResBytes)
 	if err != nil {
 		return transactionResponse{}, &httpError{
 			code:      http.StatusInternalServerError,
@@ -135,12 +147,12 @@ func requestTransactionMining(tx *api.Transaction, pvKey string, pubKey string, 
 			Status:    http.StatusText(http.StatusInternalServerError),
 		}
 	}
-	txRes.Signature = sig
+	txRes.Signature = hex.EncodeToString(sig)
 
 	return txRes, nil
 }
 
-func findLastTransaction(txAddr string, txType api.TransactionType, pvKey string) (*api.Transaction, *httpError) {
+func findLastTransaction(txAddr crypto.VersionnedHash, txType api.TransactionType, pvKey crypto.PrivateKey) (*api.Transaction, *httpError) {
 	storagePool, err := consensus.FindStoragePool(txAddr)
 	if err != nil {
 		return nil, &httpError{
@@ -176,7 +188,8 @@ func findLastTransaction(txAddr string, txType api.TransactionType, pvKey string
 			Status:    http.StatusText(http.StatusInternalServerError),
 		}
 	}
-	sig, err := crypto.Sign(string(reqBytes), pvKey)
+
+	sig, err := pvKey.Sign(reqBytes)
 	if err != nil {
 		return nil, &httpError{
 			code:      http.StatusInternalServerError,

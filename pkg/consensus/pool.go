@@ -11,6 +11,7 @@ import (
 	"github.com/uniris/uniris-core/pkg/shared"
 
 	"github.com/uniris/uniris-core/pkg/chain"
+	"github.com/uniris/uniris-core/pkg/crypto"
 )
 
 //Pool represent a pool either for sharding or validation
@@ -19,7 +20,7 @@ type Pool []Node
 //PoolRequester handles the request to perform on a pool during the mining
 type PoolRequester interface {
 	//RequestTransactionTimeLock asks a pool to timelock a transaction using the address related
-	RequestTransactionTimeLock(pool Pool, txHash string, txAddr string, masterPublicKey string) error
+	RequestTransactionTimeLock(pool Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error
 
 	//RequestTransactionValidations asks a pool to validation a transaction
 	RequestTransactionValidations(pool Pool, tx chain.Transaction, minValid int, masterValid chain.MasterValidation) ([]chain.Validation, error)
@@ -28,11 +29,11 @@ type PoolRequester interface {
 	RequestTransactionStorage(pool Pool, minStorage int, tx chain.Transaction) error
 
 	//RequestLastTransaction asks a pool to retrieve the last transaction of an address
-	RequestLastTransaction(pool Pool, txAddr string, txType chain.TransactionType) (*chain.Transaction, error)
+	RequestLastTransaction(pool Pool, txAddr crypto.VersionnedHash, txType chain.TransactionType) (*chain.Transaction, error)
 }
 
 //FindMasterNodes finds a list of master nodes by using an entropy sorting based on the transaction and minimum number of master
-func FindMasterNodes(txHash string, nodeReader NodeReader, sharedKeyReader shared.KeyReader) (Pool, error) {
+func FindMasterNodes(txHash crypto.VersionnedHash, nodeReader NodeReader, sharedKeyReader shared.KeyReader) (Pool, error) {
 	authKeys, err := sharedKeyReader.AuthorizedNodesPublicKeys()
 	if err != nil {
 		return nil, err
@@ -82,29 +83,33 @@ func requiredNumberOfMaster(nbNodes int, nbReachables int) int {
 }
 
 //buildStartingPoint creates a starting point by using an HMAC of the transaction hash and the first node shared private key
-func buildStartingPoint(txHash string, nodeMinerPrivateKey string) string {
+func buildStartingPoint(txHash crypto.VersionnedHash, nodeMinerPrivateKey crypto.PrivateKey) ([]byte, error) {
+	pvBytes, err := nodeMinerPrivateKey.Marshal()
+	if err != nil {
+		return nil, err
+	}
 	h := hmac.New(sha256.New, []byte(nodeMinerPrivateKey))
 	h.Write([]byte(txHash))
-	return hex.EncodeToString(h.Sum(nil))
+	return h.Sum(nil), nil
 }
 
 //entropySort sorts a list of nodes public keys using a "starting point" (HMAC of the transaction hash with the first node shared private key) and the hashes of the node public keys
-func entropySort(txHash string, authKeys []string, nodeFirstKey string) (sortedKeys []string) {
+func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, nodeFirstKey crypto.PublicKey) (sortedKeys []crypto.PublicKey) {
 	startingPoint := buildStartingPoint(txHash, nodeFirstKey)
 
 	//Building list of public keys and map of hash-›key
-	hashKeys := make([]string, len(authKeys))
-	mHashKeys := make(map[string]string, 0)
+	hashKeys := make([][]byte, len(authKeys))
+	mHashKeys := make(map[crypto.VersionnedHash]crypto.PublicKey, 0)
 	for i, k := range authKeys {
 		h := sha256.New()
 		h.Write([]byte(k))
-		hash := hex.EncodeToString(h.Sum(nil))
+		hash := h.Sum(nil)
 		mHashKeys[hash] = k
 		hashKeys[i] = hash
 	}
 
 	hashKeys = append(hashKeys, startingPoint)
-	sort.Strings(hashKeys)
+	sort.Slice(hashKeys)
 	var startPointIndex int
 	for i, k := range hashKeys {
 		if startingPoint == k {
@@ -122,7 +127,7 @@ func entropySort(txHash string, authKeys []string, nodeFirstKey string) (sortedK
 		//iterating from the starting point to the end of the list
 		//add add the key if the latest character matchew the start point position
 		for i := startPointIndex + 1; i < len(hashKeys); i++ {
-			if []rune(hashKeys[i])[maxpos-1] == []rune(startingPoint)[p] {
+			if hashKeys[i][maxpos-1] == startingPoint[p] {
 				var contains bool
 				var j int
 				for !contains && j < len(sortedKeys) {
@@ -141,7 +146,7 @@ func entropySort(txHash string, authKeys []string, nodeFirstKey string) (sortedK
 		//iterating from the 0 to the starting point
 		//and add the key if the latest character matches the start point position
 		for i := 0; i < startPointIndex; i++ {
-			if []rune(hashKeys[i])[maxpos-1] == []rune(startingPoint)[p] {
+			if hashKeys[i][maxpos-1] == startingPoint[p] {
 				var contains bool
 				var j int
 				for !contains && j < len(sortedKeys) {
@@ -169,7 +174,8 @@ func entropySort(txHash string, authKeys []string, nodeFirstKey string) (sortedK
 			//iterating from the starting point to the end of the list
 			//add add the key if the latest character matchew the start point position
 			for i := startPointIndex + 1; i < len(hashKeys); i++ {
-				if []rune(hashKeys[i])[maxpos-1] == hexChar[p] {
+				hexHashKey := hex.EncodeToString(hashKeys[i])
+				if []rune(hexHashKey)[maxpos-1] == hexChar[p] {
 					var contains bool
 					var j int
 					for !contains && j < len(sortedKeys) {
@@ -188,7 +194,8 @@ func entropySort(txHash string, authKeys []string, nodeFirstKey string) (sortedK
 			//iterating from the 0 to the starting point
 			//and add the key if the latest character matches the start point position
 			for i := 0; i < startPointIndex; i++ {
-				if []rune(hashKeys[i])[maxpos-1] == hexChar[p] {
+				hexHashKey := hex.EncodeToString(hashKeys[i])
+				if []rune(hexHashKey)[maxpos-1] == hexChar[p] {
 					var contains bool
 					var j int
 					for !contains && j < len(sortedKeys) {
@@ -213,12 +220,18 @@ func entropySort(txHash string, authKeys []string, nodeFirstKey string) (sortedK
 
 //FindStoragePool searches a storage pool for the given address
 //TODO: Implements AI lookups to identify the right storage pool
-func FindStoragePool(address string) (Pool, error) {
+func FindStoragePool(address []crypto.VersionnedHash) (Pool, error) {
+	b, err := hex.DecodeString("0044657dab453d34f9adc2100a2cb8f38f644ef48e34b1d99d7c4d9371068e9438")
+	if err != nil {
+		return Pool{}, err
+	}
+	pub, err := crypto.ParsePublicKey(b)
+
 	return Pool{
 		Node{
 			ip:        net.ParseIP("127.0.0.1"),
 			port:      5000,
-			publicKey: "3059301306072a8648ce3d020106082a8648ce3d0301070342000408f4b4026d2560aaa552244bdf8ec421bb41378b56487d9d4ca5a57fd6e64ef7ae2f2c6530f18bd0f359342b4fa7fdaeaa60c45a1197260eb1c267cc996bec81",
+			publicKey: pub,
 		},
 	}, nil
 }
@@ -226,11 +239,20 @@ func FindStoragePool(address string) (Pool, error) {
 //FindValidationPool searches a validation pool from a transaction hash
 //TODO: Implements AI lookups to identify the right validation pool
 func FindValidationPool(tx chain.Transaction) (Pool, error) {
+	b, err := hex.DecodeString("0044657dab453d34f9adc2100a2cb8f38f644ef48e34b1d99d7c4d9371068e9438")
+	if err != nil {
+		return Pool{}, err
+	}
+	pub, err := crypto.ParsePublicKey(b)
+	if err != nil {
+		return Pool{}, err
+	}
+
 	return Pool{
 		Node{
 			ip:        net.ParseIP("127.0.0.1"),
 			port:      5000,
-			publicKey: "3059301306072a8648ce3d020106082a8648ce3d0301070342000408f4b4026d2560aaa552244bdf8ec421bb41378b56487d9d4ca5a57fd6e64ef7ae2f2c6530f18bd0f359342b4fa7fdaeaa60c45a1197260eb1c267cc996bec81",
+			publicKey: pub,
 		},
 	}, nil
 }

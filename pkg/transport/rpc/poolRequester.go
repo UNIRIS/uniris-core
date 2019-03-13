@@ -31,7 +31,7 @@ func NewPoolRequester(skr shared.KeyReader) consensus.PoolRequester {
 	}
 }
 
-func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr string, txType chain.TransactionType) (*chain.Transaction, error) {
+func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr crypto.VersionnedHash, txType chain.TransactionType) (*chain.Transaction, error) {
 
 	nodeLastKeys, err := pr.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
@@ -50,7 +50,7 @@ func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr strin
 	if err != nil {
 		return nil, err
 	}
-	sig, err := crypto.Sign(string(reqBytes), nodeLastKeys.PrivateKey())
+	sig, err := nodeLastKeys.PrivateKey().Sign(reqBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +87,9 @@ func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr strin
 				fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 				return
 			}
-			if err := crypto.VerifySignature(string(resBytes), nodeLastKeys.PublicKey(), res.SignatureResponse); err != nil {
-				fmt.Printf("GET LAST TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
+
+			if !nodeLastKeys.PublicKey().Verify(resBytes, res.SignatureResponse) {
+				fmt.Println("GET LAST TRANSACTION RESPONSE - ERROR: invalid signature")
 				return
 			}
 
@@ -113,7 +114,7 @@ func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr strin
 	return &txRes[0], nil
 }
 
-func (pr poolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash string, txAddress string, masterPublicKey string) error {
+func (pr poolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash crypto.VersionnedHash, txAddress crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error {
 
 	lastKeys, err := pr.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
@@ -125,17 +126,21 @@ func (pr poolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash s
 
 	var ackTimelocks int32
 
+	masterKey, err := masterPublicKey.Marshal()
+	if err != nil {
+		return err
+	}
 	req := &api.TimeLockTransactionRequest{
 		Address:             txAddress,
 		TransactionHash:     txHash,
-		MasterNodePublicKey: masterPublicKey,
+		MasterNodePublicKey: masterKey,
 		Timestamp:           time.Now().Unix(),
 	}
 	reqBytes, err := json.Marshal(req)
 	if err != nil {
 		return err
 	}
-	sig, err := crypto.Sign(string(reqBytes), lastKeys.PrivateKey())
+	sig, err := lastKeys.PrivateKey().Sign(reqBytes)
 	if err != nil {
 		return err
 	}
@@ -170,8 +175,8 @@ func (pr poolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash s
 				fmt.Printf("TIMELOCK TRANSACTION RESPONSE - ERROR: %s", err.Error())
 				return
 			}
-			if err := crypto.VerifySignature(string(resBytes), lastKeys.PublicKey(), res.SignatureResponse); err != nil {
-				fmt.Printf("TIMELOCK TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
+			if !lastKeys.PublicKey().Verify(resBytes, res.SignatureResponse) {
+				fmt.Println("LOCK TRANSACTION RESPONSE - ERROR: invalid signature")
 				return
 			}
 
@@ -197,16 +202,25 @@ func (pr poolRequester) RequestTransactionValidations(pool consensus.Pool, tx ch
 		return nil, fmt.Errorf("confirm validation request error: %s", err.Error())
 	}
 
+	txf, err := formatAPITransaction(tx)
+	if err != nil {
+		return nil, err
+	}
+	mvf, err := formatAPIMasterValidation(masterValid)
+	if err != nil {
+		return nil, err
+	}
+
 	req := &api.ConfirmTransactionValidationRequest{
-		MasterValidation: formatAPIMasterValidation(masterValid),
-		Transaction:      formatAPITransaction(tx),
+		MasterValidation: mvf,
+		Transaction:      txf,
 		Timestamp:        time.Now().Unix(),
 	}
 	reqBytes, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("confirm validation request error: %s", err.Error())
 	}
-	sig, err := crypto.Sign(string(reqBytes), lastKeys.PrivateKey())
+	sig, err := lastKeys.PrivateKey().Sign(reqBytes)
 	if err != nil {
 		return nil, fmt.Errorf("confirm validation request error: %s", err.Error())
 	}
@@ -248,12 +262,17 @@ func (pr poolRequester) RequestTransactionValidations(pool consensus.Pool, tx ch
 				fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 				return
 			}
-			if err := crypto.VerifySignature(string(resBytes), lastKeys.PublicKey(), res.SignatureResponse); err != nil {
-				fmt.Printf("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
+			if !lastKeys.PublicKey().Verify(resBytes, res.SignatureResponse) {
+				fmt.Println("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: invalid signature")
 				return
 			}
 
-			v, err := chain.NewValidation(chain.ValidationStatus(res.Validation.Status), time.Unix(res.Timestamp, 0), res.Validation.PublicKey, res.Validation.Signature)
+			vKey, err := crypto.ParsePublicKey(res.Validation.PublicKey)
+			if err != nil {
+				fmt.Println("CONFIRM VALIDATION TRANSACTION RESPONSE - ERROR: invalid validator public key")
+				return
+			}
+			v, err := chain.NewValidation(chain.ValidationStatus(res.Validation.Status), time.Unix(res.Timestamp, 0), vKey, res.Validation.Signature)
 			if err != nil {
 				return
 			}
@@ -275,14 +294,28 @@ func (pr poolRequester) RequestTransactionStorage(pool consensus.Pool, minStorag
 
 	confValids := make([]*api.Validation, 0)
 	for _, v := range tx.ConfirmationsValidations() {
-		confValids = append(confValids, formatAPIValidation(v))
+		vf, err := formatAPIValidation(v)
+		if err != nil {
+			return err
+		}
+		confValids = append(confValids, vf)
+	}
+
+	txf, err := formatAPITransaction(tx)
+	if err != nil {
+		return err
+	}
+
+	mvf, err := formatAPIMasterValidation(tx.MasterValidation())
+	if err != nil {
+		return err
 	}
 
 	req := &api.StoreTransactionRequest{
 		MinedTransaction: &api.MinedTransaction{
-			MasterValidation:   formatAPIMasterValidation(tx.MasterValidation()),
+			MasterValidation:   mvf,
 			ConfirmValidations: confValids,
-			Transaction:        formatAPITransaction(tx),
+			Transaction:        txf,
 		},
 		Timestamp: time.Now().Unix(),
 	}
@@ -291,7 +324,7 @@ func (pr poolRequester) RequestTransactionStorage(pool consensus.Pool, minStorag
 	if err != nil {
 		return fmt.Errorf("store transaction request error: %s", err.Error())
 	}
-	sig, err := crypto.Sign(string(reqBytes), lastKeys.PrivateKey())
+	sig, err := lastKeys.PrivateKey().Sign(reqBytes)
 	if err != nil {
 		return fmt.Errorf("store transaction request error: %s", err.Error())
 	}
@@ -331,11 +364,10 @@ func (pr poolRequester) RequestTransactionStorage(pool consensus.Pool, minStorag
 				fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
 				return
 			}
-			if err := crypto.VerifySignature(string(resBytes), lastKeys.PublicKey(), res.SignatureResponse); err != nil {
-				fmt.Printf("STORE TRANSACTION RESPONSE - ERROR: %s\n", err.Error())
+			if !lastKeys.PublicKey().Verify(resBytes, res.SignatureResponse) {
+				fmt.Println("STORE TRANSACTION RESPONSE - ERROR: invalid signature")
 				return
 			}
-
 		}(p)
 	}
 

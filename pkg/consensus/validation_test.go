@@ -1,6 +1,8 @@
 package consensus
 
 import (
+	"crypto/rand"
+	"log"
 	"testing"
 
 	"encoding/hex"
@@ -21,52 +23,74 @@ Scenario: request transaction validations
 */
 func TestRequestValidations(t *testing.T) {
 	poolR := &mockPoolRequester{}
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	pubB, _ := pub.Marshal()
 
 	v, _ := buildValidation(chain.ValidationOK, pub, pv)
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 
-	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
-	data := map[string]string{
-		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+	data := map[string][]byte{
+		"encrypted_aes_key":         []byte("aesKey"),
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_address_by_id":   []byte("addr"),
 	}
 
 	txRaw, _ := json.Marshal(map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
 	})
-	sig, _ := crypto.Sign(string(txRaw), pv)
+	sig, _ := pv.Sign(txRaw)
 	txSigned, _ := json.Marshal(map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
-		"signature":               sig,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
+		"signature": hex.EncodeToString(sig),
 	})
-	emSig, _ := crypto.Sign(string(txSigned), pv)
+	emSig, _ := pv.Sign(txSigned)
 	txEmSigned, _ := json.Marshal(map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
-		"signature":               sig,
-		"em_signature":            emSig,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
+		"signature":    hex.EncodeToString(sig),
+		"em_signature": hex.EncodeToString(emSig),
 	})
-	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txEmSigned))
+	tx, err := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash(txEmSigned))
 
 	valids, err := requestValidations(tx, mv, Pool{}, 1, poolR)
 	assert.Nil(t, err)
@@ -81,7 +105,7 @@ Scenario: Create a node validation
 	Then I get a validation signed
 */
 func TestBuildValidation(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	v, err := buildValidation(chain.ValidationOK, pub, pv)
 	assert.Nil(t, err)
@@ -100,53 +124,78 @@ Scenario: Validate an incoming transaction
 	Then I get a validation with status OK
 */
 func TestValidateTransaction(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	pubB, _ := pub.Marshal()
 
-	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
-	data := map[string]string{
-		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+	data := map[string][]byte{
+		"encrypted_aes_key":         []byte("aesKey"),
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_address_by_id":   []byte("addr"),
 	}
 
 	txRaw, _ := json.Marshal(map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
 	})
-	sig, _ := crypto.Sign(string(txRaw), pv)
+
+	log.Print(string(txRaw))
+
+	sig, _ := pv.Sign(txRaw)
 	txSigned, _ := json.Marshal(map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
-		"signature":               sig,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
+		"signature": hex.EncodeToString(sig),
 	})
-	emSig, _ := crypto.Sign(string(txSigned), pv)
+	emSig, _ := pv.Sign(txSigned)
 	txEmSigned, _ := json.Marshal(map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
-		"signature":               sig,
-		"em_signature":            emSig,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
+		"signature":    hex.EncodeToString(sig),
+		"em_signature": hex.EncodeToString(emSig),
 	})
-	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txEmSigned))
+	tx, err := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash(txEmSigned))
 	assert.Nil(t, err)
 
 	v, _ := buildValidation(chain.ValidationOK, pub, pv)
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 
 	valid, err := ConfirmTransactionValidation(tx, mv, pub, pv)
 	assert.Nil(t, err)
@@ -160,24 +209,24 @@ Scenario: Validate an incoming transaction with invalid integrity
 	Then I get a validation with status KO
 */
 func TestValidateTransactionWithBadIntegrity(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
-	data := map[string]string{
-		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+	data := map[string][]byte{
+		"encrypted_aes_key":         []byte("aesKey"),
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_address_by_id":   []byte("addr"),
 	}
 
-	sig, _ := crypto.Sign("hello", pv)
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.IDTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.HashString("hash"))
+	sig, _ := pv.Sign([]byte("tx"))
+	tx, _ := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.IDTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.Hash([]byte("hash")))
 
 	v, _ := buildValidation(chain.ValidationOK, pub, pv)
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 	valid, err := ConfirmTransactionValidation(tx, mv, pub, pv)
 	assert.Nil(t, err)
 	assert.Equal(t, chain.ValidationKO, valid.Status())
@@ -191,50 +240,72 @@ Scenario: Perform Proof of work
 */
 func TestPerformPOW(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	pubB, _ := pub.Marshal()
 
 	keyReader := &mockSharedKeyReader{}
 	emKP, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	keyReader.crossEmitterKeys = append(keyReader.crossEmitterKeys, emKP)
 
-	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
-	data := map[string]string{
-		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+	data := map[string][]byte{
+		"encrypted_aes_key":         []byte("aesKey"),
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_address_by_id":   []byte("addr"),
 	}
 
 	txRaw, _ := json.Marshal(map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
 	})
-	sig, _ := crypto.Sign(string(txRaw), pv)
+	sig, _ := pv.Sign(txRaw)
 	txSigned, _ := json.Marshal(map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
-		"signature":               sig,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
+		"signature": hex.EncodeToString(sig),
 	})
-	emSig, _ := crypto.Sign(string(txSigned), pv)
+	emSig, _ := pv.Sign(txSigned)
 	txEmSigned, _ := json.Marshal(map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
-		"signature":               sig,
-		"em_signature":            emSig,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
+		"signature":    hex.EncodeToString(sig),
+		"em_signature": hex.EncodeToString(emSig),
 	})
-	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txEmSigned))
+	tx, err := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash(txEmSigned))
 	assert.Nil(t, err)
 
 	pow, err := proofOfWork(tx, keyReader)
@@ -250,56 +321,78 @@ Scenario: Pre-validate a transaction
 */
 func TestPreValidateTransaction(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
-	keyReader := &mockSharedKeyReader{}
-	emKP, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
-	keyReader.crossEmitterKeys = append(keyReader.crossEmitterKeys, emKP)
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	pubB, _ := pub.Marshal()
+	emReader := &mockEmitterReader{}
+	emKP, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
+	emReader.emKeys = append(emReader.emKeys, emKP)
 
-	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
-	data := map[string]string{
-		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+	data := map[string][]byte{
+		"encrypted_aes_key":         []byte("aesKey"),
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_address_by_id":   []byte("addr"),
 	}
 
 	txRaw, _ := json.Marshal(map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
 	})
-	sig, _ := crypto.Sign(string(txRaw), pv)
+	sig, _ := pv.Sign(txRaw)
 	txSigned, _ := json.Marshal(map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
-		"signature":               sig,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
+		"signature": hex.EncodeToString(sig),
 	})
-	emSig, _ := crypto.Sign(string(txSigned), pv)
+	emSig, _ := pv.Sign(txSigned)
 	txEmSigned, _ := json.Marshal(map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
-		"signature":               sig,
-		"em_signature":            emSig,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
+		"signature":    hex.EncodeToString(sig),
+		"em_signature": hex.EncodeToString(emSig),
 	})
-	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txEmSigned))
+	tx, err := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash(txEmSigned))
 	assert.Nil(t, err)
 
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	mv, err := preValidateTransaction(tx, wHeaders, Pool{Node{publicKey: "pub"}}, Pool{Node{publicKey: "pub"}}, Pool{}, 1, pub, pv, keyReader)
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	mv, err := preValidateTransaction(tx, wHeaders, Pool{Node{publicKey: pub}}, Pool{Node{publicKey: pub}}, Pool{}, 1, pub, pv, emReader)
 	assert.Nil(t, err)
 	assert.Equal(t, pub, mv.ProofOfWork())
-	assert.Equal(t, pub, mv.Validation().PublicKey())
+	assert.EqualValues(t, pub, mv.Validation().PublicKey())
 	assert.Equal(t, chain.ValidationOK, mv.Validation().Status())
 	ok, err := mv.Validation().IsValid()
 	assert.True(t, ok)
@@ -314,53 +407,75 @@ Scenario: Lead transaction mining
 */
 func TestLeadMining(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	pubB, _ := pub.Marshal()
 	keyReader := &mockSharedKeyReader{}
-	emKP, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	emKP, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 	keyReader.crossEmitterKeys = append(keyReader.crossEmitterKeys, emKP)
 
-	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
-	data := map[string]string{
-		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+	data := map[string][]byte{
+		"encrypted_aes_key":         []byte("aesKey"),
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_address_by_id":   []byte("addr"),
 	}
 
 	txRaw, _ := json.Marshal(map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
 	})
-	sig, _ := crypto.Sign(string(txRaw), pv)
+	sig, _ := pv.Sign(txRaw)
 	txSigned, _ := json.Marshal(map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
-		"signature":               sig,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
+		"signature": hex.EncodeToString(sig),
 	})
-	emSig, _ := crypto.Sign(string(txSigned), pv)
+	emSig, _ := pv.Sign(txSigned)
 	txEmSigned, _ := json.Marshal(map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
-		"signature":               sig,
-		"em_signature":            emSig,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
+		"signature":    hex.EncodeToString(sig),
+		"em_signature": hex.EncodeToString(emSig),
 	})
-	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txEmSigned))
+	tx, err := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash(txEmSigned))
 	assert.Nil(t, err)
 	poolR := &mockPoolRequester{}
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	assert.Nil(t, LeadMining(tx, 1, wHeaders, poolR, pub, pv, keyReader))
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	assert.Nil(t, LeadMining(tx, 1, wHeaders, poolR, pub, pv, emReader))
 
 	time.Sleep(1 * time.Second)
 
@@ -375,7 +490,24 @@ Scenario: Find pool for transaction mining
 */
 func TestFindPools(t *testing.T) {
 	poolR := &mockPoolRequester{}
-	lastVPool, validPool, storagePool, err := findPools(chain.Transaction{}, poolR)
+
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
+
+	addr := crypto.Hash([]byte("addr"))
+	data := map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_address_by_id":   []byte("addr"),
+		"encrypted_aes_key":         []byte("aesKey"),
+	}
+	hash := crypto.Hash([]byte("hash"))
+
+	sig, _ := pv.Sign([]byte("data"))
+
+	tx, _ := chain.NewTransaction(addr, chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, hash)
+
+	lastVPool, validPool, storagePool, err := findPools(tx, poolR)
 
 	assert.Nil(t, err)
 	assert.Empty(t, lastVPool)
@@ -388,16 +520,16 @@ type mockPoolRequester struct {
 	ko     []chain.Transaction
 }
 
-func (pr mockPoolRequester) RequestLastTransaction(pool Pool, txAddr string, txType chain.TransactionType) (*chain.Transaction, error) {
+func (pr mockPoolRequester) RequestLastTransaction(pool Pool, txAddr crypto.VersionnedHash, txType chain.TransactionType) (*chain.Transaction, error) {
 	return nil, nil
 }
 
-func (pr mockPoolRequester) RequestTransactionTimeLock(pool Pool, txHash string, txAddr string, masterPublicKey string) error {
+func (pr mockPoolRequester) RequestTransactionTimeLock(pool Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error {
 	return nil
 }
 
 func (pr mockPoolRequester) RequestTransactionValidations(pool Pool, tx chain.Transaction, minValid int, masterValid chain.MasterValidation) ([]chain.Validation, error) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	v, _ := buildValidation(chain.ValidationOK, pub, pv)
 	return []chain.Validation{v}, nil
@@ -416,5 +548,5 @@ Scenario: Get the minimum validation number
 	//TODO: to improve when the implementation will be defined
 */
 func TestGetMinimumTransactionValidation(t *testing.T) {
-	assert.Equal(t, 1, GetMinimumValidation(""))
+	assert.Equal(t, 1, GetMinimumValidation([]byte("")))
 }

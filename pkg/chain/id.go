@@ -1,7 +1,6 @@
 package chain
 
 import (
-	"encoding/hex"
 	"errors"
 )
 
@@ -14,32 +13,17 @@ type ID struct {
 func NewID(tx Transaction) (ID, error) {
 
 	if tx.txType != IDTransactionType {
-		return ID{}, errors.New("transaction: invalid type of transaction")
+		return ID{}, errors.New("invalid type of transaction")
 	}
 
-	addr, exist := tx.data["encrypted_address_by_node"]
-	if !exist {
-		return ID{}, errors.New("transaction: missing data ID 'encrypted_address_by_node'")
+	if _, exist := tx.data["encrypted_address_by_node"]; !exist {
+		return ID{}, errors.New("missing ID data: 'encrypted_address_by_node'")
 	}
-	addrID, exist := tx.data["encrypted_address_by_id"]
-	if !exist {
-		return ID{}, errors.New("transaction: missing data ID 'encrypted_address_by_id'")
+	if _, exist := tx.data["encrypted_address_by_id"]; !exist {
+		return ID{}, errors.New("missing ID data: 'encrypted_address_by_id'")
 	}
-	aesKey, exist := tx.data["encrypted_aes_key"]
-	if !exist {
-		return ID{}, errors.New("transaction: missing data ID 'encrypted_aes_key'")
-	}
-
-	if _, err := hex.DecodeString(aesKey); err != nil {
-		return ID{}, errors.New("transaction: id encrypted aes key is not in hexadecimal format")
-	}
-
-	if _, err := hex.DecodeString(addrID); err != nil {
-		return ID{}, errors.New("transaction: id encrypted address for id is not in hexadecimal format")
-	}
-
-	if _, err := hex.DecodeString(addr); err != nil {
-		return ID{}, errors.New("transaction: id encrypted address for node is not in hexadecimal format")
+	if _, exist := tx.data["encrypted_aes_key"]; !exist {
+		return ID{}, errors.New("missing ID data: 'encrypted_aes_key'")
 	}
 
 	return ID{
@@ -48,16 +32,16 @@ func NewID(tx Transaction) (ID, error) {
 }
 
 //EncryptedAddrBy returns the encrypted keychain address with the  public key
-func (id ID) EncryptedAddrBy() string {
+func (id ID) EncryptedAddrBy() []byte {
 	return id.data["encrypted_address_by_node"]
 }
 
 //EncryptedAddrByID returns the encrypted keychain address with the ID public key
-func (id ID) EncryptedAddrByID() string {
+func (id ID) EncryptedAddrByID() []byte {
 	return id.data["encrypted_address_by_id"]
 }
 
 //EncryptedAESKey returns the encrypted AES key with the ID public key
-func (id ID) EncryptedAESKey() string {
+func (id ID) EncryptedAESKey() []byte {
 	return id.data["encrypted_aes_key"]
 }

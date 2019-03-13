@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"crypto/rand"
 	"testing"
 	"time"
 
@@ -15,12 +16,12 @@ Scenario: Create transaction timelock
 	Then the timelock is stored
 */
 func TestStoreTimeLock(t *testing.T) {
-	pub, _ := crypto.GenerateKeys()
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	assert.Nil(t, TimeLockTransaction(crypto.HashString("hash1"), crypto.HashString("addr1"), pub))
+	assert.Nil(t, TimeLockTransaction(crypto.Hash([]byte("hash1")), crypto.Hash([]byte("addr1")), pub))
 	assert.Len(t, timeLockers, 1)
-	assert.Equal(t, crypto.HashString("hash1"), timeLockers[0].txHash)
-	assert.Equal(t, crypto.HashString("addr1"), timeLockers[0].txAddress)
+	assert.Equal(t, crypto.Hash([]byte("hash1")), timeLockers[0].txHash)
+	assert.Equal(t, crypto.Hash([]byte("addr1")), timeLockers[0].txAddress)
 }
 
 /*
@@ -30,9 +31,9 @@ Scenario: Create two timelock identicals
 	Then I get an error
 */
 func TestCreatedExistingLock(t *testing.T) {
-	pub, _ := crypto.GenerateKeys()
-	assert.Nil(t, TimeLockTransaction(crypto.HashString("hash2"), crypto.HashString("addr2"), pub))
-	assert.EqualError(t, TimeLockTransaction(crypto.HashString("hash2"), crypto.HashString("addr2"), pub), "a lock already exist for this transaction")
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	assert.Nil(t, TimeLockTransaction(crypto.Hash([]byte("hash2")), crypto.Hash([]byte("addr2")), pub))
+	assert.EqualError(t, TimeLockTransaction(crypto.Hash([]byte("hash2")), crypto.Hash([]byte("addr2")), pub), "a lock already exist for this transaction")
 }
 
 /*
@@ -42,11 +43,11 @@ Scenario: Remove a timelock
 	Then I get no timelock after
 */
 func TestRemoveLock(t *testing.T) {
-	pub, _ := crypto.GenerateKeys()
-	TimeLockTransaction(crypto.HashString("hash3"), crypto.HashString("addr3"), pub)
-	removeTimeLock(crypto.HashString("hash3"), crypto.HashString("addr3"))
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	TimeLockTransaction(crypto.Hash([]byte("hash3")), crypto.Hash([]byte("addr3")), pub)
+	removeTimeLock(crypto.Hash([]byte("hash3")), crypto.Hash([]byte("addr3")))
 
-	_, found, _ := findTimelock(crypto.HashString("hash3"), crypto.HashString("addr3"))
+	_, found, _ := findTimelock(crypto.Hash([]byte("hash3")), crypto.Hash([]byte("addr3")))
 	assert.False(t, found)
 }
 
@@ -58,9 +59,9 @@ Scenario: Remove a timelock after countdown
 */
 func TestRemoveLockAfterCountdown(t *testing.T) {
 	timeLockCountdown = 1 * time.Second
-	pub, _ := crypto.GenerateKeys()
-	TimeLockTransaction(crypto.HashString("hash4"), crypto.HashString("addr4"), pub)
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	TimeLockTransaction(crypto.Hash([]byte("hash4")), crypto.Hash([]byte("addr4")), pub)
 	time.Sleep(2 * time.Second)
-	_, found, _ := findTimelock(crypto.HashString("hash4"), crypto.HashString("addr4"))
+	_, found, _ := findTimelock(crypto.Hash([]byte("hash4")), crypto.Hash([]byte("addr4")))
 	assert.False(t, found)
 }
