@@ -508,7 +508,7 @@ func (pr mockPoolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHa
 	return nil
 }
 
-func (pr mockPoolRequester) RequestTransactionUnlock(pool consensus.Pool, txHash crypto.VersionnedHash, txAddr []byte) error {
+func (pr mockPoolRequester) RequestTransactionUnlock(pool consensus.Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash) error {
 	return nil
 }
 

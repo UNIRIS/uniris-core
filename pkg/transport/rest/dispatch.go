@@ -151,7 +151,7 @@ func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubK
 	return txRes, nil
 }
 
-func findLastTransaction(txAddr []byte, txType api.TransactionType, pvKey crypto.PrivateKey) (*api.Transaction, *httpError) {
+func findLastTransaction(txAddr crypto.VersionnedHash, txType api.TransactionType, pvKey crypto.PrivateKey) (*api.Transaction, *httpError) {
 	storagePool, err := consensus.FindStoragePool(txAddr)
 	if err != nil {
 		return nil, &httpError{

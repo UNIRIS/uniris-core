@@ -136,7 +136,7 @@ func getFullChain(db DatabaseReader, txAddr crypto.VersionnedHash, txType Transa
 }
 
 //LastTransaction retrieves the last transaction from the database
-func LastTransaction(db DatabaseReader, txAddr []byte, txType TransactionType) (*Transaction, error) {
+func LastTransaction(db DatabaseReader, txAddr crypto.VersionnedHash, txType TransactionType) (*Transaction, error) {
 	switch txType {
 	case KeychainTransactionType:
 		keychain, err := db.LastKeychain(txAddr)
@@ -187,7 +187,7 @@ func GetTransactionStatus(db DatabaseReader, txHash crypto.VersionnedHash) (Tran
 	return TransactionStatusSuccess, nil
 }
 
-func getTransactionByHash(db DatabaseReader, txHash []byte) (*Transaction, error) {
+func getTransactionByHash(db DatabaseReader, txHash crypto.VersionnedHash) (*Transaction, error) {
 	keychain, err := db.KeychainByHash(txHash)
 	if err != nil {
 		return nil, err

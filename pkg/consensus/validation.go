@@ -179,7 +179,7 @@ func proofOfWork(tx chain.Transaction, emR shared.EmitterDatabaseReader) (pow cr
 	return nil, nil
 }
 
-func findLastValidationPool(txAddr []byte, txType chain.TransactionType, req PoolRequester) (Pool, error) {
+func findLastValidationPool(txAddr crypto.VersionnedHash, txType chain.TransactionType, req PoolRequester) (Pool, error) {
 
 	sPool, err := FindStoragePool(txAddr)
 	if err != nil {
@@ -262,7 +262,7 @@ func buildValidation(s chain.ValidationStatus, pub crypto.PublicKey, pv crypto.P
 }
 
 //GetMinimumValidation returns the validation from a transaction hash
-func GetMinimumValidation(txHash []byte) int {
+func GetMinimumValidation(txHash crypto.VersionnedHash) int {
 	return 1
 }
 
