@@ -19,7 +19,7 @@ import (
 //GetAccountHandler is an HTTP handler which retrieves an account from an ID public key hash
 //It requests the storage pool from the id address, decrypts the encrypted keychain address and request the keychain from its dedicated pool
 //Then it aggregates the ID and Keychain data
-func GetAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context) {
+func GetAccountHandler(sharedKeyReader shared.KeyReader) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		encIDHash := c.Param("idHash")
@@ -42,7 +42,7 @@ func GetAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context
 			return
 		}
 
-		emKeys, err := techReader.EmitterKeys()
+		firstEmKeys, err := sharedKeyReader.FirstEmitterCrossKeypair()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, httpError{
 				Error:     err.Error(),
@@ -52,7 +52,7 @@ func GetAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context
 			return
 		}
 
-		if err := crypto.VerifySignature(encIDHash, emKeys.RequestKey(), sigReq); err != nil {
+		if err := crypto.VerifySignature(encIDHash, firstEmKeys.PublicKey(), sigReq); err != nil {
 			c.JSON(http.StatusBadRequest, httpError{
 				Error:     fmt.Sprintf("signature request: %s", err.Error()),
 				Status:    http.StatusText(http.StatusBadRequest),
@@ -61,7 +61,7 @@ func GetAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context
 			return
 		}
 
-		nodeLastKeys, err := techReader.NodeLastKeys()
+		nodeLastKeys, err := sharedKeyReader.LastNodeCrossKeypair()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, httpError{
 				Error:     err.Error(),
@@ -137,7 +137,7 @@ func GetAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context
 }
 
 //CreateAccountHandler is an HTTP handler which forwards ID and Keychain transaction to master nodes and reply with the transaction receipts
-func CreateAccountHandler(techReader shared.TechDatabaseReader, p2pNodeReader consensus.NodeReader) func(c *gin.Context) {
+func CreateAccountHandler(sharedKeyReader shared.KeyReader, nodeReader consensus.NodeReader) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		var form accountCreationRequest
@@ -177,7 +177,7 @@ func CreateAccountHandler(techReader shared.TechDatabaseReader, p2pNodeReader co
 			return
 		}
 
-		emKeys, err := techReader.EmitterKeys()
+		firstEmKeys, err := sharedKeyReader.FirstEmitterCrossKeypair()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, httpError{
 				Error:     err.Error(),
@@ -191,7 +191,7 @@ func CreateAccountHandler(techReader shared.TechDatabaseReader, p2pNodeReader co
 			EncryptedID:       form.EncryptedID,
 			EncryptedKeychain: form.EncryptedKeychain,
 		})
-		if err := crypto.VerifySignature(string(formBytes), emKeys.RequestKey(), form.Signature); err != nil {
+		if err := crypto.VerifySignature(string(formBytes), firstEmKeys.PublicKey(), form.Signature); err != nil {
 			c.JSON(http.StatusBadRequest, httpError{
 				Error:     fmt.Sprintf("signature request: %s", err.Error()),
 				Status:    http.StatusText(http.StatusBadRequest),
@@ -200,7 +200,7 @@ func CreateAccountHandler(techReader shared.TechDatabaseReader, p2pNodeReader co
 			return
 		}
 
-		nodeLastKeys, err := techReader.NodeLastKeys()
+		nodeLastKeys, err := sharedKeyReader.LastNodeCrossKeypair()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, httpError{
 				Error:     err.Error(),
@@ -218,7 +218,7 @@ func CreateAccountHandler(techReader shared.TechDatabaseReader, p2pNodeReader co
 				Timestamp: time.Now().Unix(),
 			})
 		}
-		idTxRes, httpErr := requestTransactionMining(idTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey(), p2pNodeReader, techReader)
+		idTxRes, httpErr := requestTransactionMining(idTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey(), nodeReader, sharedKeyReader)
 		if httpErr != nil {
 			c.JSON(httpErr.code, httpErr)
 			return
@@ -232,7 +232,7 @@ func CreateAccountHandler(techReader shared.TechDatabaseReader, p2pNodeReader co
 				Timestamp: time.Now().Unix(),
 			})
 		}
-		keychainTxRes, httpErr := requestTransactionMining(keychainTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey(), p2pNodeReader, techReader)
+		keychainTxRes, httpErr := requestTransactionMining(keychainTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey(), nodeReader, sharedKeyReader)
 		if httpErr != nil {
 			c.JSON(httpErr.code, httpErr)
 			return

@@ -81,7 +81,7 @@ func formatPeerDiscovered(p *api.PeerDiscovered) discovery.Peer {
 
 func formatTransaction(tx *api.Transaction) (chain.Transaction, error) {
 
-	propSharedKeys, err := shared.NewEmitterKeyPair(tx.SharedKeysEmitterProposal.EncryptedPrivateKey, tx.SharedKeysEmitterProposal.PublicKey)
+	propSharedKeys, err := shared.NewEmitterCrossKeyPair(tx.SharedKeysEmitterProposal.EncryptedPrivateKey, tx.SharedKeysEmitterProposal.PublicKey)
 	if err != nil {
 		return chain.Transaction{}, err
 	}

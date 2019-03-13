@@ -31,16 +31,16 @@ Scenario: Receive  get last transction about an unknown transaction
 func TestHandleGetLastTransactionWhenNotExist(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	techR := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
-	techR.nodeKeys = append(techR.nodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
 
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, techR, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, poolR, pub, pv)
 
 	req := &api.GetLastTransactionRequest{
 		Timestamp:          time.Now().Unix(),
@@ -68,23 +68,23 @@ func TestHandleGetLastTransaction(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	techR := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
-	techR.nodeKeys = append(techR.nodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
 
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, techR, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, poolR, pub, pv)
 
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
 
 	txRaw := map[string]interface{}{
 		"addr":                    crypto.HashString("addr"),
@@ -139,16 +139,16 @@ func TestHandleGetTransactionStatus(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	techR := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
-	techR.nodeKeys = append(techR.nodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
 
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, techR, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, poolR, pub, pv)
 
 	req := &api.GetTransactionStatusRequest{
 		Timestamp:       time.Now().Unix(),
@@ -178,18 +178,18 @@ func TestHandleStoreTransaction(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	techR := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
-	techR.nodeKeys = append(techR.nodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
 
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, techR, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, poolR, pub, pv)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
 
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
@@ -266,12 +266,12 @@ func TestHandleLockTransaction(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
 	chainDB := &mockChainDB{}
-	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
-	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 
 	poolR := &mockPoolRequester{}
-	txSrv := NewTransactionService(chainDB, techDB, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, poolR, pub, pv)
 
 	req := &api.TimeLockTransactionRequest{
 		Timestamp:           time.Now().Unix(),
@@ -302,24 +302,24 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
-	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
-	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpv")), pub)
-	techDB.emKeys = append(techDB.emKeys, emKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+	emKey, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encpv")), pub)
+	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
 
 	chainDB := &mockChainDB{}
 
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, techDB, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, poolR, pub, pv)
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
 	txRaw := map[string]interface{}{
 		"addr":                    crypto.HashString("addr"),
 		"data":                    data,
@@ -381,20 +381,20 @@ func TestHandleConfirmValiation(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
-	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
-	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpv")), pub)
-	techDB.emKeys = append(techDB.emKeys, emKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+	emKey, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encpv")), pub)
+	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
 
 	chainDB := &mockChainDB{}
 
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, techDB, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, poolR, pub, pv)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
@@ -578,27 +578,43 @@ func (r *mockChainDB) WriteKO(tx chain.Transaction) error {
 	return nil
 }
 
-type mockTechDB struct {
-	emKeys   shared.EmitterKeys
-	nodeKeys []shared.KeyPair
+type mockSharedKeyReader struct {
+	crossNodeKeys    []shared.NodeCrossKeyPair
+	crossEmitterKeys []shared.EmitterCrossKeyPair
 }
 
-func (db mockTechDB) EmitterKeys() (shared.EmitterKeys, error) {
-	return db.emKeys, nil
+func (r mockSharedKeyReader) EmitterCrossKeypairs() ([]shared.EmitterCrossKeyPair, error) {
+	return r.crossEmitterKeys, nil
 }
 
-func (db mockTechDB) NodeLastKeys() (shared.KeyPair, error) {
-	return db.nodeKeys[len(db.nodeKeys)-1], nil
+func (r mockSharedKeyReader) FirstNodeCrossKeypair() (shared.NodeCrossKeyPair, error) {
+	return r.crossNodeKeys[0], nil
 }
 
-func (db mockTechDB) NodeFirstKeys() (shared.KeyPair, error) {
-	return db.nodeKeys[0], nil
+func (r mockSharedKeyReader) LastNodeCrossKeypair() (shared.NodeCrossKeyPair, error) {
+	return r.crossNodeKeys[len(r.crossNodeKeys)-1], nil
 }
 
-func (db mockTechDB) AuthorizedPublicKeys() ([]string, error) {
+func (r mockSharedKeyReader) AuthorizedNodesPublicKeys() ([]string, error) {
 	return []string{
 		"pub1",
 		"pub2",
 		"pub3",
+		"pub4",
+		"pub5",
+		"pub6",
+		"pub7",
+		"pub8",
 	}, nil
+}
+
+func (r mockSharedKeyReader) CrossEmitterPublicKeys() (pubKeys []string, err error) {
+	for _, kp := range r.crossEmitterKeys {
+		pubKeys = append(pubKeys, kp.PublicKey())
+	}
+	return
+}
+
+func (r mockSharedKeyReader) FirstEmitterCrossKeypair() (shared.EmitterCrossKeyPair, error) {
+	return r.crossEmitterKeys[0], nil
 }

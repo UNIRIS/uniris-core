@@ -21,7 +21,7 @@ func TestNewID(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 
 	addr := crypto.HashString("address")
 
@@ -30,9 +30,9 @@ func TestNewID(t *testing.T) {
 	sig, _ := crypto.Sign("data", pv)
 
 	tx, err := NewTransaction(addr, IDTransactionType, map[string]string{
-		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
 
@@ -55,7 +55,7 @@ func TestNewIDWithInvalidType(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 
 	addr := crypto.HashString("address")
 
@@ -64,9 +64,9 @@ func TestNewIDWithInvalidType(t *testing.T) {
 	sig, _ := crypto.Sign("data", pv)
 
 	tx, err := NewTransaction(addr, KeychainTransactionType, map[string]string{
-		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
 
@@ -85,7 +85,7 @@ func TestNewIDWithMissingDataFields(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 
 	addr := crypto.HashString("address")
 
@@ -104,7 +104,7 @@ func TestNewIDWithMissingDataFields(t *testing.T) {
 
 	tx, err = NewTransaction(addr, IDTransactionType, map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
+		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
 
@@ -113,7 +113,7 @@ func TestNewIDWithMissingDataFields(t *testing.T) {
 
 	tx, err = NewTransaction(addr, IDTransactionType, map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
 
@@ -131,7 +131,7 @@ func TestNewIDWithNotHexDataFields(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 
 	addr := crypto.HashString("address")
 
@@ -140,24 +140,24 @@ func TestNewIDWithNotHexDataFields(t *testing.T) {
 	sig, _ := crypto.Sign("data", pv)
 
 	tx, _ := NewTransaction(addr, IDTransactionType, map[string]string{
-		"encrypted_aes_key":          "aes key",
+		"encrypted_aes_key":         "aes key",
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	_, err := NewID(tx)
 	assert.EqualError(t, err, "transaction: id encrypted aes key is not in hexadecimal format")
 
 	tx, _ = NewTransaction(addr, IDTransactionType, map[string]string{
-		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_id":    "addr",
+		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_id":   "addr",
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	_, err = NewID(tx)
 	assert.EqualError(t, err, "transaction: id encrypted address for id is not in hexadecimal format")
 
 	tx, _ = NewTransaction(addr, IDTransactionType, map[string]string{
-		"encrypted_aes_key":          hex.EncodeToString([]byte("aesKey")),
-		"encrypted_address_by_id":    hex.EncodeToString([]byte("addr")),
+		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
+		"encrypted_address_by_id":   hex.EncodeToString([]byte("addr")),
 		"encrypted_address_by_node": "addr",
 	}, time.Now(), pub, prop, sig, sig, hash)
 	_, err = NewID(tx)

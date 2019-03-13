@@ -11,7 +11,7 @@ import (
 )
 
 //GetSharedKeysHandler defines an HTTP handler to retrieve the shared keys
-func GetSharedKeysHandler(techReader shared.TechDatabaseReader) func(*gin.Context) {
+func GetSharedKeysHandler(sharedKeyReader shared.KeyReader) func(*gin.Context) {
 	return func(c *gin.Context) {
 
 		emPublicKey := c.Query("emitter_public_key")
@@ -43,7 +43,7 @@ func GetSharedKeysHandler(techReader shared.TechDatabaseReader) func(*gin.Contex
 			return
 		}
 
-		nodeLastKeys, err := techReader.NodeLastKeys()
+		nodeLastKeys, err := sharedKeyReader.LastNodeCrossKeypair()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, httpError{
 				Error:     err.Error(),
@@ -53,7 +53,7 @@ func GetSharedKeysHandler(techReader shared.TechDatabaseReader) func(*gin.Contex
 			return
 		}
 
-		sharedEmKeys, err := techReader.EmitterKeys()
+		sharedEmKeys, err := sharedKeyReader.EmitterCrossKeypairs()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, httpError{
 				Error:     err.Error(),

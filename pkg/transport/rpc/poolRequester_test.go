@@ -30,13 +30,13 @@ func TestRequestTransactionLock(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
-	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
+	keyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	keyReader.crossNodeKeys = append(keyReader.crossNodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
-	pr := NewPoolRequester(techDB)
-	txSrv := NewTransactionService(chainDB, techDB, pr, pub, pv)
+	pr := NewPoolRequester(keyReader)
+	txSrv := NewTransactionService(chainDB, keyReader, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -60,16 +60,16 @@ func TestRequestConfirmValidation(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
+	kp, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
 
-	techDB := &mockTechDB{}
-	techDB.emKeys = append(techDB.emKeys, kp)
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
-	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
+	keyReader := &mockSharedKeyReader{}
+	keyReader.crossEmitterKeys = append(keyReader.crossEmitterKeys, kp)
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	keyReader.crossNodeKeys = append(keyReader.crossNodeKeys, nodeKey)
 
-	pr := NewPoolRequester(techDB)
+	pr := NewPoolRequester(keyReader)
 
-	miningSrv := NewTransactionService(nil, techDB, pr, pub, pv)
+	miningSrv := NewTransactionService(nil, keyReader, pr, pub, pv)
 
 	lis, err := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -132,18 +132,18 @@ Scenario: Request transaction store
 func TestRequestStorage(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
-	kp, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
+	kp, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
 
 	chainDB := &mockChainDB{}
-	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
-	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
+	keyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	keyReader.crossNodeKeys = append(keyReader.crossNodeKeys, nodeKey)
 
-	techDB.emKeys = append(techDB.emKeys, kp)
+	keyReader.crossEmitterKeys = append(keyReader.crossEmitterKeys, kp)
 
-	pr := NewPoolRequester(techDB)
+	pr := NewPoolRequester(keyReader)
 
-	txSrv := NewTransactionService(chainDB, techDB, pr, pub, pv)
+	txSrv := NewTransactionService(chainDB, keyReader, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -204,13 +204,13 @@ func TestSendGetLastTransaction(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
 	chainDB := &mockChainDB{}
-	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
-	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
+	keyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	keyReader.crossNodeKeys = append(keyReader.crossNodeKeys, nodeKey)
 
-	pr := NewPoolRequester(techDB)
+	pr := NewPoolRequester(keyReader)
 
-	txSrv := NewTransactionService(chainDB, techDB, pr, pub, pv)
+	txSrv := NewTransactionService(chainDB, keyReader, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -223,7 +223,7 @@ func TestSendGetLastTransaction(t *testing.T) {
 		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPV")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encPV")), pub)
 	txRaw := map[string]interface{}{
 		"address":                 crypto.HashString("addr"),
 		"data":                    data,

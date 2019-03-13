@@ -32,19 +32,19 @@ type PoolRequester interface {
 }
 
 //FindMasterNodes finds a list of master nodes by using an entropy sorting based on the transaction and minimum number of master
-func FindMasterNodes(txHash string, r NodeReader, sharedReader shared.NodeReader) (Pool, error) {
-	authKeys, err := sharedReader.AuthorizedPublicKeys()
+func FindMasterNodes(txHash string, nodeReader NodeReader, sharedKeyReader shared.KeyReader) (Pool, error) {
+	authKeys, err := sharedKeyReader.AuthorizedNodesPublicKeys()
 	if err != nil {
 		return nil, err
 	}
 
-	nodeFirstKeys, err := sharedReader.NodeFirstKeys()
+	firstKeys, err := sharedKeyReader.FirstNodeCrossKeypair()
 	if err != nil {
 		return nil, err
 	}
 
-	sort := entropySort(txHash, authKeys, nodeFirstKeys.PrivateKey())
-	nbReachables, err := r.CountReachables()
+	sort := entropySort(txHash, authKeys, firstKeys.PrivateKey())
+	nbReachables, err := nodeReader.CountReachables()
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func FindMasterNodes(txHash string, r NodeReader, sharedReader shared.NodeReader
 
 	var i int
 	for nbReachableMasters < nbMasters && i < len(sort) {
-		n, err := r.FindByPublicKey(sort[i])
+		n, err := nodeReader.FindByPublicKey(sort[i])
 		if err != nil {
 			return nil, err
 		}

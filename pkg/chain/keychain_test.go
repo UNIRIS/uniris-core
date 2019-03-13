@@ -21,7 +21,7 @@ func TestNewKeychain(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 
 	addr := crypto.HashString("address")
 
@@ -30,7 +30,7 @@ func TestNewKeychain(t *testing.T) {
 
 	tx, err := NewTransaction(addr, KeychainTransactionType, map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
 
@@ -52,7 +52,7 @@ func TestNewKeychainWithInvalkeychainType(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 
 	addr := crypto.HashString("address")
 
@@ -62,7 +62,7 @@ func TestNewKeychainWithInvalkeychainType(t *testing.T) {
 
 	tx, err := NewTransaction(addr, IDTransactionType, map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	assert.Nil(t, err)
 
@@ -81,7 +81,7 @@ func TestNewKeychainWithMissingDataFields(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 
 	addr := crypto.HashString("address")
 
@@ -116,7 +116,7 @@ func TestNewKeychainWithNotHexDataFields(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 
 	addr := crypto.HashString("address")
 
@@ -126,14 +126,14 @@ func TestNewKeychainWithNotHexDataFields(t *testing.T) {
 
 	tx, _ := NewTransaction(addr, KeychainTransactionType, map[string]string{
 		"encrypted_address_by_node": "addr",
-		"encrypted_wallet":           hex.EncodeToString([]byte("wallet")),
+		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
 	}, time.Now(), pub, prop, sig, sig, hash)
 	_, err := NewKeychain(tx)
 	assert.EqualError(t, err, "transaction: keychain encrypted address for node is not in hexadecimal format")
 
 	tx, _ = NewTransaction(addr, KeychainTransactionType, map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":           "wallet",
+		"encrypted_wallet":          "wallet",
 	}, time.Now(), pub, prop, sig, sig, hash)
 	_, err = NewKeychain(tx)
 	assert.EqualError(t, err, "transaction: keychain encrypted wallet is not in hexadecimal format")

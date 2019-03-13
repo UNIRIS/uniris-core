@@ -29,7 +29,7 @@ func TestRequestValidations(t *testing.T) {
 	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
 	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
@@ -102,7 +102,7 @@ Scenario: Validate an incoming transaction
 func TestValidateTransaction(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
@@ -162,7 +162,7 @@ Scenario: Validate an incoming transaction with invalid integrity
 func TestValidateTransactionWithBadIntegrity(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
@@ -193,11 +193,11 @@ func TestPerformPOW(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	emReader := &mockEmitterReader{}
-	emKP, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
-	emReader.emKeys = append(emReader.emKeys, emKP)
+	keyReader := &mockSharedKeyReader{}
+	emKP, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	keyReader.crossEmitterKeys = append(keyReader.crossEmitterKeys, emKP)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
@@ -237,7 +237,7 @@ func TestPerformPOW(t *testing.T) {
 	tx, err := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txEmSigned))
 	assert.Nil(t, err)
 
-	pow, err := proofOfWork(tx, emReader)
+	pow, err := proofOfWork(tx, keyReader)
 	assert.Nil(t, err)
 	assert.Equal(t, pub, pow)
 }
@@ -251,11 +251,11 @@ Scenario: Pre-validate a transaction
 func TestPreValidateTransaction(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
-	emReader := &mockEmitterReader{}
-	emKP, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
-	emReader.emKeys = append(emReader.emKeys, emKP)
+	keyReader := &mockSharedKeyReader{}
+	emKP, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	keyReader.crossEmitterKeys = append(keyReader.crossEmitterKeys, emKP)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
@@ -296,7 +296,7 @@ func TestPreValidateTransaction(t *testing.T) {
 	assert.Nil(t, err)
 
 	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	mv, err := preValidateTransaction(tx, wHeaders, Pool{Node{publicKey: "pub"}}, Pool{Node{publicKey: "pub"}}, Pool{}, 1, pub, pv, emReader)
+	mv, err := preValidateTransaction(tx, wHeaders, Pool{Node{publicKey: "pub"}}, Pool{Node{publicKey: "pub"}}, Pool{}, 1, pub, pv, keyReader)
 	assert.Nil(t, err)
 	assert.Equal(t, pub, mv.ProofOfWork())
 	assert.Equal(t, pub, mv.Validation().PublicKey())
@@ -315,11 +315,11 @@ Scenario: Lead transaction mining
 func TestLeadMining(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
-	emReader := &mockEmitterReader{}
-	emKP, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
-	emReader.emKeys = append(emReader.emKeys, emKP)
+	keyReader := &mockSharedKeyReader{}
+	emKP, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	keyReader.crossEmitterKeys = append(keyReader.crossEmitterKeys, emKP)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_aes_key":         hex.EncodeToString([]byte("aesKey")),
@@ -360,7 +360,7 @@ func TestLeadMining(t *testing.T) {
 	assert.Nil(t, err)
 	poolR := &mockPoolRequester{}
 	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	assert.Nil(t, LeadMining(tx, 1, wHeaders, poolR, pub, pv, emReader))
+	assert.Nil(t, LeadMining(tx, 1, wHeaders, poolR, pub, pv, keyReader))
 
 	time.Sleep(1 * time.Second)
 
@@ -406,14 +406,6 @@ func (pr mockPoolRequester) RequestTransactionValidations(pool Pool, tx chain.Tr
 func (pr *mockPoolRequester) RequestTransactionStorage(pool Pool, minReplicas int, tx chain.Transaction) error {
 	pr.stores = append(pr.stores, tx)
 	return nil
-}
-
-type mockEmitterReader struct {
-	emKeys shared.EmitterKeys
-}
-
-func (r mockEmitterReader) EmitterKeys() (shared.EmitterKeys, error) {
-	return r.emKeys, nil
 }
 
 /*

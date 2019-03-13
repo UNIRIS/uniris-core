@@ -20,7 +20,7 @@ Scenario: Create a new transaction
 func TestNewTransaction(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encPvKey")), pub)
 
 	addr := crypto.HashString("addr")
 	data := map[string]string{
@@ -48,13 +48,13 @@ Scenario: Create a new transaction with an invalid addr
 	Then I get an error
 */
 func TestNewWithInvalidAddress(t *testing.T) {
-	_, err := NewTransaction("", KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterKeyPair{}, "", "", "")
+	_, err := NewTransaction("", KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterCrossKeyPair{}, "", "", "")
 	assert.EqualError(t, err, "transaction: addr hash is empty")
 
-	_, err = NewTransaction("abc", KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterKeyPair{}, "", "", "")
+	_, err = NewTransaction("abc", KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterCrossKeyPair{}, "", "", "")
 	assert.EqualError(t, err, "transaction: addr hash is not in hexadecimal format")
 
-	_, err = NewTransaction(hex.EncodeToString([]byte("abc")), KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterKeyPair{}, "", "", "")
+	_, err = NewTransaction(hex.EncodeToString([]byte("abc")), KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterCrossKeyPair{}, "", "", "")
 	assert.EqualError(t, err, "transaction: addr hash is not valid")
 }
 
@@ -66,13 +66,13 @@ Scenario: Create a new transaction with an invalid transaction hash
 */
 func TestNewWithInvalidHash(t *testing.T) {
 
-	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterKeyPair{}, "", "", "")
+	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterCrossKeyPair{}, "", "", "")
 	assert.EqualError(t, err, "transaction: hash is empty")
 
-	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterKeyPair{}, "", "", "abc")
+	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterCrossKeyPair{}, "", "", "abc")
 	assert.EqualError(t, err, "transaction: hash is not in hexadecimal format")
 
-	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterKeyPair{}, "", "", hex.EncodeToString([]byte("abc")))
+	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterCrossKeyPair{}, "", "", hex.EncodeToString([]byte("abc")))
 	assert.EqualError(t, err, "transaction: hash is not valid")
 }
 
@@ -84,7 +84,7 @@ Scenario: Create a new transaction with an invalid transaction data
 */
 func TestNewWithInvalidData(t *testing.T) {
 
-	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterKeyPair{}, "", "", crypto.HashString("addr"))
+	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{}, time.Now(), "", shared.EmitterCrossKeyPair{}, "", "", crypto.HashString("addr"))
 	assert.EqualError(t, err, "transaction: data is empty")
 }
 
@@ -98,7 +98,7 @@ func TestNewWithInvalidTimestamp(t *testing.T) {
 	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now().Add(2*time.Second), "", shared.EmitterKeyPair{}, "", "", crypto.HashString("addr"))
+	}, time.Now().Add(2*time.Second), "", shared.EmitterCrossKeyPair{}, "", "", crypto.HashString("addr"))
 	assert.EqualError(t, err, "transaction: timestamp must be greater lower than now")
 }
 
@@ -112,19 +112,19 @@ func TestNewWithInvalidPublicKey(t *testing.T) {
 	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), "", shared.EmitterKeyPair{}, "", "", crypto.HashString("addr"))
+	}, time.Now(), "", shared.EmitterCrossKeyPair{}, "", "", crypto.HashString("addr"))
 	assert.EqualError(t, err, "transaction: public key is empty")
 
 	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), "abc", shared.EmitterKeyPair{}, "", "", crypto.HashString("addr"))
+	}, time.Now(), "abc", shared.EmitterCrossKeyPair{}, "", "", crypto.HashString("addr"))
 	assert.EqualError(t, err, "transaction: public key is not in hexadecimal format")
 
 	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), hex.EncodeToString([]byte("abc")), shared.EmitterKeyPair{}, "", "", crypto.HashString("addr"))
+	}, time.Now(), hex.EncodeToString([]byte("abc")), shared.EmitterCrossKeyPair{}, "", "", crypto.HashString("addr"))
 	assert.EqualError(t, err, "transaction: public key is not valid")
 }
 
@@ -140,19 +140,19 @@ func TestNewWithInvalidSignature(t *testing.T) {
 	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), pub, shared.EmitterKeyPair{}, "", "", crypto.HashString(("hello")))
+	}, time.Now(), pub, shared.EmitterCrossKeyPair{}, "", "", crypto.HashString(("hello")))
 	assert.EqualError(t, err, "transaction: signature is empty")
 
 	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), pub, shared.EmitterKeyPair{}, "abc", "", crypto.HashString("addr"))
+	}, time.Now(), pub, shared.EmitterCrossKeyPair{}, "abc", "", crypto.HashString("addr"))
 	assert.EqualError(t, err, "transaction: signature is not in hexadecimal format")
 
 	_, err = NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), pub, shared.EmitterKeyPair{}, hex.EncodeToString([]byte("abc")), "", crypto.HashString("addr"))
+	}, time.Now(), pub, shared.EmitterCrossKeyPair{}, hex.EncodeToString([]byte("abc")), "", crypto.HashString("addr"))
 	assert.EqualError(t, err, "transaction: signature is not valid")
 }
 
@@ -170,7 +170,7 @@ func TestNewWithInvalidType(t *testing.T) {
 	_, err := NewTransaction(crypto.HashString("addr"), 10, map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), pub, shared.EmitterKeyPair{}, sig, sig, crypto.HashString(("hello")))
+	}, time.Now(), pub, shared.EmitterCrossKeyPair{}, sig, sig, crypto.HashString(("hello")))
 	assert.EqualError(t, err, "transaction: type not allowed")
 }
 
@@ -188,7 +188,7 @@ func TestNewWithoutProposal(t *testing.T) {
 	_, err := NewTransaction(crypto.HashString("addr"), KeychainTransactionType, map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
-	}, time.Now(), pub, shared.EmitterKeyPair{}, sig, sig, crypto.HashString(("hello")))
+	}, time.Now(), pub, shared.EmitterCrossKeyPair{}, sig, sig, crypto.HashString(("hello")))
 	assert.EqualError(t, err, "transaction: proposal is missing")
 }
 
@@ -201,7 +201,7 @@ Scenario: Check the transaction integrity
 func TestCheckTransactionIntegrity(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	txRaw := Transaction{
 		addr: crypto.HashString("addr"),
@@ -235,7 +235,7 @@ Scenario: Check the transaction integrity with invalid hash
 func TestCheckTransactionIntegrityWithInvalidHash(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	raw, _ := json.Marshal(Transaction{
 		addr: crypto.HashString("addr"),
@@ -267,7 +267,7 @@ Scenario: Check the transaction integrity with invalid signature
 func TestCheckTransactionIntegrityWithInvalidSignature(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	txRaw := Transaction{
 		addr: crypto.HashString("addr"),
@@ -304,7 +304,7 @@ Scenario: Add mining information to a transaction
 func TestMined(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	raw, _ := json.Marshal(Transaction{
 		addr: crypto.HashString("addr"),
@@ -351,7 +351,7 @@ Scenario: Add mining information to a transaction without confirmations
 func TestMinedWithoutConfirmations(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	raw, _ := json.Marshal(Transaction{
 		addr: crypto.HashString("addr"),
@@ -395,7 +395,7 @@ Scenario: Check the integrity of a transaction chain
 func TestCheckChainIntegrity(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	tx1 := Transaction{
 		addr: crypto.HashString("addr"),
@@ -468,7 +468,7 @@ Scenario: Check chain integrity with invalid timestamp
 func TestCheckChainIntegrityWithInvalidTime(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	tx0 := Transaction{
 		addr: crypto.HashString("addr"),
@@ -514,7 +514,7 @@ func TestChainTransaction(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	tx1 := Transaction{
 		addr: crypto.HashString("addr"),
@@ -571,7 +571,7 @@ func TestChainTransactionWithInvalidTimestamp(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	txTime1 := time.Now()
 	raw1, _ := json.Marshal(Transaction{
@@ -634,7 +634,7 @@ func TestCheckMasterValidation(t *testing.T) {
 	sig, _ := crypto.Sign(string(b), pv)
 	v.nodeSig = sig
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	tx := Transaction{
 		addr: crypto.HashString("addr"),
@@ -686,7 +686,7 @@ func TestCheckMasterValidationWithInvalidPOW(t *testing.T) {
 	sig, _ := crypto.Sign(string(b), pv)
 	v.nodeSig = sig
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encpvkey")), pub)
 
 	raw, _ := json.Marshal(Transaction{
 		addr: crypto.HashString("addr"),

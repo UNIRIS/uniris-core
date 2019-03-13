@@ -23,7 +23,7 @@ Scenario: Get shared keys with no emitter public key in the query
 */
 func TestGetSharedKeysWhenMissingPublicKey(t *testing.T) {
 	r := gin.New()
-	r.GET("/api/sharedkeys", GetSharedKeysHandler(&mockTechDB{}))
+	r.GET("/api/sharedkeys", GetSharedKeysHandler(&mockSharedKeyReader{}))
 
 	path := fmt.Sprintf("http://localhost/api/sharedkeys")
 	req, _ := http.NewRequest("GET", path, nil)
@@ -47,7 +47,7 @@ Scenario: Get shared keys with an invalid emitter public key
 */
 func TestGetSharedKeysWithInvalidPublicKey(t *testing.T) {
 	r := gin.New()
-	r.GET("/api/sharedkeys", GetSharedKeysHandler(&mockTechDB{}))
+	r.GET("/api/sharedkeys", GetSharedKeysHandler(&mockSharedKeyReader{}))
 
 	path := fmt.Sprintf("http://localhost/api/sharedkeys?emitter_public_key=abc")
 	req, _ := http.NewRequest("GET", path, nil)
@@ -73,15 +73,15 @@ func TestGetSharedKeys(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	techDB := &mockTechDB{}
+	sharedKeyReader := &mockSharedKeyReader{}
 	encPv, _ := crypto.Encrypt(pv, pub)
-	emKP, _ := shared.NewEmitterKeyPair(encPv, pub)
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
-	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
-	techDB.emKeys = append(techDB.emKeys, emKP)
+	emKP, _ := shared.NewEmitterCrossKeyPair(encPv, pub)
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKP)
 
 	r := gin.New()
-	r.GET("/api/sharedkeys", GetSharedKeysHandler(techDB))
+	r.GET("/api/sharedkeys", GetSharedKeysHandler(sharedKeyReader))
 
 	path := fmt.Sprintf("http://localhost/api/sharedkeys?emitter_public_key=%s", pub)
 	req, _ := http.NewRequest("GET", path, nil)
@@ -104,27 +104,43 @@ func TestGetSharedKeys(t *testing.T) {
 	assert.Equal(t, pv, emPvKey)
 }
 
-type mockTechDB struct {
-	emKeys   shared.EmitterKeys
-	nodeKeys []shared.KeyPair
+type mockSharedKeyReader struct {
+	crossNodeKeys    []shared.NodeCrossKeyPair
+	crossEmitterKeys []shared.EmitterCrossKeyPair
 }
 
-func (db mockTechDB) EmitterKeys() (shared.EmitterKeys, error) {
-	return db.emKeys, nil
+func (r mockSharedKeyReader) EmitterCrossKeypairs() ([]shared.EmitterCrossKeyPair, error) {
+	return r.crossEmitterKeys, nil
 }
 
-func (db mockTechDB) NodeLastKeys() (shared.KeyPair, error) {
-	return db.nodeKeys[len(db.nodeKeys)-1], nil
+func (r mockSharedKeyReader) FirstNodeCrossKeypair() (shared.NodeCrossKeyPair, error) {
+	return r.crossNodeKeys[0], nil
 }
 
-func (db mockTechDB) NodeFirstKeys() (shared.KeyPair, error) {
-	return db.nodeKeys[0], nil
+func (r mockSharedKeyReader) LastNodeCrossKeypair() (shared.NodeCrossKeyPair, error) {
+	return r.crossNodeKeys[len(r.crossNodeKeys)-1], nil
 }
 
-func (db mockTechDB) AuthorizedPublicKeys() ([]string, error) {
+func (r mockSharedKeyReader) AuthorizedNodesPublicKeys() ([]string, error) {
 	return []string{
 		"pub1",
 		"pub2",
 		"pub3",
+		"pub4",
+		"pub5",
+		"pub6",
+		"pub7",
+		"pub8",
 	}, nil
+}
+
+func (r mockSharedKeyReader) CrossEmitterPublicKeys() (pubKeys []string, err error) {
+	for _, kp := range r.crossEmitterKeys {
+		pubKeys = append(pubKeys, kp.PublicKey())
+	}
+	return
+}
+
+func (r mockSharedKeyReader) FirstEmitterCrossKeypair() (shared.EmitterCrossKeyPair, error) {
+	return r.crossEmitterKeys[0], nil
 }

@@ -25,7 +25,7 @@ func TestReadKeychainByHash(t *testing.T) {
 
 	sig, _ := crypto.Sign("hello", pv)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
 		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
@@ -80,7 +80,7 @@ func TestGetIDTransactionByHash(t *testing.T) {
 
 	sig, _ := crypto.Sign("hello", pv)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
@@ -201,7 +201,7 @@ func TestGetTransactionStatusSuccess(t *testing.T) {
 
 	sig, _ := crypto.Sign("hello", pv)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
@@ -259,7 +259,7 @@ func TestReadLastKeychainTransaction(t *testing.T) {
 
 	sig, _ := crypto.Sign("hello", pv)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
@@ -344,7 +344,7 @@ func TestGetLastIDTransaction(t *testing.T) {
 
 	sig, _ := crypto.Sign("hello", pv)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
@@ -433,7 +433,7 @@ func TestGetTransactionChain(t *testing.T) {
 
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
@@ -515,7 +515,7 @@ Scenario: Check a valid transaction before store
 func TestCheckTransactionBeforeStore(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
@@ -565,7 +565,7 @@ Scenario: Check a transaction before store dbith misssing validations
 func TestCheckTransactionBeforeStoreWithMissingValidations(t *testing.T) {
 	pub, pv := crypto.GenerateKeys()
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
@@ -636,7 +636,7 @@ func TestStoreKOTransaction(t *testing.T) {
 	sHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
 	mv, _ := NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
@@ -700,7 +700,7 @@ func TestStoreKeychainTransaction(t *testing.T) {
 	sHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
 	mv, _ := NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
@@ -764,7 +764,7 @@ func TestStoreIDTransaction(t *testing.T) {
 	sHeaders := []NodeHeader{NewNodeHeader("pub", false, false, 0, true)}
 	mv, _ := NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
 
 	data := map[string]string{
 		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),

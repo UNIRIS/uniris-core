@@ -54,7 +54,7 @@ type Transaction struct {
 	pubKey        string
 	sig           string
 	emSig         string
-	prop          shared.EmitterKeyPair
+	prop          shared.EmitterCrossKeyPair
 	hash          string
 	prevTx        *Transaction
 	masterV       MasterValidation
@@ -62,7 +62,7 @@ type Transaction struct {
 }
 
 //NewTransaction creates a new transaction
-func NewTransaction(addr string, txType TransactionType, data map[string]string, timestamp time.Time, pubK string, prop shared.EmitterKeyPair, sig string, emSig string, hash string) (Transaction, error) {
+func NewTransaction(addr string, txType TransactionType, data map[string]string, timestamp time.Time, pubK string, prop shared.EmitterCrossKeyPair, sig string, emSig string, hash string) (Transaction, error) {
 	tx := Transaction{
 		addr:      addr,
 		txType:    txType,
@@ -116,7 +116,7 @@ func (t Transaction) EmitterSignature() string {
 }
 
 //EmitterSharedKeyProposal returns Transaction's proposal
-func (t Transaction) EmitterSharedKeyProposal() shared.EmitterKeyPair {
+func (t Transaction) EmitterSharedKeyProposal() shared.EmitterCrossKeyPair {
 	return t.prop
 }
 
@@ -324,7 +324,7 @@ func (t Transaction) checkFields() error {
 		return errors.New("transaction: type not allowed")
 	}
 
-	if t.prop == (shared.EmitterKeyPair{}) {
+	if t.prop == (shared.EmitterCrossKeyPair{}) {
 		return errors.New("transaction: proposal is missing")
 	}
 

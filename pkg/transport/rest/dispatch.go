@@ -14,9 +14,9 @@ import (
 	"google.golang.org/grpc"
 )
 
-func requestTransactionMining(tx *api.Transaction, pvKey string, pubKey string, p2pNodeReader consensus.NodeReader, sharedNodeReader shared.NodeReader) (transactionResponse, *httpError) {
+func requestTransactionMining(tx *api.Transaction, pvKey string, pubKey string, nodeReader consensus.NodeReader, sharedKeyReader shared.KeyReader) (transactionResponse, *httpError) {
 
-	masterNodes, err := consensus.FindMasterNodes(tx.TransactionHash, p2pNodeReader, sharedNodeReader)
+	masterNodes, err := consensus.FindMasterNodes(tx.TransactionHash, nodeReader, sharedKeyReader)
 	if err != nil {
 		return transactionResponse{}, &httpError{
 			code:      http.StatusInternalServerError,

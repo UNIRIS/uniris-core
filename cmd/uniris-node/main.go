@@ -85,11 +85,11 @@ func main() {
 		fmt.Printf("Network: %s\n", conf.networkType)
 		fmt.Printf("Network interface: %s\n", conf.networkInterface)
 
-		techDB := memstorage.NewTechDatabase()
+		keyDB := memstorage.NewSharedKeyDatabase()
 		nodeDB := &memstorage.NodeDatabase{}
 
-		go startGRPCServer(conf, techDB, nodeDB)
-		startHTTPServer(conf, techDB, nodeDB)
+		go startGRPCServer(conf, keyDB, nodeDB)
+		startHTTPServer(conf, keyDB, nodeDB)
 
 		return nil
 	}
@@ -209,7 +209,7 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 	}
 }
 
-func startHTTPServer(conf unirisConf, techDB shared.TechDatabaseReader, nodeReader consensus.NodeReader) {
+func startHTTPServer(conf unirisConf, sharedKeyReader shared.KeyReader, nodeReader consensus.NodeReader) {
 	r := gin.Default()
 
 	staticDir, _ := filepath.Abs("../../web/static")
@@ -220,20 +220,20 @@ func startHTTPServer(conf unirisConf, techDB shared.TechDatabaseReader, nodeRead
 	swaggerFile, _ := filepath.Abs("../../api/swagger-spec/swagger.yaml")
 	r.StaticFile("/swagger.yaml", swaggerFile)
 
-	r.GET("/api/account/:idHash", rest.GetAccountHandler(techDB))
-	r.POST("/api/account", rest.CreateAccountHandler(techDB, nodeReader))
-	r.GET("/api/transaction/:txReceipt/status", rest.GetTransactionStatusHandler(techDB))
-	r.GET("/api/sharedkeys", rest.GetSharedKeysHandler(techDB))
+	r.GET("/api/account/:idHash", rest.GetAccountHandler(sharedKeyReader))
+	r.POST("/api/account", rest.CreateAccountHandler(sharedKeyReader, nodeReader))
+	r.GET("/api/transaction/:txReceipt/status", rest.GetTransactionStatusHandler(sharedKeyReader))
+	r.GET("/api/sharedkeys", rest.GetSharedKeysHandler(sharedKeyReader))
 
 	r.Run(":80")
 }
 
-func startGRPCServer(conf unirisConf, techDB shared.TechDatabaseReader, nodeWriter consensus.NodeWriter) {
+func startGRPCServer(conf unirisConf, sharedKeyReader shared.KeyReader, nodeWriter consensus.NodeWriter) {
 	grpcServer := grpc.NewServer()
 
-	poolR := rpc.NewPoolRequester(techDB)
+	poolR := rpc.NewPoolRequester(sharedKeyReader)
 	chainDB := memstorage.NewchainDatabase()
-	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, techDB, poolR, conf.publicKey, conf.privateKey))
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, poolR, conf.publicKey, conf.privateKey))
 
 	var discoveryDB discovery.Database
 	if conf.discoveryDatabase.dbType == "redis" {

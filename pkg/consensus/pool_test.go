@@ -102,7 +102,12 @@ func TestFindMasterValidationNode(t *testing.T) {
 		},
 	}
 
-	masterNodes, err := FindMasterNodes("hash", nodeDB, &mockSharedNodeReader{})
+	pub, pv := crypto.GenerateKeys()
+	crossNodeKeys, _ := shared.NewNodeCrossKeyPair(pv, pub)
+
+	masterNodes, err := FindMasterNodes("hash", nodeDB, &mockSharedKeyReader{
+		crossNodeKeys: []shared.NodeCrossKeyPair{crossNodeKeys},
+	})
 	assert.Nil(t, err)
 
 	var nbReachables int
@@ -159,18 +164,24 @@ func TestFindLastValidationPool(t *testing.T) {
 	assert.Empty(t, pool)
 }
 
-type mockSharedNodeReader struct{}
-
-func (r mockSharedNodeReader) NodeFirstKeys() (shared.KeyPair, error) {
-	pub, pv := crypto.GenerateKeys()
-	return shared.NewKeyPair(pub, pv)
+type mockSharedKeyReader struct {
+	crossNodeKeys    []shared.NodeCrossKeyPair
+	crossEmitterKeys []shared.EmitterCrossKeyPair
 }
 
-func (r mockSharedNodeReader) NodeLastKeys() (shared.KeyPair, error) {
-	return shared.KeyPair{}, nil
+func (r mockSharedKeyReader) EmitterCrossKeypairs() ([]shared.EmitterCrossKeyPair, error) {
+	return r.crossEmitterKeys, nil
 }
 
-func (r mockSharedNodeReader) AuthorizedPublicKeys() ([]string, error) {
+func (r mockSharedKeyReader) FirstNodeCrossKeypair() (shared.NodeCrossKeyPair, error) {
+	return r.crossNodeKeys[0], nil
+}
+
+func (r mockSharedKeyReader) LastNodeCrossKeypair() (shared.NodeCrossKeyPair, error) {
+	return r.crossNodeKeys[len(r.crossNodeKeys)-1], nil
+}
+
+func (r mockSharedKeyReader) AuthorizedNodesPublicKeys() ([]string, error) {
 	return []string{
 		"pub1",
 		"pub2",
@@ -181,6 +192,17 @@ func (r mockSharedNodeReader) AuthorizedPublicKeys() ([]string, error) {
 		"pub7",
 		"pub8",
 	}, nil
+}
+
+func (r mockSharedKeyReader) CrossEmitterPublicKeys() (pubKeys []string, err error) {
+	for _, kp := range r.crossEmitterKeys {
+		pubKeys = append(pubKeys, kp.PublicKey())
+	}
+	return
+}
+
+func (r mockSharedKeyReader) FirstEmitterCrossKeypair() (shared.EmitterCrossKeyPair, error) {
+	return r.crossEmitterKeys[0], nil
 }
 
 type mockNodeReader struct {

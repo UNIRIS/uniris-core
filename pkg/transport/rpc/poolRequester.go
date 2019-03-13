@@ -21,19 +21,19 @@ import (
 )
 
 type poolRequester struct {
-	techDB shared.TechDatabaseReader
+	sharedKeyReader shared.KeyReader
 }
 
 //NewPoolRequester creates a new pool requester as GRPC client
-func NewPoolRequester(tDB shared.TechDatabaseReader) consensus.PoolRequester {
+func NewPoolRequester(skr shared.KeyReader) consensus.PoolRequester {
 	return poolRequester{
-		techDB: tDB,
+		sharedKeyReader: skr,
 	}
 }
 
 func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr string, txType chain.TransactionType) (*chain.Transaction, error) {
 
-	nodeLastKeys, err := pr.techDB.NodeLastKeys()
+	nodeLastKeys, err := pr.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr strin
 
 func (pr poolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash string, txAddress string, masterPublicKey string) error {
 
-	lastKeys, err := pr.techDB.NodeLastKeys()
+	lastKeys, err := pr.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func (pr poolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash s
 
 func (pr poolRequester) RequestTransactionValidations(pool consensus.Pool, tx chain.Transaction, minValids int, masterValid chain.MasterValidation) ([]chain.Validation, error) {
 
-	lastKeys, err := pr.techDB.NodeLastKeys()
+	lastKeys, err := pr.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
 		return nil, fmt.Errorf("confirm validation request error: %s", err.Error())
 	}
@@ -268,7 +268,7 @@ func (pr poolRequester) RequestTransactionValidations(pool consensus.Pool, tx ch
 
 func (pr poolRequester) RequestTransactionStorage(pool consensus.Pool, minStorage int, tx chain.Transaction) error {
 
-	lastKeys, err := pr.techDB.NodeLastKeys()
+	lastKeys, err := pr.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
 		return fmt.Errorf("store transaction request error: %s", err.Error())
 	}

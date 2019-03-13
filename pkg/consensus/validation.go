@@ -22,7 +22,7 @@ import (
 // - Executes the proof of work
 // - Requests validation confirmations
 // - Requests storage
-func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader, poolR PoolRequester, pub, pv string, emR shared.EmitterReader) error {
+func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader, poolR PoolRequester, pub, pv string, sharedKeyReader shared.KeyReader) error {
 	log.Printf("transaction %s is in progress\n", tx.TransactionHash())
 
 	lastVPool, err := findLastValidationPool(tx.Address(), tx.TransactionType(), poolR)
@@ -42,7 +42,7 @@ func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader
 	log.Printf("transaction %s is locked\n", tx.TransactionHash())
 
 	go func() {
-		minedTx, err := mineTransaction(tx, wHeaders, sPool, lastVPool, minValids, pub, pv, emR, poolR)
+		minedTx, err := mineTransaction(tx, wHeaders, sPool, lastVPool, minValids, pub, pv, sharedKeyReader, poolR)
 		if err != nil {
 			fmt.Printf("transaction mining failed: %s\n", err.Error())
 			return
@@ -56,14 +56,14 @@ func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader
 	return nil
 }
 
-func mineTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, lastVPool Pool, minValids int, nodePub, nodePv string, emR shared.EmitterReader, poolR PoolRequester) (chain.Transaction, error) {
+func mineTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, lastVPool Pool, minValids int, nodePub, nodePv string, sharedKeyReader shared.KeyReader, poolR PoolRequester) (chain.Transaction, error) {
 
 	vPool, err := FindValidationPool(tx)
 	if err != nil {
 		return tx, fmt.Errorf("transaction find validation pool failed: %s", err.Error())
 	}
 
-	masterValid, err := preValidateTransaction(tx, wHeaders, sPool, vPool, lastVPool, minValids, nodePub, nodePv, emR)
+	masterValid, err := preValidateTransaction(tx, wHeaders, sPool, vPool, lastVPool, minValids, nodePub, nodePv, sharedKeyReader)
 	if err != nil {
 		return tx, fmt.Errorf("transaction pre-validation failed: %s", err.Error())
 	}
@@ -108,12 +108,12 @@ func findPools(tx chain.Transaction, poolR PoolRequester) (lastValidationPool, v
 }
 
 //preValidateTransaction checks the incoming transaction as master node by ensure the transaction integrity and perform the proof of work. A valiation will result from this action
-func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, vPool Pool, lastVPool Pool, minValids int, pub, pv string, emR shared.EmitterReader) (chain.MasterValidation, error) {
+func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, vPool Pool, lastVPool Pool, minValids int, pub, pv string, sharedKeyReader shared.KeyReader) (chain.MasterValidation, error) {
 	if _, err := tx.IsValid(); err != nil {
 		return chain.MasterValidation{}, err
 	}
 
-	pow, err := proofOfWork(tx, emR)
+	pow, err := proofOfWork(tx, sharedKeyReader)
 	if err != nil {
 		return chain.MasterValidation{}, err
 	}
@@ -154,8 +154,8 @@ func buildHeaders(vPool Pool, sPool Pool) (vHeaders []chain.NodeHeader, sHeaders
 	return
 }
 
-func proofOfWork(tx chain.Transaction, emR shared.EmitterReader) (pow string, err error) {
-	emKeys, err := emR.EmitterKeys()
+func proofOfWork(tx chain.Transaction, sharedKeyReader shared.KeyReader) (pow string, err error) {
+	emKeys, err := sharedKeyReader.CrossEmitterPublicKeys()
 	if err != nil {
 		return
 	}
@@ -165,10 +165,10 @@ func proofOfWork(tx chain.Transaction, emR shared.EmitterReader) (pow string, er
 		return "", err
 	}
 
-	for _, kp := range emKeys {
-		err := crypto.VerifySignature(string(txBytes), kp.PublicKey(), tx.EmitterSignature())
+	for _, pubk := range emKeys {
+		err := crypto.VerifySignature(string(txBytes), pubk, tx.EmitterSignature())
 		if err == nil {
-			return kp.PublicKey(), nil
+			return pubk, nil
 		}
 	}
 
