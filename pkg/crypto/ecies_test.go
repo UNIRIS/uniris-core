@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"crypto/elliptic"
 	"crypto/rand"
 	"testing"
 
@@ -37,12 +38,12 @@ func TestAuthenticateMessage(t *testing.T) {
 }
 
 /*
-Scenario: Encode a encryption
+Scenario: Encode a encryption with ed25519
 	Given cipher data, a public key, and a tag (MAC)
 	When I want to encode the encryption result
 	Then I get byte slice withing all these information
 */
-func TestEncodeEncryption(t *testing.T) {
+func TestEncodeEncryptionWithEd25519(t *testing.T) {
 	_, pub, _ := generateEd25519Keys(rand.Reader)
 	c := newEncodedCipher(pub, []byte("cipher data"), []byte("tag MAC"))
 	assert.NotEmpty(t, c)
@@ -55,18 +56,55 @@ func TestEncodeEncryption(t *testing.T) {
 }
 
 /*
-Scenario: Decode a encryption
+Scenario: Encode a encryption with ecdsa
+	Given cipher data, a public key, and a tag (MAC)
+	When I want to encode the encryption result
+	Then I get byte slice withing all these information
+*/
+func TestEncodeEncryptionWithEcdsa(t *testing.T) {
+	_, pub, _ := generateECDSAKeys(rand.Reader, elliptic.P256())
+	c := newEncodedCipher(pub, []byte("cipher data"), []byte("tag MAC"))
+	assert.NotEmpty(t, c)
+
+	b := pub.bytes()
+
+	assert.EqualValues(t, b, c[:len(b)])
+	assert.EqualValues(t, []byte("cipher data"), c[len(b):len(b)+len([]byte("cipher data"))])
+	assert.EqualValues(t, []byte("tag MAC"), c[len(b)+len([]byte("cipher data")):])
+}
+
+/*
+Scenario: Decode a encryption with ed25519
 	Given encryption encoded
 	When I want to decode the encryption result
 	Then I get encrypted data, a public key, and a tag (MAC)
 */
-func TestDecodeEncryption(t *testing.T) {
+func TestDecodeEncryptionWithEd25519(t *testing.T) {
 	_, pub, _ := generateEd25519Keys(rand.Reader)
 	tag := authenticateMessage([]byte("key"), []byte("message"))
 	cipher := newEncodedCipher(pub, []byte("cipher data"), tag)
 	assert.NotEmpty(t, cipher)
 
 	rPub, em, tag, err := cipher.decode(ed25519ExtractRandomPublicKey)
+	assert.Nil(t, err)
+	assert.Equal(t, pub, rPub)
+	assert.Equal(t, tag, tag)
+	assert.Equal(t, []byte("cipher data"), em)
+}
+
+/*
+Scenario: Decode a encryption with ecdsa
+	Given encryption encoded
+	When I want to decode the encryption result
+	Then I get encrypted data, a public key, and a tag (MAC)
+*/
+func TestDecodeEncryptionWithEcdsa(t *testing.T) {
+	_, pub, _ := generateECDSAKeys(rand.Reader, elliptic.P256())
+	tag := authenticateMessage([]byte("key"), []byte("message"))
+	cipher := newEncodedCipher(pub, []byte("cipher data"), tag)
+	assert.NotEmpty(t, cipher)
+
+	rPub, em, tag, err := cipher.decode(ecdsaExtractRandomPublicKey(elliptic.P256()))
 	assert.Nil(t, err)
 	assert.Equal(t, pub, rPub)
 	assert.Equal(t, tag, tag)
