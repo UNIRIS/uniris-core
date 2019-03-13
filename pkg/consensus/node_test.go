@@ -1,9 +1,14 @@
 package consensus
 
 import (
-	"github.com/stretchr/testify/assert"
+	"bytes"
+	"crypto/rand"
 	"net"
 	"testing"
+
+	"github.com/uniris/uniris-core/pkg/crypto"
+
+	"github.com/stretchr/testify/assert"
 )
 
 /*
@@ -49,13 +54,17 @@ Scenario: test WriteDiscoveredNode
 */
 func TestWriteDiscoveredNode(t *testing.T) {
 	store := &mockNodeDatabase{}
-	node := NewNode(net.ParseIP("192.168.1.1"), 5000, "key1", 1, "0, 0, 0", 0, "v1.0", 1, 1, 0.000, 0.000, GeoPatch{}, false)
+
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	node := NewNode(net.ParseIP("192.168.1.1"), 5000, pub, 1, "0, 0, 0", 0, "v1.0", 1, 1, 0.000, 0.000, GeoPatch{}, false)
 	store.WriteDiscoveredNode(node)
 	assert.Equal(t, 1, len(store.nodes))
-	node2 := NewNode(net.ParseIP("192.168.1.1"), 5000, "key1", 1, "0, 0, 1", 0, "v1.0", 1, 1, 0.000, 0.000, GeoPatch{}, false)
+	node2 := NewNode(net.ParseIP("192.168.1.1"), 5000, pub, 1, "0, 0, 1", 0, "v1.0", 1, 1, 0.000, 0.000, GeoPatch{}, false)
 	store.WriteDiscoveredNode(node2)
 	assert.Equal(t, 1, len(store.nodes))
-	node3 := NewNode(net.ParseIP("192.168.1.1"), 5000, "key3", 1, "0, 0, 0", 0, "v1.0", 1, 1, 0.000, 0.000, GeoPatch{}, false)
+	node3 := NewNode(net.ParseIP("192.168.1.1"), 5000, pub2, 1, "0, 0, 0", 0, "v1.0", 1, 1, 0.000, 0.000, GeoPatch{}, false)
 	store.WriteDiscoveredNode(node3)
 	assert.Equal(t, 2, len(store.nodes))
 
@@ -67,7 +76,15 @@ type mockNodeDatabase struct {
 
 func (db *mockNodeDatabase) WriteDiscoveredNode(node Node) error {
 	for i, n := range db.nodes {
-		if n.PublicKey() == node.PublicKey() {
+		nPub, err := n.PublicKey().Marshal()
+		if err != nil {
+			return err
+		}
+		nodePub, err := node.PublicKey().Marshal()
+		if err != nil {
+			return err
+		}
+		if bytes.Equal(nPub, nodePub) {
 			db.nodes[i] = node
 			return nil
 		}
@@ -76,9 +93,17 @@ func (db *mockNodeDatabase) WriteDiscoveredNode(node Node) error {
 	return nil
 }
 
-func (db *mockNodeDatabase) WriteReachableNode(publicKey string) error {
+func (db *mockNodeDatabase) WriteReachableNode(publicKey crypto.PublicKey) error {
 	for i, n := range db.nodes {
-		if n.PublicKey() == publicKey {
+		nPub, err := n.PublicKey().Marshal()
+		if err != nil {
+			return err
+		}
+		pub, err := publicKey.Marshal()
+		if err != nil {
+			return err
+		}
+		if bytes.Equal(nPub, pub) {
 			node := NewNode(n.IP(), n.Port(), n.PublicKey(), n.Status(), n.CPULoad(), n.FreeDiskSpace(), n.Version(), n.P2PFactor(), n.ReachablePeersNumber(), n.Latitude(), n.Longitude(), n.Patch(), true)
 			db.nodes[i] = node
 			break
@@ -87,9 +112,17 @@ func (db *mockNodeDatabase) WriteReachableNode(publicKey string) error {
 	return nil
 }
 
-func (db *mockNodeDatabase) WriteUnreachableNode(publicKey string) error {
+func (db *mockNodeDatabase) WriteUnreachableNode(publicKey crypto.PublicKey) error {
 	for i, n := range db.nodes {
-		if n.PublicKey() == publicKey {
+		nPub, err := n.PublicKey().Marshal()
+		if err != nil {
+			return err
+		}
+		pub, err := publicKey.Marshal()
+		if err != nil {
+			return err
+		}
+		if bytes.Equal(nPub, pub) {
 			node := NewNode(n.IP(), n.Port(), n.PublicKey(), n.Status(), n.CPULoad(), n.FreeDiskSpace(), n.Version(), n.P2PFactor(), n.ReachablePeersNumber(), n.Latitude(), n.Longitude(), n.Patch(), false)
 			db.nodes[i] = node
 			break

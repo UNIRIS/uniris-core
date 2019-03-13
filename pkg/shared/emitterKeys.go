@@ -1,10 +1,7 @@
 package shared
 
 import (
-	"encoding/hex"
-	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/uniris/uniris-core/pkg/crypto"
 )
@@ -13,47 +10,32 @@ import (
 type EmitterKeys []EmitterKeyPair
 
 //RequestKey returns the public key used to request between clients and nodes
-func (em EmitterKeys) RequestKey() string {
+func (em EmitterKeys) RequestKey() crypto.PublicKey {
 	return em[0].pubKey
 }
 
 //EmitterKeyPair describe shared emitter keypair
 type EmitterKeyPair struct {
-	encPvKey string
-	pubKey   string
+	encPvKey []byte
+	pubKey   crypto.PublicKey
 }
 
 //NewEmitterKeyPair creates a new shared emitter keypair
-func NewEmitterKeyPair(encPvKey, pubKey string) (EmitterKeyPair, error) {
+func NewEmitterKeyPair(encPvKey []byte, pubKey crypto.PublicKey) (EmitterKeyPair, error) {
 
-	if encPvKey == "" {
+	if len(encPvKey) == 0 {
 		return EmitterKeyPair{}, errors.New("shared emitter keys encrypted private key: is empty")
-	}
-	if _, err := hex.DecodeString(encPvKey); err != nil {
-		return EmitterKeyPair{}, errors.New("shared emitter keys encrypted private key: is not in hexadecimal format")
-	}
-
-	if _, err := crypto.IsPublicKey(pubKey); err != nil {
-		return EmitterKeyPair{}, fmt.Errorf("shared emitter keys: %s", err.Error())
 	}
 
 	return EmitterKeyPair{encPvKey, pubKey}, nil
 }
 
 //PublicKey returns the public key for the shared  keypair
-func (kp EmitterKeyPair) PublicKey() string {
+func (kp EmitterKeyPair) PublicKey() crypto.PublicKey {
 	return kp.pubKey
 }
 
 //EncryptedPrivateKey returns the encrypted private key for the shared  keypair
-func (kp EmitterKeyPair) EncryptedPrivateKey() string {
+func (kp EmitterKeyPair) EncryptedPrivateKey() []byte {
 	return kp.encPvKey
-}
-
-//MarshalJSON serialize the keypair in JSON
-func (kp EmitterKeyPair) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]string{
-		"encrypted_private_key": kp.EncryptedPrivateKey(),
-		"public_key":            kp.PublicKey(),
-	})
 }

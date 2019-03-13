@@ -1,6 +1,8 @@
 package memstorage
 
 import (
+	"github.com/uniris/uniris-core/pkg/crypto"
+
 	"github.com/uniris/uniris-core/pkg/consensus"
 )
 
@@ -25,7 +27,7 @@ func (db *NodeDatabase) WriteDiscoveredNode(node consensus.Node) error {
 }
 
 //WriteReachableNode defines a node by its public key as reachable
-func (db *NodeDatabase) WriteReachableNode(publicKey string) error {
+func (db *NodeDatabase) WriteReachableNode(publicKey crypto.PublicKey) error {
 	for i, n := range db.nodes {
 		if n.PublicKey() == publicKey {
 			node := consensus.NewNode(n.IP(), n.Port(), n.PublicKey(), n.Status(), n.CPULoad(), n.FreeDiskSpace(), n.Version(), n.P2PFactor(), n.ReachablePeersNumber(), n.Latitude(), n.Longitude(), n.Patch(), true)
@@ -37,7 +39,7 @@ func (db *NodeDatabase) WriteReachableNode(publicKey string) error {
 }
 
 //WriteUnreachableNode defines a node by its public key as unreachable
-func (db *NodeDatabase) WriteUnreachableNode(publicKey string) error {
+func (db *NodeDatabase) WriteUnreachableNode(publicKey crypto.PublicKey) error {
 	for i, n := range db.nodes {
 		if n.PublicKey() == publicKey {
 			node := consensus.NewNode(n.IP(), n.Port(), n.PublicKey(), n.Status(), n.CPULoad(), n.FreeDiskSpace(), n.Version(), n.P2PFactor(), n.ReachablePeersNumber(), n.Latitude(), n.Longitude(), n.Patch(), false)

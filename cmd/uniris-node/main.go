@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/rand"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/shared"
 	"github.com/uniris/uniris-core/pkg/system"
 
@@ -226,11 +228,29 @@ func startHTTPServer(conf unirisConf, techDB shared.TechDatabaseReader) {
 }
 
 func startGRPCServer(conf unirisConf, techDB shared.TechDatabaseReader) {
+	pubB, err := hex.DecodeString(conf.publicKey)
+	if err != nil {
+		panic(err)
+	}
+	publicKey, err := crypto.ParsePublicKey(pubB)
+	if err != nil {
+		panic(err)
+	}
+
+	pvB, err := hex.DecodeString(conf.privateKey)
+	if err != nil {
+		panic(err)
+	}
+	privateKey, err := crypto.ParsePrivateKey(pvB)
+	if err != nil {
+		panic(err)
+	}
+
 	grpcServer := grpc.NewServer()
 
 	poolR := rpc.NewPoolRequester(techDB)
 	chainDB := memstorage.NewchainDatabase()
-	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, techDB, poolR, conf.publicKey, conf.privateKey))
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, techDB, poolR, publicKey, privateKey))
 
 	var discoveryDB discovery.Database
 	if conf.discoveryDatabase.dbType == "redis" {

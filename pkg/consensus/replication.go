@@ -1,9 +1,12 @@
 package consensus
 
-import "github.com/uniris/uniris-core/pkg/chain"
+import (
+	"github.com/uniris/uniris-core/pkg/chain"
+	"github.com/uniris/uniris-core/pkg/crypto"
+)
 
 //GetMinimumReplicas returns the minimum number of replication for the transaction hash
-func GetMinimumReplicas(txHash string) int {
+func GetMinimumReplicas(txHash crypto.VersionnedHash) int {
 	//TODO: Implement the algorithm
 	return 1
 }

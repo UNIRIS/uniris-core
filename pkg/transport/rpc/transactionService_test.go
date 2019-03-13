@@ -1,7 +1,9 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"sort"
@@ -29,10 +31,10 @@ Scenario: Receive  get last transction about an unknown transaction
 	Then I get an error
 */
 func TestHandleGetLastTransactionWhenNotExist(t *testing.T) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	techR := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
 	techR.nodeKeys = append(techR.nodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
@@ -44,11 +46,11 @@ func TestHandleGetLastTransactionWhenNotExist(t *testing.T) {
 
 	req := &api.GetLastTransactionRequest{
 		Timestamp:          time.Now().Unix(),
-		TransactionAddress: crypto.HashString("address"),
+		TransactionAddress: crypto.Hash([]byte("address")),
 		Type:               api.TransactionType_KEYCHAIN,
 	}
 	reqBytes, _ := json.Marshal(req)
-	sig, _ := crypto.Sign(string(reqBytes), pv)
+	sig, _ := pv.Sign(reqBytes)
 	req.SignatureRequest = sig
 
 	_, err := txSrv.GetLastTransaction(context.TODO(), req)
@@ -66,10 +68,11 @@ Scenario: Receive  get last transaction request
 */
 func TestHandleGetLastTransaction(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	pubB, _ := pub.Marshal()
 
 	techR := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
 	techR.nodeKeys = append(techR.nodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
@@ -79,54 +82,60 @@ func TestHandleGetLastTransaction(t *testing.T) {
 	}
 	txSrv := NewTransactionService(chainDB, techR, poolR, pub, pv)
 
-	data := map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+	data := map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
 	}
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
 
 	txRaw := map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
 	}
 	txBytes, _ := json.Marshal(txRaw)
-	sig, _ := crypto.Sign(string(txBytes), pv)
-	txRaw["signature"] = sig
+	sig, _ := pv.Sign(txBytes)
+	txRaw["signature"] = hex.EncodeToString(sig)
 
 	txByteWithSign, _ := json.Marshal(txRaw)
-	emSig, _ := crypto.Sign(string(txByteWithSign), pv)
-	txRaw["em_signature"] = emSig
+	emSig, _ := pv.Sign(txByteWithSign)
+	txRaw["em_signature"] = hex.EncodeToString(emSig)
 	txBytes, _ = json.Marshal(txRaw)
 
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txBytes))
+	tx, _ := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash([]byte(txBytes)))
 	keychain, _ := chain.NewKeychain(tx)
 	chainDB.keychains = append(chainDB.keychains, keychain)
 
 	req := &api.GetLastTransactionRequest{
 		Timestamp:          time.Now().Unix(),
-		TransactionAddress: crypto.HashString("addr"),
+		TransactionAddress: crypto.Hash([]byte("addr")),
 		Type:               api.TransactionType_KEYCHAIN,
 	}
 	reqBytes, _ := json.Marshal(req)
-	sigReq, _ := crypto.Sign(string(reqBytes), pv)
+	sigReq, _ := pv.Sign(reqBytes)
 	req.SignatureRequest = sigReq
 
 	res, err := txSrv.GetLastTransaction(context.TODO(), req)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, res.SignatureResponse)
 	assert.NotNil(t, res.Transaction)
-	assert.Equal(t, crypto.HashBytes(txBytes), res.Transaction.TransactionHash)
+	assert.EqualValues(t, crypto.Hash(txBytes), res.Transaction.TransactionHash)
 
 	resBytes, _ := json.Marshal(&api.GetLastTransactionResponse{
 		Timestamp:   res.Timestamp,
 		Transaction: res.Transaction,
 	})
-	assert.Nil(t, crypto.VerifySignature(string(resBytes), pub, res.SignatureResponse))
+	assert.True(t, pub.Verify(resBytes, res.SignatureResponse))
 }
 
 /*
@@ -137,10 +146,10 @@ Scenario: Receive get transaction status request
 */
 func TestHandleGetTransactionStatus(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	techR := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
 	techR.nodeKeys = append(techR.nodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
@@ -152,10 +161,10 @@ func TestHandleGetTransactionStatus(t *testing.T) {
 
 	req := &api.GetTransactionStatusRequest{
 		Timestamp:       time.Now().Unix(),
-		TransactionHash: crypto.HashString("tx1"),
+		TransactionHash: crypto.Hash([]byte("tx1")),
 	}
 	reqBytes, _ := json.Marshal(req)
-	sig, _ := crypto.Sign(string(reqBytes), pv)
+	sig, _ := pv.Sign(reqBytes)
 	req.SignatureRequest = sig
 
 	res, err := txSrv.GetTransactionStatus(context.TODO(), req)
@@ -165,7 +174,7 @@ func TestHandleGetTransactionStatus(t *testing.T) {
 		Timestamp: res.Timestamp,
 		Status:    res.Status,
 	})
-	assert.Nil(t, crypto.VerifySignature(string(resBytes), pub, res.SignatureResponse))
+	assert.True(t, pub.Verify(resBytes, res.SignatureResponse))
 }
 
 /*
@@ -176,10 +185,11 @@ Scenario: Receive storage  transaction request
 */
 func TestHandleStoreTransaction(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	pubB, _ := pub.Marshal()
 
 	techR := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
 	techR.nodeKeys = append(techR.nodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
@@ -189,57 +199,67 @@ func TestHandleStoreTransaction(t *testing.T) {
 	}
 	txSrv := NewTransactionService(chainDB, techR, poolR, pub, pv)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
 
-	data := map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+	data := map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
 	}
 	txRaw := map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
 	}
 	txBytes, _ := json.Marshal(txRaw)
-	sig, _ := crypto.Sign(string(txBytes), pv)
-	txRaw["signature"] = sig
+	sig, _ := pv.Sign(txBytes)
+	txRaw["signature"] = hex.EncodeToString(sig)
 
 	txByteWithSign, _ := json.Marshal(txRaw)
-	emSig, _ := crypto.Sign(string(txByteWithSign), pv)
-	txRaw["em_signature"] = emSig
+	emSig, _ := pv.Sign(txByteWithSign)
+	txRaw["em_signature"] = hex.EncodeToString(emSig)
 	txBytes, _ = json.Marshal(txRaw)
 
 	txBytes, _ = json.Marshal(txRaw)
 
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txBytes))
+	tx, _ := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash(txBytes))
 
 	vRaw := map[string]interface{}{
 		"status":     chain.ValidationOK,
-		"public_key": pub,
+		"public_key": pubB,
 		"timestamp":  time.Now().Unix(),
 	}
 	vBytes, _ := json.Marshal(vRaw)
-	vSig, _ := crypto.Sign(string(vBytes), pv)
+	vSig, _ := pv.Sign(vBytes)
 	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
+
+	txf, _ := formatAPITransaction(tx)
+	mvf, _ := formatAPIMasterValidation(mv)
+	vf, _ := formatAPIValidation(v)
 
 	req := &api.StoreTransactionRequest{
 		Timestamp: time.Now().Unix(),
 		MinedTransaction: &api.MinedTransaction{
-			Transaction:        formatAPITransaction(tx),
-			MasterValidation:   formatAPIMasterValidation(mv),
-			ConfirmValidations: []*api.Validation{formatAPIValidation(v)},
+			Transaction:        txf,
+			MasterValidation:   mvf,
+			ConfirmValidations: []*api.Validation{vf},
 		},
 	}
 
 	reqBytes, _ := json.Marshal(req)
-	sigReq, _ := crypto.Sign(string(reqBytes), pv)
+	sigReq, _ := pv.Sign(reqBytes)
 	req.SignatureRequest = sigReq
 
 	res, err := txSrv.StoreTransaction(context.TODO(), req)
@@ -248,10 +268,10 @@ func TestHandleStoreTransaction(t *testing.T) {
 	resBytes, _ := json.Marshal(&api.StoreTransactionResponse{
 		Timestamp: res.Timestamp,
 	})
-	assert.Nil(t, crypto.VerifySignature(string(resBytes), pub, res.SignatureResponse))
+	assert.True(t, pub.Verify(resBytes, res.SignatureResponse))
 
 	assert.Len(t, chainDB.keychains, 1)
-	assert.Equal(t, crypto.HashBytes(txBytes), chainDB.keychains[0].TransactionHash())
+	assert.EqualValues(t, crypto.Hash(txBytes), chainDB.keychains[0].TransactionHash())
 
 }
 
@@ -263,24 +283,26 @@ Scenario: Receive lock transaction request
 */
 func TestHandleLockTransaction(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	chainDB := &mockChainDB{}
 	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
 
 	poolR := &mockPoolRequester{}
 	txSrv := NewTransactionService(chainDB, techDB, poolR, pub, pv)
 
+	pubB, _ := pub.Marshal()
+
 	req := &api.TimeLockTransactionRequest{
 		Timestamp:           time.Now().Unix(),
-		TransactionHash:     crypto.HashString("tx1"),
-		MasterNodePublicKey: pub,
-		Address:             crypto.HashString("addr1"),
+		TransactionHash:     crypto.Hash([]byte("tx1")),
+		MasterNodePublicKey: pubB,
+		Address:             crypto.Hash([]byte("addr1")),
 	}
 	reqBytes, _ := json.Marshal(req)
-	sig, _ := crypto.Sign(string(reqBytes), pv)
+	sig, _ := pv.Sign(reqBytes)
 	req.SignatureRequest = sig
 
 	res, err := txSrv.TimeLockTransaction(context.TODO(), req)
@@ -288,8 +310,8 @@ func TestHandleLockTransaction(t *testing.T) {
 	resBytes, _ := json.Marshal(&api.TimeLockTransactionResponse{
 		Timestamp: res.Timestamp,
 	})
-	assert.Nil(t, crypto.VerifySignature(string(resBytes), pub, res.SignatureResponse))
-	assert.True(t, chain.ContainsTimeLock(crypto.HashString("tx1"), crypto.HashString("addr1")))
+	assert.True(t, pub.Verify(resBytes, res.SignatureResponse))
+	assert.True(t, chain.ContainsTimeLock(crypto.Hash([]byte("tx1")), crypto.Hash([]byte("addr1"))))
 }
 
 /*
@@ -300,12 +322,13 @@ Scenario: Receive lead mining transaction request
 */
 func TestHandleLeadTransactionMining(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	pubB, _ := pub.Marshal()
 
 	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
-	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpv")), pub)
+	emKey, _ := shared.NewEmitterKeyPair([]byte("encpv"), pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
 	chainDB := &mockChainDB{}
@@ -314,31 +337,38 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 		repo: chainDB,
 	}
 	txSrv := NewTransactionService(chainDB, techDB, poolR, pub, pv)
-	data := map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+	data := map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
 	}
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
+	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
 	txRaw := map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
 	}
 	txBytes, _ := json.Marshal(txRaw)
-	sig, _ := crypto.Sign(string(txBytes), pv)
-	txRaw["signature"] = sig
+	sig, _ := pv.Sign(txBytes)
+	txRaw["signature"] = hex.EncodeToString(sig)
 
 	txByteWithSig, _ := json.Marshal(txRaw)
-	emSig, _ := crypto.Sign(string(txByteWithSig), pv)
-	txRaw["em_signature"] = emSig
+	emSig, _ := pv.Sign(txByteWithSig)
+	txRaw["em_signature"] = hex.EncodeToString(emSig)
 
 	txBytes, _ = json.Marshal(txRaw)
 
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txBytes))
+	tx, _ := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash(txBytes))
+	txf, _ := formatAPITransaction(tx)
 	req := &api.LeadTransactionMiningRequest{
 		Timestamp:          time.Now().Unix(),
 		MinimumValidations: 1,
@@ -347,14 +377,14 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 				IsMaster:      true,
 				IsUnreachable: false,
 				PatchNumber:   1,
-				PublicKey:     pub,
+				PublicKey:     pubB,
 			},
 		},
-		Transaction: formatAPITransaction(tx),
+		Transaction: txf,
 	}
 
 	reqBytes, _ := json.Marshal(req)
-	sigReq, _ := crypto.Sign(string(reqBytes), pv)
+	sigReq, _ := pv.Sign(reqBytes)
 	req.SignatureRequest = sigReq
 
 	res, err := txSrv.LeadTransactionMining(context.TODO(), req)
@@ -365,10 +395,10 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 	resBytes, _ := json.Marshal(&api.LeadTransactionMiningResponse{
 		Timestamp: res.Timestamp,
 	})
-	assert.Nil(t, crypto.VerifySignature(string(resBytes), pub, res.SignatureResponse))
+	assert.True(t, pub.Verify(resBytes, res.SignatureResponse))
 
 	assert.Len(t, chainDB.keychains, 1)
-	assert.Equal(t, crypto.HashString("addr"), chainDB.keychains[0].Address())
+	assert.EqualValues(t, crypto.Hash([]byte("addr")), chainDB.keychains[0].Address())
 }
 
 /*
@@ -379,12 +409,13 @@ Scenario: Receive confirmation of validations transaction request
 */
 func TestHandleConfirmValiation(t *testing.T) {
 
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	pubB, _ := pub.Marshal()
 
 	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewKeyPair(pub, pv)
+	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
 	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
-	emKey, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("encpv")), pub)
+	emKey, _ := shared.NewEmitterKeyPair([]byte("encpv"), pub)
 	techDB.emKeys = append(techDB.emKeys, emKey)
 
 	chainDB := &mockChainDB{}
@@ -394,50 +425,60 @@ func TestHandleConfirmValiation(t *testing.T) {
 	}
 	txSrv := NewTransactionService(chainDB, techDB, poolR, pub, pv)
 
-	prop, _ := shared.NewEmitterKeyPair(hex.EncodeToString([]byte("pvkey")), pub)
-	data := map[string]string{
-		"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-		"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	data := map[string][]byte{
+		"encrypted_address_by_node": []byte("addr"),
+		"encrypted_wallet":          []byte("wallet"),
 	}
 
 	txRaw := map[string]interface{}{
-		"addr":                    crypto.HashString("addr"),
-		"data":                    data,
-		"timestamp":               time.Now().Unix(),
-		"type":                    chain.KeychainTransactionType,
-		"public_key":              pub,
-		"em_shared_keys_proposal": prop,
+		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
+		"data": map[string]string{
+			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
+			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		},
+		"timestamp":  time.Now().Unix(),
+		"type":       chain.KeychainTransactionType,
+		"public_key": hex.EncodeToString(pubB),
+		"em_shared_keys_proposal": map[string]string{
+			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
+			"public_key":            hex.EncodeToString(pubB),
+		},
 	}
 	txBytes, _ := json.Marshal(txRaw)
-	sig, _ := crypto.Sign(string(txBytes), pv)
-	txRaw["signature"] = sig
+	sig, _ := pv.Sign(txBytes)
+	txRaw["signature"] = hex.EncodeToString(sig)
 	txByteWithSig, _ := json.Marshal(txRaw)
-	emSig, _ := crypto.Sign(string(txByteWithSig), pv)
-	txRaw["em_signature"] = emSig
+	emSig, _ := pv.Sign(txByteWithSig)
+	txRaw["em_signature"] = hex.EncodeToString(emSig)
 	txBytes, _ = json.Marshal(txRaw)
-	tx, _ := chain.NewTransaction(crypto.HashString("addr"), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.HashBytes(txBytes))
+	tx, _ := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash(txBytes))
 
 	vRaw := map[string]interface{}{
 		"status":     chain.ValidationOK,
-		"public_key": pub,
+		"public_key": pubB,
 		"timestamp":  time.Now().Unix(),
 	}
 
 	vBytes, _ := json.Marshal(vRaw)
-	vSig, _ := crypto.Sign(string(vBytes), pv)
+	vSig, _ := pv.Sign(vBytes)
 	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	vHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	sHeaders := []chain.NodeHeader{chain.NewNodeHeader("pub", false, false, 0, true)}
-	mv, _ := chain.NewMasterValidation([]string{}, pub, v, wHeaders, vHeaders, sHeaders)
+	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
+
+	txv, _ := formatAPITransaction(tx)
+	mvf, _ := formatAPIMasterValidation(mv)
+
 	req := &api.ConfirmTransactionValidationRequest{
-		Transaction:      formatAPITransaction(tx),
+		Transaction:      txv,
 		Timestamp:        time.Now().Unix(),
-		MasterValidation: formatAPIMasterValidation(mv),
+		MasterValidation: mvf,
 	}
 
 	reqBytes, _ := json.Marshal(req)
-	sigReq, _ := crypto.Sign(string(reqBytes), pv)
+	sigReq, _ := pv.Sign(reqBytes)
 	req.SignatureRequest = sigReq
 
 	res, err := txSrv.ConfirmTransactionValidation(context.TODO(), req)
@@ -447,11 +488,11 @@ func TestHandleConfirmValiation(t *testing.T) {
 		Timestamp:  res.Timestamp,
 		Validation: res.Validation,
 	})
-	assert.Nil(t, crypto.VerifySignature(string(resBytes), pub, res.SignatureResponse))
+	assert.True(t, pub.Verify(resBytes, res.SignatureResponse))
 
 	assert.NotNil(t, res.Validation)
 	assert.Equal(t, api.Validation_OK, res.Validation.Status)
-	assert.Equal(t, pub, res.Validation.PublicKey)
+	assert.EqualValues(t, pubB, res.Validation.PublicKey)
 }
 
 type mockPoolRequester struct {
@@ -459,28 +500,29 @@ type mockPoolRequester struct {
 	repo   *mockChainDB
 }
 
-func (pr mockPoolRequester) RequestLastTransaction(pool consensus.Pool, txAddr string, txType chain.TransactionType) (*chain.Transaction, error) {
+func (pr mockPoolRequester) RequestLastTransaction(pool consensus.Pool, txAddr crypto.VersionnedHash, txType chain.TransactionType) (*chain.Transaction, error) {
 	return nil, nil
 }
 
-func (pr mockPoolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash string, txAddr string, masterPublicKey string) error {
+func (pr mockPoolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error {
 	return nil
 }
 
-func (pr mockPoolRequester) RequestTransactionUnlock(pool consensus.Pool, txHash string, txAddr string) error {
+func (pr mockPoolRequester) RequestTransactionUnlock(pool consensus.Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash) error {
 	return nil
 }
 
 func (pr mockPoolRequester) RequestTransactionValidations(pool consensus.Pool, tx chain.Transaction, minValids int, masterValid chain.MasterValidation) ([]chain.Validation, error) {
-	pub, pv := crypto.GenerateKeys()
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
+	pubB, _ := pub.Marshal()
 	vRaw := map[string]interface{}{
 		"status":     chain.ValidationOK,
-		"public_key": pub,
+		"public_key": pubB,
 		"timestamp":  time.Now().Unix(),
 	}
 	vBytes, _ := json.Marshal(vRaw)
-	sig, _ := crypto.Sign(string(vBytes), pv)
+	sig, _ := pv.Sign(vBytes)
 	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, sig)
 
 	return []chain.Validation{v}, nil
@@ -505,7 +547,7 @@ type mockChainDB struct {
 	ids       []chain.ID
 }
 
-func (r mockChainDB) FullKeychain(txAddr string) (*chain.Keychain, error) {
+func (r mockChainDB) FullKeychain(txAddr crypto.VersionnedHash) (*chain.Keychain, error) {
 	sort.Slice(r.keychains, func(i, j int) bool {
 		return r.keychains[i].Timestamp().Unix() > r.keychains[j].Timestamp().Unix()
 	})
@@ -516,7 +558,7 @@ func (r mockChainDB) FullKeychain(txAddr string) (*chain.Keychain, error) {
 	return nil, nil
 }
 
-func (r mockChainDB) LastKeychain(txAddr string) (*chain.Keychain, error) {
+func (r mockChainDB) LastKeychain(txAddr crypto.VersionnedHash) (*chain.Keychain, error) {
 	sort.Slice(r.keychains, func(i, j int) bool {
 		return r.keychains[i].Timestamp().Unix() > r.keychains[j].Timestamp().Unix()
 	})
@@ -527,36 +569,36 @@ func (r mockChainDB) LastKeychain(txAddr string) (*chain.Keychain, error) {
 	return nil, nil
 }
 
-func (r mockChainDB) KeychainByHash(txHash string) (*chain.Keychain, error) {
+func (r mockChainDB) KeychainByHash(txHash crypto.VersionnedHash) (*chain.Keychain, error) {
 	for _, tx := range r.keychains {
-		if tx.TransactionHash() == txHash {
+		if bytes.Equal(tx.TransactionHash(), txHash) {
 			return &tx, nil
 		}
 	}
 	return nil, nil
 }
 
-func (r mockChainDB) IDByHash(txHash string) (*chain.ID, error) {
+func (r mockChainDB) IDByHash(txHash crypto.VersionnedHash) (*chain.ID, error) {
 	for _, tx := range r.ids {
-		if tx.TransactionHash() == txHash {
+		if bytes.Equal(tx.TransactionHash(), txHash) {
 			return &tx, nil
 		}
 	}
 	return nil, nil
 }
 
-func (r mockChainDB) ID(addr string) (*chain.ID, error) {
+func (r mockChainDB) ID(addr crypto.VersionnedHash) (*chain.ID, error) {
 	for _, tx := range r.ids {
-		if tx.Address() == addr {
+		if bytes.Equal(tx.Address(), addr) {
 			return &tx, nil
 		}
 	}
 	return nil, nil
 }
 
-func (r mockChainDB) KOByHash(txHash string) (*chain.Transaction, error) {
+func (r mockChainDB) KOByHash(txHash crypto.VersionnedHash) (*chain.Transaction, error) {
 	for _, tx := range r.kos {
-		if tx.TransactionHash() == txHash {
+		if bytes.Equal(tx.TransactionHash(), txHash) {
 			return &tx, nil
 		}
 	}
@@ -580,13 +622,13 @@ func (r *mockChainDB) WriteKO(tx chain.Transaction) error {
 
 type mockTechDB struct {
 	emKeys   shared.EmitterKeys
-	nodeKeys []shared.KeyPair
+	nodeKeys []shared.NodeKeyPair
 }
 
 func (db mockTechDB) EmitterKeys() (shared.EmitterKeys, error) {
 	return db.emKeys, nil
 }
 
-func (db mockTechDB) NodeLastKeys() (shared.KeyPair, error) {
+func (db mockTechDB) NodeLastKeys() (shared.NodeKeyPair, error) {
 	return db.nodeKeys[len(db.nodeKeys)-1], nil
 }

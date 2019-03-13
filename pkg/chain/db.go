@@ -3,6 +3,8 @@ package chain
 import (
 	"errors"
 	"fmt"
+
+	"github.com/uniris/uniris-core/pkg/crypto"
 )
 
 //Database wrap chain database reader and writer
@@ -15,22 +17,22 @@ type Database interface {
 type DatabaseReader interface {
 
 	//KOByHash retrieves a transactionfrom the KO database by hash
-	KOByHash(txHash string) (*Transaction, error)
+	KOByHash(txHash crypto.VersionnedHash) (*Transaction, error)
 
 	//FullKeychain retrieves the entire transaction chain from the Keychain database by addres
-	FullKeychain(addr string) (*Keychain, error)
+	FullKeychain(addr crypto.VersionnedHash) (*Keychain, error)
 
 	//LastKeychain retrieves the last keychain transaction from the Keychain database by address
-	LastKeychain(addr string) (*Keychain, error)
+	LastKeychain(addr crypto.VersionnedHash) (*Keychain, error)
 
 	//KeychainByHash a transaction from the Keychain database by hash
-	KeychainByHash(txHash string) (*Keychain, error)
+	KeychainByHash(txHash crypto.VersionnedHash) (*Keychain, error)
 
 	//ID retrieves a transaction from the ID database by address
-	ID(addr string) (*ID, error)
+	ID(addr crypto.VersionnedHash) (*ID, error)
 
 	//ReadIDByHash retrieves a transaction from the ID database by hash
-	IDByHash(txHash string) (*ID, error)
+	IDByHash(txHash crypto.VersionnedHash) (*ID, error)
 }
 
 //DatabaseWriter handles transaction persistence by writing in the right database the related transaction
@@ -117,7 +119,7 @@ func checkTransactionBeforeStorage(tx Transaction, minValids int) error {
 	return nil
 }
 
-func getFullChain(db DatabaseReader, txAddr string, txType TransactionType) (*Transaction, error) {
+func getFullChain(db DatabaseReader, txAddr crypto.VersionnedHash, txType TransactionType) (*Transaction, error) {
 	switch txType {
 	case KeychainTransactionType:
 		keychain, err := db.FullKeychain(txAddr)
@@ -134,7 +136,7 @@ func getFullChain(db DatabaseReader, txAddr string, txType TransactionType) (*Tr
 }
 
 //LastTransaction retrieves the last transaction from the database
-func LastTransaction(db DatabaseReader, txAddr string, txType TransactionType) (*Transaction, error) {
+func LastTransaction(db DatabaseReader, txAddr crypto.VersionnedHash, txType TransactionType) (*Transaction, error) {
 	switch txType {
 	case KeychainTransactionType:
 		keychain, err := db.LastKeychain(txAddr)
@@ -161,8 +163,7 @@ func LastTransaction(db DatabaseReader, txAddr string, txType TransactionType) (
 
 //GetTransactionStatus gets the status of a transaction
 //It lookups on timelockers, KO DB, Keychain, ID, Smart contracts
-func GetTransactionStatus(db DatabaseReader, txHash string) (TransactionStatus, error) {
-
+func GetTransactionStatus(db DatabaseReader, txHash crypto.VersionnedHash) (TransactionStatus, error) {
 	if transactionHashTimeLocked(txHash) {
 		return TransactionStatusInProgress, nil
 	}
@@ -186,7 +187,7 @@ func GetTransactionStatus(db DatabaseReader, txHash string) (TransactionStatus, 
 	return TransactionStatusSuccess, nil
 }
 
-func getTransactionByHash(db DatabaseReader, txHash string) (*Transaction, error) {
+func getTransactionByHash(db DatabaseReader, txHash crypto.VersionnedHash) (*Transaction, error) {
 	keychain, err := db.KeychainByHash(txHash)
 	if err != nil {
 		return nil, err

@@ -32,7 +32,7 @@ Scenario: Find storage pool
 	TODO: To improve when the implementation will be provided
 */
 func TestFindStoragePool(t *testing.T) {
-	pool, err := FindStoragePool("address")
+	pool, err := FindStoragePool([]byte("address"))
 	assert.Nil(t, err)
 	assert.Len(t, pool, 1)
 	assert.Equal(t, "127.0.0.1", pool[0].IP().String())
@@ -48,7 +48,7 @@ Scenario: Find last validation pool
 */
 func TestFindLastValidationPool(t *testing.T) {
 	poolR := &mockPoolRequester{}
-	pool, err := findLastValidationPool("myaddress", chain.KeychainTransactionType, poolR)
+	pool, err := findLastValidationPool([]byte("address"), chain.KeychainTransactionType, poolR)
 	assert.Nil(t, err)
 	assert.Empty(t, pool)
 }
@@ -63,7 +63,7 @@ Scenario: Find master validation node
 */
 func TestFindMasterValidationNode(t *testing.T) {
 
-	masterNodess, err := FindMasterNodes("hash", chain.KeychainTransactionType)
+	masterNodess, err := FindMasterNodes([]byte("hash"), chain.KeychainTransactionType)
 	assert.Nil(t, err)
 	assert.Len(t, masterNodess, 1)
 	assert.Equal(t, "127.0.0.1", masterNodess[0].IP().String())

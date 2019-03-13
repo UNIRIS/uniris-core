@@ -22,27 +22,32 @@ import (
 // - Executes the proof of work
 // - Requests validation confirmations
 // - Requests storage
-func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader, poolR PoolRequester, pub, pv string, emR shared.EmitterDatabaseReader) error {
-	log.Printf("transaction %s is in progress\n", tx.TransactionHash())
+func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader, poolR PoolRequester, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, emR shared.EmitterDatabaseReader) error {
+	log.Printf("transaction %x is in progress\n", tx.TransactionHash())
 
-	lastVPool, err := findLastValidationPool(tx.Address(), tx.TransactionType(), poolR)
+	if !tx.Address().IsValid() {
+		return errors.New("invalid transaction address")
+	}
+
+	lastVPool, err := findLastValidationPool(tx.Address().Digest(), tx.TransactionType(), poolR)
 	if err != nil {
 		return err
 	}
 
-	sPool, err := FindStoragePool(tx.Address())
+	sPool, err := FindStoragePool(tx.Address().Digest())
 	if err != nil {
 		return err
 	}
 
-	if err := poolR.RequestTransactionTimeLock(sPool, tx.TransactionHash(), tx.Address(), pub); err != nil {
+	//TODO: ask storage pool to store in in progress
+	if err := poolR.RequestTransactionTimeLock(sPool, tx.TransactionHash(), tx.Address(), nodePub); err != nil {
 		return fmt.Errorf("transaction lock failed: %s", err.Error())
 	}
 
-	log.Printf("transaction %s is locked\n", tx.TransactionHash())
+	log.Printf("transaction %x is locked\n", tx.TransactionHash())
 
 	go func() {
-		minedTx, err := mineTransaction(tx, wHeaders, sPool, lastVPool, minValids, pub, pv, emR, poolR)
+		minedTx, err := mineTransaction(tx, wHeaders, sPool, lastVPool, minValids, nodePub, nodePv, emR, poolR)
 		if err != nil {
 			fmt.Printf("transaction mining failed: %s\n", err.Error())
 			return
@@ -56,7 +61,7 @@ func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader
 	return nil
 }
 
-func mineTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, lastVPool Pool, minValids int, nodePub, nodePv string, emR shared.EmitterDatabaseReader, poolR PoolRequester) (chain.Transaction, error) {
+func mineTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, lastVPool Pool, minValids int, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, emR shared.EmitterDatabaseReader, poolR PoolRequester) (chain.Transaction, error) {
 
 	vPool, err := FindValidationPool(tx)
 	if err != nil {
@@ -74,22 +79,22 @@ func mineTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Po
 	if err := tx.Mined(masterValid, confirmValids); err != nil {
 		return tx, fmt.Errorf("transaction mining is invalid: %s", err.Error())
 	}
-	log.Printf("transaction %s is validated \n", tx.TransactionHash())
+	log.Printf("transaction %x is validated \n", tx.TransactionHash())
 	return tx, nil
 }
 
 func storeTransaction(tx chain.Transaction, sPool Pool, poolR PoolRequester) error {
-	minReplicas := GetMinimumReplicas(tx.TransactionHash())
+	minReplicas := GetMinimumReplicas(tx.TransactionHash().Digest())
 	if err := poolR.RequestTransactionStorage(sPool, minReplicas, tx); err != nil {
 		return fmt.Errorf("transaction storage failed: %s", err.Error())
 	}
-	log.Printf("transaction %s is stored \n", tx.TransactionHash())
+	log.Printf("transaction %x is stored \n", tx.TransactionHash())
 	return nil
 }
 
 //findPools retrieve the needed pools for the transaction mining process (last validation pool, new validation pool and storage pool)
 func findPools(tx chain.Transaction, poolR PoolRequester) (lastValidationPool, validationPool, storagePool Pool, err error) {
-	lastValidationPool, err = findLastValidationPool(tx.Address(), tx.TransactionType(), poolR)
+	lastValidationPool, err = findLastValidationPool(tx.Address().Digest(), tx.TransactionType(), poolR)
 	if err != nil {
 		return
 	}
@@ -108,7 +113,7 @@ func findPools(tx chain.Transaction, poolR PoolRequester) (lastValidationPool, v
 }
 
 //preValidateTransaction checks the incoming transaction as master node by ensure the transaction integrity and perform the proof of work. A valiation will result from this action
-func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, vPool Pool, lastVPool Pool, minValids int, pub, pv string, emR shared.EmitterDatabaseReader) (chain.MasterValidation, error) {
+func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, vPool Pool, lastVPool Pool, minValids int, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, emR shared.EmitterDatabaseReader) (chain.MasterValidation, error) {
 	if _, err := tx.IsValid(); err != nil {
 		return chain.MasterValidation{}, err
 	}
@@ -118,15 +123,15 @@ func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, s
 		return chain.MasterValidation{}, err
 	}
 	validStatus := chain.ValidationKO
-	if pow != "" {
+	if pow != nil {
 		validStatus = chain.ValidationOK
 	}
-	preValid, err := buildValidation(validStatus, pub, pv)
+	preValid, err := buildValidation(validStatus, nodePub, nodePv)
 	if err != nil {
 		return chain.MasterValidation{}, err
 	}
 
-	lastsKeys := make([]string, 0)
+	lastsKeys := make([]crypto.PublicKey, 0)
 	for _, pm := range lastVPool {
 		lastsKeys = append(lastsKeys, pm.PublicKey())
 	}
@@ -154,7 +159,7 @@ func buildHeaders(vPool Pool, sPool Pool) (vHeaders []chain.NodeHeader, sHeaders
 	return
 }
 
-func proofOfWork(tx chain.Transaction, emR shared.EmitterDatabaseReader) (pow string, err error) {
+func proofOfWork(tx chain.Transaction, emR shared.EmitterDatabaseReader) (pow crypto.PublicKey, err error) {
 	emKeys, err := emR.EmitterKeys()
 	if err != nil {
 		return
@@ -162,20 +167,19 @@ func proofOfWork(tx chain.Transaction, emR shared.EmitterDatabaseReader) (pow st
 
 	txBytes, err := tx.MarshalBeforeEmitterSignature()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	for _, kp := range emKeys {
-		err := crypto.VerifySignature(string(txBytes), kp.PublicKey(), tx.EmitterSignature())
-		if err == nil {
+		if ok := kp.PublicKey().Verify(txBytes, tx.EmitterSignature()); ok {
 			return kp.PublicKey(), nil
 		}
 	}
 
-	return "", nil
+	return nil, nil
 }
 
-func findLastValidationPool(txAddr string, txType chain.TransactionType, req PoolRequester) (Pool, error) {
+func findLastValidationPool(txAddr crypto.VersionnedHash, txType chain.TransactionType, req PoolRequester) (Pool, error) {
 
 	sPool, err := FindStoragePool(txAddr)
 	if err != nil {
@@ -210,7 +214,7 @@ func requestValidations(tx chain.Transaction, masterValid chain.MasterValidation
 		return nil, err
 	}
 
-	if !IsValidationConsensuReach(validations) {
+	if !IsValidationConsensusReach(validations) {
 		return nil, errors.New("invalid transaction")
 	}
 
@@ -218,7 +222,7 @@ func requestValidations(tx chain.Transaction, masterValid chain.MasterValidation
 }
 
 //ConfirmTransactionValidation approve the transaction validation by master and ensure its integrity
-func ConfirmTransactionValidation(tx chain.Transaction, masterV chain.MasterValidation, pub, pv string) (chain.Validation, error) {
+func ConfirmTransactionValidation(tx chain.Transaction, masterV chain.MasterValidation, pub crypto.PublicKey, pv crypto.PrivateKey) (chain.Validation, error) {
 
 	var status chain.ValidationStatus
 
@@ -235,29 +239,35 @@ func ConfirmTransactionValidation(tx chain.Transaction, masterV chain.MasterVali
 	return buildValidation(status, pub, pv)
 }
 
-func buildValidation(s chain.ValidationStatus, pub, pv string) (chain.Validation, error) {
-	b, err := json.Marshal(map[string]interface{}{
+func buildValidation(s chain.ValidationStatus, pub crypto.PublicKey, pv crypto.PrivateKey) (chain.Validation, error) {
+	pubBytes, err := pub.Marshal()
+	if err != nil {
+		return chain.Validation{}, err
+	}
+
+	vBytes, err := json.Marshal(map[string]interface{}{
 		"status":     s,
 		"timestamp":  time.Now().Unix(),
-		"public_key": pub,
+		"public_key": pubBytes,
 	})
 	if err != nil {
 		return chain.Validation{}, err
 	}
-	sig, err := crypto.Sign(string(b), pv)
+
+	vSig, err := pv.Sign(vBytes)
 	if err != nil {
 		return chain.Validation{}, err
 	}
-	return chain.NewValidation(s, time.Now(), pub, sig)
+	return chain.NewValidation(s, time.Now(), pub, vSig)
 }
 
 //GetMinimumValidation returns the validation from a transaction hash
-func GetMinimumValidation(txHash string) int {
+func GetMinimumValidation(txHash crypto.VersionnedHash) int {
 	return 1
 }
 
-// IsValidationConsensuReach determinates if for the node validations the consensus is reached
-func IsValidationConsensuReach(valids []chain.Validation) bool {
+// IsValidationConsensusReach determinates if for the node validations the consensus is reached
+func IsValidationConsensusReach(valids []chain.Validation) bool {
 	//TODO: maybe to improve
 	for _, v := range valids {
 		if v.Status() == chain.ValidationKO {
