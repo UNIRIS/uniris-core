@@ -10,7 +10,7 @@ import (
 
 //PoolRequester handles the request to perform on a pool during the mining
 type PoolRequester interface {
-	//RequestTransactionLock asks a pool to lock a transaction using the address related
+	//RequestTransactionTimeLock asks a pool to timelock a transaction using the address related
 	RequestTransactionTimeLock(pool Pool, txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash, masterPublicKey crypto.PublicKey) error
 
 	//RequestTransactionValidations asks a pool to validation a transaction
