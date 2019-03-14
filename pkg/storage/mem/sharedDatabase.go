@@ -13,11 +13,11 @@ type SharedDatabase struct {
 	emitterCrossKeys   []shared.EmitterCrossKeyPair
 	authNodePublicKeys []crypto.PublicKey
 
-	shared.KeyReader
+	shared.KeyReadWriter
 }
 
 //NewSharedDatabase creates a shared database in memory
-func NewSharedDatabase() SharedDatabase {
+func NewSharedDatabase() *SharedDatabase {
 
 	// "ed25519"
 	// "em pv key": "000c3bb61141f052e1936823a4a56224f2aae04084265655ff4c83d885295b570344657dab453d34f9adc2100a2cb8f38f644ef48e34b1d99d7c4d9371068e9438"
@@ -46,7 +46,7 @@ func NewSharedDatabase() SharedDatabase {
 	crossNodeKeys, _ := shared.NewNodeCrossKeyPair(crossNodePub, crossNodePv)
 
 	//TODO: once the feature is implemented remove it
-	return SharedDatabase{
+	return &SharedDatabase{
 		nodeCrossKeys:    []shared.NodeCrossKeyPair{crossNodeKeys},
 		emitterCrossKeys: []shared.EmitterCrossKeyPair{crossEmKeys},
 		authNodePublicKeys: []crypto.PublicKey{
@@ -78,4 +78,10 @@ func (db SharedDatabase) LastNodeCrossKeypair() (shared.NodeCrossKeyPair, error)
 //AuthorizedNodesPublicKeys retrieves the list of public keys of the authorized nodes
 func (db SharedDatabase) AuthorizedNodesPublicKeys() ([]crypto.PublicKey, error) {
 	return db.authNodePublicKeys, nil
+}
+
+//WriteAuthorizedNode inserts a new node public key as an authorized node
+func (db *SharedDatabase) WriteAuthorizedNode(pub crypto.PublicKey) error {
+	db.authNodePublicKeys = append(db.authNodePublicKeys, pub)
+	return nil
 }

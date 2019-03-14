@@ -230,7 +230,7 @@ func startHTTPServer(conf unirisConf, sharedKeyReader shared.KeyReader, nodeRead
 	r.Run(":80")
 }
 
-func startGRPCServer(conf unirisConf, sharedKeyReader shared.KeyReader, nodeWriter consensus.NodeWriter) {
+func startGRPCServer(conf unirisConf, sharedKeyRW shared.KeyReadWriter, nodeWriter consensus.NodeWriter) {
 	pubB, err := hex.DecodeString(conf.publicKey)
 	if err != nil {
 		panic(err)
@@ -251,9 +251,9 @@ func startGRPCServer(conf unirisConf, sharedKeyReader shared.KeyReader, nodeWrit
 
 	grpcServer := grpc.NewServer()
 
-	poolR := rpc.NewPoolRequester(sharedKeyReader)
+	poolR := rpc.NewPoolRequester(sharedKeyRW)
 	chainDB := memstorage.NewchainDatabase()
-	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, poolR, publicKey, privateKey))
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyRW, poolR, publicKey, privateKey))
 
 	var discoveryDB discovery.Database
 	if conf.discoveryDatabase.dbType == "redis" {
@@ -270,7 +270,7 @@ func startGRPCServer(conf unirisConf, sharedKeyReader shared.KeyReader, nodeWrit
 	if conf.bus.busType == "amqp" {
 		notif = amqp.NewDiscoveryNotifier(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port)
 		go func() {
-			if err := amqp.ConsumeDiscoveryNotifications(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port, nodeWriter); err != nil {
+			if err := amqp.ConsumeDiscoveryNotifications(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port, nodeWriter, sharedKeyRW); err != nil {
 				panic(err)
 			}
 		}()

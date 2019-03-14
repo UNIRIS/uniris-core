@@ -7,6 +7,12 @@ import (
 	"github.com/uniris/uniris-core/pkg/crypto"
 )
 
+//KeyReadWriter wraps the keys reading and persisting
+type KeyReadWriter interface {
+	KeyReader
+	KeyWriter
+}
+
 //KeyReader performs queries to retrieve shared keys
 type KeyReader interface {
 
@@ -27,6 +33,13 @@ type KeyReader interface {
 
 	//AuthorizedNodesPublicKeys retrieves the list of public keys of the authorized nodes
 	AuthorizedNodesPublicKeys() ([]crypto.PublicKey, error)
+}
+
+//KeyWriter performs persistance of the shared keys
+type KeyWriter interface {
+
+	//WriteAuthorizedNode inserts a new node public key as an authorized node
+	WriteAuthorizedNode(pubKey crypto.PublicKey) error
 }
 
 //EmitterCrossKeyPair represents cross keypair with an encrypted private key
