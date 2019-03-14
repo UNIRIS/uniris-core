@@ -98,9 +98,9 @@ func TestEntropySortWithStartingPointCharacter(t *testing.T) {
 	sorted2Bytes, _ := sortedKeys[1].Marshal()
 	sorted3Bytes, _ := sortedKeys[2].Marshal()
 
-	assert.Equal(t, pub2Hex, hex.EncodeToString(sorted1Bytes))
-	assert.Equal(t, pub3Hex, hex.EncodeToString(sorted2Bytes))
-	assert.Equal(t, pub1Hex, hex.EncodeToString(sorted3Bytes))
+	assert.Equal(t, pub3Hex, hex.EncodeToString(sorted1Bytes))
+	assert.Equal(t, pub1Hex, hex.EncodeToString(sorted2Bytes))
+	assert.Equal(t, pub2Hex, hex.EncodeToString(sorted3Bytes))
 }
 
 /*
