@@ -244,7 +244,7 @@ func TestPerformPOW(t *testing.T) {
 	pubB, _ := pub.Marshal()
 
 	keyReader := &mockSharedKeyReader{}
-	emKP, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	emKP, _ := shared.NewEmitterCrossKeyPair([]byte("pvKey"), pub)
 	keyReader.crossEmitterKeys = append(keyReader.crossEmitterKeys, emKP)
 
 	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
@@ -323,9 +323,9 @@ func TestPreValidateTransaction(t *testing.T) {
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	pubB, _ := pub.Marshal()
-	emReader := &mockEmitterReader{}
+	sharedKeyReader := &mockSharedKeyReader{}
 	emKP, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
-	emReader.emKeys = append(emReader.emKeys, emKP)
+	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKP)
 
 	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
@@ -389,7 +389,7 @@ func TestPreValidateTransaction(t *testing.T) {
 	assert.Nil(t, err)
 
 	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
-	mv, err := preValidateTransaction(tx, wHeaders, Pool{Node{publicKey: pub}}, Pool{Node{publicKey: pub}}, Pool{}, 1, pub, pv, emReader)
+	mv, err := preValidateTransaction(tx, wHeaders, Pool{Node{publicKey: pub}}, Pool{Node{publicKey: pub}}, Pool{}, 1, pub, pv, sharedKeyReader)
 	assert.Nil(t, err)
 	assert.Equal(t, pub, mv.ProofOfWork())
 	assert.EqualValues(t, pub, mv.Validation().PublicKey())
@@ -409,9 +409,9 @@ func TestLeadMining(t *testing.T) {
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	pubB, _ := pub.Marshal()
-	keyReader := &mockSharedKeyReader{}
+	sharedKeyReader := &mockSharedKeyReader{}
 	emKP, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
-	keyReader.crossEmitterKeys = append(keyReader.crossEmitterKeys, emKP)
+	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKP)
 
 	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
@@ -475,7 +475,7 @@ func TestLeadMining(t *testing.T) {
 	assert.Nil(t, err)
 	poolR := &mockPoolRequester{}
 	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
-	assert.Nil(t, LeadMining(tx, 1, wHeaders, poolR, pub, pv, emReader))
+	assert.Nil(t, LeadMining(tx, 1, wHeaders, poolR, pub, pv, sharedKeyReader))
 
 	time.Sleep(1 * time.Second)
 

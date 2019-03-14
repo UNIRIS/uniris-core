@@ -1,11 +1,8 @@
 package shared
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/x509"
-	"encoding/hex"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -22,11 +19,11 @@ Scenario: Create new EmitterCross keypair
 */
 func TestNewEmitterCrossKey(t *testing.T) {
 
-	pub, _ := crypto.GenerateKeys()
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	kp, err := NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), pub)
+	kp, err := NewEmitterCrossKeyPair([]byte("pvKey"), pub)
 	assert.Nil(t, err)
-	assert.Equal(t, hex.EncodeToString([]byte("pvKey")), kp.EncryptedPrivateKey())
+	assert.Equal(t, []byte("pvKey"), kp.EncryptedPrivateKey())
 	assert.Equal(t, pub, kp.PublicKey())
 }
 
@@ -37,33 +34,11 @@ Scenario: Create empty EmitterCross keypair
 	Then I get an error
 */
 func TestNewEmptyEmitterCrossKey(t *testing.T) {
-	_, err := NewEmitterCrossKeyPair("", "")
+	_, err := NewEmitterCrossKeyPair([]byte(""), nil)
 	assert.EqualError(t, err, "missing emitter cross private key")
-}
 
-/*
-Scenario: Create an EmitterCross keypair with not invalid public key
-	Given public key is not a valid public key
-	When I want to create a, EmitterCross  key
-	Then I get an error
-*/
-func TestNewEmitterCrossKeyWithInvalidPublicKey(t *testing.T) {
-	_, err := NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), "pubKey")
-	assert.EqualError(t, err, "emitter cross: public key is not in hexadecimal format")
-
-	_, err = NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString([]byte("pubKey")))
-	assert.EqualError(t, err, "emitter cross: public key is not valid")
-}
-
-/*
-Scenario: Create EmitterCross keypair with not hexadecimal EmitterCross private key
-	Given private key not in hex format
-	When I want to create a EmitterCross  key
-	Then I get an error
-*/
-func TestNewEmitterCrossKeyWithNotHexPvKey(t *testing.T) {
-	_, err := NewEmitterCrossKeyPair("pvKey", "pvkey")
-	assert.EqualError(t, err, "emitter cross private key is not in hexadecimal format")
+	_, err = NewEmitterCrossKeyPair([]byte("hello"), nil)
+	assert.EqualError(t, err, "missing emitter cross public key")
 }
 
 /*
@@ -74,11 +49,43 @@ Scenario: Marshal into a JSON an EmitterCross key pair
 */
 func TestMarshalEmitterCrossKeys(t *testing.T) {
 
-	pvKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	key, _ := x509.MarshalPKIXPublicKey(pvKey.Public())
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	pubB, _ := pub.Marshal()
 
-	kp, _ := NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(key))
+	kp, _ := NewEmitterCrossKeyPair([]byte("pvKey"), pub)
 	b, err := json.Marshal(kp)
 	assert.Nil(t, err)
-	assert.Equal(t, fmt.Sprintf("{\"encrypted_private_key\":\"%s\",\"public_key\":\"%s\"}", hex.EncodeToString([]byte("pvKey")), hex.EncodeToString(key)), string(b))
+	assert.Equal(t, fmt.Sprintf("{\"encrypted_private_key\":\"%s\",\"public_key\":\"%s\"}", base64.StdEncoding.EncodeToString([]byte("pvKey")), base64.StdEncoding.EncodeToString(pubB)), string(b))
+}
+
+/*
+Scenario: Create a new cross node key without keys
+	Given no public key or no private key
+	When I Want to create a cross node key
+	Then i Get errors
+*/
+func TestNewEmptyNodeCrossKey(t *testing.T) {
+	_, err := NewNodeCrossKeyPair(nil, nil)
+	assert.EqualError(t, err, "missing node cross public key")
+
+	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	_, err = NewNodeCrossKeyPair(pub, nil)
+	assert.EqualError(t, err, "missing node cross private key")
+}
+
+/*
+Scenario: Create a new cross node key with public and private keys
+	Given a public key and a private
+	When I Want to create a cross node key
+	Then i Get the cross keypair
+*/
+func TestNewNodeCrossKey(t *testing.T) {
+
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	kp, err := NewNodeCrossKeyPair(pub, pv)
+	assert.Nil(t, err)
+	assert.Equal(t, pv, kp.PrivateKey())
+	assert.Equal(t, pub, kp.PublicKey())
 }

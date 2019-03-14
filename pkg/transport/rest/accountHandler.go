@@ -33,16 +33,6 @@ func GetAccountHandler(sharedKeyReader shared.KeyReader) func(c *gin.Context) {
 			return
 		}
 
-		emKeys, err := techReader.EmitterKeys()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, httpError{
-				Error:     err.Error(),
-				Status:    http.StatusText(http.StatusInternalServerError),
-				Timestamp: time.Now().Unix(),
-			})
-			return
-		}
-
 		sigReq := c.Query("signature")
 		if sigReq == "" {
 			c.JSON(http.StatusBadRequest, httpError{
@@ -62,7 +52,17 @@ func GetAccountHandler(sharedKeyReader shared.KeyReader) func(c *gin.Context) {
 			})
 			return
 		}
-		if !firstEmKeys.PublicKey().RequestKey().Verify(encIDBytes, sigBytes) {
+
+		sigBytes, err := hex.DecodeString(sigReq)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     "signature is not in hexadecimal",
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+		if !firstEmKeys.PublicKey().Verify(encIDBytes, sigBytes) {
 			c.JSON(http.StatusBadRequest, httpError{
 				Error:     "signature is invalid",
 				Status:    http.StatusText(http.StatusBadRequest),

@@ -31,7 +31,7 @@ type NodeReader interface {
 	Unreachables() ([]Node, error)
 
 	//FindByPublicKey retrieves a node from a public key
-	FindByPublicKey(publicKey string) (Node, error)
+	FindByPublicKey(publicKey crypto.PublicKey) (Node, error)
 }
 
 //Node represents a discovered peers with some additional computed data

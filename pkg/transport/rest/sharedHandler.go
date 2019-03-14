@@ -105,7 +105,7 @@ func extractEmitterPublicKey(c *gin.Context) (crypto.PublicKey, *httpError) {
 	return emPublicKey, nil
 }
 
-func createSharedKeyResponse(sharedEmKeys shared.EmitterKeys, nodeLastKeys shared.NodeKeyPair) (sharedKeysResponse, error) {
+func createSharedKeyResponse(sharedEmKeys []shared.EmitterCrossKeyPair, nodeLastKeys shared.NodeCrossKeyPair) (sharedKeysResponse, error) {
 	emKeys := make([]emitterSharedKeys, 0)
 	for _, k := range sharedEmKeys {
 		emPubBytes, err := k.PublicKey().Marshal()

@@ -56,7 +56,7 @@ Scenario: Get transactions status with receipt bad format
 */
 func TestGetTransactionStatusWithBadFormat(t *testing.T) {
 	r := gin.New()
-	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(&mockTechDB{}))
+	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(&mockSharedKeyReader{}))
 
 	path := fmt.Sprintf("http://localhost/api/transaction/%s/status", hex.EncodeToString([]byte("abc")))
 	req, _ := http.NewRequest("GET", path, nil)

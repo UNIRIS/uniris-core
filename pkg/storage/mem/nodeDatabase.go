@@ -81,9 +81,9 @@ func (db NodeDatabase) CountReachables() (nb int, err error) {
 }
 
 //FindByPublicKey retrieves a node from a public key
-func (db *NodeDatabase) FindByPublicKey(publicKey string) (found consensus.Node, err error) {
+func (db *NodeDatabase) FindByPublicKey(publicKey crypto.PublicKey) (found consensus.Node, err error) {
 	for _, n := range db.nodes {
-		if n.PublicKey() == publicKey {
+		if n.PublicKey().Equals(publicKey) {
 			return n, nil
 		}
 	}

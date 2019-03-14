@@ -288,7 +288,7 @@ func TestHandleLockTransaction(t *testing.T) {
 	chainDB := &mockChainDB{}
 	sharedKeyReader := &mockSharedKeyReader{}
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
-	sharedKeyReader.nodeKeys = append(sharedKeyReader.nodeKeys, nodeKey)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 
 	poolR := &mockPoolRequester{}
 	txSrv := NewTransactionService(chainDB, sharedKeyReader, poolR, pub, pv)
@@ -327,7 +327,7 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 
 	sharedKeyReader := &mockSharedKeyReader{}
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
-	sharedKeyReader.nodeKeys = append(sharedKeyReader.nodeKeys, nodeKey)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 	emKey, _ := shared.NewEmitterCrossKeyPair([]byte("encpv"), pub)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
 
@@ -414,7 +414,7 @@ func TestHandleConfirmValiation(t *testing.T) {
 
 	sharedKeyReader := &mockSharedKeyReader{}
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
-	sharedKeyReader.nodeKeys = append(sharedKeyReader.nodeKeys, nodeKey)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 	emKey, _ := shared.NewEmitterCrossKeyPair([]byte("encpv"), pub)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
 
@@ -623,6 +623,7 @@ func (r *mockChainDB) WriteKO(tx chain.Transaction) error {
 type mockSharedKeyReader struct {
 	crossNodeKeys    []shared.NodeCrossKeyPair
 	crossEmitterKeys []shared.EmitterCrossKeyPair
+	authKeys         []crypto.PublicKey
 }
 
 func (r mockSharedKeyReader) EmitterCrossKeypairs() ([]shared.EmitterCrossKeyPair, error) {
@@ -638,19 +639,10 @@ func (r mockSharedKeyReader) LastNodeCrossKeypair() (shared.NodeCrossKeyPair, er
 }
 
 func (r mockSharedKeyReader) AuthorizedNodesPublicKeys() ([]crypto.PublicKey, error) {
-	return []string{
-		"pub1",
-		"pub2",
-		"pub3",
-		"pub4",
-		"pub5",
-		"pub6",
-		"pub7",
-		"pub8",
-	}, nil
+	return r.authKeys, nil
 }
 
-func (r mockSharedKeyReader) CrossEmitterPublicKeys() (pubKeys []string, err error) {
+func (r mockSharedKeyReader) CrossEmitterPublicKeys() (pubKeys []crypto.PublicKey, err error) {
 	for _, kp := range r.crossEmitterKeys {
 		pubKeys = append(pubKeys, kp.PublicKey())
 	}

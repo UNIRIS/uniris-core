@@ -24,10 +24,10 @@ type txSrv struct {
 }
 
 //NewTransactionService creates service handler for the GRPC Transaction service
-func NewTransactionService(cDB chain.Database, tDB shared.TechDatabaseReader, pR consensus.PoolRequester, nodePublicKeyk crypto.PublicKey, nodePrivateKeyk crypto.PrivateKey) api.TransactionServiceServer {
+func NewTransactionService(cDB chain.Database, skr shared.KeyReader, pR consensus.PoolRequester, nodePublicKeyk crypto.PublicKey, nodePrivateKeyk crypto.PrivateKey) api.TransactionServiceServer {
 	return txSrv{
 		chainDB:         cDB,
-		sharedKeyReader: skR,
+		sharedKeyReader: skr,
 		poolR:           pR,
 		nodePublicKey:   nodePublicKeyk,
 		nodePrivateKey:  nodePrivateKeyk,

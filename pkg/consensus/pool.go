@@ -44,7 +44,10 @@ func FindMasterNodes(txHash crypto.VersionnedHash, nodeReader NodeReader, shared
 		return nil, err
 	}
 
-	sort := entropySort(txHash, authKeys, firstKeys.PrivateKey())
+	sort, err := entropySort(txHash, authKeys, firstKeys.PrivateKey())
+	if err != nil {
+		return nil, err
+	}
 	nbReachables, err := nodeReader.CountReachables()
 	if err != nil {
 		return nil, err
@@ -83,33 +86,41 @@ func requiredNumberOfMaster(nbNodes int, nbReachables int) int {
 }
 
 //buildStartingPoint creates a starting point by using an HMAC of the transaction hash and the first node shared private key
-func buildStartingPoint(txHash crypto.VersionnedHash, nodeMinerPrivateKey crypto.PrivateKey) ([]byte, error) {
+func buildStartingPoint(txHash crypto.VersionnedHash, nodeMinerPrivateKey crypto.PrivateKey) (string, error) {
 	pvBytes, err := nodeMinerPrivateKey.Marshal()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	h := hmac.New(sha256.New, []byte(nodeMinerPrivateKey))
+	h := hmac.New(crypto.DefaultHashAlgo.New, pvBytes)
 	h.Write([]byte(txHash))
-	return h.Sum(nil), nil
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 //entropySort sorts a list of nodes public keys using a "starting point" (HMAC of the transaction hash with the first node shared private key) and the hashes of the node public keys
-func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, nodeFirstKey crypto.PublicKey) (sortedKeys []crypto.PublicKey) {
-	startingPoint := buildStartingPoint(txHash, nodeFirstKey)
+func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, nodeFirstKey crypto.PrivateKey) (sortedKeys []crypto.PublicKey, err error) {
+	startingPoint, err := buildStartingPoint(txHash, nodeFirstKey)
+	if err != nil {
+		return nil, err
+	}
 
 	//Building list of public keys and map of hash-›key
-	hashKeys := make([][]byte, len(authKeys))
-	mHashKeys := make(map[crypto.VersionnedHash]crypto.PublicKey, 0)
+	hashKeys := make([]string, len(authKeys))
+	mHashKeys := make(map[string]crypto.PublicKey, 0)
 	for i, k := range authKeys {
+		keyBytes, err := k.Marshal()
+		if err != nil {
+			return nil, err
+		}
+
 		h := sha256.New()
-		h.Write([]byte(k))
+		h.Write(keyBytes)
 		hash := h.Sum(nil)
-		mHashKeys[hash] = k
-		hashKeys[i] = hash
+		mHashKeys[hex.EncodeToString(hash)] = k
+		hashKeys[i] = hex.EncodeToString(hash)
 	}
 
 	hashKeys = append(hashKeys, startingPoint)
-	sort.Slice(hashKeys)
+	sort.Strings(hashKeys)
 	var startPointIndex int
 	for i, k := range hashKeys {
 		if startingPoint == k {
@@ -127,11 +138,11 @@ func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, node
 		//iterating from the starting point to the end of the list
 		//add add the key if the latest character matchew the start point position
 		for i := startPointIndex + 1; i < len(hashKeys); i++ {
-			if hashKeys[i][maxpos-1] == startingPoint[p] {
+			if []rune(hashKeys[i])[maxpos-1] == []rune(startingPoint)[p] {
 				var contains bool
 				var j int
 				for !contains && j < len(sortedKeys) {
-					if sortedKeys[j] == mHashKeys[hashKeys[i]] {
+					if sortedKeys[j] != nil && sortedKeys[j].Equals(mHashKeys[hashKeys[i]]) {
 						contains = true
 						break
 					}
@@ -146,12 +157,13 @@ func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, node
 		//iterating from the 0 to the starting point
 		//and add the key if the latest character matches the start point position
 		for i := 0; i < startPointIndex; i++ {
-			if hashKeys[i][maxpos-1] == startingPoint[p] {
+			if []rune(hashKeys[i])[maxpos-1] == []rune(startingPoint)[p] {
 				var contains bool
 				var j int
 				for !contains && j < len(sortedKeys) {
-					if sortedKeys[j] == mHashKeys[hashKeys[i]] {
+					if sortedKeys[j] != nil && sortedKeys[j].Equals(mHashKeys[hashKeys[i]]) {
 						contains = true
+						break
 					}
 					j++
 				}
@@ -174,12 +186,11 @@ func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, node
 			//iterating from the starting point to the end of the list
 			//add add the key if the latest character matchew the start point position
 			for i := startPointIndex + 1; i < len(hashKeys); i++ {
-				hexHashKey := hex.EncodeToString(hashKeys[i])
-				if []rune(hexHashKey)[maxpos-1] == hexChar[p] {
+				if []rune(hashKeys[i])[maxpos-1] == hexChar[p] {
 					var contains bool
 					var j int
 					for !contains && j < len(sortedKeys) {
-						if sortedKeys[j] == mHashKeys[hashKeys[i]] {
+						if sortedKeys[j] != nil && sortedKeys[j].Equals(mHashKeys[hashKeys[i]]) {
 							contains = true
 							break
 						}
@@ -194,13 +205,13 @@ func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, node
 			//iterating from the 0 to the starting point
 			//and add the key if the latest character matches the start point position
 			for i := 0; i < startPointIndex; i++ {
-				hexHashKey := hex.EncodeToString(hashKeys[i])
-				if []rune(hexHashKey)[maxpos-1] == hexChar[p] {
+				if []rune(hashKeys[i])[maxpos-1] == hexChar[p] {
 					var contains bool
 					var j int
 					for !contains && j < len(sortedKeys) {
-						if sortedKeys[j] == mHashKeys[hashKeys[i]] {
+						if sortedKeys[j] != nil && sortedKeys[j].Equals(mHashKeys[hashKeys[i]]) {
 							contains = true
+							break
 						}
 						j++
 					}
@@ -220,7 +231,7 @@ func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, node
 
 //FindStoragePool searches a storage pool for the given address
 //TODO: Implements AI lookups to identify the right storage pool
-func FindStoragePool(address []crypto.VersionnedHash) (Pool, error) {
+func FindStoragePool(address crypto.VersionnedHash) (Pool, error) {
 	b, err := hex.DecodeString("0044657dab453d34f9adc2100a2cb8f38f644ef48e34b1d99d7c4d9371068e9438")
 	if err != nil {
 		return Pool{}, err

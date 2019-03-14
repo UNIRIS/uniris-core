@@ -56,7 +56,7 @@ type Transaction struct {
 	pubKey        crypto.PublicKey
 	sig           []byte
 	emSig         []byte
-	prop          shared.EmitterKeyPair
+	prop          shared.EmitterCrossKeyPair
 	hash          crypto.VersionnedHash
 	prevTx        *Transaction
 	masterV       MasterValidation
@@ -64,7 +64,7 @@ type Transaction struct {
 }
 
 //NewTransaction creates a new transaction
-func NewTransaction(addr crypto.VersionnedHash, txType TransactionType, data map[string][]byte, timestamp time.Time, pubK crypto.PublicKey, prop shared.EmitterKeyPair, sig []byte, emSig []byte, hash crypto.VersionnedHash) (Transaction, error) {
+func NewTransaction(addr crypto.VersionnedHash, txType TransactionType, data map[string][]byte, timestamp time.Time, pubK crypto.PublicKey, prop shared.EmitterCrossKeyPair, sig []byte, emSig []byte, hash crypto.VersionnedHash) (Transaction, error) {
 	tx := Transaction{
 		addr:      addr,
 		txType:    txType,
@@ -388,15 +388,8 @@ func (t Transaction) checkFields() error {
 		return errors.New("transaction type is not allowed")
 	}
 
-	if t.prop == (shared.EmitterCrossKeyPair{}) {
-		return errors.New("transaction proposal is missing")
-	}
 	if t.prop.EncryptedPrivateKey() == nil {
 		return errors.New("transaction proposal private key is missing")
-	}
-
-	if t.prop.PublicKey() == nil {
-		return errors.New("transaction proposal public key is missing")
 	}
 
 	return nil

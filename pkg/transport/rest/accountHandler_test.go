@@ -118,8 +118,8 @@ func TestGetAccountWhenIDNotExist(t *testing.T) {
 
 	sharedKeyReader := &mockSharedKeyReader{}
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
-	sharedKeyReader.crosscrossNodeKeys = append(sharedKeyReader.crosscrossNodeKeys, nodeKey)
-	emKey, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("ov")), pub)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+	emKey, _ := shared.NewEmitterCrossKeyPair([]byte("encPV"), pub)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
 
 	chainDB := &mockChainDB{}
@@ -166,8 +166,8 @@ func TestGetAccountWhenKeychainNotExist(t *testing.T) {
 	chainDB := &mockChainDB{}
 	sharedKeyReader := &mockSharedKeyReader{}
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
-	sharedKeyReader.crosscrossNodeKeys = append(sharedKeyReader.crosscrossNodeKeys, nodeKey)
-	emKey, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("ov")), pub)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+	emKey, _ := shared.NewEmitterCrossKeyPair([]byte("encPV"), pub)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
 	pr := &mockPoolRequester{
 		repo: chainDB,
@@ -195,8 +195,6 @@ func TestGetAccountWhenKeychainNotExist(t *testing.T) {
 		"encrypted_address_by_id":   encAddr,
 		"encrypted_aes_key":         []byte("aes_key"),
 	}
-	prop, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("encPV")), pub)
-	idHash := crypto.Hash([]byte("abc"))
 
 	pubB, _ := pub.Marshal()
 
@@ -260,8 +258,8 @@ func TestGetAccount(t *testing.T) {
 	chainDB := &mockChainDB{}
 	sharedKeyReader := &mockSharedKeyReader{}
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
-	sharedKeyReader.crosscrossNodeKeys = append(sharedKeyReader.crosscrossNodeKeys, nodeKey)
-	emKey, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("ov")), pub)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+	emKey, _ := shared.NewEmitterCrossKeyPair([]byte("encPV"), pub)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
 	pr := &mockPoolRequester{
 		repo: chainDB,
@@ -353,7 +351,7 @@ func TestGetAccount(t *testing.T) {
 
 	r := gin.New()
 	r.GET("/api/account/:idHash", GetAccountHandler(sharedKeyReader))
-	path := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", encIDHash, sig)
+	path := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", hex.EncodeToString(encIDHash), hex.EncodeToString(sig))
 
 	req, _ := http.NewRequest("GET", path, nil)
 	w := httptest.NewRecorder()
@@ -378,7 +376,8 @@ func TestGetAccount(t *testing.T) {
 		Timestamp:       res.Timestamp,
 	})
 	sigBytes, _ := hex.DecodeString(res.Signature)
-	assert.True(t, sharedKeyReader.FirstNodeCrossKeypair().PublicKey().Verify(resBytes, sigBytes))
+	firstNodeKey, _ := sharedKeyReader.FirstNodeCrossKeypair()
+	assert.True(t, firstNodeKey.PublicKey().Verify(resBytes, sigBytes))
 }
 
 /*
@@ -390,12 +389,6 @@ Scenario: Create account request with an invalid signature
 func TestCreationAccountWhenInvalidID(t *testing.T) {
 	r := gin.New()
 
-	form, _ := json.Marshal(map[string]string{
-		"encrypted_id":       "abc",
-		"encrypted_keychain": "abc",
-		"signature":          "abc",
-	})
-
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	sharedKeyReader := &mockSharedKeyReader{}
@@ -404,7 +397,6 @@ func TestCreationAccountWhenInvalidID(t *testing.T) {
 	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
 
-	r := gin.New()
 	r.POST("/api/account", CreateAccountHandler(sharedKeyReader, mockNodeDatabase{}))
 
 	form, _ := json.Marshal(map[string]string{
@@ -436,12 +428,12 @@ Scenario: Create account request with an invalid encrypted transaction raw
 */
 func TestCreationAccountWhenInvalidTransactionRaw(t *testing.T) {
 
-	pub, pv, _ := crypto.GenerateECKeyPair(curve.Ed25519Curve, rand.Reader)
+	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	sharedKeyReader := &mockSharedKeyReader{}
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
-	emKey, _ := shared.NewEmitterCrossKeyPair(hex.EncodeToString([]byte("pv")), pub)
-	sharedKeyReader.crosscrossNodeKeys = append(sharedKeyReader.crosscrossNodeKeys, nodeKey)
+	emKey, _ := shared.NewEmitterCrossKeyPair([]byte("pv"), pub)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
 
 	r := gin.New()
@@ -545,6 +537,17 @@ func TestCreateAccount(t *testing.T) {
 
 	txSrv := rpc.NewTransactionService(chainDB, sharedKeyReader, pr, pub, pv)
 
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub3, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub4, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub5, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub6, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub7, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub8, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	sharedKeyReader.authKeys = []crypto.PublicKey{pub1, pub2, pub3, pub4, pub5, pub6, pub7, pub8}
+
 	//Start transaction server
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -556,14 +559,14 @@ func TestCreateAccount(t *testing.T) {
 	r := gin.New()
 	r.POST("/api/account", CreateAccountHandler(sharedKeyReader, mockNodeDatabase{
 		nodes: []consensus.Node{
-			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, "pub1", consensus.NodeOK, "", 100, "1.0", 1, 1, 12.5, -100, consensus.GeoPatch{}, true),
-			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, "pub2", consensus.NodeOK, "", 500, "1.0", 1, 1, 50.5, -80, consensus.GeoPatch{}, true),
-			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, "pub3", consensus.NodeOK, "", 300, "1.0", 1, 1, -30, 20.5, consensus.GeoPatch{}, true),
-			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, "pub4", consensus.NodeOK, "", 100, "1.0", 1, 1, 12.5, -100, consensus.GeoPatch{}, true),
-			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, "pub5", consensus.NodeOK, "", 500, "1.0", 1, 1, 50.5, -80, consensus.GeoPatch{}, true),
-			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, "pub6", consensus.NodeOK, "", 300, "1.0", 1, 1, -30, 20.5, consensus.GeoPatch{}, true),
-			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, "pub7", consensus.NodeOK, "", 100, "1.0", 1, 1, 12.5, -100, consensus.GeoPatch{}, true),
-			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, "pub8", consensus.NodeOK, "", 500, "1.0", 1, 1, 50.5, -80, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub1, consensus.NodeOK, "", 100, "1.0", 1, 1, 12.5, -100, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub2, consensus.NodeOK, "", 500, "1.0", 1, 1, 50.5, -80, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub3, consensus.NodeOK, "", 300, "1.0", 1, 1, -30, 20.5, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub4, consensus.NodeOK, "", 100, "1.0", 1, 1, 12.5, -100, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub5, consensus.NodeOK, "", 500, "1.0", 1, 1, 50.5, -80, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub6, consensus.NodeOK, "", 300, "1.0", 1, 1, -30, 20.5, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub7, consensus.NodeOK, "", 100, "1.0", 1, 1, 12.5, -100, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub8, consensus.NodeOK, "", 500, "1.0", 1, 1, 50.5, -80, consensus.GeoPatch{}, true),
 		},
 	}))
 
@@ -583,7 +586,7 @@ func TestCreateAccount(t *testing.T) {
 		"type":       chain.IDTransactionType,
 		"public_key": hex.EncodeToString(pubB),
 		"em_shared_keys_proposal": map[string]string{
-			"encrypted_private_key": hex.EncodeToString([]byte("encPv")),
+			"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
 			"public_key":            hex.EncodeToString(pubB),
 		},
 	}
@@ -606,7 +609,7 @@ func TestCreateAccount(t *testing.T) {
 		"type":       chain.KeychainTransactionType,
 		"public_key": hex.EncodeToString(pubB),
 		"em_shared_keys_proposal": map[string]string{
-			"encrypted_private_key": hex.EncodeToString([]byte("encpv")),
+			"encrypted_private_key": hex.EncodeToString([]byte("encPV")),
 			"public_key":            hex.EncodeToString(pubB),
 		},
 	}
@@ -858,9 +861,9 @@ func (db mockNodeDatabase) CountReachables() (nb int, err error) {
 	return
 }
 
-func (db mockNodeDatabase) FindByPublicKey(publicKey string) (found consensus.Node, err error) {
+func (db mockNodeDatabase) FindByPublicKey(publicKey crypto.PublicKey) (found consensus.Node, err error) {
 	for _, n := range db.nodes {
-		if n.PublicKey() == publicKey {
+		if n.PublicKey().Equals(publicKey) {
 			return n, nil
 		}
 	}

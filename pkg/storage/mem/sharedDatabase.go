@@ -11,7 +11,7 @@ import (
 type SharedDatabase struct {
 	nodeCrossKeys      []shared.NodeCrossKeyPair
 	emitterCrossKeys   []shared.EmitterCrossKeyPair
-	authNodePublicKeys []string
+	authNodePublicKeys []crypto.PublicKey
 
 	shared.KeyReader
 }
@@ -42,14 +42,14 @@ func NewSharedDatabase() SharedDatabase {
 	crossNodePv, _ := crypto.ParsePrivateKey(crossNodePvBytes)
 
 	crossNodePubBytes, _ := hex.DecodeString("00ee7a047a226e08ea14fe60ec4f6d328e56ebdb2ee2b9f5b1120e231e05c956a3")
-	crossNodePub, _ := crypto.ParsePublicKey(nodePubBytes)
-	crossNodesKeys, _ := shared.NewNodeCrossKeyPair(crossNodePub, crossNodePv)
+	crossNodePub, _ := crypto.ParsePublicKey(crossNodePubBytes)
+	crossNodeKeys, _ := shared.NewNodeCrossKeyPair(crossNodePub, crossNodePv)
 
 	//TODO: once the feature is implemented remove it
 	return SharedDatabase{
 		nodeCrossKeys:    []shared.NodeCrossKeyPair{crossNodeKeys},
 		emitterCrossKeys: []shared.EmitterCrossKeyPair{crossEmKeys},
-		authNodePublicKeys: []string{
+		authNodePublicKeys: []crypto.PublicKey{
 			crossNodeKeys.PublicKey(),
 		},
 	}
@@ -65,8 +65,8 @@ func (db SharedDatabase) FirstEmitterCrossKeypair() (shared.EmitterCrossKeyPair,
 	return db.emitterCrossKeys[0], nil
 }
 
-//FirstCrossKeysNode retrieve the first shared crosskeys for the nodes
-func (db SharedDatabase) FirstCrossKeysNode() (shared.NodeCrossKeyPair, error) {
+//FirstNodeCrossKeypair retrieve the first shared crosskeys for the nodes
+func (db SharedDatabase) FirstNodeCrossKeypair() (shared.NodeCrossKeyPair, error) {
 	return db.nodeCrossKeys[0], nil
 }
 
@@ -76,6 +76,6 @@ func (db SharedDatabase) LastNodeCrossKeypair() (shared.NodeCrossKeyPair, error)
 }
 
 //AuthorizedNodesPublicKeys retrieves the list of public keys of the authorized nodes
-func (db SharedDatabase) AuthorizedNodesPublicKeys() ([]string, error) {
+func (db SharedDatabase) AuthorizedNodesPublicKeys() ([]crypto.PublicKey, error) {
 	return db.authNodePublicKeys, nil
 }

@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -82,6 +83,12 @@ func (ePub ecdsaPublicKey) Verify(data []byte, sig []byte) bool {
 
 	hash := sha256.Sum256(data)
 	return ecdsa.Verify(ePub.pub, hash[:], ecdsaSig.R, ecdsaSig.S)
+}
+
+func (ePub ecdsaPublicKey) Equals(otherPub PublicKey) bool {
+	otherBytes := otherPub.bytes()
+	pubBytes := ePub.bytes()
+	return bytes.Equal(otherBytes, pubBytes)
 }
 
 func generateECDSAKeys(src io.Reader, c elliptic.Curve) (PrivateKey, PublicKey, error) {

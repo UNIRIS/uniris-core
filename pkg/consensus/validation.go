@@ -34,7 +34,7 @@ func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader
 		return err
 	}
 
-	sPool, err := FindStoragePool(tx.Address().Digest())
+	sPool, err := FindStoragePool(tx.Address())
 	if err != nil {
 		return err
 	}

@@ -46,7 +46,7 @@ func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubK
 		wHeaders = append(wHeaders, &api.NodeHeader{
 			IsMaster:      true,
 			IsUnreachable: !n.IsReachable(),
-			PublicKey:     n.PublicKey(),
+			PublicKey:     pubKey,
 			PatchNumber:   int32(n.Patch().ID()),
 			IsOK:          n.Status() == consensus.NodeOK,
 		})

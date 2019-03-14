@@ -71,6 +71,9 @@ type PublicKey interface {
 	//ECDH shared key is generated, the data is encrypted with AES and an message authentication code is made
 	//Finally the all these fields are encoded
 	Encrypt(data []byte) (Cipher, error)
+
+	//Equals compares the current key with another
+	Equals(pub PublicKey) bool
 }
 
 func versionKey(c Curve, marshalling []byte) VersionnedKey {

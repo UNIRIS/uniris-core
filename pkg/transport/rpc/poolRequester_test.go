@@ -31,13 +31,13 @@ func TestRequestTransactionLock(t *testing.T) {
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	sharedKeyReader := &mocksharedKeyReader{}
+	sharedKeyReader := &mockSharedKeyReader{}
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
 	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 
 	chainDB := &mockChainDB{}
-	pr := NewPoolRequester(keyReader)
-	txSrv := NewTransactionService(chainDB, keyReader, pr, pub, pv)
+	pr := NewPoolRequester(sharedKeyReader)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -63,14 +63,14 @@ func TestRequestConfirmValidation(t *testing.T) {
 
 	kp, _ := shared.NewEmitterCrossKeyPair(([]byte("pvkey")), pub)
 
-	sharedKeyReader := &mocksharedKeyReader{}
+	sharedKeyReader := &mockSharedKeyReader{}
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, kp)
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
 	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 
-	pr := NewPoolRequester(keyReader)
+	pr := NewPoolRequester(sharedKeyReader)
 
-	miningSrv := NewTransactionService(nil, keyReader, pr, pub, pv)
+	miningSrv := NewTransactionService(nil, sharedKeyReader, pr, pub, pv)
 
 	lis, err := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -145,15 +145,15 @@ func TestRequestStorage(t *testing.T) {
 	pubB, _ := pub.Marshal()
 
 	chainDB := &mockChainDB{}
-	sharedKeyReader := &mocksharedKeyReader{}
+	sharedKeyReader := &mockSharedKeyReader{}
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
 	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 
-	keyReader.crossEmitterKeys = append(keyReader.crossEmitterKeys, kp)
+	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, kp)
 
-	pr := NewPoolRequester(keyReader)
+	pr := NewPoolRequester(sharedKeyReader)
 
-	txSrv := NewTransactionService(chainDB, keyReader, pr, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -220,13 +220,13 @@ func TestSendGetLastTransaction(t *testing.T) {
 	pubB, _ := pub.Marshal()
 
 	chainDB := &mockChainDB{}
-	sharedKeyReader := &mocksharedKeyReader{}
+	sharedKeyReader := &mockSharedKeyReader{}
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
 	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 
-	pr := NewPoolRequester(keyReader)
+	pr := NewPoolRequester(sharedKeyReader)
 
-	txSrv := NewTransactionService(chainDB, keyReader, pr, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()

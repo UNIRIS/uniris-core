@@ -1,10 +1,11 @@
 package crypto
 
 import (
+	"bytes"
 	"errors"
 	"io"
 
-	"github.com/agl/ed25519/extra25519"
+	"github.com/uniris/ed25519/extra25519"
 	"golang.org/x/crypto/curve25519"
 	"golang.org/x/crypto/ed25519"
 )
@@ -73,6 +74,11 @@ func (edPub ed25519PublicKey) Verify(data []byte, sig []byte) (valid bool) {
 
 func (edPub ed25519PublicKey) Encrypt(data []byte) (Cipher, error) {
 	return eciesEncrypt(data, edPub, ed25519GenerateShared)
+}
+
+func (edPub ed25519PublicKey) Equals(otherPub PublicKey) bool {
+	otherEPub := otherPub.(ed25519PublicKey)
+	return bytes.Equal(edPub.pub, otherEPub.pub)
 }
 
 func generateEd25519Keys(src io.Reader) (PrivateKey, PublicKey, error) {

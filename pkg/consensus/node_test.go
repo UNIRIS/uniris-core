@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"bytes"
 	"crypto/rand"
 	"net"
 	"testing"
@@ -76,15 +75,7 @@ type mockNodeDatabase struct {
 
 func (db *mockNodeDatabase) WriteDiscoveredNode(node Node) error {
 	for i, n := range db.nodes {
-		nPub, err := n.PublicKey().Marshal()
-		if err != nil {
-			return err
-		}
-		nodePub, err := node.PublicKey().Marshal()
-		if err != nil {
-			return err
-		}
-		if bytes.Equal(nPub, nodePub) {
+		if n.publicKey.Equals(node.PublicKey()) {
 			db.nodes[i] = node
 			return nil
 		}
@@ -95,15 +86,7 @@ func (db *mockNodeDatabase) WriteDiscoveredNode(node Node) error {
 
 func (db *mockNodeDatabase) WriteReachableNode(publicKey crypto.PublicKey) error {
 	for i, n := range db.nodes {
-		nPub, err := n.PublicKey().Marshal()
-		if err != nil {
-			return err
-		}
-		pub, err := publicKey.Marshal()
-		if err != nil {
-			return err
-		}
-		if bytes.Equal(nPub, pub) {
+		if n.publicKey.Equals(publicKey) {
 			node := NewNode(n.IP(), n.Port(), n.PublicKey(), n.Status(), n.CPULoad(), n.FreeDiskSpace(), n.Version(), n.P2PFactor(), n.ReachablePeersNumber(), n.Latitude(), n.Longitude(), n.Patch(), true)
 			db.nodes[i] = node
 			break
@@ -114,15 +97,7 @@ func (db *mockNodeDatabase) WriteReachableNode(publicKey crypto.PublicKey) error
 
 func (db *mockNodeDatabase) WriteUnreachableNode(publicKey crypto.PublicKey) error {
 	for i, n := range db.nodes {
-		nPub, err := n.PublicKey().Marshal()
-		if err != nil {
-			return err
-		}
-		pub, err := publicKey.Marshal()
-		if err != nil {
-			return err
-		}
-		if bytes.Equal(nPub, pub) {
+		if n.publicKey.Equals(publicKey) {
 			node := NewNode(n.IP(), n.Port(), n.PublicKey(), n.Status(), n.CPULoad(), n.FreeDiskSpace(), n.Version(), n.P2PFactor(), n.ReachablePeersNumber(), n.Latitude(), n.Longitude(), n.Patch(), false)
 			db.nodes[i] = node
 			break

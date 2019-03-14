@@ -115,6 +115,7 @@ func TestGetSharedKeys(t *testing.T) {
 type mockSharedKeyReader struct {
 	crossNodeKeys    []shared.NodeCrossKeyPair
 	crossEmitterKeys []shared.EmitterCrossKeyPair
+	authKeys         []crypto.PublicKey
 }
 
 func (r mockSharedKeyReader) EmitterCrossKeypairs() ([]shared.EmitterCrossKeyPair, error) {
@@ -129,20 +130,11 @@ func (r mockSharedKeyReader) LastNodeCrossKeypair() (shared.NodeCrossKeyPair, er
 	return r.crossNodeKeys[len(r.crossNodeKeys)-1], nil
 }
 
-func (r mockSharedKeyReader) AuthorizedNodesPublicKeys() ([]string, error) {
-	return []string{
-		"pub1",
-		"pub2",
-		"pub3",
-		"pub4",
-		"pub5",
-		"pub6",
-		"pub7",
-		"pub8",
-	}, nil
+func (r mockSharedKeyReader) AuthorizedNodesPublicKeys() ([]crypto.PublicKey, error) {
+	return r.authKeys, nil
 }
 
-func (r mockSharedKeyReader) CrossEmitterPublicKeys() (pubKeys []string, err error) {
+func (r mockSharedKeyReader) CrossEmitterPublicKeys() (pubKeys []crypto.PublicKey, err error) {
 	for _, kp := range r.crossEmitterKeys {
 		pubKeys = append(pubKeys, kp.PublicKey())
 	}
