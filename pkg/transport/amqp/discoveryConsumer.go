@@ -1,6 +1,7 @@
 package amqp
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -42,28 +43,29 @@ func consumeQueues(ch *amqp.Channel, nodeWriter consensus.NodeWriter, sharedKeyW
 	go func() {
 
 		//TODO: remove sharedKeyWriter when the authorized key handling will be implemented
-		if err := consumeQueue(ch, queueNameDiscoveries, func(w consensus.NodeWriter, data []byte) error {
+		handler := func(w consensus.NodeWriter, data []byte) error {
 			return consumeDiscoveryHandler(nodeWriter, sharedKeyWriter, data)
-		}, nodeWriter); err != nil {
+		}
+		for err := range consumeQueue(ch, queueNameDiscoveries, handler, nodeWriter) {
 			errChan <- err
 		}
 	}()
 
 	go func() {
-		if err := consumeQueue(ch, queueNameReachable, consumeReachableHandler, nodeWriter); err != nil {
+		for err := range consumeQueue(ch, queueNameReachable, consumeReachableHandler, nodeWriter) {
 			errChan <- err
 		}
 	}()
 
 	go func() {
-		if err := consumeQueue(ch, queueNameUnreachable, consumeUnreachableHandler, nodeWriter); err != nil {
+		for err := range consumeQueue(ch, queueNameUnreachable, consumeUnreachableHandler, nodeWriter) {
 			errChan <- err
 		}
 	}()
 	return
 }
 
-func consumeQueue(ch *amqp.Channel, queueName string, h consumeFuncHandler, w consensus.NodeWriter) error {
+func consumeQueue(ch *amqp.Channel, queueName string, h consumeFuncHandler, w consensus.NodeWriter) (errChan chan error) {
 	q, err := ch.QueueDeclare(
 		queueName, // name
 		true,      // durable
@@ -73,7 +75,8 @@ func consumeQueue(ch *amqp.Channel, queueName string, h consumeFuncHandler, w co
 		nil,       // arguments
 	)
 	if err != nil {
-		return err
+		errChan <- err
+		return
 	}
 
 	msgs, err := ch.Consume(
@@ -86,19 +89,21 @@ func consumeQueue(ch *amqp.Channel, queueName string, h consumeFuncHandler, w co
 		nil,    // args
 	)
 	if err != nil {
-		return err
+		errChan <- err
+		return
 	}
 
 	forever := make(chan bool)
 	go func() {
 		for msg := range msgs {
-			h(w, msg.Body)
+			if err := h(w, msg.Body); err != nil {
+				errChan <- err
+			}
 		}
 	}()
 
 	<-forever
-
-	return nil
+	return
 }
 
 func consumeDiscoveryHandler(nodeWriter consensus.NodeWriter, sharedKeyWriter shared.KeyWriter, data []byte) error {
@@ -109,7 +114,11 @@ func consumeDiscoveryHandler(nodeWriter consensus.NodeWriter, sharedKeyWriter sh
 
 	patch := consensus.ComputeGeoPatch(n.AppState.GeoPosition.Latitude, n.AppState.GeoPosition.Longitude)
 
-	publicKey, err := crypto.ParsePublicKey([]byte(n.Identity.PublicKey))
+	pubBytes, err := hex.DecodeString(n.Identity.PublicKey)
+	if err != nil {
+		return err
+	}
+	publicKey, err := crypto.ParsePublicKey(pubBytes)
 	if err != nil {
 		return err
 	}
@@ -127,6 +136,7 @@ func consumeDiscoveryHandler(nodeWriter consensus.NodeWriter, sharedKeyWriter sh
 		n.AppState.GeoPosition.Longitude,
 		patch,
 		true)
+
 	if err := nodeWriter.WriteDiscoveredNode(node); err != nil {
 		return err
 	}

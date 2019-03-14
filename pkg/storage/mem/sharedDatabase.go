@@ -82,6 +82,17 @@ func (db SharedDatabase) AuthorizedNodesPublicKeys() ([]crypto.PublicKey, error)
 
 //WriteAuthorizedNode inserts a new node public key as an authorized node
 func (db *SharedDatabase) WriteAuthorizedNode(pub crypto.PublicKey) error {
-	db.authNodePublicKeys = append(db.authNodePublicKeys, pub)
+	var found bool
+	for _, k := range db.authNodePublicKeys {
+		if k.Equals(pub) {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		db.authNodePublicKeys = append(db.authNodePublicKeys, pub)
+	}
+
 	return nil
 }
