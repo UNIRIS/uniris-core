@@ -51,10 +51,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/uniris/ecies"
-
-[[constraint]]
-  branch = "master"
   name = "golang.org/x/net"
 
 [[constraint]]
@@ -76,3 +72,7 @@
 [[constraint]]
   name = "gopkg.in/go-playground/validator.v9"
   version = "9.27.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/uniris/ed25519"

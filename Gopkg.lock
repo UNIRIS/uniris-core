@@ -10,17 +10,6 @@
   version = "v0.3.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:5699a1540433914320cef63d1afc814e0632c8e7ec5954c37b0fc07a614bf149"
-  name = "github.com/agl/ed25519"
-  packages = [
-    "edwards25519",
-    "extra25519",
-  ]
-  pruneopts = "UT"
-  revision = "5312a61534124124185d41f09206b9fef1d88403"
-
-[[projects]]
   digest = "1:a8d622a8049a4aa420e1c509873bb85d4c45c5107f420d922f919bfcb8d08694"
   name = "github.com/beevik/ntp"
   packages = ["."]
@@ -159,6 +148,17 @@
   packages = ["codec"]
   pruneopts = "UT"
   revision = "c88ee250d0221a57af388746f5cf03768c21d6e2"
+
+[[projects]]
+  branch = "master"
+  digest = "1:6cc1e86473c7371e5896918ff07d7c54d2534bfc8e3fa6458ac8cd234ec3ffa7"
+  name = "github.com/uniris/ed25519"
+  packages = [
+    "edwards25519",
+    "extra25519",
+  ]
+  pruneopts = "UT"
+  revision = "7ad4abdba330b90abafd76f6de7ccbdbd6fae9a1"
 
 [[projects]]
   branch = "master"
@@ -311,14 +311,13 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/agl/ed25519/extra25519",
     "github.com/beevik/ntp",
     "github.com/gin-gonic/gin",
-    "github.com/gin-gonic/gin/binding",
     "github.com/go-redis/redis",
     "github.com/golang/protobuf/proto",
     "github.com/streadway/amqp",
     "github.com/stretchr/testify/assert",
+    "github.com/uniris/ed25519/extra25519",
     "golang.org/x/crypto/curve25519",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/hkdf",
@@ -326,7 +325,6 @@
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/status",
-    "gopkg.in/go-playground/validator.v8",
     "gopkg.in/go-playground/validator.v9",
     "gopkg.in/urfave/cli.v1",
     "gopkg.in/urfave/cli.v1/altsrc",
