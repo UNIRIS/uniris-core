@@ -222,15 +222,15 @@ func startHTTPServer(conf unirisConf, sharedKeyReader shared.KeyReader, nodeRead
 	swaggerFile, _ := filepath.Abs("../../api/swagger-spec/swagger.yaml")
 	r.StaticFile("/swagger.yaml", swaggerFile)
 
-	r.GET("/api/account/:idHash", rest.GetAccountHandler(sharedKeyReader))
+	r.GET("/api/account/:idHash", rest.GetAccountHandler(sharedKeyReader, nodeReader))
 	r.POST("/api/account", rest.CreateAccountHandler(sharedKeyReader, nodeReader))
-	r.GET("/api/transaction/:txReceipt/status", rest.GetTransactionStatusHandler(sharedKeyReader))
+	r.GET("/api/transaction/:txReceipt/status", rest.GetTransactionStatusHandler(sharedKeyReader, nodeReader))
 	r.GET("/api/sharedkeys", rest.GetSharedKeysHandler(sharedKeyReader))
 
 	r.Run(":80")
 }
 
-func startGRPCServer(conf unirisConf, sharedKeyRW shared.KeyReadWriter, nodeWriter consensus.NodeWriter) {
+func startGRPCServer(conf unirisConf, sharedKeyRW shared.KeyReadWriter, nodeRW consensus.NodeReadWriter) {
 	pubB, err := hex.DecodeString(conf.publicKey)
 	if err != nil {
 		panic(err)
@@ -253,7 +253,7 @@ func startGRPCServer(conf unirisConf, sharedKeyRW shared.KeyReadWriter, nodeWrit
 
 	poolR := rpc.NewPoolRequester(sharedKeyRW)
 	chainDB := memstorage.NewchainDatabase()
-	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyRW, poolR, publicKey, privateKey))
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyRW, nodeRW, poolR, publicKey, privateKey))
 
 	var discoveryDB discovery.Database
 	if conf.discoveryDatabase.dbType == "redis" {
@@ -270,7 +270,7 @@ func startGRPCServer(conf unirisConf, sharedKeyRW shared.KeyReadWriter, nodeWrit
 	if conf.bus.busType == "amqp" {
 		notif = amqp.NewDiscoveryNotifier(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port)
 		go func() {
-			if err := amqp.ConsumeDiscoveryNotifications(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port, nodeWriter, sharedKeyRW); err != nil {
+			if err := amqp.ConsumeDiscoveryNotifications(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port, nodeRW, sharedKeyRW); err != nil {
 				panic(err)
 			}
 		}()

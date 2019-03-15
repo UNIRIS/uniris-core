@@ -18,19 +18,21 @@ import (
 type txSrv struct {
 	chainDB         chain.Database
 	sharedKeyReader shared.KeyReader
+	nodeReader      consensus.NodeReader
 	poolR           consensus.PoolRequester
 	nodePublicKey   crypto.PublicKey
 	nodePrivateKey  crypto.PrivateKey
 }
 
 //NewTransactionService creates service handler for the GRPC Transaction service
-func NewTransactionService(cDB chain.Database, skr shared.KeyReader, pR consensus.PoolRequester, nodePublicKeyk crypto.PublicKey, nodePrivateKeyk crypto.PrivateKey) api.TransactionServiceServer {
+func NewTransactionService(cDB chain.Database, skr shared.KeyReader, nr consensus.NodeReader, pR consensus.PoolRequester, pubk crypto.PublicKey, pvk crypto.PrivateKey) api.TransactionServiceServer {
 	return txSrv{
 		chainDB:         cDB,
 		sharedKeyReader: skr,
+		nodeReader:      nr,
 		poolR:           pR,
-		nodePublicKey:   nodePublicKeyk,
-		nodePrivateKey:  nodePrivateKeyk,
+		nodePublicKey:   pubk,
+		nodePrivateKey:  pvk,
 	}
 }
 
@@ -236,7 +238,7 @@ func (s txSrv) LeadTransactionMining(ctx context.Context, req *api.LeadTransacti
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	if err := consensus.LeadMining(tx, int(req.MinimumValidations), wHeaders, s.poolR, s.nodePublicKey, s.nodePrivateKey, s.sharedKeyReader); err != nil {
+	if err := consensus.LeadMining(tx, int(req.MinimumValidations), wHeaders, s.poolR, s.nodePublicKey, s.nodePrivateKey, s.sharedKeyReader, s.nodeReader); err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 

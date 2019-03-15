@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
@@ -78,53 +79,84 @@ func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubK
 	}
 	req.SignatureRequest = reqSig
 
-	//TODO: handle multiple master node sending
-	masterAddr := fmt.Sprintf("%s:%d", masterNodes[0].IP().String(), masterNodes[0].Port())
-	conn, err := grpc.Dial(masterAddr, grpc.WithInsecure())
-	defer conn.Close()
-	if err != nil {
-		return transactionResponse{}, &httpError{
-			code:      http.StatusServiceUnavailable,
-			Error:     err.Error(),
-			Timestamp: time.Now().Unix(),
-			Status:    http.StatusText(http.StatusServiceUnavailable),
+	minAckMaster := 1 //TODO: define how many master must ack before to send response to the client
+
+	var nbMasterAck int32
+	var nbMasterFailures int32
+	var failed bool
+	ackChan := make(chan bool)
+
+	//Send concurrently mining request to several masters
+	for _, n := range masterNodes {
+		go func(n consensus.Node) {
+
+			masterAddr := fmt.Sprintf("%s:%d", n.IP().String(), n.Port())
+			conn, err := grpc.Dial(masterAddr, grpc.WithInsecure())
+			defer conn.Close()
+			if err != nil {
+				fmt.Printf("error - master unreachable: %s\n", err.Error())
+				ackChan <- false
+				return
+			}
+
+			cli := api.NewTransactionServiceClient(conn)
+			res, err := cli.LeadTransactionMining(context.Background(), req)
+			if err != nil {
+				_, message := parseGrpcError(err)
+				fmt.Printf("error - master dispatch: transaction failed - cause: %s\n", message)
+				ackChan <- false
+				return
+			}
+
+			fmt.Printf("LEAD TRANSACTION MINING RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+			resBytes, err := json.Marshal(&api.LeadTransactionMiningResponse{
+				Timestamp: res.Timestamp,
+			})
+			if err != nil {
+				fmt.Printf("error - master dispatch: transaction response bad format - cause: %s\n", err.Error())
+				ackChan <- false
+				return
+			}
+			if !pubKey.Verify(resBytes, res.SignatureResponse) {
+				fmt.Printf("error - master dispatch: invalid signature response\n")
+				ackChan <- false
+				return
+			}
+
+			ackChan <- true
+
+		}(n)
+	}
+
+	//Waiting the min ack of master
+	for ack := range ackChan {
+		if ack {
+			atomic.AddInt32(&nbMasterAck, 1)
+		} else {
+			atomic.AddInt32(&nbMasterFailures, 1)
+		}
+		if atomic.LoadInt32(&nbMasterFailures) == int32(len(masterNodes)) {
+			failed = true
+			break
+		}
+		if atomic.LoadInt32(&nbMasterAck) == int32(minAckMaster) {
+			break
 		}
 	}
 
-	cli := api.NewTransactionServiceClient(conn)
-	res, err := cli.LeadTransactionMining(context.Background(), req)
-	if err != nil {
-		code, message := parseGrpcError(err)
-		return transactionResponse{}, &httpError{
-			code:      code,
-			Error:     message,
-			Timestamp: time.Now().Unix(),
-			Status:    http.StatusText(code),
-		}
-	}
-
-	fmt.Printf("LEAD TRANSACTION MINING RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
-
-	resBytes, err := json.Marshal(&api.LeadTransactionMiningResponse{
-		Timestamp: res.Timestamp,
-	})
-	if err != nil {
+	//When no master could reply to the transaction mining request
+	//Then we send an error response back to the client
+	if failed {
 		return transactionResponse{}, &httpError{
 			code:      http.StatusInternalServerError,
-			Error:     err.Error(),
+			Error:     "transaction failed", //TODO: provide more details
 			Timestamp: time.Now().Unix(),
 			Status:    http.StatusText(http.StatusInternalServerError),
 		}
 	}
-	if !pubKey.Verify(resBytes, res.SignatureResponse) {
-		return transactionResponse{}, &httpError{
-			code:      http.StatusInternalServerError,
-			Error:     "invalid signature",
-			Timestamp: time.Now().Unix(),
-			Status:    http.StatusText(http.StatusInternalServerError),
-		}
-	}
 
+	//When the minimum ack from the master has been reached
+	//Then we send a success response back to the client
 	txRes := transactionResponse{
 		Timestamp:          time.Now().Unix(),
 		TransactionReceipt: encodeTxReceipt(tx),
@@ -152,8 +184,8 @@ func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubK
 	return txRes, nil
 }
 
-func findLastTransaction(txAddr crypto.VersionnedHash, txType api.TransactionType, pvKey crypto.PrivateKey) (*api.Transaction, *httpError) {
-	storagePool, err := consensus.FindStoragePool(txAddr)
+func findLastTransaction(txAddr crypto.VersionnedHash, txType api.TransactionType, pvKey crypto.PrivateKey, nodeReader consensus.NodeReader) (*api.Transaction, *httpError) {
+	storagePool, err := consensus.FindStoragePool(txAddr, nodeReader)
 	if err != nil {
 		return nil, &httpError{
 			code:      http.StatusInternalServerError,

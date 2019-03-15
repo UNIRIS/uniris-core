@@ -3,7 +3,7 @@ package consensus
 import (
 	"crypto/hmac"
 	"encoding/hex"
-	"errors"
+	"fmt"
 	"net"
 	"sort"
 
@@ -61,13 +61,20 @@ func FindMasterNodes(txHash crypto.VersionnedHash, nodeReader NodeReader, shared
 		if err != nil {
 			return nil, err
 		}
+
+		//check if the node exists, happens only when there is some networking issues
+		//or if the node has not been discovered yet by the gossip service
+		if n.publicKey == nil {
+			continue
+		}
+
 		masters = append(masters, n)
 		if n.isReachable {
 			nbReachableMasters++
 		}
 	}
 	if nbReachableMasters != nbMasters {
-		return nil, errors.New("cannot proceed transaction with an invalid number of reachables master nodes")
+		return nil, fmt.Errorf("cannot proceed transaction with an invalid number of reachables master nodes (%d)", nbReachableMasters)
 	}
 	return masters, nil
 }
@@ -209,21 +216,12 @@ func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, node
 }
 
 //FindStoragePool searches a storage pool for the given address
-//TODO: Implements AI lookups to identify the right storage pool
-func FindStoragePool(address crypto.VersionnedHash) (Pool, error) {
-	b, err := hex.DecodeString("0044657dab453d34f9adc2100a2cb8f38f644ef48e34b1d99d7c4d9371068e9438")
-	if err != nil {
-		return Pool{}, err
-	}
-	pub, err := crypto.ParsePublicKey(b)
-
-	return Pool{
-		Node{
-			ip:        net.ParseIP("127.0.0.1"),
-			port:      5000,
-			publicKey: pub,
-		},
-	}, nil
+func FindStoragePool(address crypto.VersionnedHash, r NodeReader) (Pool, error) {
+	//Because of the entropy of the master election and without the sharding implementation
+	//We cannot be sure to retrieve the data
+	//So in waiting the sharding implementation, we need to select one of the master peers elected to retrieve data
+	//TODO: implement storage pool election
+	return r.Reachables()
 }
 
 //FindValidationPool searches a validation pool from a transaction hash

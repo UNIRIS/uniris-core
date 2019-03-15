@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -19,7 +18,7 @@ import (
 //GetAccountHandler is an HTTP handler which retrieves an account from an ID public key hash
 //It requests the storage pool from the id address, decrypts the encrypted keychain address and request the keychain from its dedicated pool
 //Then it aggregates the ID and Keychain data
-func GetAccountHandler(sharedKeyReader shared.KeyReader) func(c *gin.Context) {
+func GetAccountHandler(sharedKeyReader shared.KeyReader, nodeReader consensus.NodeReader) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		encIDHash := c.Param("idHash")
@@ -90,7 +89,7 @@ func GetAccountHandler(sharedKeyReader shared.KeyReader) func(c *gin.Context) {
 			})
 			return
 		}
-		idTx, httpErr := findLastTransaction(idHash, api.TransactionType_ID, nodeLastKeys.PrivateKey())
+		idTx, httpErr := findLastTransaction(idHash, api.TransactionType_ID, nodeLastKeys.PrivateKey(), nodeReader)
 		if httpErr != nil {
 			httpErr.Error = fmt.Sprintf("ID: %s", httpErr.Error)
 			c.JSON(httpErr.code, httpErr)
@@ -108,7 +107,7 @@ func GetAccountHandler(sharedKeyReader shared.KeyReader) func(c *gin.Context) {
 			return
 		}
 
-		keychainTx, httpErr := findLastTransaction(keychainAddr, api.TransactionType_KEYCHAIN, nodeLastKeys.PrivateKey())
+		keychainTx, httpErr := findLastTransaction(keychainAddr, api.TransactionType_KEYCHAIN, nodeLastKeys.PrivateKey(), nodeReader)
 		if httpErr != nil {
 			httpErr.Error = fmt.Sprintf("Keychain: %s", httpErr.Error)
 			c.JSON(httpErr.code, httpErr)
@@ -228,7 +227,6 @@ func CreateAccountHandler(sharedKeyReader shared.KeyReader, nodeReader consensus
 		encKeychainBytes, _ := hex.DecodeString(form.EncryptedKeychain)
 		keychainTx, httpErr := decodeTransactionRaw(encKeychainBytes, nodeLastKeys.PrivateKey())
 		if httpErr != nil {
-			log.Print(httpErr.Error)
 			c.JSON(httpErr.code, httpErr)
 			return
 		}

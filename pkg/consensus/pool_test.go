@@ -120,7 +120,7 @@ func TestFindMasterValidationNode(t *testing.T) {
 	_, pub7, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	_, pub8, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	nodeDB := &mockNodeDatabase{
+	nodeDB := &mockNodeReader{
 		nodes: []Node{
 			Node{publicKey: pub1, isReachable: false},
 			Node{publicKey: pub2, isReachable: true},
@@ -175,25 +175,19 @@ Scenario: Find storage pool
 	TODO: To improve when the implementation will be provided
 */
 func TestFindStoragePool(t *testing.T) {
-	pool, err := FindStoragePool([]byte("address"))
-	assert.Nil(t, err)
-	assert.Len(t, pool, 1)
-	assert.Equal(t, "127.0.0.1", pool[0].IP().String())
-}
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-/*
-Scenario: Find last validation pool
-	Given a transaction address
-	When I want to find the last validation pool
-	Then I get a pool including a least one member
+	nodeDB := &mockNodeReader{
+		nodes: []Node{
+			Node{publicKey: pub1, isReachable: true},
+			Node{publicKey: pub2, isReachable: true},
+		},
+	}
 
-	TODO: To improve when the implementation of the method FindStoragePool will be provided
-*/
-func TestFindLastValidationPool(t *testing.T) {
-	poolR := &mockPoolRequester{}
-	pool, err := findLastValidationPool([]byte("address"), chain.KeychainTransactionType, poolR)
+	pool, err := FindStoragePool([]byte("address"), nodeDB)
 	assert.Nil(t, err)
-	assert.Empty(t, pool)
+	assert.Len(t, pool, 2)
 }
 
 type mockSharedKeyReader struct {
@@ -233,7 +227,7 @@ type mockNodeReader struct {
 	nodes []Node
 }
 
-func (db mockNodeDatabase) Reachables() (reachables []Node, err error) {
+func (db mockNodeReader) Reachables() (reachables []Node, err error) {
 	for _, n := range db.nodes {
 		if n.isReachable {
 			reachables = append(reachables, n)
@@ -242,7 +236,7 @@ func (db mockNodeDatabase) Reachables() (reachables []Node, err error) {
 	return
 }
 
-func (db mockNodeDatabase) Unreachables() (unreachables []Node, err error) {
+func (db mockNodeReader) Unreachables() (unreachables []Node, err error) {
 	for _, n := range db.nodes {
 		if !n.isReachable {
 			unreachables = append(unreachables, n)
@@ -251,7 +245,7 @@ func (db mockNodeDatabase) Unreachables() (unreachables []Node, err error) {
 	return
 }
 
-func (db mockNodeDatabase) CountReachables() (nb int, err error) {
+func (db mockNodeReader) CountReachables() (nb int, err error) {
 	for _, n := range db.nodes {
 		if n.isReachable {
 			nb++
@@ -260,7 +254,7 @@ func (db mockNodeDatabase) CountReachables() (nb int, err error) {
 	return
 }
 
-func (db *mockNodeDatabase) FindByPublicKey(publicKey crypto.PublicKey) (found Node, err error) {
+func (db *mockNodeReader) FindByPublicKey(publicKey crypto.PublicKey) (found Node, err error) {
 	for _, n := range db.nodes {
 		if n.publicKey.Equals(publicKey) {
 			return n, nil

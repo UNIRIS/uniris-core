@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"time"
 
@@ -22,37 +21,50 @@ import (
 // - Executes the proof of work
 // - Requests validation confirmations
 // - Requests storage
-func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader, poolR PoolRequester, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader) error {
-	log.Printf("transaction %x is in progress\n", tx.TransactionHash())
+func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader, poolR PoolRequester, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader, nodeReader NodeReader) error {
+	fmt.Printf("transaction %x is in progress\n", tx.TransactionHash())
 
 	if !tx.Address().IsValid() {
 		return errors.New("invalid transaction address")
 	}
 
-	lastVPool, err := findLastValidationPool(tx.Address().Digest(), tx.TransactionType(), poolR)
+	lastVPool, err := findLastValidationPool(tx.Address(), tx.TransactionType(), poolR, nodeReader)
 	if err != nil {
 		return err
 	}
 
-	sPool, err := FindStoragePool(tx.Address())
+	sPool, err := FindStoragePool(tx.Address(), nodeReader)
 	if err != nil {
 		return err
 	}
 
-	//TODO: ask storage pool to store in in progress
 	if err := poolR.RequestTransactionTimeLock(sPool, tx.TransactionHash(), tx.Address(), nodePub); err != nil {
 		return fmt.Errorf("transaction lock failed: %s", err.Error())
 	}
 
-	log.Printf("transaction %x is locked\n", tx.TransactionHash())
+	fmt.Printf("transaction %x is locked\n", tx.TransactionHash())
 
 	go func() {
-		minedTx, err := mineTransaction(tx, wHeaders, sPool, lastVPool, minValids, nodePub, nodePv, sharedKeyReader, poolR)
+		vPool, err := FindValidationPool(tx)
 		if err != nil {
-			fmt.Printf("transaction mining failed: %s\n", err.Error())
+			fmt.Printf("transaction find validation pool failed: %s\n", err.Error())
 			return
 		}
-		if err := storeTransaction(minedTx, sPool, poolR); err != nil {
+
+		masterValid, err := preValidateTransaction(tx, wHeaders, sPool, vPool, lastVPool, minValids, nodePub, nodePv, sharedKeyReader)
+		if err != nil {
+			fmt.Printf("transaction pre-validation failed: %s\n", err.Error())
+			return
+		}
+		confirmValids, err := requestValidations(tx, masterValid, vPool, minValids, poolR)
+		if err != nil {
+			fmt.Printf("transaction validation confirmations failed: %s\n", err.Error())
+		}
+		if err := tx.Mined(masterValid, confirmValids); err != nil {
+			fmt.Printf("transaction mining is invalid: %s\n", err.Error())
+		}
+		fmt.Printf("transaction %x is validated \n", tx.TransactionHash())
+		if err := storeTransaction(tx, sPool, poolR); err != nil {
 			fmt.Printf("transaction storage failed: %s\n", err.Error())
 			return
 		}
@@ -61,55 +73,13 @@ func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader
 	return nil
 }
 
-func mineTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, lastVPool Pool, minValids int, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader, poolR PoolRequester) (chain.Transaction, error) {
-
-	vPool, err := FindValidationPool(tx)
-	if err != nil {
-		return tx, fmt.Errorf("transaction find validation pool failed: %s", err.Error())
-	}
-
-	masterValid, err := preValidateTransaction(tx, wHeaders, sPool, vPool, lastVPool, minValids, nodePub, nodePv, sharedKeyReader)
-	if err != nil {
-		return tx, fmt.Errorf("transaction pre-validation failed: %s", err.Error())
-	}
-	confirmValids, err := requestValidations(tx, masterValid, vPool, minValids, poolR)
-	if err != nil {
-		return tx, fmt.Errorf("transaction validation confirmations failed: %s", err.Error())
-	}
-	if err := tx.Mined(masterValid, confirmValids); err != nil {
-		return tx, fmt.Errorf("transaction mining is invalid: %s", err.Error())
-	}
-	log.Printf("transaction %x is validated \n", tx.TransactionHash())
-	return tx, nil
-}
-
 func storeTransaction(tx chain.Transaction, sPool Pool, poolR PoolRequester) error {
 	minReplicas := GetMinimumReplicas(tx.TransactionHash().Digest())
 	if err := poolR.RequestTransactionStorage(sPool, minReplicas, tx); err != nil {
 		return fmt.Errorf("transaction storage failed: %s", err.Error())
 	}
-	log.Printf("transaction %x is stored \n", tx.TransactionHash())
+	fmt.Printf("transaction %x is stored \n", tx.TransactionHash())
 	return nil
-}
-
-//findPools retrieve the needed pools for the transaction mining process (last validation pool, new validation pool and storage pool)
-func findPools(tx chain.Transaction, poolR PoolRequester) (lastValidationPool, validationPool, storagePool Pool, err error) {
-	lastValidationPool, err = findLastValidationPool(tx.Address().Digest(), tx.TransactionType(), poolR)
-	if err != nil {
-		return
-	}
-
-	validationPool, err = FindValidationPool(tx)
-	if err != nil {
-		return
-	}
-
-	storagePool, err = FindStoragePool(tx.Address())
-	if err != nil {
-		return
-	}
-
-	return
 }
 
 //preValidateTransaction checks the incoming transaction as master node by ensure the transaction integrity and perform the proof of work. A valiation will result from this action
@@ -179,9 +149,9 @@ func proofOfWork(tx chain.Transaction, sharedKeyReader shared.KeyReader) (pow cr
 	return nil, nil
 }
 
-func findLastValidationPool(txAddr crypto.VersionnedHash, txType chain.TransactionType, req PoolRequester) (Pool, error) {
+func findLastValidationPool(txAddr crypto.VersionnedHash, txType chain.TransactionType, req PoolRequester, nodeReader NodeReader) (Pool, error) {
 
-	sPool, err := FindStoragePool(txAddr)
+	sPool, err := FindStoragePool(txAddr, nodeReader)
 	if err != nil {
 		return nil, err
 	}
@@ -227,10 +197,10 @@ func ConfirmTransactionValidation(tx chain.Transaction, masterV chain.MasterVali
 	var status chain.ValidationStatus
 
 	if _, err := tx.IsValid(); err != nil {
-		log.Printf("Transaction validation confirmation failed: %s\n", err.Error())
+		fmt.Printf("Transaction validation confirmation failed: %s\n", err.Error())
 		status = chain.ValidationKO
 	} else if _, err := masterV.IsValid(); err != nil {
-		log.Printf("Transaction master validation confirmation failed: %s\n", err.Error())
+		fmt.Printf("Transaction master validation confirmation failed: %s\n", err.Error())
 		status = chain.ValidationKO
 	} else {
 		status = chain.ValidationOK

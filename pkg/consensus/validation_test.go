@@ -2,7 +2,6 @@ package consensus
 
 import (
 	"crypto/rand"
-	"log"
 	"testing"
 
 	"encoding/hex"
@@ -150,8 +149,6 @@ func TestValidateTransaction(t *testing.T) {
 			"public_key":            hex.EncodeToString(pubB),
 		},
 	})
-
-	log.Print(string(txRaw))
 
 	sig, _ := pv.Sign(txRaw)
 	txSigned, _ := json.Marshal(map[string]interface{}{
@@ -413,6 +410,15 @@ func TestLeadMining(t *testing.T) {
 	emKP, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKP)
 
+	nodeReader := &mockNodeReader{
+		nodes: []Node{
+			Node{
+				publicKey:   pub,
+				isReachable: true,
+			},
+		},
+	}
+
 	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
@@ -475,44 +481,11 @@ func TestLeadMining(t *testing.T) {
 	assert.Nil(t, err)
 	poolR := &mockPoolRequester{}
 	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
-	assert.Nil(t, LeadMining(tx, 1, wHeaders, poolR, pub, pv, sharedKeyReader))
+	assert.Nil(t, LeadMining(tx, 1, wHeaders, poolR, pub, pv, sharedKeyReader, nodeReader))
 
 	time.Sleep(1 * time.Second)
 
 	assert.Len(t, poolR.stores, 1)
-}
-
-/*
-Scenario: Find pool for transaction mining
-	Given a transaction
-	When I want to find the pools
-	Then I get the last validation pool, the validation pool and the storage pool
-*/
-func TestFindPools(t *testing.T) {
-	poolR := &mockPoolRequester{}
-
-	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
-
-	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
-
-	addr := crypto.Hash([]byte("addr"))
-	data := map[string][]byte{
-		"encrypted_address_by_node": []byte("addr"),
-		"encrypted_address_by_id":   []byte("addr"),
-		"encrypted_aes_key":         []byte("aesKey"),
-	}
-	hash := crypto.Hash([]byte("hash"))
-
-	sig, _ := pv.Sign([]byte("data"))
-
-	tx, _ := chain.NewTransaction(addr, chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, hash)
-
-	lastVPool, validPool, storagePool, err := findPools(tx, poolR)
-
-	assert.Nil(t, err)
-	assert.Empty(t, lastVPool)
-	assert.Equal(t, "127.0.0.1", validPool[0].IP().String())
-	assert.Equal(t, "127.0.0.1", storagePool[0].IP().String())
 }
 
 type mockPoolRequester struct {

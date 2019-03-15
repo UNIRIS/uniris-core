@@ -6,6 +6,12 @@ import (
 	"github.com/uniris/uniris-core/pkg/crypto"
 )
 
+//NodeReadWriter wraps the node reading and persisting
+type NodeReadWriter interface {
+	NodeReader
+	NodeWriter
+}
+
 //NodeWriter persists network node
 type NodeWriter interface {
 

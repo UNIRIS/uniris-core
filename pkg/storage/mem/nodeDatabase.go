@@ -10,8 +10,7 @@ import (
 type NodeDatabase struct {
 	nodes []consensus.Node
 
-	consensus.NodeReader
-	consensus.NodeWriter
+	consensus.NodeReadWriter
 }
 
 //WriteDiscoveredNode stores a new discovered node

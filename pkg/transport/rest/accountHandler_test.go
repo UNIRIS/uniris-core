@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -36,7 +35,7 @@ Scenario: Get account request with an ID hash not a valid hash
 */
 func TestGetAccountWhenInvalidHash(t *testing.T) {
 	r := gin.New()
-	r.GET("/api/account/:idHash", GetAccountHandler(&mockSharedKeyReader{}))
+	r.GET("/api/account/:idHash", GetAccountHandler(&mockSharedKeyReader{}, &mockNodeDatabase{}))
 
 	path := fmt.Sprintf("http://localhost/api/account/abc")
 	req, _ := http.NewRequest("GET", path, nil)
@@ -66,10 +65,9 @@ func TestGetAccountWhenInvalidSignature(t *testing.T) {
 	r := gin.New()
 	r.GET("/api/account/:idHash", GetAccountHandler(&mockSharedKeyReader{
 		crossEmitterKeys: []shared.EmitterCrossKeyPair{emK},
-	}))
+	}, &mockNodeDatabase{}))
 
 	path1 := fmt.Sprintf("http://localhost/api/account/%s", hex.EncodeToString(crypto.Hash(([]byte("abc")))))
-	log.Print(path1)
 	req1, _ := http.NewRequest("GET", path1, nil)
 	w1 := httptest.NewRecorder()
 	r.ServeHTTP(w1, req1)
@@ -127,14 +125,20 @@ func TestGetAccountWhenIDNotExist(t *testing.T) {
 		repo: chainDB,
 	}
 
+	nodeReader := &mockNodeDatabase{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		},
+	}
+
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, pr, pub, pv))
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv))
 	go grpcServer.Serve(lis)
 
 	r := gin.New()
-	r.GET("/api/account/:idHash", GetAccountHandler(sharedKeyReader))
+	r.GET("/api/account/:idHash", GetAccountHandler(sharedKeyReader, nodeReader))
 
 	idHash := crypto.Hash([]byte("abc"))
 	encIDHash, _ := pub.Encrypt(idHash)
@@ -173,15 +177,21 @@ func TestGetAccountWhenKeychainNotExist(t *testing.T) {
 		repo: chainDB,
 	}
 
+	nodeReader := &mockNodeDatabase{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		},
+	}
+
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, pr, pub, pv))
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv))
 	go grpcServer.Serve(lis)
 
 	//Start API
 	r := gin.New()
-	r.GET("/api/account/:idHash", GetAccountHandler(sharedKeyReader))
+	r.GET("/api/account/:idHash", GetAccountHandler(sharedKeyReader, nodeReader))
 
 	//Create transactions
 
@@ -265,10 +275,16 @@ func TestGetAccount(t *testing.T) {
 		repo: chainDB,
 	}
 
+	nodeReader := &mockNodeDatabase{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		},
+	}
+
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, pr, pub, pv))
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv))
 	go grpcServer.Serve(lis)
 
 	//Create transactions
@@ -350,7 +366,7 @@ func TestGetAccount(t *testing.T) {
 	sig, _ := pv.Sign(encIDHash)
 
 	r := gin.New()
-	r.GET("/api/account/:idHash", GetAccountHandler(sharedKeyReader))
+	r.GET("/api/account/:idHash", GetAccountHandler(sharedKeyReader, nodeReader))
 	path := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", hex.EncodeToString(encIDHash), hex.EncodeToString(sig))
 
 	req, _ := http.NewRequest("GET", path, nil)
@@ -535,8 +551,6 @@ func TestCreateAccount(t *testing.T) {
 		repo: chainDB,
 	}
 
-	txSrv := rpc.NewTransactionService(chainDB, sharedKeyReader, pr, pub, pv)
-
 	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	_, pub3, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
@@ -547,6 +561,21 @@ func TestCreateAccount(t *testing.T) {
 	_, pub8, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	sharedKeyReader.authKeys = []crypto.PublicKey{pub1, pub2, pub3, pub4, pub5, pub6, pub7, pub8}
+
+	nodeReader := &mockNodeDatabase{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub1, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub2, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub3, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub4, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub5, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub6, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub7, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub8, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		},
+	}
+
+	txSrv := rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv)
 
 	//Start transaction server
 	lis, _ := net.Listen("tcp", ":5000")
@@ -683,9 +712,9 @@ func TestCreateAccount(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	assert.Len(t, chainDB.keychains, 1)
+	assert.Len(t, chainDB.keychains, 5) //because we send to 5 master and because we do not provide sharding yet
 	assert.EqualValues(t, crypto.Hash([]byte("abc")), chainDB.keychains[0].Address())
-	assert.Len(t, chainDB.ids, 1)
+	assert.Len(t, chainDB.ids, 5) //because we send to 5 master and because we do not provide sharding yet
 	assert.EqualValues(t, crypto.Hash([]byte("abc")), chainDB.ids[0].Address())
 
 }
