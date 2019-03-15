@@ -152,9 +152,9 @@ func TestFindMasterValidationNode(t *testing.T) {
 
 /*
 Scenario: Find validation pool
-	Given a transaction address
-	When I want to find the validation pool
-	Then I get a pool including a least one member
+    Given a transaction required 5 validations and 12 nodes with 3 unreachables located into 5 patches
+    When I want to find the validation pool
+    Then I get at least 7 nodes in the pool (5 + 5/2), and at least 6 headers (5 min validations + 1 master)
 */
 func TestFindValidationPool(t *testing.T) {
 
@@ -200,8 +200,8 @@ func TestFindValidationPool(t *testing.T) {
 
 	pool, err := FindValidationPool(crypto.Hash([]byte("address")), 5, masterPub, nodeReader, sharedKeyReader)
 	assert.Nil(t, err)
-	assert.True(t, len(pool.nodes) >= 7)   //5 + (5/2)
-	assert.True(t, len(pool.headers) >= 6) //min: 5 validation node + 1 master node
+	assert.True(t, len(pool.nodes) >= 7)
+	assert.True(t, len(pool.headers) >= 6)
 
 	minPatches, _ := validationRequiredPatchNumber(5, nodeReader)
 	distinctPatches := make([]int, 0)

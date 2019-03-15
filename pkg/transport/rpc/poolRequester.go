@@ -62,7 +62,7 @@ func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr crypt
 
 	txRes := make([]chain.Transaction, 0)
 
-	for _, p := range pool {
+	for _, p := range pool.Nodes() {
 		go func(p consensus.Node) {
 
 			serverAddr := fmt.Sprintf("%s:%d", p.IP(), p.Port())
@@ -123,7 +123,7 @@ func (pr poolRequester) RequestLastTransaction(pool consensus.Pool, txAddr crypt
 		} else {
 			atomic.AddInt32(&nbReqFailures, 1)
 		}
-		if atomic.LoadInt32(&nbReqFailures) == int32(len(pool)) {
+		if atomic.LoadInt32(&nbReqFailures) == int32(len(pool.Nodes())) {
 			failed = true
 			break
 		}
@@ -178,7 +178,7 @@ func (pr poolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash c
 	}
 	req.SignatureRequest = sig
 
-	for _, p := range pool {
+	for _, p := range pool.Nodes() {
 		go func(p consensus.Node) {
 
 			serverAddr := fmt.Sprintf("%s:%d", p.IP(), p.Port())
@@ -225,7 +225,7 @@ func (pr poolRequester) RequestTransactionTimeLock(pool consensus.Pool, txHash c
 		} else {
 			atomic.AddInt32(&nbLockFailures, 1)
 		}
-		if atomic.LoadInt32(&nbLockFailures) == int32(len(pool)) {
+		if atomic.LoadInt32(&nbLockFailures) == int32(len(pool.Nodes())) {
 			failed = true
 			break
 		}
@@ -279,7 +279,7 @@ func (pr poolRequester) RequestTransactionValidations(pool consensus.Pool, tx ch
 	var nbValidationFailures int32
 	var failed bool
 
-	for _, p := range pool {
+	for _, p := range pool.Nodes() {
 
 		go func(p consensus.Node) {
 
@@ -340,7 +340,7 @@ func (pr poolRequester) RequestTransactionValidations(pool consensus.Pool, tx ch
 		} else {
 			atomic.AddInt32(&nbValidationFailures, 1)
 		}
-		if atomic.LoadInt32(&nbValidationFailures) == int32(len(pool)) {
+		if atomic.LoadInt32(&nbValidationFailures) == int32(len(pool.Nodes())) {
 			failed = true
 			break
 		}
@@ -407,7 +407,7 @@ func (pr poolRequester) RequestTransactionStorage(pool consensus.Pool, minStorag
 	var nbStorageFailures int32
 	var failed bool
 
-	for _, p := range pool {
+	for _, p := range pool.Nodes() {
 		go func(p consensus.Node) {
 
 			serverAddr := fmt.Sprintf("%s:%d", p.IP().String(), p.Port())
@@ -454,7 +454,7 @@ func (pr poolRequester) RequestTransactionStorage(pool consensus.Pool, minStorag
 		} else {
 			atomic.AddInt32(&nbStorageFailures, 1)
 		}
-		if atomic.LoadInt32(&nbStorageFailures) == int32(len(pool)) {
+		if atomic.LoadInt32(&nbStorageFailures) == int32(len(pool.Nodes())) {
 			failed = true
 			break
 		}

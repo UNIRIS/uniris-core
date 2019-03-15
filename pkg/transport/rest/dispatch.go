@@ -44,7 +44,7 @@ func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubK
 
 	//Building the welcome node headers
 	wHeaders := make([]*api.NodeHeader, 0)
-	for _, n := range masterNodes {
+	for _, n := range masterNodes.Nodes() {
 
 		pubKey, err := n.PublicKey().Marshal()
 		if err != nil {
@@ -99,7 +99,7 @@ func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubK
 	ackChan := make(chan bool)
 
 	//Send concurrently mining request to several masters
-	for _, n := range masterNodes {
+	for _, n := range masterNodes.Nodes() {
 		go func(n consensus.Node) {
 
 			masterAddr := fmt.Sprintf("%s:%d", n.IP().String(), n.Port())
@@ -147,7 +147,7 @@ func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubK
 		} else {
 			atomic.AddInt32(&nbMasterFailures, 1)
 		}
-		if atomic.LoadInt32(&nbMasterFailures) == int32(len(masterNodes)) {
+		if atomic.LoadInt32(&nbMasterFailures) == int32(len(masterNodes.Nodes())) {
 			failed = true
 			break
 		}
@@ -206,7 +206,7 @@ func findLastTransaction(txAddr crypto.VersionnedHash, txType api.TransactionTyp
 			Status:    http.StatusText(http.StatusInternalServerError),
 		}
 	}
-	storageMasterNode := fmt.Sprintf("%s:%d", storagePool[0].IP().String(), storagePool[0].Port())
+	storageMasterNode := fmt.Sprintf("%s:%d", storagePool.Nodes()[0].IP().String(), storagePool.Nodes()[0].Port())
 	conn, err := grpc.Dial(storageMasterNode, grpc.WithInsecure())
 	defer conn.Close()
 	if err != nil {

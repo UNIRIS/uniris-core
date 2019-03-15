@@ -269,10 +269,11 @@ func FindValidationPool(txHash crypto.VersionnedHash, minValidations int, master
 	nbReachables := 0
 	patchIds := make([]int, 0)
 
-	var i int
-
 	//challenge the validations nodes by providing more nodes validations
-	maxNbValidations := minValidations + (minValidations / 2)
+	maxNbValidations := minValidations
+	if len(authKeys) >= minValidations+(minValidations/2) {
+		maxNbValidations = minValidations + (minValidations / 2)
+	}
 
 	//adding the master node to the validation headers
 	masterNode, err := nodeReader.FindByPublicKey(masterNodeKey)
@@ -281,7 +282,7 @@ func FindValidationPool(txHash crypto.VersionnedHash, minValidations int, master
 	}
 	vPool.headers = append(vPool.headers, chain.NewNodeHeader(masterNodeKey, false, true, masterNode.patch.patchid, masterNode.status == NodeOK))
 
-	for nbReachables < maxNbValidations && len(patchIds) < requiredPatchNb && i < len(sKeys) {
+	for i := 0; (nbReachables < maxNbValidations || len(patchIds) < requiredPatchNb) && i < len(sKeys); i++ {
 		n, err := nodeReader.FindByPublicKey(sKeys[i])
 		if err != nil {
 			return Pool{}, err
@@ -317,14 +318,13 @@ func FindValidationPool(txHash crypto.VersionnedHash, minValidations int, master
 			nbReachables++
 		}
 
-		i++
 	}
 
-	if nbReachables != maxNbValidations {
+	if nbReachables < maxNbValidations {
 		return Pool{}, errors.New("cannot proceed transaction with an invalid number of reachables validation nodes")
 	}
 
-	if len(patchIds) != requiredPatchNb {
+	if len(patchIds) < requiredPatchNb {
 		return Pool{}, errors.New("cannot proceed transaction with missing patches validation nodes")
 	}
 
