@@ -63,8 +63,8 @@ func FindMasterNodes(txHash crypto.VersionnedHash, nodeReader NodeReader, shared
 
 	nbReachableMasters := 0
 
-	for i := 0; nbReachableMasters < nbMasters && i < len(sort); i++ {
-		n, err := nodeReader.FindByPublicKey(sort[i])
+	for i := 0; nbReachableMasters < nbMasters && i < len(sKeys); i++ {
+		n, err := nodeReader.FindByPublicKey(sKeys[i])
 		if err != nil {
 			return Pool{}, err
 		}
@@ -75,13 +75,13 @@ func FindMasterNodes(txHash crypto.VersionnedHash, nodeReader NodeReader, shared
 			continue
 		}
 
-		masters = append(masters, n)
+		mPool.nodes = append(mPool.nodes, n)
 		if n.isReachable {
 			nbReachableMasters++
 		}
 	}
 	if nbReachableMasters != nbMasters {
-		return nil, fmt.Errorf("cannot proceed transaction with an invalid number of reachables master nodes (%d)", nbReachableMasters)
+		return Pool{}, fmt.Errorf("cannot proceed transaction with an invalid number of reachables master nodes (%d)", nbReachableMasters)
 	}
 	return
 }
@@ -108,7 +108,7 @@ func buildStartingPoint(txHash crypto.VersionnedHash, nodeMinerPrivateKey crypto
 }
 
 //entropySort sKeyss a list of nodes public keys using a "starting point" (HMAC of the transaction hash with the first node shared private key) and the hashes of the node public keys
-func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, nodeFirstKey crypto.PrivateKey) (sKeysedKeys []crypto.PublicKey, err error) {
+func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, nodeFirstKey crypto.PrivateKey) (sortedKeys []crypto.PublicKey, err error) {
 	startingPoint, err := buildStartingPoint(txHash, nodeFirstKey)
 	if err != nil {
 		return nil, err
@@ -155,7 +155,7 @@ func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, node
 					}
 				}
 				if !contains {
-					sKeysedKeys = append(sKeysedKeys, mHashKeys[hashKeys[i]])
+					sortedKeys = append(sortedKeys, mHashKeys[hashKeys[i]])
 				}
 			}
 		}
@@ -172,14 +172,14 @@ func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, node
 					}
 				}
 				if !contains {
-					sKeysedKeys = append(sKeysedKeys, mHashKeys[hashKeys[i]])
+					sortedKeys = append(sortedKeys, mHashKeys[hashKeys[i]])
 				}
 			}
 		}
 	}
 
 	//We have tested all the characters of the staring point and not yet finished the sKeysing operation, we will loop on all the hex characters to finish sKeysing
-	if len(sKeysedKeys) < len(hashKeys)-1 {
+	if len(sortedKeys) < len(hashKeys)-1 {
 		hexChar := []rune{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
 		for p := 0; len(sortedKeys) < len(hashKeys)-1 && p < len(hexChar); p++ {
 
@@ -195,7 +195,7 @@ func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, node
 						}
 					}
 					if !contains {
-						sKeysedKeys = append(sKeysedKeys, mHashKeys[hashKeys[i]])
+						sortedKeys = append(sortedKeys, mHashKeys[hashKeys[i]])
 					}
 				}
 			}
@@ -212,7 +212,7 @@ func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, node
 						}
 					}
 					if !contains {
-						sKeysedKeys = append(sKeysedKeys, mHashKeys[hashKeys[i]])
+						sortedKeys = append(sortedKeys, mHashKeys[hashKeys[i]])
 					}
 				}
 			}
@@ -228,7 +228,20 @@ func FindStoragePool(address crypto.VersionnedHash, r NodeReader) (Pool, error) 
 	//We cannot be sure to retrieve the data
 	//So in waiting the sharding implementation, we need to select one of the master peers elected to retrieve data
 	//TODO: implement storage pool election
-	return r.Reachables()
+	nodes, err := r.Reachables()
+	if err != nil {
+		return Pool{}, err
+	}
+
+	h := make([]chain.NodeHeader, 0)
+	for _, n := range nodes {
+		h = append(h, chain.NewNodeHeader(n.publicKey, !n.isReachable, false, n.patch.patchid, n.status == NodeOK))
+	}
+
+	return Pool{
+		nodes:   nodes,
+		headers: h,
+	}, err
 }
 
 //FindValidationPool lookups a validation pool from a transaction hash and a required number using the entropy sKeys

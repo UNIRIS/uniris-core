@@ -386,7 +386,14 @@ func TestPreValidateTransaction(t *testing.T) {
 	assert.Nil(t, err)
 
 	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
-	mv, err := preValidateTransaction(tx, wHeaders, Pool{nodes: []Node{Node{publicKey: pub}}}, Pool{nodes: []Node{Node{publicKey: pub}}}, Pool{}, 1, pub, pv, sharedKeyReader)
+	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+
+	sPool := Pool{nodes: []Node{Node{publicKey: pub}}, headers: sHeaders}
+	vPool := Pool{nodes: []Node{Node{publicKey: pub}}, headers: vHeaders}
+	lastVPool := Pool{}
+
+	mv, err := preValidateTransaction(tx, wHeaders, sPool, vPool, lastVPool, pub, pv, sharedKeyReader)
 	assert.Nil(t, err)
 	assert.Equal(t, pub, mv.ProofOfWork())
 	assert.EqualValues(t, pub, mv.Validation().PublicKey())
@@ -408,7 +415,11 @@ func TestLeadMining(t *testing.T) {
 	pubB, _ := pub.Marshal()
 	sharedKeyReader := &mockSharedKeyReader{}
 	emKP, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
+	nodeKP, _ := shared.NewNodeCrossKeyPair(pub, pv)
+
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKP)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKP)
+	sharedKeyReader.authKeys = append(sharedKeyReader.authKeys, pub)
 
 	nodeReader := &mockNodeReader{
 		nodes: []Node{

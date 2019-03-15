@@ -21,7 +21,7 @@ import (
 // - Executes the proof of work
 // - Requests validation confirmations
 // - Requests storage
-func LeadMining(tx chain.Transaction, nbValidations int, wHeaders []chain.NodeHeader, poolR PoolRequester, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, nodeReader NodeReader, sharedKeyReader shared.KeyReader) error {
+func LeadMining(tx chain.Transaction, nbValidations int, wHeaders []chain.NodeHeader, poolR PoolRequester, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader, nodeReader NodeReader) error {
 	log.Printf("transaction %x is in progress\n", tx.TransactionHash())
 
 	if !tx.Address().IsValid() {
@@ -51,12 +51,12 @@ func LeadMining(tx chain.Transaction, nbValidations int, wHeaders []chain.NodeHe
 			return
 		}
 
-		masterValid, err := preValidateTransaction(tx, wHeaders, sPool, vPool, lastVPool, minValids, nodePub, nodePv, sharedKeyReader)
+		masterValid, err := preValidateTransaction(tx, wHeaders, sPool, vPool, lastVPool, nodePub, nodePv, sharedKeyReader)
 		if err != nil {
 			fmt.Printf("transaction pre-validation failed: %s\n", err.Error())
 			return
 		}
-		confirmValids, err := requestValidations(tx, masterValid, vPool, minValids, poolR)
+		confirmValids, err := requestValidations(tx, masterValid, vPool, nbValidations, poolR)
 		if err != nil {
 			fmt.Printf("transaction validation confirmations failed: %s\n", err.Error())
 		}
@@ -83,7 +83,7 @@ func storeTransaction(tx chain.Transaction, sPool Pool, poolR PoolRequester) err
 }
 
 //preValidateTransaction checks the incoming transaction as master node by ensure the transaction integrity and perform the proof of work. A valiation will result from this action
-func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, vPool Pool, lastVPool Pool, minValids int, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader) (chain.MasterValidation, error) {
+func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, vPool Pool, lastVPool Pool, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader) (chain.MasterValidation, error) {
 	if _, err := tx.IsValid(); err != nil {
 		return chain.MasterValidation{}, err
 	}
@@ -134,14 +134,14 @@ func proofOfWork(tx chain.Transaction, sharedKeyReader shared.KeyReader) (pow cr
 	return nil, nil
 }
 
-func findLastValidationPool(txAddr crypto.VersionnedHash, txType chain.TransactionType, req PoolRequester, nodeReader NodeReader) (Pool, error) {
+func findLastValidationPool(txAddr crypto.VersionnedHash, txType chain.TransactionType, pr PoolRequester, r NodeReader) (prevP Pool, err error) {
 
-	sPool, err := FindStoragePool(txAddr, nodeReader)
+	sPool, err := FindStoragePool(txAddr, r)
 	if err != nil {
 		return
 	}
 
-	tx, err := poolR.RequestLastTransaction(sPool, txAddr, txType)
+	tx, err := pr.RequestLastTransaction(sPool, txAddr, txType)
 	if err != nil {
 		return
 	}

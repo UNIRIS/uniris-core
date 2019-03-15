@@ -242,7 +242,7 @@ func TestFindStoragePool(t *testing.T) {
 
 	pool, err := FindStoragePool([]byte("address"), nodeDB)
 	assert.Nil(t, err)
-	assert.Len(t, pool, 2)
+	assert.Len(t, pool.nodes, 2)
 }
 
 type mockSharedKeyReader struct {
