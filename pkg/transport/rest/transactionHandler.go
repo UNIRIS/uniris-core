@@ -41,7 +41,7 @@ func GetTransactionStatusHandler(sharedKeyReader shared.KeyReader, nodeReader co
 		}
 
 		//Send request to the storage master node
-		serverAddr := fmt.Sprintf("%s:%d", sPool.Nodes()[0].IP().String(), sPool.Nodes()[0].Port())
+		serverAddr := fmt.Sprintf("%s:%d", sPool[0].IP().String(), sPool[0].Port())
 		conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 		if err != nil {
 			c.JSON(http.StatusServiceUnavailable, httpError{

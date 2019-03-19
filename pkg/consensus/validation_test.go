@@ -386,14 +386,12 @@ func TestPreValidateTransaction(t *testing.T) {
 	assert.Nil(t, err)
 
 	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
-	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
-	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
 
-	sPool := Pool{nodes: []Node{Node{publicKey: pub}}, headers: sHeaders}
-	vPool := Pool{nodes: []Node{Node{publicKey: pub}}, headers: vHeaders}
+	sPool := Pool{Node{publicKey: pub}}
+	vPool := Pool{Node{publicKey: pub}}
 	lastVPool := Pool{}
 
-	mv, err := preValidateTransaction(tx, wHeaders, sPool, vPool, lastVPool, pub, pv, sharedKeyReader)
+	mv, err := preValidateTransaction(tx, wHeaders, sPool, vPool, lastVPool, pub, pv, sharedKeyReader, mockNodeReader{})
 	assert.Nil(t, err)
 	assert.Equal(t, pub, mv.ProofOfWork())
 	assert.EqualValues(t, pub, mv.Validation().PublicKey())
@@ -401,6 +399,8 @@ func TestPreValidateTransaction(t *testing.T) {
 	ok, err := mv.Validation().IsValid()
 	assert.True(t, ok)
 	assert.Nil(t, err)
+
+	assert.Len(t, mv.ValidationHeaders(), 2) //vPool member + master node
 }
 
 /*

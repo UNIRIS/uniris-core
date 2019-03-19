@@ -142,7 +142,7 @@ func TestFindMasterValidationNode(t *testing.T) {
 	assert.Nil(t, err)
 
 	var nbReachables int
-	for _, n := range masterNodes.nodes {
+	for _, n := range masterNodes {
 		if n.isReachable {
 			nbReachables++
 		}
@@ -154,7 +154,7 @@ func TestFindMasterValidationNode(t *testing.T) {
 Scenario: Find validation pool
     Given a transaction required 5 validations and 12 nodes with 3 unreachables located into 5 patches
     When I want to find the validation pool
-    Then I get at least 7 nodes in the pool (5 + 5/2), and at least 6 headers (5 min validations + 1 master)
+    Then I get at least 7 nodes in the pool (5 + 5/2)
 */
 func TestFindValidationPool(t *testing.T) {
 
@@ -200,21 +200,20 @@ func TestFindValidationPool(t *testing.T) {
 
 	pool, err := FindValidationPool(crypto.Hash([]byte("address")), 5, masterPub, nodeReader, sharedKeyReader)
 	assert.Nil(t, err)
-	assert.True(t, len(pool.nodes) >= 7)
-	assert.True(t, len(pool.headers) >= 6)
+	assert.True(t, len(pool) >= 7)
 
 	minPatches, _ := validationRequiredPatchNumber(5, nodeReader)
 	distinctPatches := make([]int, 0)
-	for _, h := range pool.headers {
+	for _, h := range pool {
 		var found bool
 		for _, p := range distinctPatches {
-			if p == h.PatchNumber() {
+			if p == h.patch.patchid {
 				found = true
 				break
 			}
 		}
 		if !found {
-			distinctPatches = append(distinctPatches, h.PatchNumber())
+			distinctPatches = append(distinctPatches, h.patch.patchid)
 		}
 	}
 
@@ -242,7 +241,7 @@ func TestFindStoragePool(t *testing.T) {
 
 	pool, err := FindStoragePool([]byte("address"), nodeDB)
 	assert.Nil(t, err)
-	assert.Len(t, pool.nodes, 2)
+	assert.Len(t, pool, 2)
 }
 
 type mockSharedKeyReader struct {

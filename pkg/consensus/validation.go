@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/uniris/uniris-core/pkg/shared"
@@ -22,7 +21,7 @@ import (
 // - Requests validation confirmations
 // - Requests storage
 func LeadMining(tx chain.Transaction, nbValidations int, wHeaders []chain.NodeHeader, poolR PoolRequester, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader, nodeReader NodeReader) error {
-	log.Printf("transaction %x is in progress\n", tx.TransactionHash())
+	fmt.Printf("transaction %x is in progress\n", tx.TransactionHash())
 
 	if !tx.Address().IsValid() {
 		return errors.New("invalid transaction address")
@@ -51,7 +50,7 @@ func LeadMining(tx chain.Transaction, nbValidations int, wHeaders []chain.NodeHe
 			return
 		}
 
-		masterValid, err := preValidateTransaction(tx, wHeaders, sPool, vPool, lastVPool, nodePub, nodePv, sharedKeyReader)
+		masterValid, err := preValidateTransaction(tx, wHeaders, sPool, vPool, lastVPool, nodePub, nodePv, sharedKeyReader, nodeReader)
 		if err != nil {
 			fmt.Printf("transaction pre-validation failed: %s\n", err.Error())
 			return
@@ -83,7 +82,7 @@ func storeTransaction(tx chain.Transaction, sPool Pool, poolR PoolRequester) err
 }
 
 //preValidateTransaction checks the incoming transaction as master node by ensure the transaction integrity and perform the proof of work. A valiation will result from this action
-func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, vPool Pool, lastVPool Pool, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader) (chain.MasterValidation, error) {
+func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, vPool Pool, lastVPool Pool, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader, nodeReader NodeReader) (chain.MasterValidation, error) {
 	if _, err := tx.IsValid(); err != nil {
 		return chain.MasterValidation{}, err
 	}
@@ -102,16 +101,42 @@ func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, s
 	}
 
 	lastsKeys := make([]crypto.PublicKey, 0)
-	for _, pm := range lastVPool.nodes {
+	for _, pm := range lastVPool {
 		lastsKeys = append(lastsKeys, pm.PublicKey())
 	}
 
-	masterValid, err := chain.NewMasterValidation(lastsKeys, pow, preValid, wHeaders, vPool.headers, sPool.headers)
+	vHeaders, sHeaders, err := buildHeaders(nodeReader, nodePub, vPool, sPool)
+	if err != nil {
+		return chain.MasterValidation{}, err
+	}
+	masterValid, err := chain.NewMasterValidation(lastsKeys, pow, preValid, wHeaders, vHeaders, sHeaders)
 	if err != nil {
 		return chain.MasterValidation{}, err
 	}
 
 	return masterValid, nil
+}
+
+func buildHeaders(r NodeReader, nodePubK crypto.PublicKey, vPool Pool, sPool Pool) (vHeaders []chain.NodeHeader, sHeaders []chain.NodeHeader, err error) {
+
+	//Add the master node in the header of the validation node list (for traceability and reward)
+	masterNode, err := r.FindByPublicKey(nodePubK)
+	if err != nil {
+		return
+	}
+	vHeaders = append(vHeaders, chain.NewNodeHeader(nodePubK, false, true, masterNode.patch.patchid, masterNode.status == NodeOK))
+
+	//Fill the validation headers with the elected validation pool
+	for _, n := range vPool {
+		vHeaders = append(vHeaders, chain.NewNodeHeader(n.PublicKey(), !n.isReachable, false, n.patch.patchid, n.status == NodeOK))
+	}
+
+	//Fill the storage headers with the elected storage pool
+	for _, n := range sPool {
+		sHeaders = append(sHeaders, chain.NewNodeHeader(n.PublicKey(), !n.isReachable, false, n.patch.patchid, n.status == NodeOK))
+	}
+
+	return
 }
 
 func proofOfWork(tx chain.Transaction, sharedKeyReader shared.KeyReader) (pow crypto.PublicKey, err error) {
@@ -154,7 +179,7 @@ func findLastValidationPool(txAddr crypto.VersionnedHash, txType chain.Transacti
 		if err != nil {
 			return Pool{}, err
 		}
-		prevP.nodes = append(prevP.nodes, node)
+		prevP = append(prevP, node)
 	}
 
 	return

@@ -14,15 +14,7 @@ import (
 )
 
 //Pool represent a pool either for sharding or validation
-type Pool struct {
-	nodes   []Node
-	headers []chain.NodeHeader
-}
-
-//Nodes returns the nodes of the pool
-func (p Pool) Nodes() []Node {
-	return p.nodes
-}
+type Pool []Node
 
 //PoolRequester handles the request to perform on a pool during the mining
 type PoolRequester interface {
@@ -75,7 +67,7 @@ func FindMasterNodes(txHash crypto.VersionnedHash, nodeReader NodeReader, shared
 			continue
 		}
 
-		mPool.nodes = append(mPool.nodes, n)
+		mPool = append(mPool, n)
 		if n.isReachable {
 			nbReachableMasters++
 		}
@@ -97,8 +89,8 @@ func requiredNumberOfMaster(nbNodes int, nbReachables int) int {
 }
 
 //buildStartingPoint creates a starting point by using an HMAC of the transaction hash and the first node shared private key
-func buildStartingPoint(txHash crypto.VersionnedHash, nodeMinerPrivateKey crypto.PrivateKey) (string, error) {
-	pvBytes, err := nodeMinerPrivateKey.Marshal()
+func buildStartingPoint(txHash crypto.VersionnedHash, nodeCrossFirstPvKey crypto.PrivateKey) (string, error) {
+	pvBytes, err := nodeCrossFirstPvKey.Marshal()
 	if err != nil {
 		return "", err
 	}
@@ -108,8 +100,8 @@ func buildStartingPoint(txHash crypto.VersionnedHash, nodeMinerPrivateKey crypto
 }
 
 //entropySort sKeyss a list of nodes public keys using a "starting point" (HMAC of the transaction hash with the first node shared private key) and the hashes of the node public keys
-func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, nodeFirstKey crypto.PrivateKey) (sortedKeys []crypto.PublicKey, err error) {
-	startingPoint, err := buildStartingPoint(txHash, nodeFirstKey)
+func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, nodeCrossFirstPvKey crypto.PrivateKey) (sortedKeys []crypto.PublicKey, err error) {
+	startingPoint, err := buildStartingPoint(txHash, nodeCrossFirstPvKey)
 	if err != nil {
 		return nil, err
 	}
@@ -230,18 +222,10 @@ func FindStoragePool(address crypto.VersionnedHash, r NodeReader) (Pool, error) 
 	//TODO: implement storage pool election
 	nodes, err := r.Reachables()
 	if err != nil {
-		return Pool{}, err
+		return nil, err
 	}
 
-	h := make([]chain.NodeHeader, 0)
-	for _, n := range nodes {
-		h = append(h, chain.NewNodeHeader(n.publicKey, !n.isReachable, false, n.patch.patchid, n.status == NodeOK))
-	}
-
-	return Pool{
-		nodes:   nodes,
-		headers: h,
-	}, err
+	return nodes, nil
 }
 
 //FindValidationPool lookups a validation pool from a transaction hash and a required number using the entropy sKeys
@@ -266,8 +250,8 @@ func FindValidationPool(txHash crypto.VersionnedHash, minValidations int, master
 		return
 	}
 
-	nbReachables := 0
-	patchIds := make([]int, 0)
+	var nbReachables int
+	var patchIds []int
 
 	//challenge the validations nodes by providing more nodes validations
 	maxNbValidations := minValidations
@@ -275,29 +259,14 @@ func FindValidationPool(txHash crypto.VersionnedHash, minValidations int, master
 		maxNbValidations = minValidations + (minValidations / 2)
 	}
 
-	//adding the master node to the validation headers
-	masterNode, err := nodeReader.FindByPublicKey(masterNodeKey)
-	if err != nil {
-		return
-	}
-	vPool.headers = append(vPool.headers, chain.NewNodeHeader(masterNodeKey, false, true, masterNode.patch.patchid, masterNode.status == NodeOK))
-
 	for i := 0; (nbReachables < maxNbValidations || len(patchIds) < requiredPatchNb) && i < len(sKeys); i++ {
 		n, err := nodeReader.FindByPublicKey(sKeys[i])
 		if err != nil {
 			return Pool{}, err
 		}
 
-		//Add a validation headers
-		vPool.headers = append(vPool.headers,
-			chain.NewNodeHeader(sKeys[i],
-				!n.isReachable,
-				false,
-				n.patch.patchid,
-				n.status == NodeOK))
-
 		//Add the node to the pool
-		vPool.nodes = append(vPool.nodes, n)
+		vPool = append(vPool, n)
 
 		//Need a view of the reachable and unreachables for a better validation
 		if n.isReachable {
@@ -321,7 +290,7 @@ func FindValidationPool(txHash crypto.VersionnedHash, minValidations int, master
 	}
 
 	if nbReachables < maxNbValidations {
-		return Pool{}, errors.New("cannot proceed transaction with an invalid number of reachables validation nodes")
+		return Pool{}, errors.New("cannot proceed transaction with an invalid number of reachabled validation nodes")
 	}
 
 	if len(patchIds) < requiredPatchNb {
