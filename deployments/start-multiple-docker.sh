@@ -43,28 +43,51 @@ privateKeys[3]="00b84ac63695ef472b9a23dab78e388cb6ba2a7a0578b51c3ba4e4d7e5b23ee2
 publicKeys[3]="00947b6ca58d87a126fc410858046c3edaea3dd1d570275502e7b45331c47fb655"
 privateKeys[4]="00292fab83ef20397b07d2f9f0adaab2ff093d269111c70d3f80d1b7cc9ee6c1b7ca8a194ecb4ecc61287124a7f5d4db80a1a3d203ed43ace2e4fabf5e78a6bc83"
 publicKeys[4]="00ca8a194ecb4ecc61287124a7f5d4db80a1a3d203ed43ace2e4fabf5e78a6bc83"
-privateKeys[5]="d7dfabfbb24976d028f905a1f816c732a7469717416510391560e7e23bf95c168046e2828b98a664d6d5b34f3954b4c803ef46490bbb4f8a1bea748720bc664c"
-publicKeys[5]="8046e2828b98a664d6d5b34f3954b4c803ef46490bbb4f8a1bea748720bc664c"
-privateKeys[6]="06e382d52b331dff979250a4cf663185b39387b4a51bf5d90baa14445eb66ed18a00bf2f03ffa91e6f828efa03088543b499a8b9cb03ca27df39f4df15c6f032"
-publicKeys[6]="8a00bf2f03ffa91e6f828efa03088543b499a8b9cb03ca27df39f4df15c6f032"
-privateKeys[7]="77336325bd1c3677bcd461e7aa717c47ee88569bb3128e144a052452b1bfc4f943027a071af06a39e683a0984909479fc642326c8d22b5f110fe40e5b0948c97"
-publicKeys[7]="43027a071af06a39e683a0984909479fc642326c8d22b5f110fe40e5b0948c97"
+privateKeys[5]="003dfcbdfb38b042a9c319677a93999c5e3125a64e1441c7409d4c7db5434021295475d994fecb8492dfe05df3025c7fdfacdec323970b1c96c2d75f7ac5ef0fc3"
+publicKeys[5]="005475d994fecb8492dfe05df3025c7fdfacdec323970b1c96c2d75f7ac5ef0fc3"
+privateKeys[6]="00a5805009c794e7a90203417405c2ace5189af3a9fd68bc4ccfb5f1ccf4a0e00cb43683f3f473af5719f294f93519c579fbcf1f603080df8b0ccfe042aa5896b4"
+publicKeys[6]="00b43683f3f473af5719f294f93519c579fbcf1f603080df8b0ccfe042aa5896b4"
+privateKeys[7]="0076b7c35321d6f4e126bd6efaff8e33114f56a309756ef492d206b38e5a70df25254bd5c54d29afc54156042f50f0b3424c4f1a60882a3e2ea71d4e803ae301c5"
+publicKeys[7]="00254bd5c54d29afc54156042f50f0b3424c4f1a60882a3e2ea71d4e803ae301c5"
 
 printf 'version: "2.2"\n'
 printf 'networks:\n'
 printf '  uniris:\n'
 printf '    external: true\n'
 printf 'services:\n'
+
+
 for i in `seq  $nb`
 do
-
-r=$(( $RANDOM % 5 ))
 
 printf '  peer%d:\n' "$i"
 printf '    image: uniris\n'
 printf '    environment:\n'
-printf '      - UNIRIS_PUBLIC_KEY=%s\n' ${publicKeys[$r]}
-printf '      - UNIRIS_PRIVATE_KEY=%s\n' ${privateKeys[$r]}
+
+ok=0
+while [ $ok == 0 ]
+do
+    r=$(( $RANDOM % 7 ))
+    rKey=${publicKeys[$r]}
+
+    found=-1
+    for j in "${prevKeys[@]}"
+    do
+        if [ $j == $rKey ]
+        then
+            found=1
+        fi
+    done
+
+    if [ $found == -1 ]
+    then
+        printf '      - UNIRIS_PUBLIC_KEY=%s\n' ${publicKeys[$r]}
+        printf '      - UNIRIS_PRIVATE_KEY=%s\n' ${privateKeys[$r]}
+        prevKeys[$i]=${publicKeys[$r]}
+        ok=1
+    fi
+done
+
 printf '      - UNIRIS_NETWORK_INTERFACE=eth0\n'
 seed=""
 if [ $nb -gt 2 ]; then
@@ -73,7 +96,7 @@ if [ $nb -gt 2 ]; then
         ok=0
         while [ $ok == 0 ]
         do
-            r=$(( $RANDOM % 5 ))
+            r=$(( $RANDOM % 7 ))
             if [ $r != $i ];
             then
                 seed+="172.16.0.1${r}:5000:${publicKeys[$r]};"
@@ -86,11 +109,12 @@ else
     prevR=-1
     while [ $ok == 0 ]
     do
-        r=$(( $RANDOM % 5 ))
+        r=$(( $RANDOM % 7 ))
         if [ $r != $i ] || [ $prevR != $r ];
         then
             seed="172.16.0.1${r}:5000:${publicKeys[$r]};"
             ok=1
+            prevR=r
         fi
     done
 fi
