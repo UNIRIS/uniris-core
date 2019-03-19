@@ -90,8 +90,8 @@ func requiredNumberOfMaster(nbNodes int, nbReachables int) int {
 }
 
 //buildStartingPoint creates a starting point by using an HMAC of the transaction hash and the first node shared private key
-func buildStartingPoint(txHash crypto.VersionnedHash, nodeMinerPrivateKey crypto.PrivateKey) (string, error) {
-	pvBytes, err := nodeMinerPrivateKey.Marshal()
+func buildStartingPoint(txHash crypto.VersionnedHash, nodeCrossFirstPvKey crypto.PrivateKey) (string, error) {
+	pvBytes, err := nodeCrossFirstPvKey.Marshal()
 	if err != nil {
 		return "", err
 	}
@@ -101,8 +101,8 @@ func buildStartingPoint(txHash crypto.VersionnedHash, nodeMinerPrivateKey crypto
 }
 
 //entropySort sorts a list of nodes public keys using a "starting point" (HMAC of the transaction hash with the first node shared private key) and the hashes of the node public keys
-func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, nodeFirstKey crypto.PrivateKey) (sortedKeys []crypto.PublicKey, err error) {
-	startingPoint, err := buildStartingPoint(txHash, nodeFirstKey)
+func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, nodeCrossFirstPvKey crypto.PrivateKey) (sortedKeys []crypto.PublicKey, err error) {
+	startingPoint, err := buildStartingPoint(txHash, nodeCrossFirstPvKey)
 	if err != nil {
 		return nil, err
 	}
