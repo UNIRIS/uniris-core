@@ -21,7 +21,7 @@ func TestNewID(t *testing.T) {
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
 
 	addr := crypto.Hash([]byte("address"))
 
@@ -55,7 +55,7 @@ func TestNewIDWithInvalidType(t *testing.T) {
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
 
 	addr := crypto.Hash([]byte("address"))
 
@@ -85,7 +85,7 @@ func TestNewIDWithMissingDataFields(t *testing.T) {
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
 
 	addr := crypto.Hash([]byte("address"))
 

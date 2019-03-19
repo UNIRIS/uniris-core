@@ -2,7 +2,6 @@ package consensus
 
 import (
 	"crypto/rand"
-	"log"
 	"testing"
 
 	"encoding/hex"
@@ -32,7 +31,7 @@ func TestRequestValidations(t *testing.T) {
 	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_aes_key":         []byte("aesKey"),
@@ -127,7 +126,7 @@ func TestValidateTransaction(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	pubB, _ := pub.Marshal()
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_aes_key":         []byte("aesKey"),
@@ -150,8 +149,6 @@ func TestValidateTransaction(t *testing.T) {
 			"public_key":            hex.EncodeToString(pubB),
 		},
 	})
-
-	log.Print(string(txRaw))
 
 	sig, _ := pv.Sign(txRaw)
 	txSigned, _ := json.Marshal(map[string]interface{}{
@@ -211,7 +208,7 @@ Scenario: Validate an incoming transaction with invalid integrity
 func TestValidateTransactionWithBadIntegrity(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_aes_key":         []byte("aesKey"),
@@ -243,11 +240,11 @@ func TestPerformPOW(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	pubB, _ := pub.Marshal()
 
-	emReader := &mockEmitterReader{}
-	emKP, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
-	emReader.emKeys = append(emReader.emKeys, emKP)
+	keyReader := &mockSharedKeyReader{}
+	emKP, _ := shared.NewEmitterCrossKeyPair([]byte("pvKey"), pub)
+	keyReader.crossEmitterKeys = append(keyReader.crossEmitterKeys, emKP)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_aes_key":         []byte("aesKey"),
@@ -308,7 +305,7 @@ func TestPerformPOW(t *testing.T) {
 	tx, err := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash(txEmSigned))
 	assert.Nil(t, err)
 
-	pow, err := proofOfWork(tx, emReader)
+	pow, err := proofOfWork(tx, keyReader)
 	assert.Nil(t, err)
 	assert.Equal(t, pub, pow)
 }
@@ -323,11 +320,11 @@ func TestPreValidateTransaction(t *testing.T) {
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	pubB, _ := pub.Marshal()
-	emReader := &mockEmitterReader{}
-	emKP, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
-	emReader.emKeys = append(emReader.emKeys, emKP)
+	sharedKeyReader := &mockSharedKeyReader{}
+	emKP, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
+	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKP)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_aes_key":         []byte("aesKey"),
@@ -389,7 +386,7 @@ func TestPreValidateTransaction(t *testing.T) {
 	assert.Nil(t, err)
 
 	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
-	mv, err := preValidateTransaction(tx, wHeaders, Pool{Node{publicKey: pub}}, Pool{Node{publicKey: pub}}, Pool{}, 1, pub, pv, emReader)
+	mv, err := preValidateTransaction(tx, wHeaders, Pool{Node{publicKey: pub}}, Pool{Node{publicKey: pub}}, Pool{}, 1, pub, pv, sharedKeyReader)
 	assert.Nil(t, err)
 	assert.Equal(t, pub, mv.ProofOfWork())
 	assert.EqualValues(t, pub, mv.Validation().PublicKey())
@@ -409,11 +406,20 @@ func TestLeadMining(t *testing.T) {
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	pubB, _ := pub.Marshal()
-	emReader := &mockEmitterReader{}
-	emKP, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
-	emReader.emKeys = append(emReader.emKeys, emKP)
+	sharedKeyReader := &mockSharedKeyReader{}
+	emKP, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
+	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKP)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	nodeReader := &mockNodeReader{
+		nodes: []Node{
+			Node{
+				publicKey:   pub,
+				isReachable: true,
+			},
+		},
+	}
+
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_aes_key":         []byte("aesKey"),
@@ -475,44 +481,11 @@ func TestLeadMining(t *testing.T) {
 	assert.Nil(t, err)
 	poolR := &mockPoolRequester{}
 	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
-	assert.Nil(t, LeadMining(tx, 1, wHeaders, poolR, pub, pv, emReader))
+	assert.Nil(t, LeadMining(tx, 1, wHeaders, poolR, pub, pv, sharedKeyReader, nodeReader))
 
 	time.Sleep(1 * time.Second)
 
 	assert.Len(t, poolR.stores, 1)
-}
-
-/*
-Scenario: Find pool for transaction mining
-	Given a transaction
-	When I want to find the pools
-	Then I get the last validation pool, the validation pool and the storage pool
-*/
-func TestFindPools(t *testing.T) {
-	poolR := &mockPoolRequester{}
-
-	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
-
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
-
-	addr := crypto.Hash([]byte("addr"))
-	data := map[string][]byte{
-		"encrypted_address_by_node": []byte("addr"),
-		"encrypted_address_by_id":   []byte("addr"),
-		"encrypted_aes_key":         []byte("aesKey"),
-	}
-	hash := crypto.Hash([]byte("hash"))
-
-	sig, _ := pv.Sign([]byte("data"))
-
-	tx, _ := chain.NewTransaction(addr, chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, hash)
-
-	lastVPool, validPool, storagePool, err := findPools(tx, poolR)
-
-	assert.Nil(t, err)
-	assert.Empty(t, lastVPool)
-	assert.Equal(t, "127.0.0.1", validPool[0].IP().String())
-	assert.Equal(t, "127.0.0.1", storagePool[0].IP().String())
 }
 
 type mockPoolRequester struct {
@@ -538,14 +511,6 @@ func (pr mockPoolRequester) RequestTransactionValidations(pool Pool, tx chain.Tr
 func (pr *mockPoolRequester) RequestTransactionStorage(pool Pool, minReplicas int, tx chain.Transaction) error {
 	pr.stores = append(pr.stores, tx)
 	return nil
-}
-
-type mockEmitterReader struct {
-	emKeys shared.EmitterKeys
-}
-
-func (r mockEmitterReader) EmitterKeys() (shared.EmitterKeys, error) {
-	return r.emKeys, nil
 }
 
 /*

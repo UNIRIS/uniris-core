@@ -20,7 +20,7 @@ Scenario: Create a new transaction
 func TestNewTransactionTransaction(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
 
 	addr := crypto.Hash([]byte("addr"))
 	data := map[string][]byte{
@@ -48,10 +48,10 @@ Scenario: Create a new transaction with an invalid addr
 	Then I get an error
 */
 func TestNewTransactionWithInvalidAddress(t *testing.T) {
-	_, err := NewTransaction([]byte(""), KeychainTransactionType, map[string][]byte{}, time.Now(), nil, shared.EmitterKeyPair{}, []byte(""), []byte(""), []byte(""))
+	_, err := NewTransaction([]byte(""), KeychainTransactionType, map[string][]byte{}, time.Now(), nil, shared.EmitterCrossKeyPair{}, []byte(""), []byte(""), []byte(""))
 	assert.EqualError(t, err, "transaction address is missing")
 
-	_, err = NewTransaction([]byte("abc"), KeychainTransactionType, map[string][]byte{}, time.Now(), nil, shared.EmitterKeyPair{}, []byte(""), []byte(""), []byte(""))
+	_, err = NewTransaction([]byte("abc"), KeychainTransactionType, map[string][]byte{}, time.Now(), nil, shared.EmitterCrossKeyPair{}, []byte(""), []byte(""), []byte(""))
 	assert.EqualError(t, err, "transaction address is not a valid hash")
 }
 
@@ -63,7 +63,7 @@ Scenario: Create a new transaction without public key
 */
 func TestNewTransactionWithoutPublicKey(t *testing.T) {
 
-	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), nil, shared.EmitterKeyPair{}, []byte("fake sig"), []byte("fake sig"), []byte(""))
+	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), nil, shared.EmitterCrossKeyPair{}, []byte("fake sig"), []byte("fake sig"), []byte(""))
 	assert.EqualError(t, err, "transaction public key is missing")
 }
 
@@ -75,7 +75,7 @@ Scenario: Create a new transaction without signature
 */
 func TestNewTransactionWithoutSignature(t *testing.T) {
 	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
-	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), pub, shared.EmitterKeyPair{}, nil, nil, []byte(""))
+	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), pub, shared.EmitterCrossKeyPair{}, nil, nil, []byte(""))
 	assert.EqualError(t, err, "transaction signature is missing")
 }
 
@@ -87,7 +87,7 @@ Scenario: Create a new transaction without emitter signature
 */
 func TestNewTransactionWithoutEmitterSignature(t *testing.T) {
 	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
-	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), pub, shared.EmitterKeyPair{}, []byte("fake sig"), nil, []byte(""))
+	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), pub, shared.EmitterCrossKeyPair{}, []byte("fake sig"), nil, []byte(""))
 	assert.EqualError(t, err, "transaction emitter signature is missing")
 }
 
@@ -101,10 +101,10 @@ func TestNewTransactionWithInvalidHash(t *testing.T) {
 
 	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), pub, shared.EmitterKeyPair{}, []byte("fake sig"), []byte("fake sig"), []byte(""))
+	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), pub, shared.EmitterCrossKeyPair{}, []byte("fake sig"), []byte("fake sig"), []byte(""))
 	assert.EqualError(t, err, "transaction hash is missing")
 
-	_, err = NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), pub, shared.EmitterKeyPair{}, []byte("fake sig"), []byte("fake sig"), []byte("abc"))
+	_, err = NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), pub, shared.EmitterCrossKeyPair{}, []byte("fake sig"), []byte("fake sig"), []byte("abc"))
 	assert.EqualError(t, err, "transaction hash is not a valid hash")
 }
 
@@ -117,7 +117,7 @@ Scenario: Create a new transaction with an invalid transaction data
 func TestNewTransactionWithInvalidData(t *testing.T) {
 
 	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
-	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), pub, shared.EmitterKeyPair{}, []byte("fake sig"), []byte("fake sig"), crypto.Hash([]byte("addr")))
+	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{}, time.Now(), pub, shared.EmitterCrossKeyPair{}, []byte("fake sig"), []byte("fake sig"), crypto.Hash([]byte("addr")))
 	assert.EqualError(t, err, "transaction data is missing")
 }
 
@@ -132,7 +132,7 @@ func TestNewTransactionWithInvalidTimestamp(t *testing.T) {
 	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
 		"encrypted_wallet":          []byte("wallet"),
-	}, time.Now().Add(2*time.Second), pub, shared.EmitterKeyPair{}, []byte("fake sig"), []byte("fake sig"), crypto.Hash([]byte("addr")))
+	}, time.Now().Add(2*time.Second), pub, shared.EmitterCrossKeyPair{}, []byte("fake sig"), []byte("fake sig"), crypto.Hash([]byte("addr")))
 	assert.EqualError(t, err, "transaction timestamp must be greater lower than now")
 }
 
@@ -150,7 +150,7 @@ func TestNewTransactionWithInvalidType(t *testing.T) {
 	_, err := NewTransaction(crypto.Hash([]byte("addr")), 10, map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
 		"encrypted_wallet":          []byte("wallet"),
-	}, time.Now(), pub, shared.EmitterKeyPair{}, sig, sig, crypto.Hash([]byte("hello")))
+	}, time.Now(), pub, shared.EmitterCrossKeyPair{}, sig, sig, crypto.Hash([]byte("hello")))
 	assert.EqualError(t, err, "transaction type is not allowed")
 }
 
@@ -168,15 +168,8 @@ func TestNewTransactionWithoutProposal(t *testing.T) {
 	_, err := NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
 		"encrypted_wallet":          []byte("wallet"),
-	}, time.Now(), pub, shared.EmitterKeyPair{}, sig, sig, crypto.Hash([]byte("hello")))
+	}, time.Now(), pub, shared.EmitterCrossKeyPair{}, sig, sig, crypto.Hash([]byte("hello")))
 	assert.EqualError(t, err, "transaction proposal private key is missing")
-
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPv"), nil)
-	_, err = NewTransaction(crypto.Hash([]byte("addr")), KeychainTransactionType, map[string][]byte{
-		"encrypted_address_by_node": []byte("addr"),
-		"encrypted_wallet":          []byte("wallet"),
-	}, time.Now(), pub, prop, sig, sig, crypto.Hash([]byte("hello")))
-	assert.EqualError(t, err, "transaction proposal public key is missing")
 }
 
 /*
@@ -188,7 +181,7 @@ Scenario: Check the transaction integrity
 func TestCheckTransactionIntegrity(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
 
 	txRaw := Transaction{
 		addr: crypto.Hash([]byte("addr")),
@@ -222,7 +215,7 @@ Scenario: Check the transaction integrity with invalid hash
 func TestCheckTransactionIntegrityWithInvalidHash(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
 
 	raw, _ := json.Marshal(Transaction{
 		addr: crypto.Hash([]byte("addr")),
@@ -254,7 +247,7 @@ Scenario: Check the transaction integrity with invalid signature
 func TestCheckTransactionIntegrityWithInvalidSignature(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
 
 	txRaw := Transaction{
 		addr: crypto.Hash([]byte("addr")),
@@ -291,7 +284,7 @@ Scenario: Add mining information to a transaction
 func TestMined(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
 
 	raw, _ := json.Marshal(Transaction{
 		addr: crypto.Hash([]byte("addr")),
@@ -338,7 +331,7 @@ Scenario: Add mining information to a transaction without confirmations
 func TestMinedWithoutConfirmations(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
 
 	raw, _ := json.Marshal(Transaction{
 		addr: crypto.Hash([]byte("addr")),
@@ -381,7 +374,7 @@ Scenario: Check the integrity of a transaction chain
 func TestCheckChainIntegrity(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
 
 	tx1 := Transaction{
 		addr: crypto.Hash([]byte("addr")),
@@ -454,7 +447,7 @@ Scenario: Check chain integrity with invalid timestamp
 func TestCheckChainIntegrityWithInvalidTime(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
 
 	tx0 := Transaction{
 		addr: crypto.Hash([]byte("addr")),
@@ -500,7 +493,7 @@ func TestChainTransaction(t *testing.T) {
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
 
 	tx1 := Transaction{
 		addr: crypto.Hash([]byte("addr")),
@@ -555,7 +548,7 @@ func TestChainTransactionWithInvalidTimestamp(t *testing.T) {
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
 
 	txTime1 := time.Now()
 	raw1, _ := json.Marshal(Transaction{
@@ -618,7 +611,7 @@ func TestCheckMasterValidation(t *testing.T) {
 	sig, _ := pv.Sign(b)
 	v.nodeSig = sig
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
 
 	tx := Transaction{
 		addr: crypto.Hash([]byte("addr")),
@@ -669,7 +662,7 @@ func TestCheckMasterValidationWithInvalidPOW(t *testing.T) {
 	sig, _ := pv.Sign(b)
 	v.nodeSig = sig
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPvKey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPvKey"), pub)
 
 	raw, _ := json.Marshal(Transaction{
 		addr: crypto.Hash([]byte("addr")),

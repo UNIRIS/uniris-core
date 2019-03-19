@@ -87,7 +87,7 @@ func formatTransaction(tx *api.Transaction) (chain.Transaction, error) {
 	if err != nil {
 		return chain.Transaction{}, nil
 	}
-	propSharedKeys, err := shared.NewEmitterKeyPair(tx.SharedKeysEmitterProposal.EncryptedPrivateKey, propPubKey)
+	propSharedKeys, err := shared.NewEmitterCrossKeyPair(tx.SharedKeysEmitterProposal.EncryptedPrivateKey, propPubKey)
 	if err != nil {
 		return chain.Transaction{}, err
 	}

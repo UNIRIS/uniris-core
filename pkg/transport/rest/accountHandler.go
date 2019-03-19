@@ -4,9 +4,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
+
+	"github.com/uniris/uniris-core/pkg/consensus"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/shared"
@@ -17,7 +18,7 @@ import (
 //GetAccountHandler is an HTTP handler which retrieves an account from an ID public key hash
 //It requests the storage pool from the id address, decrypts the encrypted keychain address and request the keychain from its dedicated pool
 //Then it aggregates the ID and Keychain data
-func GetAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context) {
+func GetAccountHandler(sharedKeyReader shared.KeyReader, nodeReader consensus.NodeReader) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		encIDHash := c.Param("idHash")
@@ -26,16 +27,6 @@ func GetAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context
 			c.JSON(http.StatusBadRequest, httpError{
 				Error:     "id hash is not in hexadecimal",
 				Status:    http.StatusText(http.StatusBadRequest),
-				Timestamp: time.Now().Unix(),
-			})
-			return
-		}
-
-		emKeys, err := techReader.EmitterKeys()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, httpError{
-				Error:     err.Error(),
-				Status:    http.StatusText(http.StatusInternalServerError),
 				Timestamp: time.Now().Unix(),
 			})
 			return
@@ -50,6 +41,17 @@ func GetAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context
 			})
 			return
 		}
+
+		firstEmKeys, err := sharedKeyReader.FirstEmitterCrossKeypair()
+		if err != nil {
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     "signature is not in hexadecimal",
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+
 		sigBytes, err := hex.DecodeString(sigReq)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, httpError{
@@ -59,7 +61,7 @@ func GetAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context
 			})
 			return
 		}
-		if !emKeys.RequestKey().Verify(encIDBytes, sigBytes) {
+		if !firstEmKeys.PublicKey().Verify(encIDBytes, sigBytes) {
 			c.JSON(http.StatusBadRequest, httpError{
 				Error:     "signature is invalid",
 				Status:    http.StatusText(http.StatusBadRequest),
@@ -68,7 +70,7 @@ func GetAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context
 			return
 		}
 
-		nodeLastKeys, err := techReader.NodeLastKeys()
+		nodeLastKeys, err := sharedKeyReader.LastNodeCrossKeypair()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, httpError{
 				Error:     err.Error(),
@@ -87,7 +89,7 @@ func GetAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context
 			})
 			return
 		}
-		idTx, httpErr := findLastTransaction(idHash, api.TransactionType_ID, nodeLastKeys.PrivateKey())
+		idTx, httpErr := findLastTransaction(idHash, api.TransactionType_ID, nodeLastKeys.PrivateKey(), nodeReader)
 		if httpErr != nil {
 			httpErr.Error = fmt.Sprintf("ID: %s", httpErr.Error)
 			c.JSON(httpErr.code, httpErr)
@@ -105,7 +107,7 @@ func GetAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context
 			return
 		}
 
-		keychainTx, httpErr := findLastTransaction(keychainAddr, api.TransactionType_KEYCHAIN, nodeLastKeys.PrivateKey())
+		keychainTx, httpErr := findLastTransaction(keychainAddr, api.TransactionType_KEYCHAIN, nodeLastKeys.PrivateKey(), nodeReader)
 		if httpErr != nil {
 			httpErr.Error = fmt.Sprintf("Keychain: %s", httpErr.Error)
 			c.JSON(httpErr.code, httpErr)
@@ -145,7 +147,7 @@ func GetAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context
 }
 
 //CreateAccountHandler is an HTTP handler which forwards ID and Keychain transaction to master nodes and reply with the transaction receipts
-func CreateAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Context) {
+func CreateAccountHandler(sharedKeyReader shared.KeyReader, nodeReader consensus.NodeReader) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		var form accountCreationRequest
@@ -158,7 +160,24 @@ func CreateAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Cont
 			})
 		}
 
-		emKeys, err := techReader.EmitterKeys()
+		if _, err := hex.DecodeString(form.EncryptedID); err != nil {
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     "encrypted id: must be hexadecimal",
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+
+		if _, err := hex.DecodeString(form.EncryptedKeychain); err != nil {
+			c.JSON(http.StatusBadRequest, httpError{
+				Error:     "encrypted keychain: must be hexadecimal",
+				Status:    http.StatusText(http.StatusBadRequest),
+				Timestamp: time.Now().Unix(),
+			})
+			return
+		}
+		firstEmKeys, err := sharedKeyReader.FirstEmitterCrossKeypair()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, httpError{
 				Error:     err.Error(),
@@ -174,7 +193,7 @@ func CreateAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Cont
 		})
 
 		sig, _ := hex.DecodeString(form.Signature)
-		if !emKeys.RequestKey().Verify(formBytes, sig) {
+		if !firstEmKeys.PublicKey().Verify(formBytes, sig) {
 			c.JSON(http.StatusBadRequest, httpError{
 				Error:     "signature is invalid",
 				Status:    http.StatusText(http.StatusBadRequest),
@@ -183,7 +202,7 @@ func CreateAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Cont
 			return
 		}
 
-		nodeLastKeys, err := techReader.NodeLastKeys()
+		nodeLastKeys, err := sharedKeyReader.LastNodeCrossKeypair()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, httpError{
 				Error:     err.Error(),
@@ -199,7 +218,7 @@ func CreateAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Cont
 			c.JSON(httpErr.code, httpErr)
 			return
 		}
-		idTxRes, httpErr := requestTransactionMining(idTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey())
+		idTxRes, httpErr := requestTransactionMining(idTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey(), nodeReader, sharedKeyReader)
 		if httpErr != nil {
 			c.JSON(httpErr.code, httpErr)
 			return
@@ -208,11 +227,10 @@ func CreateAccountHandler(techReader shared.TechDatabaseReader) func(c *gin.Cont
 		encKeychainBytes, _ := hex.DecodeString(form.EncryptedKeychain)
 		keychainTx, httpErr := decodeTransactionRaw(encKeychainBytes, nodeLastKeys.PrivateKey())
 		if httpErr != nil {
-			log.Print(httpErr.Error)
 			c.JSON(httpErr.code, httpErr)
 			return
 		}
-		keychainTxRes, httpErr := requestTransactionMining(keychainTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey())
+		keychainTxRes, httpErr := requestTransactionMining(keychainTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey(), nodeReader, sharedKeyReader)
 		if httpErr != nil {
 			c.JSON(httpErr.code, httpErr)
 			return

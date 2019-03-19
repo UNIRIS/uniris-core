@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -187,4 +188,19 @@ func TestExtractEcdsaRandomPubKeyFromCipher(t *testing.T) {
 	assert.NotEqual(t, 0, pos)
 
 	assert.Equal(t, pub, rPub)
+}
+
+/*
+Scenario: Compare two ecdsa public keys
+	Given a two ed25519 generated with the same secret
+	When I want to compare
+	Then I get a true response which said they are the same
+*/
+func TestEqualEcdsaPublicKey(t *testing.T) {
+	_, pub, _ := generateECDSAKeys(bytes.NewBufferString("helloaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), elliptic.P256())
+	_, pub2, _ := generateECDSAKeys(bytes.NewBufferString("helloaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), elliptic.P256())
+	assert.True(t, pub.Equals(pub2))
+
+	_, pub3, _ := generateECDSAKeys(bytes.NewBufferString("abcccoaaaaaaaaaaaaaabbbbbbaaaaaaaaaaaaaaaaaaaaaaa"), elliptic.P256())
+	assert.False(t, pub.Equals(pub3))
 }

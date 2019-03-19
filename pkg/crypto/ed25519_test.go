@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"bytes"
 	"crypto/rand"
 	"testing"
 
@@ -141,4 +142,18 @@ func TestExtractEd25519RandomPubKeyFromCipher(t *testing.T) {
 	assert.Equal(t, rPub, pub)
 	assert.NotEqual(t, 0, pos)
 
+}
+
+/*
+Scenario: Compare two ed25519 public keys
+	Given a two ed25519 generated with the same secret
+	When I want to compare
+	Then I get a true response which said they are the same
+*/
+func TestEqualEd25519PublicKey(t *testing.T) {
+	_, pub, _ := generateEd25519Keys(bytes.NewBufferString("helloaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+	_, pub2, _ := generateEd25519Keys(bytes.NewBufferString("helloaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+	_, pub3, _ := generateEd25519Keys(bytes.NewBufferString("helloaaaaaaaaagggggaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+	assert.True(t, pub.Equals(pub2))
+	assert.False(t, pub.Equals(pub3))
 }

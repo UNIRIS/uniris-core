@@ -16,21 +16,23 @@ import (
 )
 
 type txSrv struct {
-	chainDB        chain.Database
-	techDB         shared.TechDatabaseReader
-	poolR          consensus.PoolRequester
-	nodePublicKey  crypto.PublicKey
-	nodePrivateKey crypto.PrivateKey
+	chainDB         chain.Database
+	sharedKeyReader shared.KeyReader
+	nodeReader      consensus.NodeReader
+	poolR           consensus.PoolRequester
+	nodePublicKey   crypto.PublicKey
+	nodePrivateKey  crypto.PrivateKey
 }
 
 //NewTransactionService creates service handler for the GRPC Transaction service
-func NewTransactionService(cDB chain.Database, tDB shared.TechDatabaseReader, pR consensus.PoolRequester, nodePublicKeyk crypto.PublicKey, nodePrivateKeyk crypto.PrivateKey) api.TransactionServiceServer {
+func NewTransactionService(cDB chain.Database, skr shared.KeyReader, nr consensus.NodeReader, pR consensus.PoolRequester, pubk crypto.PublicKey, pvk crypto.PrivateKey) api.TransactionServiceServer {
 	return txSrv{
-		chainDB:        cDB,
-		techDB:         tDB,
-		poolR:          pR,
-		nodePublicKey:  nodePublicKeyk,
-		nodePrivateKey: nodePrivateKeyk,
+		chainDB:         cDB,
+		sharedKeyReader: skr,
+		nodeReader:      nr,
+		poolR:           pR,
+		nodePublicKey:   pubk,
+		nodePrivateKey:  pvk,
 	}
 }
 
@@ -46,7 +48,7 @@ func (s txSrv) GetLastTransaction(ctx context.Context, req *api.GetLastTransacti
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	nodeLastKeys, err := s.techDB.NodeLastKeys()
+	nodeLastKeys, err := s.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +97,7 @@ func (s txSrv) GetTransactionStatus(ctx context.Context, req *api.GetTransaction
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
-	nodeLastKeys, err := s.techDB.NodeLastKeys()
+	nodeLastKeys, err := s.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +134,7 @@ func (s txSrv) StoreTransaction(ctx context.Context, req *api.StoreTransactionRe
 		MinedTransaction: req.MinedTransaction,
 		Timestamp:        req.Timestamp,
 	})
-	nodeLastKeys, err := s.techDB.NodeLastKeys()
+	nodeLastKeys, err := s.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +179,7 @@ func (s txSrv) TimeLockTransaction(ctx context.Context, req *api.TimeLockTransac
 		MasterNodePublicKey: req.MasterNodePublicKey,
 		Timestamp:           req.Timestamp,
 	})
-	nodeLastKeys, err := s.techDB.NodeLastKeys()
+	nodeLastKeys, err := s.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +220,7 @@ func (s txSrv) LeadTransactionMining(ctx context.Context, req *api.LeadTransacti
 		Timestamp:          req.Timestamp,
 		WelcomeHeaders:     req.WelcomeHeaders,
 	})
-	nodeLastKeys, err := s.techDB.NodeLastKeys()
+	nodeLastKeys, err := s.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +238,7 @@ func (s txSrv) LeadTransactionMining(ctx context.Context, req *api.LeadTransacti
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	if err := consensus.LeadMining(tx, int(req.MinimumValidations), wHeaders, s.poolR, s.nodePublicKey, s.nodePrivateKey, s.techDB); err != nil {
+	if err := consensus.LeadMining(tx, int(req.MinimumValidations), wHeaders, s.poolR, s.nodePublicKey, s.nodePrivateKey, s.sharedKeyReader, s.nodeReader); err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
@@ -267,7 +269,7 @@ func (s txSrv) ConfirmTransactionValidation(ctx context.Context, req *api.Confir
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	nodeLastKeys, err := s.techDB.NodeLastKeys()
+	nodeLastKeys, err := s.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
 		return nil, err
 	}

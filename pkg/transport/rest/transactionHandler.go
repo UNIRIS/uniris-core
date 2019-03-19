@@ -17,7 +17,7 @@ import (
 )
 
 //GetTransactionStatusHandler defines an HTTP handler to get the status of a transaction
-func GetTransactionStatusHandler(techReader shared.TechDatabaseReader) func(c *gin.Context) {
+func GetTransactionStatusHandler(sharedKeyReader shared.KeyReader, nodeReader consensus.NodeReader) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		txReceipt := c.Param("txReceipt")
 		txAddress, txHash, err := decodeTxReceipt(txReceipt)
@@ -30,7 +30,7 @@ func GetTransactionStatusHandler(techReader shared.TechDatabaseReader) func(c *g
 			return
 		}
 
-		sPool, err := consensus.FindStoragePool(txAddress)
+		sPool, err := consensus.FindStoragePool(txAddress, nodeReader)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, httpError{
 				Error:     err.Error(),
@@ -68,7 +68,7 @@ func GetTransactionStatusHandler(techReader shared.TechDatabaseReader) func(c *g
 			return
 		}
 
-		nodeLastKeys, err := techReader.NodeLastKeys()
+		nodeLastKeys, err := sharedKeyReader.LastNodeCrossKeypair()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, httpError{
 				Error:     err.Error(),

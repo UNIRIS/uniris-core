@@ -26,7 +26,7 @@ func TestReadKeychainByHash(t *testing.T) {
 
 	sig, _ := pv.Sign([]byte("hello"))
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
 		"encrypted_wallet":          []byte("wallet"),
@@ -81,7 +81,7 @@ func TestGetIDTransactionByHash(t *testing.T) {
 
 	sig, _ := pv.Sign([]byte("hello"))
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
@@ -204,7 +204,7 @@ func TestGetTransactionStatusSuccess(t *testing.T) {
 
 	sig, _ := pv.Sign([]byte("hello"))
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
@@ -262,7 +262,7 @@ func TestReadLastKeychainTransaction(t *testing.T) {
 
 	sig, _ := pv.Sign([]byte("hello"))
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
@@ -345,7 +345,7 @@ func TestGetLastIDTransaction(t *testing.T) {
 
 	sig, _ := pv.Sign([]byte("hello"))
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
@@ -432,7 +432,7 @@ func TestGetTransactionChain(t *testing.T) {
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
@@ -512,7 +512,7 @@ Scenario: Check a valid transaction before store
 func TestCheckTransactionBeforeStore(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
@@ -562,7 +562,7 @@ Scenario: Check a transaction before store dbith misssing validations
 func TestCheckTransactionBeforeStoreWithMissingValidations(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
@@ -633,7 +633,7 @@ func TestStoreKOTransaction(t *testing.T) {
 	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
@@ -697,7 +697,7 @@ func TestStoreKeychainTransaction(t *testing.T) {
 	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
@@ -761,7 +761,7 @@ func TestStoreIDTransaction(t *testing.T) {
 	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),

@@ -1,19 +1,21 @@
 package amqp
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
 
 	"github.com/uniris/uniris-core/pkg/consensus"
 	"github.com/uniris/uniris-core/pkg/crypto"
+	"github.com/uniris/uniris-core/pkg/shared"
 
 	"github.com/streadway/amqp"
 )
 
 //ConsumeDiscoveryNotifications intercepts the RabbitMQ discovery notifications and store them into a specific database
 //These data will be used by the consensus layer to identify peers and pools
-func ConsumeDiscoveryNotifications(host string, user string, pwd string, port int, w consensus.NodeWriter) error {
+func ConsumeDiscoveryNotifications(host string, user string, pwd string, port int, nodeWriter consensus.NodeWriter, sharedKeyWriter shared.KeyWriter) error {
 	amqpURI := fmt.Sprintf("amqp://%s:%s@%s:%d", user, pwd, host, port)
 
 	conn, err := amqp.Dial(amqpURI)
@@ -28,7 +30,7 @@ func ConsumeDiscoveryNotifications(host string, user string, pwd string, port in
 		return err
 	}
 
-	for err := range consumeQueues(ch, w) {
+	for err := range consumeQueues(ch, nodeWriter, sharedKeyWriter) {
 		fmt.Println(err)
 	}
 
@@ -37,28 +39,33 @@ func ConsumeDiscoveryNotifications(host string, user string, pwd string, port in
 
 type consumeFuncHandler func(w consensus.NodeWriter, data []byte) error
 
-func consumeQueues(ch *amqp.Channel, w consensus.NodeWriter) (errChan chan error) {
+func consumeQueues(ch *amqp.Channel, nodeWriter consensus.NodeWriter, sharedKeyWriter shared.KeyWriter) (errChan chan error) {
 	go func() {
-		if err := consumeQueue(ch, queueNameDiscoveries, consumeDiscoveryHandler, w); err != nil {
+
+		//TODO: remove sharedKeyWriter when the authorized key handling will be implemented
+		handler := func(w consensus.NodeWriter, data []byte) error {
+			return consumeDiscoveryHandler(nodeWriter, sharedKeyWriter, data)
+		}
+		for err := range consumeQueue(ch, queueNameDiscoveries, handler, nodeWriter) {
 			errChan <- err
 		}
 	}()
 
 	go func() {
-		if err := consumeQueue(ch, queueNameReachable, consumeReachableHandler, w); err != nil {
+		for err := range consumeQueue(ch, queueNameReachable, consumeReachableHandler, nodeWriter) {
 			errChan <- err
 		}
 	}()
 
 	go func() {
-		if err := consumeQueue(ch, queueNameUnreachable, consumeUnreachableHandler, w); err != nil {
+		for err := range consumeQueue(ch, queueNameUnreachable, consumeUnreachableHandler, nodeWriter) {
 			errChan <- err
 		}
 	}()
 	return
 }
 
-func consumeQueue(ch *amqp.Channel, queueName string, h consumeFuncHandler, w consensus.NodeWriter) error {
+func consumeQueue(ch *amqp.Channel, queueName string, h consumeFuncHandler, w consensus.NodeWriter) (errChan chan error) {
 	q, err := ch.QueueDeclare(
 		queueName, // name
 		true,      // durable
@@ -68,7 +75,8 @@ func consumeQueue(ch *amqp.Channel, queueName string, h consumeFuncHandler, w co
 		nil,       // arguments
 	)
 	if err != nil {
-		return err
+		errChan <- err
+		return
 	}
 
 	msgs, err := ch.Consume(
@@ -81,22 +89,24 @@ func consumeQueue(ch *amqp.Channel, queueName string, h consumeFuncHandler, w co
 		nil,    // args
 	)
 	if err != nil {
-		return err
+		errChan <- err
+		return
 	}
 
 	forever := make(chan bool)
 	go func() {
 		for msg := range msgs {
-			h(w, msg.Body)
+			if err := h(w, msg.Body); err != nil {
+				errChan <- err
+			}
 		}
 	}()
 
 	<-forever
-
-	return nil
+	return
 }
 
-func consumeDiscoveryHandler(w consensus.NodeWriter, data []byte) error {
+func consumeDiscoveryHandler(nodeWriter consensus.NodeWriter, sharedKeyWriter shared.KeyWriter, data []byte) error {
 	var n node
 	if err := json.Unmarshal(data, &n); err != nil {
 		return err
@@ -104,7 +114,11 @@ func consumeDiscoveryHandler(w consensus.NodeWriter, data []byte) error {
 
 	patch := consensus.ComputeGeoPatch(n.AppState.GeoPosition.Latitude, n.AppState.GeoPosition.Longitude)
 
-	publicKey, err := crypto.ParsePublicKey([]byte(n.Identity.PublicKey))
+	pubBytes, err := hex.DecodeString(n.Identity.PublicKey)
+	if err != nil {
+		return err
+	}
+	publicKey, err := crypto.ParsePublicKey(pubBytes)
 	if err != nil {
 		return err
 	}
@@ -122,11 +136,14 @@ func consumeDiscoveryHandler(w consensus.NodeWriter, data []byte) error {
 		n.AppState.GeoPosition.Longitude,
 		patch,
 		true)
-	if err := w.WriteDiscoveredNode(node); err != nil {
+
+	if err := nodeWriter.WriteDiscoveredNode(node); err != nil {
 		return err
 	}
 	fmt.Printf("Discovered node stored: %s\n", n.Identity.PublicKey)
-	return nil
+
+	//TODO: remove sharedKeyWriter when the authorized key handling will be implemented
+	return sharedKeyWriter.WriteAuthorizedNode(publicKey)
 }
 
 func consumeReachableHandler(w consensus.NodeWriter, publicKey []byte) error {

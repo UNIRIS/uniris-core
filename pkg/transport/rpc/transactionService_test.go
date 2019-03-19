@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"net"
 	"sort"
 	"testing"
 	"time"
@@ -33,16 +34,22 @@ Scenario: Receive  get last transction about an unknown transaction
 func TestHandleGetLastTransactionWhenNotExist(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	techR := &mockTechDB{}
-	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
-	techR.nodeKeys = append(techR.nodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+
+	nodeReader := &mockNodeReader{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		},
+	}
 
 	chainDB := &mockChainDB{}
 
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, techR, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv)
 
 	req := &api.GetLastTransactionRequest{
 		Timestamp:          time.Now().Unix(),
@@ -71,23 +78,29 @@ func TestHandleGetLastTransaction(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	pubB, _ := pub.Marshal()
 
-	techR := &mockTechDB{}
-	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
-	techR.nodeKeys = append(techR.nodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+
+	nodeReader := &mockNodeReader{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		},
+	}
 
 	chainDB := &mockChainDB{}
 
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, techR, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv)
 
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
 		"encrypted_wallet":          []byte("wallet"),
 	}
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	txRaw := map[string]interface{}{
 		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
@@ -148,16 +161,22 @@ func TestHandleGetTransactionStatus(t *testing.T) {
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	techR := &mockTechDB{}
-	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
-	techR.nodeKeys = append(techR.nodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+
+	nodeReader := &mockNodeReader{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		},
+	}
 
 	chainDB := &mockChainDB{}
 
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, techR, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv)
 
 	req := &api.GetTransactionStatusRequest{
 		Timestamp:       time.Now().Unix(),
@@ -188,18 +207,24 @@ func TestHandleStoreTransaction(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	pubB, _ := pub.Marshal()
 
-	techR := &mockTechDB{}
-	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
-	techR.nodeKeys = append(techR.nodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+
+	nodeReader := &mockNodeReader{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		},
+	}
 
 	chainDB := &mockChainDB{}
 
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, techR, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
@@ -286,12 +311,18 @@ func TestHandleLockTransaction(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	chainDB := &mockChainDB{}
-	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
-	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+
+	nodeReader := &mockNodeReader{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		},
+	}
 
 	poolR := &mockPoolRequester{}
-	txSrv := NewTransactionService(chainDB, techDB, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv)
 
 	pubB, _ := pub.Marshal()
 
@@ -325,24 +356,30 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	pubB, _ := pub.Marshal()
 
-	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
-	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
-	emKey, _ := shared.NewEmitterKeyPair([]byte("encpv"), pub)
-	techDB.emKeys = append(techDB.emKeys, emKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+	emKey, _ := shared.NewEmitterCrossKeyPair([]byte("encpv"), pub)
+	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
+
+	nodeReader := &mockNodeReader{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		},
+	}
 
 	chainDB := &mockChainDB{}
 
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, techDB, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv)
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
 		"encrypted_wallet":          []byte("wallet"),
 	}
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 	txRaw := map[string]interface{}{
 		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
 		"data": map[string]string{
@@ -412,20 +449,26 @@ func TestHandleConfirmValiation(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	pubB, _ := pub.Marshal()
 
-	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
-	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
-	emKey, _ := shared.NewEmitterKeyPair([]byte("encpv"), pub)
-	techDB.emKeys = append(techDB.emKeys, emKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+	emKey, _ := shared.NewEmitterCrossKeyPair([]byte("encpv"), pub)
+	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
+
+	nodeReader := &mockNodeReader{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		},
+	}
 
 	chainDB := &mockChainDB{}
 
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, techDB, poolR, pub, pv)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv)
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
 		"encrypted_wallet":          []byte("wallet"),
@@ -620,15 +663,75 @@ func (r *mockChainDB) WriteKO(tx chain.Transaction) error {
 	return nil
 }
 
-type mockTechDB struct {
-	emKeys   shared.EmitterKeys
-	nodeKeys []shared.NodeKeyPair
+type mockSharedKeyReader struct {
+	crossNodeKeys    []shared.NodeCrossKeyPair
+	crossEmitterKeys []shared.EmitterCrossKeyPair
+	authKeys         []crypto.PublicKey
 }
 
-func (db mockTechDB) EmitterKeys() (shared.EmitterKeys, error) {
-	return db.emKeys, nil
+func (r mockSharedKeyReader) EmitterCrossKeypairs() ([]shared.EmitterCrossKeyPair, error) {
+	return r.crossEmitterKeys, nil
 }
 
-func (db mockTechDB) NodeLastKeys() (shared.NodeKeyPair, error) {
-	return db.nodeKeys[len(db.nodeKeys)-1], nil
+func (r mockSharedKeyReader) FirstNodeCrossKeypair() (shared.NodeCrossKeyPair, error) {
+	return r.crossNodeKeys[0], nil
+}
+
+func (r mockSharedKeyReader) LastNodeCrossKeypair() (shared.NodeCrossKeyPair, error) {
+	return r.crossNodeKeys[len(r.crossNodeKeys)-1], nil
+}
+
+func (r mockSharedKeyReader) AuthorizedNodesPublicKeys() ([]crypto.PublicKey, error) {
+	return r.authKeys, nil
+}
+
+func (r mockSharedKeyReader) CrossEmitterPublicKeys() (pubKeys []crypto.PublicKey, err error) {
+	for _, kp := range r.crossEmitterKeys {
+		pubKeys = append(pubKeys, kp.PublicKey())
+	}
+	return
+}
+
+func (r mockSharedKeyReader) FirstEmitterCrossKeypair() (shared.EmitterCrossKeyPair, error) {
+	return r.crossEmitterKeys[0], nil
+}
+
+type mockNodeReader struct {
+	nodes []consensus.Node
+}
+
+func (db mockNodeReader) Reachables() (reachables []consensus.Node, err error) {
+	for _, n := range db.nodes {
+		if n.IsReachable() {
+			reachables = append(reachables, n)
+		}
+	}
+	return
+}
+
+func (db mockNodeReader) Unreachables() (unreachables []consensus.Node, err error) {
+	for _, n := range db.nodes {
+		if !n.IsReachable() {
+			unreachables = append(unreachables, n)
+		}
+	}
+	return
+}
+
+func (db mockNodeReader) CountReachables() (nb int, err error) {
+	for _, n := range db.nodes {
+		if n.IsReachable() {
+			nb++
+		}
+	}
+	return
+}
+
+func (db *mockNodeReader) FindByPublicKey(publicKey crypto.PublicKey) (found consensus.Node, err error) {
+	for _, n := range db.nodes {
+		if n.PublicKey().Equals(publicKey) {
+			return n, nil
+		}
+	}
+	return
 }

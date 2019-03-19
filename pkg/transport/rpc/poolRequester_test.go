@@ -31,13 +31,19 @@ func TestRequestTransactionLock(t *testing.T) {
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
-	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+
+	nodeReader := &mockNodeReader{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		},
+	}
 
 	chainDB := &mockChainDB{}
-	pr := NewPoolRequester(techDB)
-	txSrv := NewTransactionService(chainDB, techDB, pr, pub, pv)
+	pr := NewPoolRequester(sharedKeyReader)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -45,7 +51,7 @@ func TestRequestTransactionLock(t *testing.T) {
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
-	pool, _ := consensus.FindStoragePool([]byte("addr"))
+	pool, _ := consensus.FindStoragePool([]byte("addr"), nodeReader)
 	assert.Nil(t, pr.RequestTransactionTimeLock(pool, crypto.Hash([]byte("tx")), crypto.Hash([]byte("addr")), pub))
 	assert.True(t, chain.ContainsTimeLock(crypto.Hash([]byte("tx")), crypto.Hash([]byte("addr"))))
 }
@@ -61,16 +67,22 @@ func TestRequestConfirmValidation(t *testing.T) {
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	pubB, _ := pub.Marshal()
 
-	kp, _ := shared.NewEmitterKeyPair(([]byte("pvkey")), pub)
+	kp, _ := shared.NewEmitterCrossKeyPair(([]byte("pvkey")), pub)
 
-	techDB := &mockTechDB{}
-	techDB.emKeys = append(techDB.emKeys, kp)
-	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
-	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, kp)
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 
-	pr := NewPoolRequester(techDB)
+	nodeReader := &mockNodeReader{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		},
+	}
 
-	miningSrv := NewTransactionService(nil, techDB, pr, pub, pv)
+	pr := NewPoolRequester(sharedKeyReader)
+
+	miningSrv := NewTransactionService(nil, sharedKeyReader, nodeReader, pr, pub, pv)
 
 	lis, err := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -141,19 +153,25 @@ Scenario: Request transaction store
 func TestRequestStorage(t *testing.T) {
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
-	kp, _ := shared.NewEmitterKeyPair([]byte("pvkey"), pub)
+	kp, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 	pubB, _ := pub.Marshal()
 
 	chainDB := &mockChainDB{}
-	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
-	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 
-	techDB.emKeys = append(techDB.emKeys, kp)
+	nodeReader := &mockNodeReader{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		},
+	}
 
-	pr := NewPoolRequester(techDB)
+	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, kp)
 
-	txSrv := NewTransactionService(chainDB, techDB, pr, pub, pv)
+	pr := NewPoolRequester(sharedKeyReader)
+
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -200,7 +218,7 @@ func TestRequestStorage(t *testing.T) {
 	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
-	pool, _ := consensus.FindStoragePool([]byte("addr"))
+	pool, _ := consensus.FindStoragePool([]byte("addr"), nodeReader)
 	tx.Mined(mv, []chain.Validation{v})
 	assert.Nil(t, pr.RequestTransactionStorage(pool, 1, tx))
 
@@ -220,13 +238,19 @@ func TestSendGetLastTransaction(t *testing.T) {
 	pubB, _ := pub.Marshal()
 
 	chainDB := &mockChainDB{}
-	techDB := &mockTechDB{}
-	nodeKey, _ := shared.NewNodeKeyPair(pub, pv)
-	techDB.nodeKeys = append(techDB.nodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{}
+	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
+	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 
-	pr := NewPoolRequester(techDB)
+	nodeReader := &mockNodeReader{
+		nodes: []consensus.Node{
+			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		},
+	}
 
-	txSrv := NewTransactionService(chainDB, techDB, pr, pub, pv)
+	pr := NewPoolRequester(sharedKeyReader)
+
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -239,7 +263,7 @@ func TestSendGetLastTransaction(t *testing.T) {
 		"encrypted_wallet":          []byte("wallet"),
 	}
 
-	prop, _ := shared.NewEmitterKeyPair([]byte("encPV"), pub)
+	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPV"), pub)
 	txRaw := map[string]interface{}{
 		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
 		"data": map[string]string{
@@ -266,7 +290,7 @@ func TestSendGetLastTransaction(t *testing.T) {
 	keychain, _ := chain.NewKeychain(tx)
 	chainDB.keychains = append(chainDB.keychains, keychain)
 
-	pool, _ := consensus.FindStoragePool([]byte("address"))
+	pool, _ := consensus.FindStoragePool([]byte("address"), nodeReader)
 
 	txRes, err := pr.RequestLastTransaction(pool, crypto.Hash([]byte("addr")), chain.KeychainTransactionType)
 	assert.Nil(t, err)

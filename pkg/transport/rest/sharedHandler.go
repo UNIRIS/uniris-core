@@ -12,7 +12,7 @@ import (
 )
 
 //GetSharedKeysHandler defines an HTTP handler to retrieve the shared keys
-func GetSharedKeysHandler(techReader shared.TechDatabaseReader) func(*gin.Context) {
+func GetSharedKeysHandler(sharedKeyReader shared.KeyReader) func(*gin.Context) {
 	return func(c *gin.Context) {
 
 		emPubKey, httpErr := extractEmitterPublicKey(c)
@@ -39,7 +39,7 @@ func GetSharedKeysHandler(techReader shared.TechDatabaseReader) func(*gin.Contex
 			return
 		}
 
-		nodeLastKeys, err := techReader.NodeLastKeys()
+		nodeLastKeys, err := sharedKeyReader.LastNodeCrossKeypair()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, httpError{
 				Error:     err.Error(),
@@ -49,7 +49,7 @@ func GetSharedKeysHandler(techReader shared.TechDatabaseReader) func(*gin.Contex
 			return
 		}
 
-		sharedEmKeys, err := techReader.EmitterKeys()
+		sharedEmKeys, err := sharedKeyReader.EmitterCrossKeypairs()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, httpError{
 				Error:     err.Error(),
@@ -105,7 +105,7 @@ func extractEmitterPublicKey(c *gin.Context) (crypto.PublicKey, *httpError) {
 	return emPublicKey, nil
 }
 
-func createSharedKeyResponse(sharedEmKeys shared.EmitterKeys, nodeLastKeys shared.NodeKeyPair) (sharedKeysResponse, error) {
+func createSharedKeyResponse(sharedEmKeys []shared.EmitterCrossKeyPair, nodeLastKeys shared.NodeCrossKeyPair) (sharedKeysResponse, error) {
 	emKeys := make([]emitterSharedKeys, 0)
 	for _, k := range sharedEmKeys {
 		emPubBytes, err := k.PublicKey().Marshal()
