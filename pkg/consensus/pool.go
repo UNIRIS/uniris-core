@@ -31,7 +31,7 @@ type PoolRequester interface {
 	RequestLastTransaction(pool Pool, txAddr crypto.VersionnedHash, txType chain.TransactionType) (*chain.Transaction, error)
 }
 
-//FindMasterNodes finds a list of master nodes by using an entropy sKeysing based on the transaction and minimum number of master
+//FindMasterNodes finds a list of master nodes by using an entropy sort based on the transaction and minimum number of master
 func FindMasterNodes(txHash crypto.VersionnedHash, nodeReader NodeReader, sharedKeyReader shared.KeyReader) (mPool Pool, err error) {
 	authKeys, err := sharedKeyReader.AuthorizedNodesPublicKeys()
 	if err != nil {
@@ -99,7 +99,7 @@ func buildStartingPoint(txHash crypto.VersionnedHash, nodeCrossFirstPvKey crypto
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-//entropySort sKeyss a list of nodes public keys using a "starting point" (HMAC of the transaction hash with the first node shared private key) and the hashes of the node public keys
+//entropySort sorts a list of nodes public keys using a "starting point" (HMAC of the transaction hash with the first node shared private key) and the hashes of the node public keys
 func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, nodeCrossFirstPvKey crypto.PrivateKey) (sortedKeys []crypto.PublicKey, err error) {
 	startingPoint, err := buildStartingPoint(txHash, nodeCrossFirstPvKey)
 	if err != nil {
@@ -170,7 +170,7 @@ func entropySort(txHash crypto.VersionnedHash, authKeys []crypto.PublicKey, node
 		}
 	}
 
-	//We have tested all the characters of the staring point and not yet finished the sKeysing operation, we will loop on all the hex characters to finish sKeysing
+	//We have tested all the characters of the staring point and not yet finished the sort operation, we will loop on all the hex characters to finish the sort
 	if len(sortedKeys) < len(hashKeys)-1 {
 		hexChar := []rune{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'}
 		for p := 0; len(sortedKeys) < len(hashKeys)-1 && p < len(hexChar); p++ {
@@ -228,7 +228,7 @@ func FindStoragePool(address crypto.VersionnedHash, r NodeReader) (Pool, error) 
 	return nodes, nil
 }
 
-//FindValidationPool lookups a validation pool from a transaction hash and a required number using the entropy sKeys
+//FindValidationPool lookups a validation pool from a transaction hash and a required number using the entropy sort
 func FindValidationPool(txHash crypto.VersionnedHash, minValidations int, masterNodeKey crypto.PublicKey, nodeReader NodeReader, sharedKeyReader shared.KeyReader) (vPool Pool, err error) {
 	authKeys, err := sharedKeyReader.AuthorizedNodesPublicKeys()
 	if err != nil {
