@@ -250,16 +250,19 @@ func FindValidationPool(txHash crypto.VersionnedHash, minValidations int, master
 		return
 	}
 
-	var nbReachables int
-	var patchIds []int
-
 	//challenge the validations nodes by providing more nodes validations
+	nbReachables, err := nodeReader.CountReachables()
+	if err != nil {
+		return
+	}
 	maxNbValidations := minValidations
-	if len(authKeys) >= minValidations+(minValidations/2) {
+	if nbReachables >= minValidations+(minValidations/2) {
 		maxNbValidations = minValidations + (minValidations / 2)
 	}
 
-	for i := 0; (nbReachables < maxNbValidations || len(patchIds) < requiredPatchNb) && i < len(sKeys); i++ {
+	var sortedReachables int
+	var sortedPatchIDs []int
+	for i := 0; (sortedReachables < maxNbValidations || len(sortedPatchIDs) < requiredPatchNb) && i < len(sKeys); i++ {
 		n, err := nodeReader.FindByPublicKey(sKeys[i])
 		if err != nil {
 			return Pool{}, err
@@ -274,26 +277,26 @@ func FindValidationPool(txHash crypto.VersionnedHash, minValidations int, master
 			//Reference the patch of the node if it's not already insert by helping to determinate
 			//the number of distinct patches retrieved for the check of the required number of patches
 			var existingPatch bool
-			for _, id := range patchIds {
+			for _, id := range sortedPatchIDs {
 				if id == n.patch.patchid {
 					existingPatch = true
 					break
 				}
 			}
 			if !existingPatch {
-				patchIds = append(patchIds, n.patch.patchid)
+				sortedPatchIDs = append(sortedPatchIDs, n.patch.patchid)
 			}
 
-			nbReachables++
+			sortedReachables++
 		}
 
 	}
 
-	if nbReachables < maxNbValidations {
+	if sortedReachables < maxNbValidations {
 		return Pool{}, errors.New("cannot proceed transaction with an invalid number of reachabled validation nodes")
 	}
 
-	if len(patchIds) < requiredPatchNb {
+	if len(sortedPatchIDs) < requiredPatchNb {
 		return Pool{}, errors.New("cannot proceed transaction with missing patches validation nodes")
 	}
 
