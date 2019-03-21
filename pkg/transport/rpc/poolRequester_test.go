@@ -73,6 +73,7 @@ func TestRequestConfirmValidation(t *testing.T) {
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, kp)
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
 	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+	sharedKeyReader.authKeys = append(sharedKeyReader.authKeys, pub)
 
 	nodeReader := &mockNodeReader{
 		nodes: []consensus.Node{
@@ -132,7 +133,7 @@ func TestRequestConfirmValidation(t *testing.T) {
 	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 
-	pool, _ := consensus.FindValidationPool(tx)
+	pool, _ := consensus.FindValidationPool(tx.Address(), 1, pub, nodeReader, sharedKeyReader)
 	valids, err := pr.RequestTransactionValidations(pool, tx, 1, mv)
 	assert.Nil(t, err)
 

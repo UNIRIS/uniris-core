@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"time"
 
 	"github.com/uniris/uniris-core/pkg/shared"
@@ -21,7 +20,7 @@ import (
 // - Executes the proof of work
 // - Requests validation confirmations
 // - Requests storage
-func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader, poolR PoolRequester, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader, nodeReader NodeReader) error {
+func LeadMining(tx chain.Transaction, nbValidations int, wHeaders []chain.NodeHeader, poolR PoolRequester, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader, nodeReader NodeReader) error {
 	fmt.Printf("transaction %x is in progress\n", tx.TransactionHash())
 
 	if !tx.Address().IsValid() {
@@ -45,18 +44,18 @@ func LeadMining(tx chain.Transaction, minValids int, wHeaders []chain.NodeHeader
 	fmt.Printf("transaction %x is locked\n", tx.TransactionHash())
 
 	go func() {
-		vPool, err := FindValidationPool(tx)
+		vPool, err := FindValidationPool(tx.Address(), nbValidations, nodePub, nodeReader, sharedKeyReader)
 		if err != nil {
 			fmt.Printf("transaction find validation pool failed: %s\n", err.Error())
 			return
 		}
 
-		masterValid, err := preValidateTransaction(tx, wHeaders, sPool, vPool, lastVPool, minValids, nodePub, nodePv, sharedKeyReader)
+		masterValid, err := preValidateTransaction(tx, wHeaders, sPool, vPool, lastVPool, nodePub, nodePv, sharedKeyReader, nodeReader)
 		if err != nil {
 			fmt.Printf("transaction pre-validation failed: %s\n", err.Error())
 			return
 		}
-		confirmValids, err := requestValidations(tx, masterValid, vPool, minValids, poolR)
+		confirmValids, err := requestValidations(tx, masterValid, vPool, nbValidations, poolR)
 		if err != nil {
 			fmt.Printf("transaction validation confirmations failed: %s\n", err.Error())
 		}
@@ -83,7 +82,7 @@ func storeTransaction(tx chain.Transaction, sPool Pool, poolR PoolRequester) err
 }
 
 //preValidateTransaction checks the incoming transaction as master node by ensure the transaction integrity and perform the proof of work. A valiation will result from this action
-func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, vPool Pool, lastVPool Pool, minValids int, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader) (chain.MasterValidation, error) {
+func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, vPool Pool, lastVPool Pool, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader, nodeReader NodeReader) (chain.MasterValidation, error) {
 	if _, err := tx.IsValid(); err != nil {
 		return chain.MasterValidation{}, err
 	}
@@ -106,7 +105,10 @@ func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, s
 		lastsKeys = append(lastsKeys, pm.PublicKey())
 	}
 
-	vHeaders, sHeaders := buildHeaders(vPool, sPool)
+	vHeaders, sHeaders, err := buildHeaders(nodeReader, nodePub, vPool, sPool)
+	if err != nil {
+		return chain.MasterValidation{}, err
+	}
 	masterValid, err := chain.NewMasterValidation(lastsKeys, pow, preValid, wHeaders, vHeaders, sHeaders)
 	if err != nil {
 		return chain.MasterValidation{}, err
@@ -115,15 +117,23 @@ func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, s
 	return masterValid, nil
 }
 
-func buildHeaders(vPool Pool, sPool Pool) (vHeaders []chain.NodeHeader, sHeaders []chain.NodeHeader) {
+func buildHeaders(r NodeReader, nodePubK crypto.PublicKey, vPool Pool, sPool Pool) (vHeaders []chain.NodeHeader, sHeaders []chain.NodeHeader, err error) {
+
+	//Add the master node in the header of the validation node list (for traceability and reward)
+	masterNode, err := r.FindByPublicKey(nodePubK)
+	if err != nil {
+		return
+	}
+	vHeaders = append(vHeaders, chain.NewNodeHeader(nodePubK, false, true, masterNode.patch.patchid, masterNode.status == NodeOK))
+
+	//Fill the validation headers with the elected validation pool
 	for _, n := range vPool {
-		//TODO: retrieve real value (patch, is unreachable, is OK)
-		vHeaders = append(vHeaders, chain.NewNodeHeader(n.PublicKey(), true, true, 0, true))
+		vHeaders = append(vHeaders, chain.NewNodeHeader(n.PublicKey(), !n.isReachable, false, n.patch.patchid, n.status == NodeOK))
 	}
 
+	//Fill the storage headers with the elected storage pool
 	for _, n := range sPool {
-		//TODO: retrieve real value (patch, is unreachable)
-		sHeaders = append(sHeaders, chain.NewNodeHeader(n.PublicKey(), true, true, 0, true))
+		sHeaders = append(sHeaders, chain.NewNodeHeader(n.PublicKey(), !n.isReachable, false, n.patch.patchid, n.status == NodeOK))
 	}
 
 	return
@@ -149,33 +159,30 @@ func proofOfWork(tx chain.Transaction, sharedKeyReader shared.KeyReader) (pow cr
 	return nil, nil
 }
 
-func findLastValidationPool(txAddr crypto.VersionnedHash, txType chain.TransactionType, req PoolRequester, nodeReader NodeReader) (Pool, error) {
+func findLastValidationPool(txAddr crypto.VersionnedHash, txType chain.TransactionType, pr PoolRequester, r NodeReader) (prevP Pool, err error) {
 
-	sPool, err := FindStoragePool(txAddr, nodeReader)
+	sPool, err := FindStoragePool(txAddr, r)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	tx, err := req.RequestLastTransaction(sPool, txAddr, txType)
+	tx, err := pr.RequestLastTransaction(sPool, txAddr, txType)
 	if err != nil {
-		return nil, err
+		return
 	}
 	if tx == nil {
-		return nil, nil
+		return
 	}
 
-	pm := make([]Node, 0)
 	for _, key := range tx.MasterValidation().PreviousValidationNodes() {
-		//TODO: find ip address and port
-		pm = append(pm, Node{
-			publicKey: key,
-			ip:        net.ParseIP("127.0.0.1"),
-			port:      5000,
-		})
-
+		node, err := r.FindByPublicKey(key)
+		if err != nil {
+			return Pool{}, err
+		}
+		prevP = append(prevP, node)
 	}
 
-	return Pool(pm), nil
+	return
 }
 
 func requestValidations(tx chain.Transaction, masterValid chain.MasterValidation, vPool Pool, minValids int, poolR PoolRequester) ([]chain.Validation, error) {
@@ -231,9 +238,83 @@ func buildValidation(s chain.ValidationStatus, pub crypto.PublicKey, pv crypto.P
 	return chain.NewValidation(s, time.Now(), pub, vSig)
 }
 
-//GetMinimumValidation returns the validation from a transaction hash
-func GetMinimumValidation(txHash crypto.VersionnedHash) int {
-	return 1
+//RequiredValidationNumber returns the need number of validations for a transaction either based on the network topology or the transaction fees
+func RequiredValidationNumber(txType chain.TransactionType, txFees float64, nodeReader NodeReader, keyReader shared.KeyReader) (int, error) {
+
+	nodeKeys, err := keyReader.AuthorizedNodesPublicKeys()
+	if err != nil {
+		return 0, err
+	}
+
+	nbReachables, err := nodeReader.CountReachables()
+	if err != nil {
+		return 0, nil
+	}
+
+	if txType != chain.SystemTransactionType && len(nodeKeys) <= 3 {
+		return 0, errors.New("no enough nodes in the network to validate this transaction")
+	}
+
+	if txType == chain.SystemTransactionType {
+		return requiredValidationNumberForSysTX(len(nodeKeys), nbReachables)
+	}
+
+	return requiredValidationNumberWithFees(txFees, nbReachables), nil
+}
+
+//requiredValidationNumberForSysTX returns the number of validations needed for a validation based on the network topology
+func requiredValidationNumberForSysTX(nbNodes int, nbReachableNodes int) (int, error) {
+	if nbNodes <= 2 && nbReachableNodes == 1 {
+		return 1, nil
+	}
+	if nbNodes <= 5 && nbReachableNodes >= 1 {
+		return nbReachableNodes, nil
+	}
+	if nbNodes > 5 && nbReachableNodes >= 5 {
+		return 5, nil
+	}
+	return 0, errors.New("no enough nodes in the network to validate this transaction")
+}
+
+//requiredValidationNumberWithFees returns the number of validations needed for a validation based on the transaction fees
+func requiredValidationNumberWithFees(txFees float64, nbReachablesNodes int) (validationNumber int) {
+	fees := feesMatrix()
+
+	//3,5,7,9,11,13,15,17,19,21,23,.....
+	validationsRange := make([]int, 0)
+	for i := 3; i <= 100; i += 2 {
+		validationsRange = append(validationsRange, i)
+	}
+
+	for i := range validationsRange {
+		if txFees <= fees[i] {
+			validationNumber = validationsRange[i]
+			if validationNumber > nbReachablesNodes {
+				validationNumber = nbReachablesNodes
+			}
+			break
+		}
+	}
+
+	return
+}
+
+//TransactionFees compute the fees earned for a given transaction
+func TransactionFees(txType chain.TransactionType, txData map[string][]byte) float64 {
+	if txType == chain.SystemTransactionType {
+		return 0
+	}
+	//TODO: compute fees base on the data sent and type of the transaction
+	return 0.001
+}
+
+//feesMatrix returns the fees matrix
+func feesMatrix() (fees []float64) {
+	//0.001,0.01,0.1,1,10,100,1000,10000,0.1M,1M
+	for i := 0.001; i < 1000000; i *= 10 {
+		fees = append(fees, i)
+	}
+	return
 }
 
 // IsValidationConsensusReach determinates if for the node validations the consensus is reached
