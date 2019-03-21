@@ -361,6 +361,7 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 	emKey, _ := shared.NewEmitterCrossKeyPair([]byte("encpv"), pub)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
+	sharedKeyReader.authKeys = append(sharedKeyReader.authKeys, pub)
 
 	nodeReader := &mockNodeReader{
 		nodes: []consensus.Node{

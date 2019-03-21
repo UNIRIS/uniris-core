@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uniris/uniris-core/pkg/chain"
+
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/consensus"
 	"github.com/uniris/uniris-core/pkg/crypto"
@@ -28,7 +30,17 @@ func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubK
 		}
 	}
 
-	minValidations := consensus.GetMinimumValidation(tx.TransactionHash)
+	//Get the minimum number of validations based on the type of the transaction and its fees
+	txFees := consensus.TransactionFees(chain.TransactionType(tx.Type), tx.Data)
+	minValidations, err := consensus.RequiredValidationNumber(chain.TransactionType(tx.Type), txFees, nodeReader, sharedKeyReader)
+	if err != nil {
+		return transactionResponse{}, &httpError{
+			code:      http.StatusInternalServerError,
+			Error:     err.Error(),
+			Timestamp: time.Now().Unix(),
+			Status:    http.StatusText(http.StatusInternalServerError),
+		}
+	}
 
 	//Building the welcome node headers
 	wHeaders := make([]*api.NodeHeader, 0)

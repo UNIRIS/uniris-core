@@ -45,6 +45,9 @@ const (
 
 	//ContractMessageTransactionType represents a Transaction related to a smart contract message
 	ContractMessageTransactionType TransactionType = 3
+
+	//SystemTransactionType represents a transaction related to the network/infrastructure
+	SystemTransactionType TransactionType = 4
 )
 
 //Transaction describe a root Transaction
@@ -384,6 +387,7 @@ func (t Transaction) checkFields() error {
 	case IDTransactionType:
 	case ContractTransactionType:
 	case ContractMessageTransactionType:
+	case SystemTransactionType:
 	default:
 		return errors.New("transaction type is not allowed")
 	}
