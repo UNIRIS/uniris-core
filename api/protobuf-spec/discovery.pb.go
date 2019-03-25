@@ -3,9 +3,11 @@
 
 package api
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
+import (
+	fmt "fmt"
+	proto "github.com/golang/protobuf/proto"
+	math "math"
+)
 
 import (
 	context "golang.org/x/net/context"
@@ -36,6 +38,7 @@ var PeerAppState_PeerStatus_name = map[int32]string{
 	1: "OK",
 	2: "FAULTY",
 }
+
 var PeerAppState_PeerStatus_value = map[string]int32{
 	"BOOTSTRAPING": 0,
 	"OK":           1,
@@ -45,8 +48,9 @@ var PeerAppState_PeerStatus_value = map[string]int32{
 func (x PeerAppState_PeerStatus) String() string {
 	return proto.EnumName(PeerAppState_PeerStatus_name, int32(x))
 }
+
 func (PeerAppState_PeerStatus) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_2a01b728bc4f80da, []int{8, 0}
+	return fileDescriptor_1e7ff60feb39c8d0, []int{8, 0}
 }
 
 type SynRequest struct {
@@ -61,16 +65,17 @@ func (m *SynRequest) Reset()         { *m = SynRequest{} }
 func (m *SynRequest) String() string { return proto.CompactTextString(m) }
 func (*SynRequest) ProtoMessage()    {}
 func (*SynRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_2a01b728bc4f80da, []int{0}
+	return fileDescriptor_1e7ff60feb39c8d0, []int{0}
 }
+
 func (m *SynRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SynRequest.Unmarshal(m, b)
 }
 func (m *SynRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SynRequest.Marshal(b, m, deterministic)
 }
-func (dst *SynRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SynRequest.Merge(dst, src)
+func (m *SynRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SynRequest.Merge(m, src)
 }
 func (m *SynRequest) XXX_Size() int {
 	return xxx_messageInfo_SynRequest.Size(m)
@@ -108,16 +113,17 @@ func (m *SynResponse) Reset()         { *m = SynResponse{} }
 func (m *SynResponse) String() string { return proto.CompactTextString(m) }
 func (*SynResponse) ProtoMessage()    {}
 func (*SynResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_2a01b728bc4f80da, []int{1}
+	return fileDescriptor_1e7ff60feb39c8d0, []int{1}
 }
+
 func (m *SynResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SynResponse.Unmarshal(m, b)
 }
 func (m *SynResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SynResponse.Marshal(b, m, deterministic)
 }
-func (dst *SynResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SynResponse.Merge(dst, src)
+func (m *SynResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SynResponse.Merge(m, src)
 }
 func (m *SynResponse) XXX_Size() int {
 	return xxx_messageInfo_SynResponse.Size(m)
@@ -161,16 +167,17 @@ func (m *AckRequest) Reset()         { *m = AckRequest{} }
 func (m *AckRequest) String() string { return proto.CompactTextString(m) }
 func (*AckRequest) ProtoMessage()    {}
 func (*AckRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_2a01b728bc4f80da, []int{2}
+	return fileDescriptor_1e7ff60feb39c8d0, []int{2}
 }
+
 func (m *AckRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AckRequest.Unmarshal(m, b)
 }
 func (m *AckRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_AckRequest.Marshal(b, m, deterministic)
 }
-func (dst *AckRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AckRequest.Merge(dst, src)
+func (m *AckRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AckRequest.Merge(m, src)
 }
 func (m *AckRequest) XXX_Size() int {
 	return xxx_messageInfo_AckRequest.Size(m)
@@ -206,16 +213,17 @@ func (m *AckResponse) Reset()         { *m = AckResponse{} }
 func (m *AckResponse) String() string { return proto.CompactTextString(m) }
 func (*AckResponse) ProtoMessage()    {}
 func (*AckResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_2a01b728bc4f80da, []int{3}
+	return fileDescriptor_1e7ff60feb39c8d0, []int{3}
 }
+
 func (m *AckResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AckResponse.Unmarshal(m, b)
 }
 func (m *AckResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_AckResponse.Marshal(b, m, deterministic)
 }
-func (dst *AckResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AckResponse.Merge(dst, src)
+func (m *AckResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AckResponse.Merge(m, src)
 }
 func (m *AckResponse) XXX_Size() int {
 	return xxx_messageInfo_AckResponse.Size(m)
@@ -245,16 +253,17 @@ func (m *PeerDigest) Reset()         { *m = PeerDigest{} }
 func (m *PeerDigest) String() string { return proto.CompactTextString(m) }
 func (*PeerDigest) ProtoMessage()    {}
 func (*PeerDigest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_2a01b728bc4f80da, []int{4}
+	return fileDescriptor_1e7ff60feb39c8d0, []int{4}
 }
+
 func (m *PeerDigest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PeerDigest.Unmarshal(m, b)
 }
 func (m *PeerDigest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PeerDigest.Marshal(b, m, deterministic)
 }
-func (dst *PeerDigest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PeerDigest.Merge(dst, src)
+func (m *PeerDigest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeerDigest.Merge(m, src)
 }
 func (m *PeerDigest) XXX_Size() int {
 	return xxx_messageInfo_PeerDigest.Size(m)
@@ -292,16 +301,17 @@ func (m *PeerDiscovered) Reset()         { *m = PeerDiscovered{} }
 func (m *PeerDiscovered) String() string { return proto.CompactTextString(m) }
 func (*PeerDiscovered) ProtoMessage()    {}
 func (*PeerDiscovered) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_2a01b728bc4f80da, []int{5}
+	return fileDescriptor_1e7ff60feb39c8d0, []int{5}
 }
+
 func (m *PeerDiscovered) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PeerDiscovered.Unmarshal(m, b)
 }
 func (m *PeerDiscovered) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PeerDiscovered.Marshal(b, m, deterministic)
 }
-func (dst *PeerDiscovered) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PeerDiscovered.Merge(dst, src)
+func (m *PeerDiscovered) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeerDiscovered.Merge(m, src)
 }
 func (m *PeerDiscovered) XXX_Size() int {
 	return xxx_messageInfo_PeerDiscovered.Size(m)
@@ -346,16 +356,17 @@ func (m *PeerIdentity) Reset()         { *m = PeerIdentity{} }
 func (m *PeerIdentity) String() string { return proto.CompactTextString(m) }
 func (*PeerIdentity) ProtoMessage()    {}
 func (*PeerIdentity) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_2a01b728bc4f80da, []int{6}
+	return fileDescriptor_1e7ff60feb39c8d0, []int{6}
 }
+
 func (m *PeerIdentity) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PeerIdentity.Unmarshal(m, b)
 }
 func (m *PeerIdentity) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PeerIdentity.Marshal(b, m, deterministic)
 }
-func (dst *PeerIdentity) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PeerIdentity.Merge(dst, src)
+func (m *PeerIdentity) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeerIdentity.Merge(m, src)
 }
 func (m *PeerIdentity) XXX_Size() int {
 	return xxx_messageInfo_PeerIdentity.Size(m)
@@ -399,16 +410,17 @@ func (m *PeerHeartbeatState) Reset()         { *m = PeerHeartbeatState{} }
 func (m *PeerHeartbeatState) String() string { return proto.CompactTextString(m) }
 func (*PeerHeartbeatState) ProtoMessage()    {}
 func (*PeerHeartbeatState) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_2a01b728bc4f80da, []int{7}
+	return fileDescriptor_1e7ff60feb39c8d0, []int{7}
 }
+
 func (m *PeerHeartbeatState) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PeerHeartbeatState.Unmarshal(m, b)
 }
 func (m *PeerHeartbeatState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PeerHeartbeatState.Marshal(b, m, deterministic)
 }
-func (dst *PeerHeartbeatState) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PeerHeartbeatState.Merge(dst, src)
+func (m *PeerHeartbeatState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeerHeartbeatState.Merge(m, src)
 }
 func (m *PeerHeartbeatState) XXX_Size() int {
 	return xxx_messageInfo_PeerHeartbeatState.Size(m)
@@ -450,16 +462,17 @@ func (m *PeerAppState) Reset()         { *m = PeerAppState{} }
 func (m *PeerAppState) String() string { return proto.CompactTextString(m) }
 func (*PeerAppState) ProtoMessage()    {}
 func (*PeerAppState) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_2a01b728bc4f80da, []int{8}
+	return fileDescriptor_1e7ff60feb39c8d0, []int{8}
 }
+
 func (m *PeerAppState) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PeerAppState.Unmarshal(m, b)
 }
 func (m *PeerAppState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PeerAppState.Marshal(b, m, deterministic)
 }
-func (dst *PeerAppState) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PeerAppState.Merge(dst, src)
+func (m *PeerAppState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeerAppState.Merge(m, src)
 }
 func (m *PeerAppState) XXX_Size() int {
 	return xxx_messageInfo_PeerAppState.Size(m)
@@ -531,16 +544,17 @@ func (m *PeerAppState_GeoCoordinates) Reset()         { *m = PeerAppState_GeoCoo
 func (m *PeerAppState_GeoCoordinates) String() string { return proto.CompactTextString(m) }
 func (*PeerAppState_GeoCoordinates) ProtoMessage()    {}
 func (*PeerAppState_GeoCoordinates) Descriptor() ([]byte, []int) {
-	return fileDescriptor_discovery_2a01b728bc4f80da, []int{8, 0}
+	return fileDescriptor_1e7ff60feb39c8d0, []int{8, 0}
 }
+
 func (m *PeerAppState_GeoCoordinates) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_PeerAppState_GeoCoordinates.Unmarshal(m, b)
 }
 func (m *PeerAppState_GeoCoordinates) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_PeerAppState_GeoCoordinates.Marshal(b, m, deterministic)
 }
-func (dst *PeerAppState_GeoCoordinates) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PeerAppState_GeoCoordinates.Merge(dst, src)
+func (m *PeerAppState_GeoCoordinates) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PeerAppState_GeoCoordinates.Merge(m, src)
 }
 func (m *PeerAppState_GeoCoordinates) XXX_Size() int {
 	return xxx_messageInfo_PeerAppState_GeoCoordinates.Size(m)
@@ -566,6 +580,7 @@ func (m *PeerAppState_GeoCoordinates) GetLongitude() float32 {
 }
 
 func init() {
+	proto.RegisterEnum("api.PeerAppState_PeerStatus", PeerAppState_PeerStatus_name, PeerAppState_PeerStatus_value)
 	proto.RegisterType((*SynRequest)(nil), "api.SynRequest")
 	proto.RegisterType((*SynResponse)(nil), "api.SynResponse")
 	proto.RegisterType((*AckRequest)(nil), "api.AckRequest")
@@ -576,7 +591,6 @@ func init() {
 	proto.RegisterType((*PeerHeartbeatState)(nil), "api.PeerHeartbeatState")
 	proto.RegisterType((*PeerAppState)(nil), "api.PeerAppState")
 	proto.RegisterType((*PeerAppState_GeoCoordinates)(nil), "api.PeerAppState.GeoCoordinates")
-	proto.RegisterEnum("api.PeerAppState_PeerStatus", PeerAppState_PeerStatus_name, PeerAppState_PeerStatus_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -684,9 +698,9 @@ var _DiscoveryService_serviceDesc = grpc.ServiceDesc{
 	Metadata: "discovery.proto",
 }
 
-func init() { proto.RegisterFile("discovery.proto", fileDescriptor_discovery_2a01b728bc4f80da) }
+func init() { proto.RegisterFile("discovery.proto", fileDescriptor_1e7ff60feb39c8d0) }
 
-var fileDescriptor_discovery_2a01b728bc4f80da = []byte{
+var fileDescriptor_1e7ff60feb39c8d0 = []byte{
 	// 695 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x54, 0x41, 0x6f, 0xd3, 0x4c,
 	0x10, 0x6d, 0x9c, 0x36, 0x4d, 0x26, 0xfd, 0x92, 0x74, 0x3f, 0x04, 0xa1, 0x2a, 0x52, 0xe5, 0x03,

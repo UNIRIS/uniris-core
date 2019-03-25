@@ -15,12 +15,12 @@ import (
 //LeadMining lead the mining workflow
 //
 //The workflow includes:
-// - Locks the transaction
+// - TimeLock the transaction
 // - Pre-validate (master validation)
 // - Executes the proof of work
 // - Requests validation confirmations
 // - Requests storage
-func LeadMining(tx chain.Transaction, nbValidations int, wHeaders []chain.NodeHeader, poolR PoolRequester, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader, nodeReader NodeReader) error {
+func LeadMining(tx chain.Transaction, nbValidations int, wHeaders chain.WelcomeNodeHeader, poolR PoolRequester, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader, nodeReader NodeReader) error {
 	fmt.Printf("transaction %x is in progress\n", tx.TransactionHash())
 
 	if !tx.Address().IsValid() {
@@ -82,7 +82,7 @@ func storeTransaction(tx chain.Transaction, sPool Pool, poolR PoolRequester) err
 }
 
 //preValidateTransaction checks the incoming transaction as master node by ensure the transaction integrity and perform the proof of work. A valiation will result from this action
-func preValidateTransaction(tx chain.Transaction, wHeaders []chain.NodeHeader, sPool Pool, vPool Pool, lastVPool Pool, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader, nodeReader NodeReader) (chain.MasterValidation, error) {
+func preValidateTransaction(tx chain.Transaction, wHeaders chain.WelcomeNodeHeader, sPool Pool, vPool Pool, lastVPool Pool, nodePub crypto.PublicKey, nodePv crypto.PrivateKey, sharedKeyReader shared.KeyReader, nodeReader NodeReader) (chain.MasterValidation, error) {
 	if _, err := tx.IsValid(); err != nil {
 		return chain.MasterValidation{}, err
 	}

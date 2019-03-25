@@ -53,7 +53,7 @@ func TestReadKeychainByHash(t *testing.T) {
 	})
 	vSig, _ := pv.Sign(vBytes)
 	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	wHeaders := NewWelcomeNodeHeader(pub, []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
 	vHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
@@ -111,7 +111,7 @@ func TestGetIDTransactionByHash(t *testing.T) {
 	})
 	vSig, _ := pv.Sign(vBytes)
 	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	wHeaders := NewWelcomeNodeHeader(pub, []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
 	vHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
@@ -234,7 +234,7 @@ func TestGetTransactionStatusSuccess(t *testing.T) {
 	})
 	vSig, _ := pv.Sign(vBytes)
 	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	wHeaders := NewWelcomeNodeHeader(pub, []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
 	vHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
@@ -292,7 +292,7 @@ func TestReadLastKeychainTransaction(t *testing.T) {
 	})
 	vSig, _ := pv.Sign(vBytes)
 	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	wHeaders := NewWelcomeNodeHeader(pub, []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
 	vHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
@@ -376,7 +376,7 @@ func TestGetLastIDTransaction(t *testing.T) {
 	})
 	vSig, _ := pv.Sign(vBytes)
 	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	wHeaders := NewWelcomeNodeHeader(pub, []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
 	vHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
@@ -462,7 +462,7 @@ func TestGetTransactionChain(t *testing.T) {
 	})
 	vSig, _ := pv.Sign(vBytes)
 	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	wHeaders := NewWelcomeNodeHeader(pub, []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
 	vHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
@@ -544,7 +544,7 @@ func TestCheckTransactionBeforeStore(t *testing.T) {
 	})
 	vSig, _ := pv.Sign(vBytes)
 	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	wHeaders := NewWelcomeNodeHeader(pub, []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
 	vHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
@@ -594,7 +594,7 @@ func TestCheckTransactionBeforeStoreWithMissingValidations(t *testing.T) {
 	})
 	vSig, _ := pv.Sign(vBytes)
 	v, _ := NewValidation(ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	wHeaders := NewWelcomeNodeHeader(pub, []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
 	vHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
@@ -628,7 +628,7 @@ func TestStoreKOTransaction(t *testing.T) {
 	})
 	vSig2, _ := pv.Sign(vBytes2)
 	v2, _ := NewValidation(ValidationOK, time.Now(), pub, vSig2)
-	wHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	wHeaders := NewWelcomeNodeHeader(pub, []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
 	vHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
@@ -692,7 +692,7 @@ func TestStoreKeychainTransaction(t *testing.T) {
 	})
 	vSig2, _ := pv.Sign(vBytes2)
 	v2, _ := NewValidation(ValidationOK, time.Now(), pub, vSig2)
-	wHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	wHeaders := NewWelcomeNodeHeader(pub, []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
 	vHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
@@ -756,7 +756,7 @@ func TestStoreIDTransaction(t *testing.T) {
 	})
 	vSig2, _ := pv.Sign(vBytes2)
 	v2, _ := NewValidation(ValidationOK, time.Now(), pub, vSig2)
-	wHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
+	wHeaders := NewWelcomeNodeHeader(pub, []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
 	vHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []NodeHeader{NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)

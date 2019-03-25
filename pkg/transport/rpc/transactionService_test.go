@@ -265,7 +265,7 @@ func TestHandleStoreTransaction(t *testing.T) {
 	vBytes, _ := json.Marshal(vRaw)
 	vSig, _ := pv.Sign(vBytes)
 	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	wHeaders := chain.NewWelcomeNodeHeader(pub, []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
 	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
@@ -407,16 +407,20 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 
 	tx, _ := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash(txBytes))
 	txf, _ := formatAPITransaction(tx)
+	ml := []*api.NodeHeader{
+		&api.NodeHeader{
+			IsMaster:      true,
+			IsUnreachable: false,
+			PatchNumber:   1,
+			PublicKey:     pubB,
+		}}
 	req := &api.LeadTransactionMiningRequest{
 		Timestamp:          time.Now().Unix(),
 		MinimumValidations: 1,
-		WelcomeHeaders: []*api.NodeHeader{
-			&api.NodeHeader{
-				IsMaster:      true,
-				IsUnreachable: false,
-				PatchNumber:   1,
-				PublicKey:     pubB,
-			},
+		WelcomeHeaders: &api.WelcomeNodeHeader{
+			PublicKey:   pubB,
+			MastersList: ml,
+			Signature:   []byte("sig"),
 		},
 		Transaction: txf,
 	}
@@ -507,7 +511,7 @@ func TestHandleConfirmValiation(t *testing.T) {
 	vBytes, _ := json.Marshal(vRaw)
 	vSig, _ := pv.Sign(vBytes)
 	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
-	wHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
+	wHeaders := chain.NewWelcomeNodeHeader(pub, []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
 	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)

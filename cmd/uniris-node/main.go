@@ -212,6 +212,24 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 }
 
 func startHTTPServer(conf unirisConf, sharedKeyReader shared.KeyReader, nodeReader consensus.NodeReader) {
+	pubB, err := hex.DecodeString(conf.publicKey)
+	if err != nil {
+		panic(err)
+	}
+	publicKey, err := crypto.ParsePublicKey(pubB)
+	if err != nil {
+		panic(err)
+	}
+
+	pvB, err := hex.DecodeString(conf.privateKey)
+	if err != nil {
+		panic(err)
+	}
+	privateKey, err := crypto.ParsePrivateKey(pvB)
+	if err != nil {
+		panic(err)
+	}
+
 	r := gin.Default()
 
 	staticDir, _ := filepath.Abs("../../web/static")
@@ -223,7 +241,7 @@ func startHTTPServer(conf unirisConf, sharedKeyReader shared.KeyReader, nodeRead
 	r.StaticFile("/swagger.yaml", swaggerFile)
 
 	r.GET("/api/account/:idHash", rest.GetAccountHandler(sharedKeyReader, nodeReader))
-	r.POST("/api/account", rest.CreateAccountHandler(sharedKeyReader, nodeReader))
+	r.POST("/api/account", rest.CreateAccountHandler(sharedKeyReader, nodeReader, publicKey, privateKey))
 	r.GET("/api/transaction/:txReceipt/status", rest.GetTransactionStatusHandler(sharedKeyReader, nodeReader))
 	r.GET("/api/sharedkeys", rest.GetSharedKeysHandler(sharedKeyReader))
 

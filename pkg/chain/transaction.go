@@ -507,7 +507,7 @@ type MasterValidation struct {
 	prevValidNodes []crypto.PublicKey
 	pow            crypto.PublicKey
 	validation     Validation
-	wHeaders       []NodeHeader
+	wHeaders       WelcomeNodeHeader
 	vHeaders       []NodeHeader
 	sHeaders       []NodeHeader
 }
@@ -557,8 +557,39 @@ func (h NodeHeader) IsOk() bool {
 	return h.isOK
 }
 
+//WelcomeNodeHeader identifies a Welcome headers
+type WelcomeNodeHeader struct {
+	pubKey     crypto.PublicKey
+	masterlist []NodeHeader
+	sig        []byte
+}
+
+//NewWelcomeNodeHeader creates a new Welcome node header
+func NewWelcomeNodeHeader(pubK crypto.PublicKey, ml []NodeHeader, sig []byte) WelcomeNodeHeader {
+	return WelcomeNodeHeader{
+		pubKey:     pubK,
+		masterlist: ml,
+		sig:        sig,
+	}
+}
+
+//PublicKey returns the welcomenode public key
+func (wh WelcomeNodeHeader) PublicKey() crypto.PublicKey {
+	return wh.pubKey
+}
+
+//NodeHeaders returns the node headers from the welcomenode headers
+func (wh WelcomeNodeHeader) NodeHeaders() []NodeHeader {
+	return wh.masterlist
+}
+
+//Sig returns the welcome Node signature
+func (wh WelcomeNodeHeader) Sig() []byte {
+	return wh.sig
+}
+
 //NewMasterValidation creates a new master Transaction validation
-func NewMasterValidation(prevValidNodes []crypto.PublicKey, pow crypto.PublicKey, valid Validation, wHeaders []NodeHeader, vHeaders []NodeHeader, sHeaders []NodeHeader) (MasterValidation, error) {
+func NewMasterValidation(prevValidNodes []crypto.PublicKey, pow crypto.PublicKey, valid Validation, wHeaders WelcomeNodeHeader, vHeaders []NodeHeader, sHeaders []NodeHeader) (MasterValidation, error) {
 	mv := MasterValidation{
 		prevValidNodes: prevValidNodes,
 		pow:            pow,
@@ -589,7 +620,7 @@ func (mv MasterValidation) Validation() Validation {
 }
 
 //WelcomeHeaders returns the headers determining the master nodes election
-func (mv MasterValidation) WelcomeHeaders() []NodeHeader {
+func (mv MasterValidation) WelcomeHeaders() WelcomeNodeHeader {
 	return mv.wHeaders
 }
 
@@ -606,7 +637,7 @@ func (mv MasterValidation) StorageHeaders() []NodeHeader {
 //IsValid check is the master validation is correct
 func (mv MasterValidation) IsValid() (bool, error) {
 
-	if len(mv.wHeaders) == 0 {
+	if len(mv.wHeaders.masterlist) == 0 {
 		return false, fmt.Errorf("master validation: missing welcome node headers")
 	}
 
