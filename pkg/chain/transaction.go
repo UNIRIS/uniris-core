@@ -560,7 +560,7 @@ func (h NodeHeader) IsOk() bool {
 //WelcomeNodeHeader identifies a Welcome headers
 type WelcomeNodeHeader struct {
 	pubKey     crypto.PublicKey
-	masterlist []NodeHeader
+	masterList []NodeHeader
 	sig        []byte
 }
 
@@ -568,7 +568,7 @@ type WelcomeNodeHeader struct {
 func NewWelcomeNodeHeader(pubK crypto.PublicKey, ml []NodeHeader, sig []byte) WelcomeNodeHeader {
 	return WelcomeNodeHeader{
 		pubKey:     pubK,
-		masterlist: ml,
+		masterList: ml,
 		sig:        sig,
 	}
 }
@@ -580,7 +580,7 @@ func (wh WelcomeNodeHeader) PublicKey() crypto.PublicKey {
 
 //NodeHeaders returns the node headers from the welcomenode headers
 func (wh WelcomeNodeHeader) NodeHeaders() []NodeHeader {
-	return wh.masterlist
+	return wh.masterList
 }
 
 //Sig returns the welcome Node signature
@@ -637,7 +637,7 @@ func (mv MasterValidation) StorageHeaders() []NodeHeader {
 //IsValid check is the master validation is correct
 func (mv MasterValidation) IsValid() (bool, error) {
 
-	if len(mv.wHeaders.masterlist) == 0 {
+	if len(mv.wHeaders.masterList) == 0 {
 		return false, fmt.Errorf("master validation: missing welcome node headers")
 	}
 

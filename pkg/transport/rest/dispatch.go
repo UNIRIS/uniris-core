@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func requestTransactionMining(tx *api.Transaction, nodelastsharedpvKey crypto.PrivateKey, nodelastsharedpubKey crypto.PublicKey, nodeReader consensus.NodeReader, sharedKeyReader shared.KeyReader, nodepubk crypto.PublicKey, nodepvk crypto.PrivateKey) (transactionResponse, *httpError) {
+func requestTransactionMining(tx *api.Transaction, nodeLastSharedPvKey crypto.PrivateKey, nodeLastSharedPubKey crypto.PublicKey, nodeReader consensus.NodeReader, sharedKeyReader shared.KeyReader, nodePubk crypto.PublicKey, nodePvk crypto.PrivateKey) (transactionResponse, *httpError) {
 
 	masterNodes, err := consensus.FindMasterNodes(tx.TransactionHash, nodeReader, sharedKeyReader)
 	if err != nil {
@@ -75,7 +75,7 @@ func requestTransactionMining(tx *api.Transaction, nodelastsharedpvKey crypto.Pr
 		}
 	}
 
-	whSig, err := nodepvk.Sign(whBytes)
+	whSig, err := nodePvk.Sign(whBytes)
 	if err != nil {
 		return transactionResponse{}, &httpError{
 			code:      http.StatusInternalServerError,
@@ -85,7 +85,7 @@ func requestTransactionMining(tx *api.Transaction, nodelastsharedpvKey crypto.Pr
 		}
 	}
 
-	npubk, err := nodepubk.Marshal()
+	npubk, err := nodePubk.Marshal()
 
 	if err != nil {
 		return transactionResponse{}, &httpError{
@@ -117,7 +117,7 @@ func requestTransactionMining(tx *api.Transaction, nodelastsharedpvKey crypto.Pr
 			Status:    http.StatusText(http.StatusInternalServerError),
 		}
 	}
-	reqSig, err := nodelastsharedpvKey.Sign(reqBytes)
+	reqSig, err := nodeLastSharedPvKey.Sign(reqBytes)
 	if err != nil {
 		return transactionResponse{}, &httpError{
 			code:      http.StatusInternalServerError,
@@ -166,7 +166,7 @@ func requestTransactionMining(tx *api.Transaction, nodelastsharedpvKey crypto.Pr
 				ackChan <- false
 				return
 			}
-			if !nodelastsharedpubKey.Verify(resBytes, res.SignatureResponse) {
+			if !nodeLastSharedPubKey.Verify(resBytes, res.SignatureResponse) {
 				fmt.Printf("error - master dispatch: invalid signature response\n")
 				ackChan <- false
 				return
@@ -219,7 +219,7 @@ func requestTransactionMining(tx *api.Transaction, nodelastsharedpvKey crypto.Pr
 			Status:    http.StatusText(http.StatusInternalServerError),
 		}
 	}
-	sig, err := nodelastsharedpvKey.Sign(txResBytes)
+	sig, err := nodeLastSharedPvKey.Sign(txResBytes)
 	if err != nil {
 		return transactionResponse{}, &httpError{
 			code:      http.StatusInternalServerError,
