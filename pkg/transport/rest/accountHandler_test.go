@@ -413,7 +413,7 @@ func TestCreationAccountWhenInvalidID(t *testing.T) {
 	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
 
-	r.POST("/api/account", CreateAccountHandler(sharedKeyReader, mockNodeDatabase{}))
+	r.POST("/api/account", CreateAccountHandler(sharedKeyReader, mockNodeDatabase{}, pub, pv))
 
 	form, _ := json.Marshal(map[string]string{
 		"encrypted_id":       hex.EncodeToString([]byte("id")),
@@ -453,7 +453,7 @@ func TestCreationAccountWhenInvalidTransactionRaw(t *testing.T) {
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
 
 	r := gin.New()
-	r.POST("/api/account", CreateAccountHandler(sharedKeyReader, mockNodeDatabase{}))
+	r.POST("/api/account", CreateAccountHandler(sharedKeyReader, mockNodeDatabase{}, pub, pv))
 
 	form := accountCreationRequest{
 		EncryptedID:       hex.EncodeToString([]byte("abc")),
@@ -597,7 +597,7 @@ func TestCreateAccount(t *testing.T) {
 			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub7, consensus.NodeOK, "", 100, "1.0", 1, 1, 12.5, -100, consensus.GeoPatch{}, true),
 			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub8, consensus.NodeOK, "", 500, "1.0", 1, 1, 50.5, -80, consensus.GeoPatch{}, true),
 		},
-	}))
+	}, pub, pv))
 
 	//Create transactions
 	addr := crypto.Hash([]byte("addr"))

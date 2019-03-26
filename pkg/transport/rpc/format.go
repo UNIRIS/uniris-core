@@ -149,7 +149,7 @@ func formatMasterValidation(mv *api.MasterValidation) (chain.MasterValidation, e
 		return chain.MasterValidation{}, err
 	}
 
-	wHeaders, err := formatNodeHeaders(mv.WelcomeHeaders)
+	wHeaders, err := formatWelcomeNodeHeaders(mv.WelcomeHeaders)
 	if err != nil {
 		return chain.MasterValidation{}, err
 	}
@@ -252,7 +252,7 @@ func formatAPIMasterValidation(masterValid chain.MasterValidation) (*api.MasterV
 		return nil, err
 	}
 
-	wHeaders, err := formatNodeHeadersAPI(masterValid.WelcomeHeaders())
+	wHeaders, err := formatWelcomeNodeHeadersAPI(masterValid.WelcomeHeaders())
 	if err != nil {
 		return nil, err
 	}
@@ -292,6 +292,27 @@ func formatNodeHeadersAPI(headers []chain.NodeHeader) (apiHeaders []*api.NodeHea
 	return
 }
 
+func formatWelcomeNodeHeadersAPI(wheaders chain.WelcomeNodeHeader) (*api.WelcomeNodeHeader, error) {
+
+	masterlist := make([]*api.NodeHeader, 0)
+
+	wnpubk, err := wheaders.PublicKey().Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	masterlist, err = formatNodeHeadersAPI(wheaders.NodeHeaders())
+	if err != nil {
+		return nil, err
+	}
+
+	return &api.WelcomeNodeHeader{
+		PublicKey:   wnpubk,
+		MastersList: masterlist,
+		Signature:   wheaders.Sig(),
+	}, nil
+}
+
 func formatNodeHeaders(apiHeaders []*api.NodeHeader) (headers []chain.NodeHeader, err error) {
 	for _, h := range apiHeaders {
 		pubKey, err := crypto.ParsePublicKey(h.PublicKey)
@@ -307,4 +328,22 @@ func formatNodeHeaders(apiHeaders []*api.NodeHeader) (headers []chain.NodeHeader
 		))
 	}
 	return
+}
+
+func formatWelcomeNodeHeaders(apiwHeaders *api.WelcomeNodeHeader) (chain.WelcomeNodeHeader, error) {
+
+	masterlist := make([]chain.NodeHeader, 0)
+	wnh := chain.WelcomeNodeHeader{}
+
+	wpubk, err := crypto.ParsePublicKey(apiwHeaders.PublicKey)
+	if err != nil {
+		return wnh, err
+	}
+
+	masterlist, err = formatNodeHeaders(apiwHeaders.MastersList)
+	if err != nil {
+		return wnh, err
+	}
+
+	return chain.NewWelcomeNodeHeader(wpubk, masterlist, apiwHeaders.Signature), nil
 }

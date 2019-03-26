@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubKey crypto.PublicKey, nodeReader consensus.NodeReader, sharedKeyReader shared.KeyReader) (transactionResponse, *httpError) {
+func requestTransactionMining(tx *api.Transaction, nodeLastSharedPvKey crypto.PrivateKey, nodeLastSharedPubKey crypto.PublicKey, nodeReader consensus.NodeReader, sharedKeyReader shared.KeyReader, nodePubk crypto.PublicKey, nodePvk crypto.PrivateKey) (transactionResponse, *httpError) {
 
 	masterNodes, err := consensus.FindMasterNodes(tx.TransactionHash, nodeReader, sharedKeyReader)
 	if err != nil {
@@ -43,7 +43,7 @@ func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubK
 	}
 
 	//Building the welcome node headers
-	wHeaders := make([]*api.NodeHeader, 0)
+	wHeadersMasters := make([]*api.NodeHeader, 0)
 	for _, n := range masterNodes {
 
 		pubKey, err := n.PublicKey().Marshal()
@@ -56,13 +56,50 @@ func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubK
 			}
 		}
 
-		wHeaders = append(wHeaders, &api.NodeHeader{
+		wHeadersMasters = append(wHeadersMasters, &api.NodeHeader{
 			IsMaster:      true,
 			IsUnreachable: !n.IsReachable(),
 			PublicKey:     pubKey,
 			PatchNumber:   int32(n.Patch().ID()),
 			IsOK:          n.Status() == consensus.NodeOK,
 		})
+	}
+
+	whBytes, err := json.Marshal(wHeadersMasters)
+	if err != nil {
+		return transactionResponse{}, &httpError{
+			code:      http.StatusInternalServerError,
+			Error:     err.Error(),
+			Timestamp: time.Now().Unix(),
+			Status:    http.StatusText(http.StatusInternalServerError),
+		}
+	}
+
+	whSig, err := nodePvk.Sign(whBytes)
+	if err != nil {
+		return transactionResponse{}, &httpError{
+			code:      http.StatusInternalServerError,
+			Error:     err.Error(),
+			Timestamp: time.Now().Unix(),
+			Status:    http.StatusText(http.StatusInternalServerError),
+		}
+	}
+
+	npubk, err := nodePubk.Marshal()
+
+	if err != nil {
+		return transactionResponse{}, &httpError{
+			code:      http.StatusInternalServerError,
+			Error:     err.Error(),
+			Timestamp: time.Now().Unix(),
+			Status:    http.StatusText(http.StatusInternalServerError),
+		}
+	}
+
+	wHeaders := &api.WelcomeNodeHeader{
+		PublicKey:   npubk,
+		MastersList: wHeadersMasters,
+		Signature:   whSig,
 	}
 
 	req := &api.LeadTransactionMiningRequest{
@@ -80,7 +117,7 @@ func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubK
 			Status:    http.StatusText(http.StatusInternalServerError),
 		}
 	}
-	reqSig, err := pvKey.Sign(reqBytes)
+	reqSig, err := nodeLastSharedPvKey.Sign(reqBytes)
 	if err != nil {
 		return transactionResponse{}, &httpError{
 			code:      http.StatusInternalServerError,
@@ -129,7 +166,7 @@ func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubK
 				ackChan <- false
 				return
 			}
-			if !pubKey.Verify(resBytes, res.SignatureResponse) {
+			if !nodeLastSharedPubKey.Verify(resBytes, res.SignatureResponse) {
 				fmt.Printf("error - master dispatch: invalid signature response\n")
 				ackChan <- false
 				return
@@ -182,7 +219,7 @@ func requestTransactionMining(tx *api.Transaction, pvKey crypto.PrivateKey, pubK
 			Status:    http.StatusText(http.StatusInternalServerError),
 		}
 	}
-	sig, err := pvKey.Sign(txResBytes)
+	sig, err := nodeLastSharedPvKey.Sign(txResBytes)
 	if err != nil {
 		return transactionResponse{}, &httpError{
 			code:      http.StatusInternalServerError,

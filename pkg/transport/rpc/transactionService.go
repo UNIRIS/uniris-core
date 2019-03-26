@@ -233,7 +233,7 @@ func (s txSrv) LeadTransactionMining(ctx context.Context, req *api.LeadTransacti
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	wHeaders, err := formatNodeHeaders(req.WelcomeHeaders)
+	wHeaders, err := formatWelcomeNodeHeaders(req.WelcomeHeaders)
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
