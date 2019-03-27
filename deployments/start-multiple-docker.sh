@@ -67,7 +67,7 @@ printf '    environment:\n'
 ok=0
 while [ $ok == 0 ]
 do
-    r=$(( $RANDOM % 7 ))
+    r=$(( $RANDOM % $nb ))
     rKey=${publicKeys[$r]}
 
     found=-1
@@ -96,27 +96,18 @@ if [ $nb -gt 2 ]; then
         ok=0
         while [ $ok == 0 ]
         do
-            r=$(( $RANDOM % 7 ))
-            if [ $r != $i ];
+            r=$(( $RANDOM % $nb ))
+            if [ $((r+1)) != $i ];
             then
-                seed+="172.16.0.1${r}:5000:${publicKeys[$r]};"
+                seed+="172.16.0.1$((r+1)):5000:${publicKeys[$r]};"
                 ok=1
+                prevSeed[$i]=${r}
             fi
         done
     done
 else
-    ok=0
-    prevR=-1
-    while [ $ok == 0 ]
-    do
-        r=$(( $RANDOM % 7 ))
-        if [ $r != $i ] || [ $prevR != $r ];
-        then
-            seed="172.16.0.1${r}:5000:${publicKeys[$r]};"
-            ok=1
-            prevR=r
-        fi
-    done
+    r=$(( $RANDOM % $nb ))
+    seed="172.16.0.1$((r+1)):5000:${publicKeys[$r]};"
 fi
 
 printf '      - UNIRIS_DISCOVERY_SEEDS=%s\n' "$seed"
