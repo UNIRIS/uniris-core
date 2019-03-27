@@ -70,6 +70,9 @@ Supported flags:
 | discovery-notif-user | Bus messenging instance user | default: `uniris` (AMQP) |
 | bus-password | Bus messenging instance password | default: `uniris` (AMQP) |
 | grpc-port | GRPC port | default: `5000`|
+| log-type | Logging type | default: `file`|
+| log-level | Logging level | default: `info`|
+| log-dir | Logging directory | default: `/var/log/uniris`|
 
 ## Contribution
 

@@ -245,6 +245,27 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 			Usage:       "GRPC server port used to communicate with other nodes",
 			Destination: &conf.grpcPort,
 		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:        "log-type",
+			EnvVar:      "UNIRIS_LOG_TYPE",
+			Value:       "file",
+			Usage:       "Logging type (stdout/file)",
+			Destination: &conf.logging.logType,
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:        "log-level",
+			EnvVar:      "UNIRIS_LOG_LEVEL",
+			Value:       "info",
+			Usage:       "Logging level (info/error/debug)",
+			Destination: &conf.logging.logLevel,
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:        "log-dir",
+			EnvVar:      "UNIRIS_LOG_DIR",
+			Value:       "/var/log/uniris",
+			Usage:       "Dir to store log files",
+			Destination: &conf.logging.LogDir,
+		}),
 	}
 }
 
@@ -441,5 +462,10 @@ type unirisConf struct {
 		host   string
 		port   int
 		pwd    string
+	}
+	logging struct {
+		logType  string
+		logLevel string
+		LogDir   string
 	}
 }

@@ -23,6 +23,11 @@ bus-port: 5672
 bus-user: uniris
 bus-password: uniris
 
+#LOGGING
+log-type: file
+log-level: info
+log-dir: /var/log/uniris
+
 
 
 
