@@ -16,6 +16,7 @@ import (
 	"github.com/uniris/uniris-core/pkg/consensus"
 
 	"github.com/uniris/uniris-core/pkg/crypto"
+	logging "github.com/uniris/uniris-core/pkg/logging"
 	"github.com/uniris/uniris-core/pkg/shared"
 	"github.com/uniris/uniris-core/pkg/system"
 
@@ -36,6 +37,27 @@ import (
 
 const (
 	defaultConfigurationFile = "./conf.yaml"
+)
+
+const (
+	discoverieLogFile = "Discoverie.log"
+	miningLogFile     = "Mining.log"
+)
+
+const (
+	discoverieAppID = "Discoverie"
+	miningAppID     = "Mining"
+)
+
+var appIDLogFile = map[string]string{
+	discoverieAppID: discoverieLogFile,
+	miningAppID:     miningLogFile,
+}
+
+const (
+	errorLogLevel int = iota
+	infoLogLevel
+	debugLogLevel
 )
 
 func main() {
@@ -468,4 +490,104 @@ type unirisConf struct {
 		logLevel string
 		LogDir   string
 	}
+}
+
+func createLogger(appID string, ty string, dir string, level string, privateNetwork bool, privateIface string) logging.Logger {
+
+	//check if appID is in the list
+	if _, appExist := appIDLogFile[appID]; appExist {
+		log.Fatal("[Fatal] Unkown application ID")
+	}
+
+	//get HostID using the system reader
+	sysReader := system.NewReader(privateNetwork, privateIface)
+	ip, err := sysReader.IP()
+	if err != nil {
+		log.Fatal("[Fatal] Cannot get the hostID")
+	}
+
+	//check if log type has the good value
+	if ty != "stdout" && ty != "file" {
+		log.Fatal("[Fatal] log-type value should be (stdout|file)")
+	}
+
+	//check if log-level has the good value
+	if level != "info" && level != "error" && level != "debug" {
+		log.Fatal("[Fatal] log-level value should be (info|error|debug)")
+	}
+
+	//map Loglevel
+	var ll int
+	if level == "error" {
+		ll = errorLogLevel
+	} else if level == "info" {
+		ll = infoLogLevel
+	} else {
+		ll = debugLogLevel
+	}
+
+	if ty == "stdout" {
+		stdLog := log.New(os.Stdout, "", 0)
+		return logging.NewLogger(stdLog, appID, ip, ll)
+	}
+
+	if ty == "file" {
+
+		src, err := os.Stat(dir)
+
+		//check if logdir exist or not
+		if os.IsNotExist(err) {
+			log.Println("[Error] log-dir" + dir + "does not exist, please create the adequate directory")
+			stdLog := log.New(os.Stdout, "", 0)
+			return logging.NewLogger(stdLog, appID, ip, ll)
+		}
+
+		//check if logdir is not a file
+		if src.Mode().IsRegular() {
+			log.Println("[Erro] log-dir" + dir + "is a file, please create the adequate directory")
+			stdLog := log.New(os.Stdout, "", 0)
+			return logging.NewLogger(stdLog, appID, ip, ll)
+		}
+
+		//create Discoverie log files
+		err = createFile(dir, discoverieLogFile)
+		if err != nil {
+			log.Print(err.Error())
+			stdLog := log.New(os.Stdout, "", 0)
+			return logging.NewLogger(stdLog, appID, ip, ll)
+
+		}
+
+		//create Mining log files
+		err = createFile(dir, miningLogFile)
+		if err != nil {
+			log.Print(err.Error())
+			stdLog := log.New(os.Stdout, "", 0)
+			return logging.NewLogger(stdLog, appID, ip, ll)
+		}
+	}
+
+	f, err := os.OpenFile(dir+"/"+appIDLogFile[appID], os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
+	if err != nil {
+		stdLog := log.New(os.Stdout, "", 0)
+		return logging.NewLogger(stdLog, appID, ip, ll)
+	}
+
+	fileLog := log.New(f, "", 0)
+	return logging.NewLogger(fileLog, appID, ip, ll)
+}
+
+func createFile(path string, filename string) error {
+
+	_, err := os.Stat(path + "/" + filename)
+
+	if os.IsNotExist(err) {
+		file, err := os.Create(path + "/" + filename)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+	}
+	return nil
 }
