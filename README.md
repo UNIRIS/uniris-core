@@ -61,6 +61,10 @@ Supported flags:
 | discovery-db-host| Discovery database instance hostname | default: `localhost` |
 | discovery-db-port | Discovery database instance port | default: `6379` (Redis) |
 | discovery-db-password | Discovery database instance password | default: `''`
+| node-db-type| Node database instance type | `mem` (default), `redis` |
+| node-db-host| Node database instance hostname | default: `localhost` |
+| node-db-port | Node database instance port | default: `6379` (Redis) |
+| node-db-password | Node database instance password | default: `''`
 | bus-type| Bus messenging instance type | `mem` (default), `amqp` |
 | bus-host | Bus messenging instance host | default: `localhost`|
 | discovery-notif-user | Bus messenging instance user | default: `uniris` (AMQP) |

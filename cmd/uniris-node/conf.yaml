@@ -13,6 +13,10 @@ discovery-db-type: mem
 discovery-db-host: localhost
 discovery-db-port: 6379
 discovery-db-password: ""
+node-db-type: mem
+node-db-host: localhost
+node-db-port: 6379
+node-db-password: ""
 bus-type: mem
 bus-host: localhost
 bus-port: 5672

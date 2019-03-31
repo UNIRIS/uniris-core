@@ -21,7 +21,7 @@ type discoveryDb struct {
 	client *redis.Client
 }
 
-//NewDiscoveryDatabase creates a new repository using redis as storage
+//NewDiscoveryDatabase creates a new discovery database handler using redis as storage
 //An error is returned if the redis instance is not reached
 func NewDiscoveryDatabase(hostname string, port int, pwd string) (discovery.Database, error) {
 	client := redis.NewClient(&redis.Options{

@@ -88,7 +88,17 @@ func main() {
 		fmt.Printf("Network interface: %s\n", conf.networkInterface)
 
 		sharedDB := memstorage.NewSharedDatabase()
-		nodeDB := &memstorage.NodeDatabase{}
+
+		var nodeDB consensus.NodeReadWriter
+		if conf.nodeDatabase.dbType == "redis" {
+			nodeRedisDB, err := redis.NewNodeDatabase(conf.nodeDatabase.host, conf.nodeDatabase.port, conf.nodeDatabase.pwd)
+			if err != nil {
+				panic(err)
+			}
+			nodeDB = nodeRedisDB
+		} else {
+			nodeDB = &memstorage.NodeDatabase{}
+		}
 
 		go startGRPCServer(conf, sharedDB, nodeDB)
 		startHTTPServer(conf, sharedDB, nodeDB)
@@ -165,6 +175,33 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 			EnvVar:      "UNIRIS_DISCOVERY_DB_PWD",
 			Usage:       "Discovery database instance password",
 			Destination: &conf.discoveryDatabase.pwd,
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:        "node-db-type",
+			EnvVar:      "UNIRIS_NODE_DB_TYPE",
+			Value:       "mem",
+			Usage:       "Node database instance type (mem or redis)",
+			Destination: &conf.nodeDatabase.dbType,
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:        "node-db-host",
+			EnvVar:      "UNIRIS_NODE_DB_HOST",
+			Value:       "localhost",
+			Usage:       "Node database instance hostname",
+			Destination: &conf.nodeDatabase.host,
+		}),
+		altsrc.NewIntFlag(cli.IntFlag{
+			Name:        "node-db-port",
+			Value:       6379,
+			EnvVar:      "UNIRIS_NODE_DB_PORT",
+			Usage:       "Node database instance port",
+			Destination: &conf.nodeDatabase.port,
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:        "node-db-password",
+			EnvVar:      "UNIRIS_NODE_DB_PWD",
+			Usage:       "Node database instance password",
+			Destination: &conf.nodeDatabase.pwd,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
 			Name:        "bus-type",
@@ -394,6 +431,12 @@ type unirisConf struct {
 	}
 	discoverySeeds    string
 	discoveryDatabase struct {
+		dbType string
+		host   string
+		port   int
+		pwd    string
+	}
+	nodeDatabase struct {
 		dbType string
 		host   string
 		port   int

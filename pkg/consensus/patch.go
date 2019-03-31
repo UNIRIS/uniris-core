@@ -1,6 +1,14 @@
 package consensus
 
-import "math"
+import (
+	"errors"
+	"math"
+)
+
+const xDegreePatch float64 = 10
+const yDegreePatch float64 = 10
+
+var worldPatches = createMapPatches(xDegreePatch, yDegreePatch)
 
 //GeoPatch represents a geographic section on the earth based on latitude and longitude
 type GeoPatch struct {
@@ -9,6 +17,16 @@ type GeoPatch struct {
 	right   float64
 	top     float64
 	bottom  float64
+}
+
+//NewGeoPatch creates a new geo patch using its ID
+func NewGeoPatch(id int) (GeoPatch, error) {
+	for i, p := range worldPatches {
+		if i == id {
+			return p, nil
+		}
+	}
+	return GeoPatch{}, errors.New("patch id doesn't exist")
 }
 
 //ID returns the geo patch ID
@@ -37,9 +55,7 @@ func createMapPatches(xDegree float64, yDegree float64) []GeoPatch {
 
 //ComputeGeoPatch identifies a geographic patch from a given geographic peer position
 func ComputeGeoPatch(lat float64, lon float64) (p GeoPatch) {
-	geoPatches := createMapPatches(10, 10)
-
-	for _, patch := range geoPatches {
+	for _, patch := range worldPatches {
 
 		if lon >= patch.left && lon <= patch.right && lat >= patch.bottom && lat <= patch.top {
 			p = patch
