@@ -2,30 +2,32 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/discovery"
+	"github.com/uniris/uniris-core/pkg/logging"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type discoverySrv struct {
-	db    discovery.Database
-	notif discovery.Notifier
+	db     discovery.Database
+	notif  discovery.Notifier
+	logger logging.Logger
 }
 
 //NewDiscoveryServer creates a new GRPC server for the discovery service
-func NewDiscoveryServer(db discovery.Database, n discovery.Notifier) api.DiscoveryServiceServer {
+func NewDiscoveryServer(db discovery.Database, n discovery.Notifier, l logging.Logger) api.DiscoveryServiceServer {
 	return &discoverySrv{
-		db:    db,
-		notif: n,
+		db:     db,
+		notif:  n,
+		logger: l,
 	}
 }
 
 func (s discoverySrv) Synchronize(ctx context.Context, req *api.SynRequest) (*api.SynResponse, error) {
-	fmt.Printf("SYN REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
+	s.logger.Debug("SYN REQUEST - " + time.Unix(req.Timestamp, 0).String())
 
 	receivedPeers := make([]discovery.Peer, 0)
 	for _, p := range req.KnownPeers {
@@ -55,7 +57,7 @@ func (s discoverySrv) Synchronize(ctx context.Context, req *api.SynRequest) (*ap
 }
 
 func (s discoverySrv) Acknowledge(ctx context.Context, req *api.AckRequest) (*api.AckResponse, error) {
-	fmt.Printf("ACK REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
+	s.logger.Debug("ACK REQUEST - " + time.Unix(req.Timestamp, 0).String())
 
 	newPeers := make([]discovery.Peer, 0)
 	for _, p := range req.RequestedPeers {

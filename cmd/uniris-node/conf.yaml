@@ -1,6 +1,6 @@
 # NETWORK CONFIGURATION
 network-type: private
-network-interface: lo0
+network-interface: lo
 
 # MINER IDENTIFICATION
 public-key: 00ee7a047a226e08ea14fe60ec4f6d328e56ebdb2ee2b9f5b1120e231e05c956a3
@@ -25,7 +25,7 @@ bus-password: uniris
 
 #LOGGING
 log-type: file
-log-level: info
+log-level: debug
 log-dir: /var/log/uniris
 
 

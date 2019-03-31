@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/uniris/uniris-core/pkg/logging"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -18,7 +19,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func requestTransactionMining(tx *api.Transaction, nodeLastSharedPvKey crypto.PrivateKey, nodeLastSharedPubKey crypto.PublicKey, nodeReader consensus.NodeReader, sharedKeyReader shared.KeyReader, nodePubk crypto.PublicKey, nodePvk crypto.PrivateKey) (transactionResponse, *httpError) {
+func requestTransactionMining(tx *api.Transaction, nodeLastSharedPvKey crypto.PrivateKey, nodeLastSharedPubKey crypto.PublicKey, nodeReader consensus.NodeReader, sharedKeyReader shared.KeyReader, nodePubk crypto.PublicKey, nodePvk crypto.PrivateKey, l logging.Logger) (transactionResponse, *httpError) {
 
 	masterNodes, err := consensus.FindMasterNodes(tx.TransactionHash, nodeReader, sharedKeyReader)
 	if err != nil {
@@ -143,7 +144,7 @@ func requestTransactionMining(tx *api.Transaction, nodeLastSharedPvKey crypto.Pr
 			conn, err := grpc.Dial(masterAddr, grpc.WithInsecure())
 			defer conn.Close()
 			if err != nil {
-				fmt.Printf("error - master unreachable: %s\n", err.Error())
+				l.Error("error - master unreachable: " + err.Error())
 				ackChan <- false
 				return
 			}
@@ -152,22 +153,22 @@ func requestTransactionMining(tx *api.Transaction, nodeLastSharedPvKey crypto.Pr
 			res, err := cli.LeadTransactionMining(context.Background(), req)
 			if err != nil {
 				_, message := parseGrpcError(err)
-				fmt.Printf("error - master dispatch: transaction failed - cause: %s\n", message)
+				l.Error("error - master dispatch: transaction failed - cause: " + message)
 				ackChan <- false
 				return
 			}
 
-			fmt.Printf("LEAD TRANSACTION MINING RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+			l.Debug("LEAD TRANSACTION MINING RESPONSE - " + time.Unix(res.Timestamp, 0).String())
 			resBytes, err := json.Marshal(&api.LeadTransactionMiningResponse{
 				Timestamp: res.Timestamp,
 			})
 			if err != nil {
-				fmt.Printf("error - master dispatch: transaction response bad format - cause: %s\n", err.Error())
+				l.Error("error - master dispatch: transaction response bad format - cause: " + err.Error())
 				ackChan <- false
 				return
 			}
 			if !nodeLastSharedPubKey.Verify(resBytes, res.SignatureResponse) {
-				fmt.Printf("error - master dispatch: invalid signature response\n")
+				l.Error("error - master dispatch: invalid signature response\n")
 				ackChan <- false
 				return
 			}

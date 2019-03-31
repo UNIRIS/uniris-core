@@ -2,7 +2,10 @@ package rpc
 
 import (
 	"context"
+	"github.com/uniris/uniris-core/pkg/logging"
+	"log"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -20,8 +23,9 @@ Scenario: Receive a synchronize request without knowing any peers
 */
 func TestHandleSynchronizeRequestWithoutKnownPeers(t *testing.T) {
 	db := &mockDiscoveryDB{}
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
 
-	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{})
+	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{}, l)
 
 	res, err := discoverySrv.Synchronize(context.TODO(), &api.SynRequest{
 		KnownPeers: []*api.PeerDigest{
@@ -60,7 +64,8 @@ func TestHandleSynchronizeRequestByKnowingPeer(t *testing.T) {
 		},
 	}
 
-	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{})
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{}, l)
 
 	res, err := discoverySrv.Synchronize(context.TODO(), &api.SynRequest{
 		KnownPeers: []*api.PeerDigest{
@@ -92,8 +97,8 @@ Scenario: Receive an acknowledgement request with the details for the requested 
 */
 func TestHandleAcknowledgeRequest(t *testing.T) {
 	db := &mockDiscoveryDB{}
-
-	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{})
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{}, l)
 
 	_, err := discoverySrv.Acknowledge(context.TODO(), &api.AckRequest{
 		RequestedPeers: []*api.PeerDiscovered{

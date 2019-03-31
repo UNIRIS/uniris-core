@@ -2,6 +2,7 @@ package amqp
 
 import (
 	"fmt"
+	"github.com/uniris/uniris-core/pkg/logging"
 	"time"
 
 	"github.com/streadway/amqp"
@@ -9,9 +10,9 @@ import (
 )
 
 //NewDiscoveryNotifier creates a discovery notifier using AMQP
-func NewDiscoveryNotifier(host, user, pwd string, port int) discovery.Notifier {
+func NewDiscoveryNotifier(host, user, pwd string, port int, l logging.Logger) discovery.Notifier {
 	amqpURI := fmt.Sprintf("amqp://%s:%s@%s:%d", user, pwd, host, port)
-	return notifier{amqpURI}
+	return notifier{amqpURI, l}
 }
 
 const (
@@ -22,6 +23,7 @@ const (
 
 type notifier struct {
 	amqpURI string
+	logger  logging.Logger
 }
 
 func (n notifier) NotifyDiscovery(p discovery.Peer) error {
@@ -29,7 +31,7 @@ func (n notifier) NotifyDiscovery(p discovery.Peer) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Discovered peer: %s\n", p)
+	n.logger.Info("Discovered peer: " + p.String())
 	return n.notifyQueue(b, "application/json", queueNameDiscoveries)
 }
 

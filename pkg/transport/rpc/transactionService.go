@@ -3,13 +3,13 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/chain"
 	"github.com/uniris/uniris-core/pkg/consensus"
 	"github.com/uniris/uniris-core/pkg/crypto"
+	"github.com/uniris/uniris-core/pkg/logging"
 	"github.com/uniris/uniris-core/pkg/shared"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -22,10 +22,11 @@ type txSrv struct {
 	poolR           consensus.PoolRequester
 	nodePublicKey   crypto.PublicKey
 	nodePrivateKey  crypto.PrivateKey
+	logger          logging.Logger
 }
 
 //NewTransactionService creates service handler for the GRPC Transaction service
-func NewTransactionService(cDB chain.Database, skr shared.KeyReader, nr consensus.NodeReader, pR consensus.PoolRequester, pubk crypto.PublicKey, pvk crypto.PrivateKey) api.TransactionServiceServer {
+func NewTransactionService(cDB chain.Database, skr shared.KeyReader, nr consensus.NodeReader, pR consensus.PoolRequester, pubk crypto.PublicKey, pvk crypto.PrivateKey, l logging.Logger) api.TransactionServiceServer {
 	return txSrv{
 		chainDB:         cDB,
 		sharedKeyReader: skr,
@@ -33,11 +34,12 @@ func NewTransactionService(cDB chain.Database, skr shared.KeyReader, nr consensu
 		poolR:           pR,
 		nodePublicKey:   pubk,
 		nodePrivateKey:  pvk,
+		logger:          l,
 	}
 }
 
 func (s txSrv) GetLastTransaction(ctx context.Context, req *api.GetLastTransactionRequest) (*api.GetLastTransactionResponse, error) {
-	fmt.Printf("GET LAST TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
+	s.logger.Debug("GET LAST TRANSACTION REQUEST - " + time.Unix(req.Timestamp, 0).String())
 
 	reqBytes, err := json.Marshal(&api.GetLastTransactionRequest{
 		TransactionAddress: req.TransactionAddress,
@@ -88,7 +90,7 @@ func (s txSrv) GetLastTransaction(ctx context.Context, req *api.GetLastTransacti
 }
 
 func (s txSrv) GetTransactionStatus(ctx context.Context, req *api.GetTransactionStatusRequest) (*api.GetTransactionStatusResponse, error) {
-	fmt.Printf("GET TRANSACTION STATUS REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
+	s.logger.Debug("GET TRANSACTION STATUS REQUEST - " + time.Unix(req.Timestamp, 0).String())
 
 	reqBytes, err := json.Marshal(&api.GetTransactionStatusRequest{
 		TransactionHash: req.TransactionHash,
@@ -128,7 +130,7 @@ func (s txSrv) GetTransactionStatus(ctx context.Context, req *api.GetTransaction
 }
 
 func (s txSrv) StoreTransaction(ctx context.Context, req *api.StoreTransactionRequest) (*api.StoreTransactionResponse, error) {
-	fmt.Printf("STORE TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
+	s.logger.Debug("STORE TRANSACTION REQUEST - " + time.Unix(req.Timestamp, 0).String())
 
 	reqBytes, err := json.Marshal(&api.StoreTransactionRequest{
 		MinedTransaction: req.MinedTransaction,
@@ -171,7 +173,7 @@ func (s txSrv) StoreTransaction(ctx context.Context, req *api.StoreTransactionRe
 }
 
 func (s txSrv) TimeLockTransaction(ctx context.Context, req *api.TimeLockTransactionRequest) (*api.TimeLockTransactionResponse, error) {
-	fmt.Printf("TIMELOCK TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
+	s.logger.Debug("TIMELOCK TRANSACTION REQUEST - " + time.Unix(req.Timestamp, 0).String())
 
 	reqBytes, err := json.Marshal(&api.TimeLockTransactionRequest{
 		TransactionHash:     req.TransactionHash,
@@ -212,7 +214,7 @@ func (s txSrv) TimeLockTransaction(ctx context.Context, req *api.TimeLockTransac
 }
 
 func (s txSrv) LeadTransactionMining(ctx context.Context, req *api.LeadTransactionMiningRequest) (*api.LeadTransactionMiningResponse, error) {
-	fmt.Printf("LEAD TRANSACTION MINING REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
+	s.logger.Debug("LEAD TRANSACTION MINING REQUEST - " + time.Unix(req.Timestamp, 0).String())
 
 	reqBytes, err := json.Marshal(&api.LeadTransactionMiningRequest{
 		Transaction:        req.Transaction,
@@ -238,7 +240,7 @@ func (s txSrv) LeadTransactionMining(ctx context.Context, req *api.LeadTransacti
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	if err := consensus.LeadMining(tx, int(req.MinimumValidations), wHeaders, s.poolR, s.nodePublicKey, s.nodePrivateKey, s.sharedKeyReader, s.nodeReader); err != nil {
+	if err := consensus.LeadMining(tx, int(req.MinimumValidations), wHeaders, s.poolR, s.nodePublicKey, s.nodePrivateKey, s.sharedKeyReader, s.nodeReader, s.logger); err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
@@ -258,7 +260,7 @@ func (s txSrv) LeadTransactionMining(ctx context.Context, req *api.LeadTransacti
 }
 
 func (s txSrv) ConfirmTransactionValidation(ctx context.Context, req *api.ConfirmTransactionValidationRequest) (*api.ConfirmTransactionValidationResponse, error) {
-	fmt.Printf("CONFIRM VALIDATION TRANSACTION REQUEST - %s\n", time.Unix(req.Timestamp, 0).String())
+	s.logger.Debug("CONFIRM VALIDATION TRANSACTION REQUEST - " + time.Unix(req.Timestamp, 0).String())
 
 	reqBytes, err := json.Marshal(&api.ConfirmTransactionValidationRequest{
 		Transaction:      req.Transaction,
@@ -285,7 +287,7 @@ func (s txSrv) ConfirmTransactionValidation(ctx context.Context, req *api.Confir
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
-	valid, err := consensus.ConfirmTransactionValidation(tx, masterValid, s.nodePublicKey, s.nodePrivateKey)
+	valid, err := consensus.ConfirmTransactionValidation(tx, masterValid, s.nodePublicKey, s.nodePrivateKey, s.logger)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}

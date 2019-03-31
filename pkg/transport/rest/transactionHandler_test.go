@@ -6,13 +6,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/uniris/uniris-core/pkg/consensus"
+	"github.com/uniris/uniris-core/pkg/logging"
 	"github.com/uniris/uniris-core/pkg/shared"
 
 	"github.com/gin-gonic/gin"
@@ -32,8 +35,9 @@ Scenario: Get transactions status with receipt non hexadecimal
 	Then I get an error
 */
 func TestGetTransactionStatusWithNoHexaReceipt(t *testing.T) {
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
 	r := gin.New()
-	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(&mockSharedKeyReader{}, &mockNodeDatabase{}))
+	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(&mockSharedKeyReader{}, &mockNodeDatabase{}, l))
 
 	path := fmt.Sprintf("http://localhost/api/transaction/abc/status")
 	req, _ := http.NewRequest("GET", path, nil)
@@ -56,8 +60,9 @@ Scenario: Get transactions status with receipt bad format
 	Then I get an error
 */
 func TestGetTransactionStatusWithBadFormat(t *testing.T) {
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
 	r := gin.New()
-	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(&mockSharedKeyReader{}, &mockNodeDatabase{}))
+	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(&mockSharedKeyReader{}, &mockNodeDatabase{}, l))
 
 	path := fmt.Sprintf("http://localhost/api/transaction/%s/status", hex.EncodeToString([]byte("abc")))
 	req, _ := http.NewRequest("GET", path, nil)
@@ -80,8 +85,9 @@ Scenario: Get transactions status with receipt bad length
 	Then I get an error
 */
 func TestGetTransactionStatusWithBadReceiptLength(t *testing.T) {
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
 	r := gin.New()
-	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(&mockSharedKeyReader{}, &mockNodeDatabase{}))
+	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(&mockSharedKeyReader{}, &mockNodeDatabase{}, l))
 
 	receipt := make([]byte, 10)
 	receipt[0] = byte(int(stdcrypto.SHA256))
@@ -117,7 +123,8 @@ func TestGetTransactionStatusUnknown(t *testing.T) {
 
 	chainDB := &mockChainDB{}
 
-	pr := rpc.NewPoolRequester(sharedKeyReader)
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	pr := rpc.NewPoolRequester(sharedKeyReader, l)
 
 	nodeReader := &mockNodeDatabase{
 		nodes: []consensus.Node{
@@ -125,7 +132,7 @@ func TestGetTransactionStatusUnknown(t *testing.T) {
 		},
 	}
 
-	txSrv := rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv)
+	txSrv := rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l)
 
 	//Start transaction server
 	lisTx, _ := net.Listen("tcp", ":5000")
@@ -136,7 +143,7 @@ func TestGetTransactionStatusUnknown(t *testing.T) {
 
 	//Start API
 	r := gin.New()
-	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(sharedKeyReader, nodeReader))
+	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(sharedKeyReader, nodeReader, l))
 
 	addr := crypto.Hash([]byte("hash"))
 	hash := crypto.Hash([]byte("abc"))

@@ -2,9 +2,19 @@ package logging
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"time"
+)
+
+//Loglevel describes the log level
+type Loglevel int
+
+const (
+	errorLogLevel Loglevel = iota
+	infoLogLevel
+	debugLogLevel
 )
 
 //Logger describe a logger structure
@@ -12,11 +22,21 @@ type Logger struct {
 	log      *log.Logger
 	appID    string
 	hostID   net.IP
-	logLevel int
+	logLevel Loglevel
 }
 
 //NewLogger create a new logger with the good parameteres
-func NewLogger(l *log.Logger, appid string, hostid net.IP, ll int) Logger {
+func NewLogger(l *log.Logger, appid string, hostid net.IP, level string) Logger {
+
+	//map Loglevel
+	var ll Loglevel
+	if level == "error" {
+		ll = errorLogLevel
+	} else if level == "info" {
+		ll = infoLogLevel
+	} else {
+		ll = debugLogLevel
+	}
 
 	return Logger{
 		log:      l,
@@ -27,25 +47,35 @@ func NewLogger(l *log.Logger, appid string, hostid net.IP, ll int) Logger {
 
 }
 
+//GetLevel Return the log level
+func (l *Logger) GetLevel() Loglevel {
+	return l.logLevel
+}
+
+//GetWriter Return the log IO Writer
+func (l *Logger) GetWriter() io.Writer {
+	return l.log.Writer()
+}
+
 //Error write an Error message
-func (l *Logger) Error(app string, hostID net.IP, data string) {
-	line := formatLogLine(app, "ERROR", hostID, data)
+func (l *Logger) Error(data string) {
+	line := formatLogLine(l.appID, "ERROR", l.hostID, data)
 	l.log.Println(line)
 
 }
 
 //Info write an Info message
-func (l *Logger) Info(app string, hostID net.IP, data string) {
+func (l *Logger) Info(data string) {
 	if l.logLevel >= 1 {
-		line := formatLogLine(app, "ERROR", hostID, data)
+		line := formatLogLine(l.appID, "INFO", l.hostID, data)
 		l.log.Println(line)
 	}
 }
 
 //Debug write a debug message
-func (l *Logger) Debug(app string, hostID net.IP, data string) {
+func (l *Logger) Debug(data string) {
 	if l.logLevel >= 2 {
-		line := formatLogLine(app, "ERROR", hostID, data)
+		line := formatLogLine(l.appID, "DEBUG", l.hostID, data)
 		l.log.Println(line)
 	}
 }

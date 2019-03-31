@@ -9,6 +9,7 @@ import (
 
 	"github.com/uniris/uniris-core/pkg/consensus"
 	"github.com/uniris/uniris-core/pkg/crypto"
+	"github.com/uniris/uniris-core/pkg/logging"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/shared"
@@ -19,7 +20,7 @@ import (
 //GetAccountHandler is an HTTP handler which retrieves an account from an ID public key hash
 //It requests the storage pool from the id address, decrypts the encrypted keychain address and request the keychain from its dedicated pool
 //Then it aggregates the ID and Keychain data
-func GetAccountHandler(sharedKeyReader shared.KeyReader, nodeReader consensus.NodeReader) func(c *gin.Context) {
+func GetAccountHandler(sharedKeyReader shared.KeyReader, nodeReader consensus.NodeReader, l logging.Logger) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		encIDHash := c.Param("idHash")
@@ -148,7 +149,7 @@ func GetAccountHandler(sharedKeyReader shared.KeyReader, nodeReader consensus.No
 }
 
 //CreateAccountHandler is an HTTP handler which forwards ID and Keychain transaction to master nodes and reply with the transaction receipts
-func CreateAccountHandler(sharedKeyReader shared.KeyReader, nodeReader consensus.NodeReader, pubk crypto.PublicKey, pvk crypto.PrivateKey) func(c *gin.Context) {
+func CreateAccountHandler(sharedKeyReader shared.KeyReader, nodeReader consensus.NodeReader, pubk crypto.PublicKey, pvk crypto.PrivateKey, l logging.Logger) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		var form accountCreationRequest
@@ -219,7 +220,7 @@ func CreateAccountHandler(sharedKeyReader shared.KeyReader, nodeReader consensus
 			c.JSON(httpErr.code, httpErr)
 			return
 		}
-		idTxRes, httpErr := requestTransactionMining(idTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey(), nodeReader, sharedKeyReader, pubk, pvk)
+		idTxRes, httpErr := requestTransactionMining(idTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey(), nodeReader, sharedKeyReader, pubk, pvk, l)
 		if httpErr != nil {
 			c.JSON(httpErr.code, httpErr)
 			return
@@ -231,7 +232,7 @@ func CreateAccountHandler(sharedKeyReader shared.KeyReader, nodeReader consensus
 			c.JSON(httpErr.code, httpErr)
 			return
 		}
-		keychainTxRes, httpErr := requestTransactionMining(keychainTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey(), nodeReader, sharedKeyReader, pubk, pvk)
+		keychainTxRes, httpErr := requestTransactionMining(keychainTx, nodeLastKeys.PrivateKey(), nodeLastKeys.PublicKey(), nodeReader, sharedKeyReader, pubk, pvk, l)
 		if httpErr != nil {
 			c.JSON(httpErr.code, httpErr)
 			return

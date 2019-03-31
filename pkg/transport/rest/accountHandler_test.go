@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sort"
 	"testing"
 	"time"
@@ -24,6 +26,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/uniris/uniris-core/pkg/crypto"
+	"github.com/uniris/uniris-core/pkg/logging"
 	"github.com/uniris/uniris-core/pkg/transport/rpc"
 )
 
@@ -35,7 +38,8 @@ Scenario: Get account request with an ID hash not a valid hash
 */
 func TestGetAccountWhenInvalidHash(t *testing.T) {
 	r := gin.New()
-	r.GET("/api/account/:idHash", GetAccountHandler(&mockSharedKeyReader{}, &mockNodeDatabase{}))
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	r.GET("/api/account/:idHash", GetAccountHandler(&mockSharedKeyReader{}, &mockNodeDatabase{}, l))
 
 	path := fmt.Sprintf("http://localhost/api/account/abc")
 	req, _ := http.NewRequest("GET", path, nil)
@@ -61,11 +65,12 @@ func TestGetAccountWhenInvalidSignature(t *testing.T) {
 
 	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	emK, _ := shared.NewEmitterCrossKeyPair([]byte("enc"), pub)
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
 
 	r := gin.New()
 	r.GET("/api/account/:idHash", GetAccountHandler(&mockSharedKeyReader{
 		crossEmitterKeys: []shared.EmitterCrossKeyPair{emK},
-	}, &mockNodeDatabase{}))
+	}, &mockNodeDatabase{}, l))
 
 	path1 := fmt.Sprintf("http://localhost/api/account/%s", hex.EncodeToString(crypto.Hash(([]byte("abc")))))
 	req1, _ := http.NewRequest("GET", path1, nil)
@@ -134,11 +139,12 @@ func TestGetAccountWhenIDNotExist(t *testing.T) {
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv))
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l))
 	go grpcServer.Serve(lis)
 
 	r := gin.New()
-	r.GET("/api/account/:idHash", GetAccountHandler(sharedKeyReader, nodeReader))
+	r.GET("/api/account/:idHash", GetAccountHandler(sharedKeyReader, nodeReader, l))
 
 	idHash := crypto.Hash([]byte("abc"))
 	encIDHash, _ := pub.Encrypt(idHash)
@@ -185,13 +191,14 @@ func TestGetAccountWhenKeychainNotExist(t *testing.T) {
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
 	grpcServer := grpc.NewServer()
-	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv))
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l))
 	go grpcServer.Serve(lis)
 
 	//Start API
 	r := gin.New()
-	r.GET("/api/account/:idHash", GetAccountHandler(sharedKeyReader, nodeReader))
+	r.GET("/api/account/:idHash", GetAccountHandler(sharedKeyReader, nodeReader, l))
 
 	//Create transactions
 
@@ -283,8 +290,9 @@ func TestGetAccount(t *testing.T) {
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
 	grpcServer := grpc.NewServer()
-	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv))
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l))
 	go grpcServer.Serve(lis)
 
 	//Create transactions
@@ -366,7 +374,7 @@ func TestGetAccount(t *testing.T) {
 	sig, _ := pv.Sign(encIDHash)
 
 	r := gin.New()
-	r.GET("/api/account/:idHash", GetAccountHandler(sharedKeyReader, nodeReader))
+	r.GET("/api/account/:idHash", GetAccountHandler(sharedKeyReader, nodeReader, l))
 	path := fmt.Sprintf("http://localhost/api/account/%s?signature=%s", hex.EncodeToString(encIDHash), hex.EncodeToString(sig))
 
 	req, _ := http.NewRequest("GET", path, nil)
@@ -406,6 +414,7 @@ func TestCreationAccountWhenInvalidID(t *testing.T) {
 	r := gin.New()
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
 
 	sharedKeyReader := &mockSharedKeyReader{}
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
@@ -413,7 +422,7 @@ func TestCreationAccountWhenInvalidID(t *testing.T) {
 	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
 
-	r.POST("/api/account", CreateAccountHandler(sharedKeyReader, mockNodeDatabase{}, pub, pv))
+	r.POST("/api/account", CreateAccountHandler(sharedKeyReader, mockNodeDatabase{}, pub, pv, l))
 
 	form, _ := json.Marshal(map[string]string{
 		"encrypted_id":       hex.EncodeToString([]byte("id")),
@@ -451,9 +460,10 @@ func TestCreationAccountWhenInvalidTransactionRaw(t *testing.T) {
 	emKey, _ := shared.NewEmitterCrossKeyPair([]byte("pv"), pub)
 	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
 
 	r := gin.New()
-	r.POST("/api/account", CreateAccountHandler(sharedKeyReader, mockNodeDatabase{}, pub, pv))
+	r.POST("/api/account", CreateAccountHandler(sharedKeyReader, mockNodeDatabase{}, pub, pv, l))
 
 	form := accountCreationRequest{
 		EncryptedID:       hex.EncodeToString([]byte("abc")),
@@ -574,8 +584,8 @@ func TestCreateAccount(t *testing.T) {
 			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub8, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
 		},
 	}
-
-	txSrv := rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv)
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	txSrv := rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l)
 
 	//Start transaction server
 	lis, _ := net.Listen("tcp", ":5000")
@@ -597,7 +607,7 @@ func TestCreateAccount(t *testing.T) {
 			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub7, consensus.NodeOK, "", 100, "1.0", 1, 1, 12.5, -100, consensus.GeoPatch{}, true),
 			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub8, consensus.NodeOK, "", 500, "1.0", 1, 1, 50.5, -80, consensus.GeoPatch{}, true),
 		},
-	}, pub, pv))
+	}, pub, pv, l))
 
 	//Create transactions
 	addr := crypto.Hash([]byte("addr"))

@@ -11,13 +11,14 @@ import (
 	"github.com/gin-gonic/gin"
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/consensus"
+	"github.com/uniris/uniris-core/pkg/logging"
 	"github.com/uniris/uniris-core/pkg/shared"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 )
 
 //GetTransactionStatusHandler defines an HTTP handler to get the status of a transaction
-func GetTransactionStatusHandler(sharedKeyReader shared.KeyReader, nodeReader consensus.NodeReader) func(c *gin.Context) {
+func GetTransactionStatusHandler(sharedKeyReader shared.KeyReader, nodeReader consensus.NodeReader, l logging.Logger) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		txReceipt := c.Param("txReceipt")
 		txAddress, txHash, err := decodeTxReceipt(txReceipt)
@@ -101,7 +102,7 @@ func GetTransactionStatusHandler(sharedKeyReader shared.KeyReader, nodeReader co
 			return
 		}
 
-		fmt.Printf("GET TRANSACTION STATUS RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+		l.Debug("GET TRANSACTION STATUS RESPONSE - " + time.Unix(res.Timestamp, 0).String())
 		resBytes, err := json.Marshal(&api.GetTransactionStatusResponse{
 			Status:    res.Status,
 			Timestamp: res.Timestamp,

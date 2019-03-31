@@ -2,11 +2,15 @@ package discovery
 
 import (
 	"errors"
+	"log"
 	"net"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/uniris/uniris-core/pkg/logging"
 )
 
 /*
@@ -20,8 +24,8 @@ func TestPeerStatusWithNoDiscoveries(t *testing.T) {
 	p := NewPeerDigest(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
-
-	status, err := localStatus(p, 0, mockNetworkChecker{})
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	status, err := localStatus(p, 0, mockNetworkChecker{}, l)
 	assert.Nil(t, err)
 	assert.Equal(t, BootstrapingPeer, status)
 }
@@ -37,7 +41,8 @@ func TestPeerStatusWithNotInternet(t *testing.T) {
 	p := NewPeerDigest(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
-	status, _ := localStatus(p, 1, mockFailInternetNetworker{})
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	status, _ := localStatus(p, 1, mockFailInternetNetworker{}, l)
 	assert.Equal(t, FaultyPeer, status)
 }
 
@@ -52,14 +57,16 @@ func TestPeerStatusWithNotInternetWithTimerStateEnabled(t *testing.T) {
 	p := NewPeerDigest(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
-	status, _ := localStatus(p, 1, mockFailInternetNetworker{})
+
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	status, _ := localStatus(p, 1, mockFailInternetNetworker{}, l)
 	assert.Equal(t, FaultyPeer, status)
 	ts := checktimerState()
 	assert.Equal(t, false, ts)
-	status2, _ := localStatus(p, 1, mockNetworkChecker{})
+	status2, _ := localStatus(p, 1, mockNetworkChecker{}, l)
 	assert.Equal(t, BootstrapingPeer, status2)
 	time.Sleep(5 * time.Second)
-	status3, _ := localStatus(p, 1, mockNetworkChecker{})
+	status3, _ := localStatus(p, 1, mockNetworkChecker{}, l)
 	assert.Equal(t, OkPeerStatus, status3)
 
 }
@@ -75,7 +82,9 @@ func TestPeerStatusWithBadNTP(t *testing.T) {
 	p := NewPeerDigest(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
-	status, _ := localStatus(p, 1, mockFailNTPNetworker{})
+
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	status, _ := localStatus(p, 1, mockFailNTPNetworker{}, l)
 	assert.Equal(t, FaultyPeer, status)
 }
 
@@ -90,7 +99,9 @@ func TestPeerStatusWithNoGRPC(t *testing.T) {
 	p := NewPeerDigest(
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
-	status, _ := localStatus(p, 1, mockFailGRPCServersNetworker{})
+
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	status, _ := localStatus(p, 1, mockFailGRPCServersNetworker{}, l)
 	assert.Equal(t, FaultyPeer, status)
 }
 
@@ -106,7 +117,8 @@ func TestPeerStatusWithElapsedTimeLowerBootstrapingTime(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
 		NewPeerHeartbeatState(time.Now(), 0))
 
-	status, _ := localStatus(p, 1, mockNetworkChecker{})
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	status, _ := localStatus(p, 1, mockNetworkChecker{}, l)
 	assert.Equal(t, BootstrapingPeer, status)
 }
 
@@ -123,7 +135,8 @@ func TestPeerStatusWithAvgDiscoveriesGreaterThanPeerDiscovery(t *testing.T) {
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", BootstrapingPeer, 30.0, 10.0, "", 100, 1, 1))
 
-	status, _ := localStatus(p, 5, mockNetworkChecker{})
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	status, _ := localStatus(p, 5, mockNetworkChecker{}, l)
 	assert.Equal(t, BootstrapingPeer, status)
 }
 
@@ -140,7 +153,8 @@ func TestPeerStatusWithAvgDiscoveriesLessThanPeerDiscovery(t *testing.T) {
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", BootstrapingPeer, 30.0, 10.0, "", 100, 1, 5))
 
-	status, _ := localStatus(p, 1, mockNetworkChecker{})
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	status, _ := localStatus(p, 1, mockNetworkChecker{}, l)
 	assert.Equal(t, OkPeerStatus, status)
 }
 
@@ -157,7 +171,8 @@ func TestPeerStatusWithLongTTL(t *testing.T) {
 		NewPeerHeartbeatState(time.Now(), 5000),
 		NewPeerAppState("1.0", BootstrapingPeer, 30.0, 10.0, "", 100, 1, 5))
 
-	status, _ := localStatus(p, 1, mockNetworkChecker{})
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	status, _ := localStatus(p, 1, mockNetworkChecker{}, l)
 	assert.Equal(t, OkPeerStatus, status)
 }
 

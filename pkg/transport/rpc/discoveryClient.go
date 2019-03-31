@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"github.com/uniris/uniris-core/pkg/logging"
 	"time"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
@@ -19,7 +20,7 @@ func NewGossipRoundMessenger() discovery.Messenger {
 	return rndMsg{}
 }
 
-func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (requestedPeers []discovery.PeerIdentity, discoveredPeers []discovery.Peer, err error) {
+func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer, l logging.Logger) (requestedPeers []discovery.PeerIdentity, discoveredPeers []discovery.Peer, err error) {
 	serverAddr := fmt.Sprintf("%s:%d", target.IP().String(), target.Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
@@ -46,7 +47,7 @@ func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (
 		return nil, nil, err
 	}
 
-	fmt.Printf("SYN RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+	l.Debug("SYN RESPONSE - " + time.Unix(res.Timestamp, 0).String())
 
 	for _, p := range res.DiscoveredPeers {
 		discoveredPeers = append(discoveredPeers, formatPeerDiscovered(p))
@@ -58,7 +59,7 @@ func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (
 	return
 }
 
-func (m rndMsg) SendAck(target discovery.PeerIdentity, requested []discovery.Peer) error {
+func (m rndMsg) SendAck(target discovery.PeerIdentity, requested []discovery.Peer, l logging.Logger) error {
 	serverAddr := fmt.Sprintf("%s:%d", target.IP().String(), target.Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
@@ -86,6 +87,6 @@ func (m rndMsg) SendAck(target discovery.PeerIdentity, requested []discovery.Pee
 		return err
 	}
 
-	fmt.Printf("ACK RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+	l.Debug("ACK RESPONSE - " + time.Unix(res.Timestamp, 0).String())
 	return nil
 }

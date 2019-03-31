@@ -6,14 +6,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/uniris/uniris-core/pkg/crypto"
+	"github.com/uniris/uniris-core/pkg/logging"
 	"github.com/uniris/uniris-core/pkg/shared"
 )
 
@@ -24,8 +28,9 @@ Scenario: Get shared keys with no emitter public key in the query
 	THen I get an error
 */
 func TestGetSharedKeysWhenMissingPublicKey(t *testing.T) {
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
 	r := gin.New()
-	r.GET("/api/sharedkeys", GetSharedKeysHandler(&mockSharedKeyReader{}))
+	r.GET("/api/sharedkeys", GetSharedKeysHandler(&mockSharedKeyReader{}, l))
 
 	path := fmt.Sprintf("http://localhost/api/sharedkeys")
 	req, _ := http.NewRequest("GET", path, nil)
@@ -48,8 +53,9 @@ Scenario: Get shared keys with an invalid emitter public key
 	THen I get an error
 */
 func TestGetSharedKeysWithInvalidPublicKey(t *testing.T) {
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
 	r := gin.New()
-	r.GET("/api/sharedkeys", GetSharedKeysHandler(&mockSharedKeyReader{}))
+	r.GET("/api/sharedkeys", GetSharedKeysHandler(&mockSharedKeyReader{}, l))
 
 	path := fmt.Sprintf("http://localhost/api/sharedkeys?emitter_public_key=abc")
 	req, _ := http.NewRequest("GET", path, nil)
@@ -84,11 +90,11 @@ func TestGetSharedKeys(t *testing.T) {
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
 	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKP)
-
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
 	pubB, _ := pub.Marshal()
 
 	r := gin.New()
-	r.GET("/api/sharedkeys", GetSharedKeysHandler(sharedKeyReader))
+	r.GET("/api/sharedkeys", GetSharedKeysHandler(sharedKeyReader, l))
 
 	path := fmt.Sprintf("http://localhost/api/sharedkeys?emitter_public_key=%s", hex.EncodeToString(pubB))
 	req, _ := http.NewRequest("GET", path, nil)

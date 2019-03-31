@@ -2,7 +2,10 @@ package discovery
 
 import (
 	"errors"
+	"github.com/uniris/uniris-core/pkg/logging"
+	"log"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -16,7 +19,7 @@ Scenario: Spread a gossip round and discover peers
 	Then we get the new peers discovered
 */
 func TestStartRound(t *testing.T) {
-
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
 	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2")
 
 	p1 := NewDiscoveredPeer(
@@ -31,7 +34,7 @@ func TestStartRound(t *testing.T) {
 		NewPeerAppState("1.0", OkPeerStatus, 20.0, 19.4, "", 0, 1, 0),
 	)
 
-	discoveries, err := startRound(target, []Peer{p1, p2}, mockMessenger{})
+	discoveries, err := startRound(target, []Peer{p1, p2}, mockMessenger{}, l)
 	assert.Nil(t, err)
 	assert.Len(t, discoveries, 1)
 	assert.Equal(t, "dKey1", discoveries[0].Identity().PublicKey())
@@ -45,6 +48,8 @@ Scenario: Spread gossip but unreach the target peer during the SYN request
 */
 func TestStartRoundWithUnreachWhenSYN(t *testing.T) {
 
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+
 	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2")
 
 	p1 := NewDiscoveredPeer(
@@ -59,7 +64,7 @@ func TestStartRoundWithUnreachWhenSYN(t *testing.T) {
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
 
-	_, err := startRound(target, []Peer{p1, p2}, mockMessengerWithSynFailure{})
+	_, err := startRound(target, []Peer{p1, p2}, mockMessengerWithSynFailure{}, l)
 	assert.Equal(t, err, ErrUnreachablePeer)
 }
 
@@ -71,6 +76,7 @@ Scenario: Spread gossip but unreach the target peer during the SYN request
 */
 func TestStartRoundWithUnreachWhenACK(t *testing.T) {
 
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
 	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2")
 
 	p1 := NewDiscoveredPeer(
@@ -85,7 +91,7 @@ func TestStartRoundWithUnreachWhenACK(t *testing.T) {
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
 
-	_, err := startRound(target, []Peer{p1, p2}, mockMessengerWithAckFailure{})
+	_, err := startRound(target, []Peer{p1, p2}, mockMessengerWithAckFailure{}, l)
 	assert.Equal(t, err, ErrUnreachablePeer)
 }
 
@@ -126,7 +132,9 @@ func TestRunCycle(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key3"),
 	}
 
-	discoveries, reachables, unreachables, err := startCycle(self, mockMessenger{}, seeds, []Peer{kp1}, []PeerIdentity{kp1.Identity()}, []PeerIdentity{})
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+
+	discoveries, reachables, unreachables, err := startCycle(self, mockMessenger{}, seeds, []Peer{kp1}, []PeerIdentity{kp1.Identity()}, []PeerIdentity{}, l)
 
 	assert.Nil(t, err)
 	assert.Len(t, discoveries, 2)
@@ -157,7 +165,9 @@ func TestRunCycleGetUnreachable(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key3"),
 	}
 
-	_, _, unreachables, err := startCycle(self, mockMessengerWithSynFailure{}, seeds, []Peer{kp1}, []PeerIdentity{kp1.Identity()}, []PeerIdentity{})
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+
+	_, _, unreachables, err := startCycle(self, mockMessengerWithSynFailure{}, seeds, []Peer{kp1}, []PeerIdentity{kp1.Identity()}, []PeerIdentity{}, l)
 
 	assert.Nil(t, err)
 	assert.Len(t, unreachables, 2)
@@ -182,7 +192,9 @@ func TestRunCycleWithUnreachable(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key3"),
 	}
 
-	_, reachables, unreachables, err := startCycle(self, mockMessenger{}, seeds, []Peer{kp1}, []PeerIdentity{kp1.Identity()}, []PeerIdentity{ur1})
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+
+	_, reachables, unreachables, err := startCycle(self, mockMessenger{}, seeds, []Peer{kp1}, []PeerIdentity{kp1.Identity()}, []PeerIdentity{ur1}, l)
 
 	assert.Nil(t, err)
 	assert.Len(t, unreachables, 0)
@@ -290,7 +302,8 @@ func TestGossip(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("10.0.0.1"), 3000, "key1"),
 	}
 
-	err := Gossip(self, seeds, db, mockNetworkChecker{}, mockSystemReader{}, mockMessenger{}, notif)
+	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	err := Gossip(self, seeds, db, mockNetworkChecker{}, mockSystemReader{}, mockMessenger{}, notif, l)
 	assert.Nil(t, err)
 	assert.Len(t, db.discoveredPeers, 2)
 	assert.Len(t, db.unreachablePeers, 0)
@@ -545,18 +558,18 @@ func (i mockSystemReader) IP() (net.IP, error) {
 type mockMessengerWithSynFailure struct {
 }
 
-func (m mockMessengerWithSynFailure) SendSyn(target PeerIdentity, known []Peer) (reqPeers []PeerIdentity, discoveries []Peer, err error) {
+func (m mockMessengerWithSynFailure) SendSyn(target PeerIdentity, known []Peer, l logging.Logger) (reqPeers []PeerIdentity, discoveries []Peer, err error) {
 	return nil, nil, ErrUnreachablePeer
 }
 
-func (m mockMessengerWithSynFailure) SendAck(target PeerIdentity, requested []Peer) error {
+func (m mockMessengerWithSynFailure) SendAck(target PeerIdentity, requested []Peer, l logging.Logger) error {
 	return nil
 }
 
 type mockMessengerWithAckFailure struct {
 }
 
-func (m mockMessengerWithAckFailure) SendSyn(target PeerIdentity, known []Peer) (requested []PeerIdentity, discoveries []Peer, err error) {
+func (m mockMessengerWithAckFailure) SendSyn(target PeerIdentity, known []Peer, l logging.Logger) (requested []PeerIdentity, discoveries []Peer, err error) {
 	reqP := NewPeerIdentity(net.ParseIP("200.18.186.39"), 3000, "uKey1")
 
 	hb := NewPeerHeartbeatState(time.Now(), 0)
@@ -570,24 +583,24 @@ func (m mockMessengerWithAckFailure) SendSyn(target PeerIdentity, known []Peer) 
 	return []PeerIdentity{reqP}, []Peer{np1}, nil
 }
 
-func (m mockMessengerWithAckFailure) SendAck(target PeerIdentity, requested []Peer) error {
+func (m mockMessengerWithAckFailure) SendAck(target PeerIdentity, requested []Peer, l logging.Logger) error {
 	return ErrUnreachablePeer
 }
 
 type mockMessengerUnexpectedFailure struct {
 }
 
-func (m mockMessengerUnexpectedFailure) SendSyn(target PeerIdentity, known []Peer) (unknown []Peer, new []Peer, err error) {
+func (m mockMessengerUnexpectedFailure) SendSyn(target PeerIdentity, known []Peer, l logging.Logger) (unknown []Peer, new []Peer, err error) {
 	return nil, nil, errors.New("Unexpected")
 }
 
-func (m mockMessengerUnexpectedFailure) SendAck(target PeerIdentity, requested []Peer) error {
+func (m mockMessengerUnexpectedFailure) SendAck(target PeerIdentity, requested []Peer, l logging.Logger) error {
 	return nil
 }
 
 type mockMessenger struct{}
 
-func (m mockMessenger) SendSyn(target PeerIdentity, known []Peer) (requested []PeerIdentity, discoveries []Peer, err error) {
+func (m mockMessenger) SendSyn(target PeerIdentity, known []Peer, l logging.Logger) (requested []PeerIdentity, discoveries []Peer, err error) {
 	reqP := NewPeerIdentity(net.ParseIP("200.18.186.39"), 3000, "uKey1")
 
 	np1 := NewDiscoveredPeer(
@@ -599,6 +612,6 @@ func (m mockMessenger) SendSyn(target PeerIdentity, known []Peer) (requested []P
 	return []PeerIdentity{reqP}, []Peer{np1}, nil
 }
 
-func (m mockMessenger) SendAck(target PeerIdentity, requested []Peer) error {
+func (m mockMessenger) SendAck(target PeerIdentity, requested []Peer, l logging.Logger) error {
 	return nil
 }

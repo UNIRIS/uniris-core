@@ -8,11 +8,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/uniris/uniris-core/pkg/crypto"
+	"github.com/uniris/uniris-core/pkg/logging"
 	"github.com/uniris/uniris-core/pkg/shared"
 )
 
 //GetSharedKeysHandler defines an HTTP handler to retrieve the shared keys
-func GetSharedKeysHandler(sharedKeyReader shared.KeyReader) func(*gin.Context) {
+func GetSharedKeysHandler(sharedKeyReader shared.KeyReader, l logging.Logger) func(*gin.Context) {
 	return func(c *gin.Context) {
 
 		emPubKey, httpErr := extractEmitterPublicKey(c)
