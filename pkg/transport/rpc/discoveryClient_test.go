@@ -1,7 +1,9 @@
 package rpc
 
 import (
+	"log"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -9,6 +11,7 @@ import (
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/discovery"
+	"github.com/uniris/uniris-core/pkg/logging"
 	"google.golang.org/grpc"
 )
 
@@ -21,15 +24,15 @@ Scenario: Send a syn request to a peer by sending its local view
 func TestSendSynRequest(t *testing.T) {
 
 	db := &mockDiscoveryDB{}
-
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	lis, _ := net.Listen("tcp", ":3000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{})
+	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{}, l)
 	api.RegisterDiscoveryServiceServer(grpcServer, discoverySrv)
 	go grpcServer.Serve(lis)
 
-	rndMsg := NewGossipRoundMessenger()
+	rndMsg := NewGossipRoundMessenger(l)
 	target := discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "pubkey")
 	reqPeers, discoveries, err := rndMsg.SendSyn(target, []discovery.Peer{
 		discovery.NewDiscoveredPeer(
@@ -51,7 +54,8 @@ Scenario: Send a syn request to a disconnected peer
 	Then I get an error as unreachable
 */
 func TestSendSynRequestUnreach(t *testing.T) {
-	rndMsg := NewGossipRoundMessenger()
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
+	rndMsg := NewGossipRoundMessenger(l)
 	target := discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "pubkey")
 	_, _, err := rndMsg.SendSyn(target, []discovery.Peer{
 		discovery.NewDiscoveredPeer(
@@ -72,15 +76,16 @@ Scenario: Send a ack request to a peer by sending details about the requested pe
 func TestSendAckRequest(t *testing.T) {
 
 	db := &mockDiscoveryDB{}
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
 	lis, _ := net.Listen("tcp", ":3000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{})
+	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{}, l)
 	api.RegisterDiscoveryServiceServer(grpcServer, discoverySrv)
 	go grpcServer.Serve(lis)
 
-	rndMsg := NewGossipRoundMessenger()
+	rndMsg := NewGossipRoundMessenger(l)
 	target := discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "pubkey")
 	err := rndMsg.SendAck(target, []discovery.Peer{
 		discovery.NewDiscoveredPeer(
@@ -101,7 +106,8 @@ Scenario: Send a ack request to a disconnected peer
 	Then I get an error as unreachable
 */
 func TestSendAckRequestUnreach(t *testing.T) {
-	rndMsg := NewGossipRoundMessenger()
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
+	rndMsg := NewGossipRoundMessenger(l)
 	target := discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "pubkey")
 	err := rndMsg.SendAck(target, []discovery.Peer{
 		discovery.NewDiscoveredPeer(

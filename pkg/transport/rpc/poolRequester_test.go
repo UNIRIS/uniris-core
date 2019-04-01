@@ -4,7 +4,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"log"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -19,6 +21,7 @@ import (
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 	"github.com/uniris/uniris-core/pkg/crypto"
+	"github.com/uniris/uniris-core/pkg/logging"
 )
 
 /*
@@ -42,8 +45,11 @@ func TestRequestTransactionLock(t *testing.T) {
 	}
 
 	chainDB := &mockChainDB{}
-	pr := NewPoolRequester(sharedKeyReader)
-	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv)
+
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
+	pr := NewPoolRequester(sharedKeyReader, l)
+
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -81,9 +87,11 @@ func TestRequestConfirmValidation(t *testing.T) {
 		},
 	}
 
-	pr := NewPoolRequester(sharedKeyReader)
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
-	miningSrv := NewTransactionService(nil, sharedKeyReader, nodeReader, pr, pub, pv)
+	pr := NewPoolRequester(sharedKeyReader, l)
+
+	miningSrv := NewTransactionService(nil, sharedKeyReader, nodeReader, pr, pub, pv, l)
 
 	lis, err := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -170,9 +178,11 @@ func TestRequestStorage(t *testing.T) {
 
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, kp)
 
-	pr := NewPoolRequester(sharedKeyReader)
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
-	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv)
+	pr := NewPoolRequester(sharedKeyReader, l)
+
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -249,9 +259,11 @@ func TestSendGetLastTransaction(t *testing.T) {
 		},
 	}
 
-	pr := NewPoolRequester(sharedKeyReader)
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
-	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv)
+	pr := NewPoolRequester(sharedKeyReader, l)
+
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()

@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"github.com/uniris/uniris-core/pkg/logging"
 	"time"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
@@ -12,11 +13,15 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type rndMsg struct{}
+type rndMsg struct {
+	logger logging.Logger
+}
 
 //NewGossipRoundMessenger creates a new round messenger with GRPC
-func NewGossipRoundMessenger() discovery.Messenger {
-	return rndMsg{}
+func NewGossipRoundMessenger(l logging.Logger) discovery.Messenger {
+	return rndMsg{
+		logger: l,
+	}
 }
 
 func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (requestedPeers []discovery.PeerIdentity, discoveredPeers []discovery.Peer, err error) {
@@ -46,7 +51,7 @@ func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (
 		return nil, nil, err
 	}
 
-	fmt.Printf("SYN RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+	m.logger.Debug("SYN RESPONSE - " + time.Unix(res.Timestamp, 0).String())
 
 	for _, p := range res.DiscoveredPeers {
 		discoveredPeers = append(discoveredPeers, formatPeerDiscovered(p))
@@ -86,6 +91,6 @@ func (m rndMsg) SendAck(target discovery.PeerIdentity, requested []discovery.Pee
 		return err
 	}
 
-	fmt.Printf("ACK RESPONSE - %s\n", time.Unix(res.Timestamp, 0).String())
+	m.logger.Debug("ACK RESPONSE - " + time.Unix(res.Timestamp, 0).String())
 	return nil
 }

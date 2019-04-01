@@ -16,6 +16,7 @@ import (
 	"github.com/uniris/uniris-core/pkg/consensus"
 
 	"github.com/uniris/uniris-core/pkg/crypto"
+	logging "github.com/uniris/uniris-core/pkg/logging"
 	"github.com/uniris/uniris-core/pkg/shared"
 	"github.com/uniris/uniris-core/pkg/system"
 
@@ -36,7 +37,18 @@ import (
 
 const (
 	defaultConfigurationFile = "./conf.yaml"
+
+	discoveryLogFile = "Discovery.log"
+	miningLogFile    = "Mining.log"
+
+	discoveryAppID = "Discovery"
+	miningAppID    = "Mining"
 )
+
+var appIDLogFile = map[string]string{
+	discoveryAppID: discoveryLogFile,
+	miningAppID:    miningLogFile,
+}
 
 func main() {
 
@@ -100,8 +112,12 @@ func main() {
 			nodeDB = &memstorage.NodeDatabase{}
 		}
 
-		go startGRPCServer(conf, sharedDB, nodeDB)
-		startHTTPServer(conf, sharedDB, nodeDB)
+		ip := getIP(conf.networkType, conf.networkInterface)
+		loggerDiscovery := createLogger(discoveryAppID, conf.logging.logType, conf.logging.LogDir, conf.logging.logLevel, ip)
+		loggerMining := createLogger(miningAppID, conf.logging.logType, conf.logging.LogDir, conf.logging.logLevel, ip)
+
+		go startGRPCServer(conf, sharedDB, nodeDB, ip, loggerDiscovery, loggerMining)
+		startHTTPServer(conf, sharedDB, nodeDB, loggerMining)
 
 		return nil
 	}
@@ -245,10 +261,31 @@ func getCliFlags(conf *unirisConf) []cli.Flag {
 			Usage:       "GRPC server port used to communicate with other nodes",
 			Destination: &conf.grpcPort,
 		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:        "log-type",
+			EnvVar:      "UNIRIS_LOG_TYPE",
+			Value:       "file",
+			Usage:       "Logging type (stdout/file)",
+			Destination: &conf.logging.logType,
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:        "log-level",
+			EnvVar:      "UNIRIS_LOG_LEVEL",
+			Value:       "info",
+			Usage:       "Logging level (info/error/debug)",
+			Destination: &conf.logging.logLevel,
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:        "log-dir",
+			EnvVar:      "UNIRIS_LOG_DIR",
+			Value:       "/var/log/uniris",
+			Usage:       "Dir to store log files",
+			Destination: &conf.logging.LogDir,
+		}),
 	}
 }
 
-func startHTTPServer(conf unirisConf, sharedKeyReader shared.KeyReader, nodeReader consensus.NodeReader) {
+func startHTTPServer(conf unirisConf, sharedKeyReader shared.KeyReader, nodeReader consensus.NodeReader, l logging.Logger) {
 	pubB, err := hex.DecodeString(conf.publicKey)
 	if err != nil {
 		panic(err)
@@ -277,15 +314,15 @@ func startHTTPServer(conf unirisConf, sharedKeyReader shared.KeyReader, nodeRead
 	swaggerFile, _ := filepath.Abs("../../api/swagger-spec/swagger.yaml")
 	r.StaticFile("/swagger.yaml", swaggerFile)
 
-	r.GET("/api/account/:idHash", rest.GetAccountHandler(sharedKeyReader, nodeReader))
-	r.POST("/api/account", rest.CreateAccountHandler(sharedKeyReader, nodeReader, publicKey, privateKey))
-	r.GET("/api/transaction/:txReceipt/status", rest.GetTransactionStatusHandler(sharedKeyReader, nodeReader))
-	r.GET("/api/sharedkeys", rest.GetSharedKeysHandler(sharedKeyReader))
+	r.GET("/api/account/:idHash", rest.GetAccountHandler(sharedKeyReader, nodeReader, l))
+	r.POST("/api/account", rest.CreateAccountHandler(sharedKeyReader, nodeReader, publicKey, privateKey, l))
+	r.GET("/api/transaction/:txReceipt/status", rest.GetTransactionStatusHandler(sharedKeyReader, nodeReader, l))
+	r.GET("/api/sharedkeys", rest.GetSharedKeysHandler(sharedKeyReader, l))
 
 	r.Run(":80")
 }
 
-func startGRPCServer(conf unirisConf, sharedKeyRW shared.KeyReadWriter, nodeRW consensus.NodeReadWriter) {
+func startGRPCServer(conf unirisConf, sharedKeyRW shared.KeyReadWriter, nodeRW consensus.NodeReadWriter, ip net.IP, ld logging.Logger, lm logging.Logger) {
 	pubB, err := hex.DecodeString(conf.publicKey)
 	if err != nil {
 		panic(err)
@@ -306,9 +343,9 @@ func startGRPCServer(conf unirisConf, sharedKeyRW shared.KeyReadWriter, nodeRW c
 
 	grpcServer := grpc.NewServer()
 
-	poolR := rpc.NewPoolRequester(sharedKeyRW)
+	poolR := rpc.NewPoolRequester(sharedKeyRW, lm)
 	chainDB := memstorage.NewchainDatabase()
-	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyRW, nodeRW, poolR, publicKey, privateKey))
+	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyRW, nodeRW, poolR, publicKey, privateKey, lm))
 
 	var discoveryDB discovery.Database
 	if conf.discoveryDatabase.dbType == "redis" {
@@ -323,19 +360,21 @@ func startGRPCServer(conf unirisConf, sharedKeyRW shared.KeyReadWriter, nodeRW c
 
 	var notif discovery.Notifier
 	if conf.bus.busType == "amqp" {
-		notif = amqp.NewDiscoveryNotifier(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port)
+		notif = amqp.NewDiscoveryNotifier(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port, ld)
 		go func() {
-			if err := amqp.ConsumeDiscoveryNotifications(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port, nodeRW, sharedKeyRW); err != nil {
+			if err := amqp.ConsumeDiscoveryNotifications(conf.bus.host, conf.bus.user, conf.bus.password, conf.bus.port, nodeRW, sharedKeyRW, ld); err != nil {
 				panic(err)
 			}
 		}()
 	} else {
-		notif = &memtransport.DiscoveryNotifier{}
+		notif = &memtransport.DiscoveryNotifier{
+			Logger: ld,
+		}
 	}
 
-	api.RegisterDiscoveryServiceServer(grpcServer, rpc.NewDiscoveryServer(discoveryDB, notif))
+	api.RegisterDiscoveryServiceServer(grpcServer, rpc.NewDiscoveryServer(discoveryDB, notif, ld))
 
-	go startDiscovery(conf, discoveryDB, notif)
+	go startDiscovery(conf, discoveryDB, notif, ld)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", conf.grpcPort))
 	if err != nil {
@@ -347,7 +386,7 @@ func startGRPCServer(conf unirisConf, sharedKeyRW shared.KeyReadWriter, nodeRW c
 	}
 }
 
-func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Notifier) {
+func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Notifier, logger logging.Logger) {
 
 	netCheck := system.NewNetworkChecker(conf.grpcPort)
 
@@ -358,21 +397,23 @@ func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Noti
 		systemReader = system.NewReader(false, "")
 	}
 
-	roundMessenger := rpc.NewGossipRoundMessenger()
+	roundMessenger := rpc.NewGossipRoundMessenger(logger)
+
 	ip, err := systemReader.IP()
 	if err != nil {
 		panic(err)
 	}
+
 	lon, lat, err := systemReader.GeoPosition()
 	if err != nil {
-		log.Println(discovery.ErrGeoPosition)
+		logger.Error(discovery.ErrGeoPosition.Error())
 	}
 	selfPeer := discovery.NewSelfPeer(conf.publicKey, ip, conf.grpcPort, conf.version, lon, lat)
 
 	seeds := getSeeds(conf)
 
 	timer := time.NewTicker(time.Second * 3)
-	log.Print("Gossip running...")
+	logger.Info("Gossip running...")
 
 	//Store local peer
 	if err := db.WriteDiscoveredPeer(selfPeer); err != nil {
@@ -381,7 +422,7 @@ func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Noti
 
 	for range timer.C {
 		go func() {
-			if err := discovery.Gossip(selfPeer, seeds, db, netCheck, systemReader, roundMessenger, notif); err != nil {
+			if err := discovery.Gossip(selfPeer, seeds, db, netCheck, systemReader, roundMessenger, notif, logger); err != nil {
 				timer.Stop()
 				panic(err)
 			}
@@ -442,4 +483,89 @@ type unirisConf struct {
 		port   int
 		pwd    string
 	}
+	logging struct {
+		logType  string
+		logLevel string
+		LogDir   string
+	}
+}
+
+func createLogger(appID string, ty string, dir string, level string, ip net.IP) logging.Logger {
+
+	//check if appID is in the list
+	if _, appExist := appIDLogFile[appID]; !appExist {
+		log.Fatal("[Fatal] Unkown application ID")
+	}
+
+	//check if log type has the good value
+	if ty != "stdout" && ty != "file" {
+		log.Fatal("[Fatal] log-type value should be (stdout|file)")
+	}
+
+	//check if log-level has the good value
+	if level != "info" && level != "error" && level != "debug" {
+		log.Fatal("[Fatal] log-level value should be (info|error|debug)")
+	}
+
+	//map Loglevel
+	var ll logging.Level
+	if level == "error" {
+		ll = logging.ErrorLogLevel
+	} else if level == "info" {
+		ll = logging.InfoLogLevel
+	} else {
+		ll = logging.DebugLogLevel
+	}
+
+	if ty == "stdout" {
+		stdLog := log.New(os.Stdout, "", 0)
+		return logging.NewLogger("stdout", stdLog, appID, ip, ll)
+	}
+
+	if ty == "file" {
+
+		src, err := os.Stat(dir)
+
+		//check if logdir exist or not
+		if os.IsNotExist(err) {
+			log.Println("[Error] log-dir" + dir + "does not exist, please create the adequate directory")
+			stdLog := log.New(os.Stdout, "", 0)
+			return logging.NewLogger("stdout", stdLog, appID, ip, ll)
+		}
+
+		//check if logdir is not a file
+		if src.Mode().IsRegular() {
+			log.Println("[Erro] log-dir" + dir + "is a file, please create the adequate directory")
+			stdLog := log.New(os.Stdout, "", 0)
+			return logging.NewLogger("stdout", stdLog, appID, ip, ll)
+		}
+	}
+
+	f, err := os.OpenFile(dir+"/"+appIDLogFile[appID], os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		stdLog := log.New(os.Stdout, "", 0)
+		return logging.NewLogger("stdout", stdLog, appID, ip, ll)
+	}
+
+	fileLog := log.New(f, "", 0)
+	return logging.NewLogger("file", fileLog, appID, ip, ll)
+}
+
+func getIP(networkType string, networkInterface string) net.IP {
+
+	var sysReader discovery.SystemReader
+
+	if networkType == "private" {
+		sysReader = system.NewReader(true, networkInterface)
+
+	} else {
+		sysReader = system.NewReader(false, "")
+	}
+
+	ip, err := sysReader.IP()
+	if err != nil {
+		log.Fatal("[Fatal] Cannot get the hostID")
+	}
+
+	return ip
 }

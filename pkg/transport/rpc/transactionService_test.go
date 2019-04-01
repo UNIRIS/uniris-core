@@ -6,7 +6,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"log"
 	"net"
+	"os"
 	"sort"
 	"testing"
 	"time"
@@ -20,6 +22,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
+	"github.com/uniris/uniris-core/pkg/logging"
 	"github.com/uniris/uniris-core/pkg/shared"
 
 	"github.com/uniris/uniris-core/pkg/crypto"
@@ -49,7 +52,9 @@ func TestHandleGetLastTransactionWhenNotExist(t *testing.T) {
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv)
+
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv, l)
 
 	req := &api.GetLastTransactionRequest{
 		Timestamp:          time.Now().Unix(),
@@ -93,7 +98,9 @@ func TestHandleGetLastTransaction(t *testing.T) {
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv)
+
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv, l)
 
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
@@ -176,7 +183,9 @@ func TestHandleGetTransactionStatus(t *testing.T) {
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv)
+
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv, l)
 
 	req := &api.GetTransactionStatusRequest{
 		Timestamp:       time.Now().Unix(),
@@ -222,7 +231,9 @@ func TestHandleStoreTransaction(t *testing.T) {
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv)
+
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv, l)
 
 	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 
@@ -322,7 +333,8 @@ func TestHandleLockTransaction(t *testing.T) {
 	}
 
 	poolR := &mockPoolRequester{}
-	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv)
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv, l)
 
 	pubB, _ := pub.Marshal()
 
@@ -374,7 +386,8 @@ func TestHandleLeadTransactionMining(t *testing.T) {
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv)
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv, l)
 	data := map[string][]byte{
 		"encrypted_address_by_node": []byte("addr"),
 		"encrypted_wallet":          []byte("wallet"),
@@ -471,7 +484,8 @@ func TestHandleConfirmValiation(t *testing.T) {
 	poolR := &mockPoolRequester{
 		repo: chainDB,
 	}
-	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv)
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
+	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, poolR, pub, pv, l)
 
 	prop, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
 	data := map[string][]byte{

@@ -13,6 +13,9 @@ RUN apt-get update && apt-get install -y vim curl net-tools
 RUN sed -i 's/bind 127.0.0.1 ::1/bind 127.0.0.1/' /etc/redis/redis.conf 
 RUN sed -i  '/NODE_IP_ADDRESS/ s/^#NODE_IP_ADDRESS/NODE_IP_ADDRESS/g' /etc/rabbitmq/rabbitmq-env.conf
 
+#create Log directory
+RUN mkdir -p /var/log/uniris
+
 # enable management plugin on rabitmq
 RUN rabbitmq-plugins enable rabbitmq_management;
 
@@ -39,6 +42,9 @@ ENV UNIRIS_BUS_PORT=5672
 ENV UNIRIS_BUS_USER=uniris
 ENV UNIRIS_BUS_PWD=uniris
 ENV UNIRIS_GRPC_PORT=5000
+ENV UNIRIS_LOG_TYPE=file
+ENV UNIRIS_LOG_LEVEL=info
+ENV UNIRIS_LOG_DIR=/var/log/uniris
 
 # Expose Public services
 EXPOSE 80

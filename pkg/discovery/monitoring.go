@@ -2,9 +2,9 @@ package discovery
 
 import (
 	"errors"
-	"fmt"
-	"log"
 	"net"
+
+	"github.com/uniris/uniris-core/pkg/logging"
 )
 
 //ErrNTPShift is returned when the NTP clock drift to much
@@ -44,9 +44,9 @@ type SystemReader interface {
 	IP() (net.IP, error)
 }
 
-func updateSelf(self Peer, reachables []Peer, seeds []PeerIdentity, db dbWriter, netCheck NetworkChecker, sysR SystemReader) error {
+func updateSelf(self Peer, reachables []Peer, seeds []PeerIdentity, db dbWriter, netCheck NetworkChecker, sysR SystemReader, l logging.Logger) error {
 
-	status, err := localStatus(self, seedReachableAverage(seeds, reachables), netCheck)
+	status, err := localStatus(self, seedReachableAverage(seeds, reachables), netCheck, l)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func updateSelf(self Peer, reachables []Peer, seeds []PeerIdentity, db dbWriter,
 	if err != nil {
 		if err == ErrGeoPosition {
 			status = FaultyPeer
-			log.Println(ErrGeoPosition)
+			l.Error(ErrGeoPosition.Error())
 		} else {
 			return err
 		}
@@ -94,16 +94,16 @@ func systemInfo(sr SystemReader) (lon float64, lat float64, ip net.IP, cpu strin
 }
 
 //localStatus retrieves the status of the local peer.
-func localStatus(p Peer, seedAvgDiscovery int, nv NetworkChecker) (PeerStatus, error) {
+func localStatus(p Peer, seedAvgDiscovery int, nv NetworkChecker, l logging.Logger) (PeerStatus, error) {
 	if err := nv.CheckInternetState(); err != nil {
-		fmt.Printf("networking error: %s\n", err.Error())
+		l.Error("networking error: " + err.Error())
 		refreshtimerState()
 		return FaultyPeer, nil
 	}
 
 	if err := nv.CheckNtpState(); err != nil {
 		if err == ErrNTPShift || err == ErrNTPFailure {
-			fmt.Printf("networking error: %s\n", err.Error())
+			l.Error("networking error: " + err.Error())
 			refreshtimerState()
 			return FaultyPeer, nil
 		}
@@ -113,7 +113,7 @@ func localStatus(p Peer, seedAvgDiscovery int, nv NetworkChecker) (PeerStatus, e
 
 	if err := nv.CheckGRPCServer(); err != nil {
 		if err == ErrGRPCServer {
-			fmt.Printf("networking error: %s\n", err.Error())
+			l.Error("networking error: " + err.Error())
 			refreshtimerState()
 			return FaultyPeer, nil
 		}

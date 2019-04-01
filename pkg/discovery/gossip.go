@@ -2,7 +2,7 @@ package discovery
 
 import (
 	"errors"
-	"log"
+	"github.com/uniris/uniris-core/pkg/logging"
 	"math/rand"
 	"reflect"
 	"sync"
@@ -60,7 +60,7 @@ type Messenger interface {
 }
 
 //Gossip initialize a cycle to spread the local view by updating its local peer and store the results
-func Gossip(self Peer, seeds []PeerIdentity, db Database, netCheck NetworkChecker, sysR SystemReader, msg Messenger, n Notifier) error {
+func Gossip(self Peer, seeds []PeerIdentity, db Database, netCheck NetworkChecker, sysR SystemReader, msg Messenger, n Notifier, l logging.Logger) error {
 	if len(seeds) == 0 {
 		return errors.New("cannot start a gossip round without a list seeds")
 	}
@@ -76,11 +76,11 @@ func Gossip(self Peer, seeds []PeerIdentity, db Database, netCheck NetworkChecke
 	}
 	reaches := reachablePeers(unreaches, peers)
 
-	if err := updateSelf(self, reaches, seeds, db, netCheck, sysR); err != nil {
+	if err := updateSelf(self, reaches, seeds, db, netCheck, sysR, l); err != nil {
 		return err
 	}
 
-	cDiscoveries, cReachables, cUnreachables, err := startCycle(self, msg, seeds, peers, reaches.identities(), unreaches)
+	cDiscoveries, cReachables, cUnreachables, err := startCycle(self, msg, seeds, peers, reaches.identities(), unreaches, l)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func Gossip(self Peer, seeds []PeerIdentity, db Database, netCheck NetworkChecke
 }
 
 //startCycle initiate a gossip cycle by creating rounds from a peer selection to spread the known peers and discover new peers
-func startCycle(self Peer, msg Messenger, seeds []PeerIdentity, peers []Peer, reaches []PeerIdentity, unreaches []PeerIdentity) (discoveries []Peer, reachables []PeerIdentity, unreachables []PeerIdentity, err error) {
+func startCycle(self Peer, msg Messenger, seeds []PeerIdentity, peers []Peer, reaches []PeerIdentity, unreaches []PeerIdentity, l logging.Logger) (discoveries []Peer, reachables []PeerIdentity, unreachables []PeerIdentity, err error) {
 
 	//Pick the peers to gossip with
 	selectedPeers := make([]PeerIdentity, 0)
@@ -134,13 +134,13 @@ func startCycle(self Peer, msg Messenger, seeds []PeerIdentity, peers []Peer, re
 
 			//We initiate a gossip round and stores as discovery and reachable when the peers answers.
 			//Otherwise it the peer cannot be reached, it will stored as unreachable for a later retry
-			pp, err := startRound(target, peers, msg)
+			pp, err := startRound(target, peers, msg, l)
 			if err != nil {
 				if err == ErrUnreachablePeer {
 					unreachables = append(unreachables, target)
 					return
 				}
-				log.Printf("unexpected error during round execution: %s", err.Error())
+				l.Error("unexpected error during round execution: " + err.Error())
 				return
 			}
 			discoveries = append(discoveries, pp...)
@@ -162,7 +162,7 @@ func randomPeer(items []PeerIdentity) PeerIdentity {
 }
 
 //startRound initiate the gossip round by messenging with the target peer
-func startRound(target PeerIdentity, peers []Peer, msg Messenger) ([]Peer, error) {
+func startRound(target PeerIdentity, peers []Peer, msg Messenger, l logging.Logger) ([]Peer, error) {
 	reqPeers, discoveries, err := msg.SendSyn(target, peers)
 	if err != nil {
 		return nil, err
