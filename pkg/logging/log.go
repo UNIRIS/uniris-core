@@ -2,7 +2,6 @@ package logging
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"time"
@@ -19,6 +18,7 @@ const (
 
 //Logger describe a logger structure
 type Logger struct {
+	ioType   string
 	log      *log.Logger
 	appID    string
 	hostID   net.IP
@@ -26,35 +26,26 @@ type Logger struct {
 }
 
 //NewLogger create a new logger with the good parameteres
-func NewLogger(l *log.Logger, appid string, hostid net.IP, level string) Logger {
-
-	//map Loglevel
-	var ll Loglevel
-	if level == "error" {
-		ll = errorLogLevel
-	} else if level == "info" {
-		ll = infoLogLevel
-	} else {
-		ll = debugLogLevel
-	}
+func NewLogger(o string, l *log.Logger, appid string, hostid net.IP, level Loglevel) Logger {
 
 	return Logger{
+		ioType:   o,
 		log:      l,
 		appID:    appid,
-		logLevel: ll,
+		logLevel: level,
 		hostID:   hostid,
 	}
 
 }
 
-//GetLevel Return the log level
-func (l *Logger) GetLevel() Loglevel {
+//Level Return the log level
+func (l *Logger) Level() Loglevel {
 	return l.logLevel
 }
 
-//GetWriter Return the log IO Writer
-func (l *Logger) GetWriter() io.Writer {
-	return l.log.Writer()
+//Writer Return the log IO Writer
+func (l *Logger) Writer() string {
+	return l.ioType
 }
 
 //Error write an Error message

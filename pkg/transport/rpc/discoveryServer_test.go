@@ -23,7 +23,7 @@ Scenario: Receive a synchronize request without knowing any peers
 */
 func TestHandleSynchronizeRequestWithoutKnownPeers(t *testing.T) {
 	db := &mockDiscoveryDB{}
-	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
 
 	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{}, l)
 
@@ -64,7 +64,7 @@ func TestHandleSynchronizeRequestByKnowingPeer(t *testing.T) {
 		},
 	}
 
-	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
 	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{}, l)
 
 	res, err := discoverySrv.Synchronize(context.TODO(), &api.SynRequest{
@@ -97,7 +97,7 @@ Scenario: Receive an acknowledgement request with the details for the requested 
 */
 func TestHandleAcknowledgeRequest(t *testing.T) {
 	db := &mockDiscoveryDB{}
-	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
 	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{}, l)
 
 	_, err := discoverySrv.Acknowledge(context.TODO(), &api.AckRequest{

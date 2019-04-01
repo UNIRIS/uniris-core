@@ -55,8 +55,8 @@ type Notifier interface {
 
 //Messenger represents a gossip client
 type Messenger interface {
-	SendSyn(target PeerIdentity, known []Peer, l logging.Logger) (requested []PeerIdentity, discovered []Peer, err error)
-	SendAck(target PeerIdentity, requested []Peer, l logging.Logger) error
+	SendSyn(target PeerIdentity, known []Peer) (requested []PeerIdentity, discovered []Peer, err error)
+	SendAck(target PeerIdentity, requested []Peer) error
 }
 
 //Gossip initialize a cycle to spread the local view by updating its local peer and store the results
@@ -163,7 +163,7 @@ func randomPeer(items []PeerIdentity) PeerIdentity {
 
 //startRound initiate the gossip round by messenging with the target peer
 func startRound(target PeerIdentity, peers []Peer, msg Messenger, l logging.Logger) ([]Peer, error) {
-	reqPeers, discoveries, err := msg.SendSyn(target, peers, l)
+	reqPeers, discoveries, err := msg.SendSyn(target, peers)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func startRound(target PeerIdentity, peers []Peer, msg Messenger, l logging.Logg
 		}
 
 		//Send to the SYN receiver an ACK with the peer detailed requested
-		if err := msg.SendAck(target, reqDetailed, l); err != nil {
+		if err := msg.SendAck(target, reqDetailed); err != nil {
 			return nil, err
 		}
 	}

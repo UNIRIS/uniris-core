@@ -24,7 +24,7 @@ Scenario: Send a syn request to a peer by sending its local view
 func TestSendSynRequest(t *testing.T) {
 
 	db := &mockDiscoveryDB{}
-	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
 	lis, _ := net.Listen("tcp", ":3000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
@@ -32,7 +32,7 @@ func TestSendSynRequest(t *testing.T) {
 	api.RegisterDiscoveryServiceServer(grpcServer, discoverySrv)
 	go grpcServer.Serve(lis)
 
-	rndMsg := NewGossipRoundMessenger()
+	rndMsg := NewGossipRoundMessenger(l)
 	target := discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "pubkey")
 	reqPeers, discoveries, err := rndMsg.SendSyn(target, []discovery.Peer{
 		discovery.NewDiscoveredPeer(
@@ -40,7 +40,7 @@ func TestSendSynRequest(t *testing.T) {
 			discovery.NewPeerHeartbeatState(time.Now(), 1000),
 			discovery.NewPeerAppState("1.0", discovery.OkPeerStatus, 10.0, 20.0, "", 300, 1, 1000),
 		),
-	}, l)
+	})
 	assert.Nil(t, err)
 	assert.NotEmpty(t, reqPeers)
 	assert.Empty(t, discoveries)
@@ -54,8 +54,8 @@ Scenario: Send a syn request to a disconnected peer
 	Then I get an error as unreachable
 */
 func TestSendSynRequestUnreach(t *testing.T) {
-	rndMsg := NewGossipRoundMessenger()
-	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	rndMsg := NewGossipRoundMessenger(l)
 	target := discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "pubkey")
 	_, _, err := rndMsg.SendSyn(target, []discovery.Peer{
 		discovery.NewDiscoveredPeer(
@@ -63,7 +63,7 @@ func TestSendSynRequestUnreach(t *testing.T) {
 			discovery.NewPeerHeartbeatState(time.Now(), 1000),
 			discovery.NewPeerAppState("1.0", discovery.OkPeerStatus, 10.0, 20.0, "", 300, 1, 1000),
 		),
-	}, l)
+	})
 	assert.Equal(t, err, discovery.ErrUnreachablePeer)
 }
 
@@ -76,7 +76,7 @@ Scenario: Send a ack request to a peer by sending details about the requested pe
 func TestSendAckRequest(t *testing.T) {
 
 	db := &mockDiscoveryDB{}
-	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
 
 	lis, _ := net.Listen("tcp", ":3000")
 	defer lis.Close()
@@ -85,7 +85,7 @@ func TestSendAckRequest(t *testing.T) {
 	api.RegisterDiscoveryServiceServer(grpcServer, discoverySrv)
 	go grpcServer.Serve(lis)
 
-	rndMsg := NewGossipRoundMessenger()
+	rndMsg := NewGossipRoundMessenger(l)
 	target := discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "pubkey")
 	err := rndMsg.SendAck(target, []discovery.Peer{
 		discovery.NewDiscoveredPeer(
@@ -93,7 +93,7 @@ func TestSendAckRequest(t *testing.T) {
 			discovery.NewPeerHeartbeatState(time.Now(), 1000),
 			discovery.NewPeerAppState("1.0", discovery.OkPeerStatus, 10.0, 20.0, "", 300, 1, 1000),
 		),
-	}, l)
+	})
 	assert.Nil(t, err)
 	assert.NotEmpty(t, db.discoveredPeers)
 	assert.Equal(t, "pubkey2", db.discoveredPeers[0].Identity().PublicKey())
@@ -106,8 +106,8 @@ Scenario: Send a ack request to a disconnected peer
 	Then I get an error as unreachable
 */
 func TestSendAckRequestUnreach(t *testing.T) {
-	l := logging.NewLogger(log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), "debug")
-	rndMsg := NewGossipRoundMessenger()
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	rndMsg := NewGossipRoundMessenger(l)
 	target := discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "pubkey")
 	err := rndMsg.SendAck(target, []discovery.Peer{
 		discovery.NewDiscoveredPeer(
@@ -115,6 +115,6 @@ func TestSendAckRequestUnreach(t *testing.T) {
 			discovery.NewPeerHeartbeatState(time.Now(), 1000),
 			discovery.NewPeerAppState("1.0", discovery.OkPeerStatus, 10.0, 20.0, "", 300, 1, 1000),
 		),
-	}, l)
+	})
 	assert.Equal(t, err, discovery.ErrUnreachablePeer)
 }

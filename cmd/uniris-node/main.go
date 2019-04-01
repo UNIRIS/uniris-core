@@ -397,7 +397,7 @@ func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Noti
 		systemReader = system.NewReader(false, "")
 	}
 
-	roundMessenger := rpc.NewGossipRoundMessenger()
+	roundMessenger := rpc.NewGossipRoundMessenger(logger)
 
 	ip, err := systemReader.IP()
 	if err != nil {
@@ -507,9 +507,19 @@ func createLogger(appID string, ty string, dir string, level string, ip net.IP) 
 		log.Fatal("[Fatal] log-level value should be (info|error|debug)")
 	}
 
+	//map Loglevel
+	var ll logging.Loglevel
+	if level == "error" {
+		ll = logging.Loglevel(0)
+	} else if level == "info" {
+		ll = logging.Loglevel(1)
+	} else {
+		ll = logging.Loglevel(2)
+	}
+
 	if ty == "stdout" {
 		stdLog := log.New(os.Stdout, "", 0)
-		return logging.NewLogger(stdLog, appID, ip, level)
+		return logging.NewLogger("stdout", stdLog, appID, ip, ll)
 	}
 
 	if ty == "file" {
@@ -520,25 +530,25 @@ func createLogger(appID string, ty string, dir string, level string, ip net.IP) 
 		if os.IsNotExist(err) {
 			log.Println("[Error] log-dir" + dir + "does not exist, please create the adequate directory")
 			stdLog := log.New(os.Stdout, "", 0)
-			return logging.NewLogger(stdLog, appID, ip, level)
+			return logging.NewLogger("stdout", stdLog, appID, ip, ll)
 		}
 
 		//check if logdir is not a file
 		if src.Mode().IsRegular() {
 			log.Println("[Erro] log-dir" + dir + "is a file, please create the adequate directory")
 			stdLog := log.New(os.Stdout, "", 0)
-			return logging.NewLogger(stdLog, appID, ip, level)
+			return logging.NewLogger("stdout", stdLog, appID, ip, ll)
 		}
 	}
 
 	f, err := os.OpenFile(dir+"/"+appIDLogFile[appID], os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stdLog := log.New(os.Stdout, "", 0)
-		return logging.NewLogger(stdLog, appID, ip, level)
+		return logging.NewLogger("stdout", stdLog, appID, ip, ll)
 	}
 
 	fileLog := log.New(f, "", 0)
-	return logging.NewLogger(fileLog, appID, ip, level)
+	return logging.NewLogger("file", fileLog, appID, ip, ll)
 }
 
 func getIP(networkType string, networkInterface string) net.IP {

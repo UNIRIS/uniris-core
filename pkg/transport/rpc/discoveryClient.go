@@ -13,14 +13,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type rndMsg struct{}
-
-//NewGossipRoundMessenger creates a new round messenger with GRPC
-func NewGossipRoundMessenger() discovery.Messenger {
-	return rndMsg{}
+type rndMsg struct {
+	logger logging.Logger
 }
 
-func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer, l logging.Logger) (requestedPeers []discovery.PeerIdentity, discoveredPeers []discovery.Peer, err error) {
+//NewGossipRoundMessenger creates a new round messenger with GRPC
+func NewGossipRoundMessenger(l logging.Logger) discovery.Messenger {
+	return rndMsg{
+		logger: l,
+	}
+}
+
+func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (requestedPeers []discovery.PeerIdentity, discoveredPeers []discovery.Peer, err error) {
 	serverAddr := fmt.Sprintf("%s:%d", target.IP().String(), target.Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	if err != nil {
@@ -47,7 +51,7 @@ func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer, l
 		return nil, nil, err
 	}
 
-	l.Debug("SYN RESPONSE - " + time.Unix(res.Timestamp, 0).String())
+	m.logger.Debug("SYN RESPONSE - " + time.Unix(res.Timestamp, 0).String())
 
 	for _, p := range res.DiscoveredPeers {
 		discoveredPeers = append(discoveredPeers, formatPeerDiscovered(p))
@@ -59,7 +63,7 @@ func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer, l
 	return
 }
 
-func (m rndMsg) SendAck(target discovery.PeerIdentity, requested []discovery.Peer, l logging.Logger) error {
+func (m rndMsg) SendAck(target discovery.PeerIdentity, requested []discovery.Peer) error {
 	serverAddr := fmt.Sprintf("%s:%d", target.IP().String(), target.Port())
 	conn, err := grpc.Dial(serverAddr, grpc.WithInsecure())
 	defer conn.Close()
@@ -87,6 +91,6 @@ func (m rndMsg) SendAck(target discovery.PeerIdentity, requested []discovery.Pee
 		return err
 	}
 
-	l.Debug("ACK RESPONSE - " + time.Unix(res.Timestamp, 0).String())
+	m.logger.Debug("ACK RESPONSE - " + time.Unix(res.Timestamp, 0).String())
 	return nil
 }
