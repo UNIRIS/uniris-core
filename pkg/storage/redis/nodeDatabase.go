@@ -55,7 +55,7 @@ func (db nodeDB) FindByPublicKey(pubKey crypto.PublicKey) (n consensus.Node, err
 	}
 	pubKeyEnc := base64.StdEncoding.EncodeToString(pubB)
 
-	list, err := db.fetchList(nodesKey)
+	list, err := db.fetchList()
 	if err != nil {
 		return
 	}
@@ -73,7 +73,7 @@ func (db nodeDB) FindByPublicKey(pubKey crypto.PublicKey) (n consensus.Node, err
 }
 
 func (db nodeDB) Reachables() (nodes []consensus.Node, err error) {
-	list, err := db.fetchList(nodesKey)
+	list, err := db.fetchList()
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (db nodeDB) Reachables() (nodes []consensus.Node, err error) {
 }
 
 func (db nodeDB) Unreachables() (nodes []consensus.Node, err error) {
-	list, err := db.fetchList(nodesKey)
+	list, err := db.fetchList()
 	if err != nil {
 		return nil, err
 	}
@@ -180,8 +180,8 @@ func (db nodeDB) WriteUnreachableNode(publicKey crypto.PublicKey) error {
 	return nil
 }
 
-func (db nodeDB) fetchList(key string) ([]map[string]string, error) {
-	cmdKeys := db.client.Keys(key)
+func (db nodeDB) fetchList() ([]map[string]string, error) {
+	cmdKeys := db.client.Keys(fmt.Sprintf("%s:*", nodesKey))
 	if cmdKeys.Err() != nil {
 		return nil, cmdKeys.Err()
 	}
