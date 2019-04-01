@@ -198,7 +198,7 @@ func TestValidateTransaction(t *testing.T) {
 	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
 
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	valid, err := ConfirmTransactionValidation(tx, mv, pub, pv, l)
 	assert.Nil(t, err)
 	assert.Equal(t, chain.ValidationOK, valid.Status())
@@ -229,7 +229,7 @@ func TestValidateTransactionWithBadIntegrity(t *testing.T) {
 	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
 	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
 	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	valid, err := ConfirmTransactionValidation(tx, mv, pub, pv, l)
 	assert.Nil(t, err)
 	assert.Equal(t, chain.ValidationKO, valid.Status())
@@ -497,7 +497,7 @@ func TestLeadMining(t *testing.T) {
 	tx, err := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash(txEmSigned))
 	assert.Nil(t, err)
 	poolR := &mockPoolRequester{}
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	wHeaders := chain.NewWelcomeNodeHeader(pub, []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
 	assert.Nil(t, LeadMining(tx, 1, wHeaders, poolR, pub, pv, sharedKeyReader, nodeReader, l))
 

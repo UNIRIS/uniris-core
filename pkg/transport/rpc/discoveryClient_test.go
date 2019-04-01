@@ -24,7 +24,7 @@ Scenario: Send a syn request to a peer by sending its local view
 func TestSendSynRequest(t *testing.T) {
 
 	db := &mockDiscoveryDB{}
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	lis, _ := net.Listen("tcp", ":3000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
@@ -54,7 +54,7 @@ Scenario: Send a syn request to a disconnected peer
 	Then I get an error as unreachable
 */
 func TestSendSynRequestUnreach(t *testing.T) {
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	rndMsg := NewGossipRoundMessenger(l)
 	target := discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "pubkey")
 	_, _, err := rndMsg.SendSyn(target, []discovery.Peer{
@@ -76,7 +76,7 @@ Scenario: Send a ack request to a peer by sending details about the requested pe
 func TestSendAckRequest(t *testing.T) {
 
 	db := &mockDiscoveryDB{}
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
 	lis, _ := net.Listen("tcp", ":3000")
 	defer lis.Close()
@@ -106,7 +106,7 @@ Scenario: Send a ack request to a disconnected peer
 	Then I get an error as unreachable
 */
 func TestSendAckRequestUnreach(t *testing.T) {
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	rndMsg := NewGossipRoundMessenger(l)
 	target := discovery.NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "pubkey")
 	err := rndMsg.SendAck(target, []discovery.Peer{

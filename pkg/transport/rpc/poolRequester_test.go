@@ -46,7 +46,7 @@ func TestRequestTransactionLock(t *testing.T) {
 
 	chainDB := &mockChainDB{}
 
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	pr := NewPoolRequester(sharedKeyReader, l)
 
 	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l)
@@ -87,7 +87,7 @@ func TestRequestConfirmValidation(t *testing.T) {
 		},
 	}
 
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
 	pr := NewPoolRequester(sharedKeyReader, l)
 
@@ -178,7 +178,7 @@ func TestRequestStorage(t *testing.T) {
 
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, kp)
 
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
 	pr := NewPoolRequester(sharedKeyReader, l)
 
@@ -259,7 +259,7 @@ func TestSendGetLastTransaction(t *testing.T) {
 		},
 	}
 
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
 	pr := NewPoolRequester(sharedKeyReader, l)
 

@@ -35,7 +35,7 @@ Scenario: Get transactions status with receipt non hexadecimal
 	Then I get an error
 */
 func TestGetTransactionStatusWithNoHexaReceipt(t *testing.T) {
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	r := gin.New()
 	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(&mockSharedKeyReader{}, &mockNodeDatabase{}, l))
 
@@ -60,7 +60,7 @@ Scenario: Get transactions status with receipt bad format
 	Then I get an error
 */
 func TestGetTransactionStatusWithBadFormat(t *testing.T) {
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	r := gin.New()
 	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(&mockSharedKeyReader{}, &mockNodeDatabase{}, l))
 
@@ -85,7 +85,7 @@ Scenario: Get transactions status with receipt bad length
 	Then I get an error
 */
 func TestGetTransactionStatusWithBadReceiptLength(t *testing.T) {
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	r := gin.New()
 	r.GET("/api/transaction/:txReceipt/status", GetTransactionStatusHandler(&mockSharedKeyReader{}, &mockNodeDatabase{}, l))
 
@@ -123,7 +123,7 @@ func TestGetTransactionStatusUnknown(t *testing.T) {
 
 	chainDB := &mockChainDB{}
 
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	pr := rpc.NewPoolRequester(sharedKeyReader, l)
 
 	nodeReader := &mockNodeDatabase{

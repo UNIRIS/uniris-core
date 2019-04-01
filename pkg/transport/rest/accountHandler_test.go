@@ -38,7 +38,7 @@ Scenario: Get account request with an ID hash not a valid hash
 */
 func TestGetAccountWhenInvalidHash(t *testing.T) {
 	r := gin.New()
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	r.GET("/api/account/:idHash", GetAccountHandler(&mockSharedKeyReader{}, &mockNodeDatabase{}, l))
 
 	path := fmt.Sprintf("http://localhost/api/account/abc")
@@ -65,7 +65,7 @@ func TestGetAccountWhenInvalidSignature(t *testing.T) {
 
 	_, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	emK, _ := shared.NewEmitterCrossKeyPair([]byte("enc"), pub)
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
 	r := gin.New()
 	r.GET("/api/account/:idHash", GetAccountHandler(&mockSharedKeyReader{
@@ -139,7 +139,7 @@ func TestGetAccountWhenIDNotExist(t *testing.T) {
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
 	grpcServer := grpc.NewServer()
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l))
 	go grpcServer.Serve(lis)
 
@@ -191,7 +191,7 @@ func TestGetAccountWhenKeychainNotExist(t *testing.T) {
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	grpcServer := grpc.NewServer()
 	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l))
 	go grpcServer.Serve(lis)
@@ -290,7 +290,7 @@ func TestGetAccount(t *testing.T) {
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	grpcServer := grpc.NewServer()
 	api.RegisterTransactionServiceServer(grpcServer, rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l))
 	go grpcServer.Serve(lis)
@@ -414,7 +414,7 @@ func TestCreationAccountWhenInvalidID(t *testing.T) {
 	r := gin.New()
 
 	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
 	sharedKeyReader := &mockSharedKeyReader{}
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
@@ -460,7 +460,7 @@ func TestCreationAccountWhenInvalidTransactionRaw(t *testing.T) {
 	emKey, _ := shared.NewEmitterCrossKeyPair([]byte("pv"), pub)
 	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKey)
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
 	r := gin.New()
 	r.POST("/api/account", CreateAccountHandler(sharedKeyReader, mockNodeDatabase{}, pub, pv, l))
@@ -584,7 +584,7 @@ func TestCreateAccount(t *testing.T) {
 			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub8, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
 		},
 	}
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	txSrv := rpc.NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l)
 
 	//Start transaction server

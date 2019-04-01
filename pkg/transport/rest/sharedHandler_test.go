@@ -28,7 +28,7 @@ Scenario: Get shared keys with no emitter public key in the query
 	THen I get an error
 */
 func TestGetSharedKeysWhenMissingPublicKey(t *testing.T) {
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	r := gin.New()
 	r.GET("/api/sharedkeys", GetSharedKeysHandler(&mockSharedKeyReader{}, l))
 
@@ -53,7 +53,7 @@ Scenario: Get shared keys with an invalid emitter public key
 	THen I get an error
 */
 func TestGetSharedKeysWithInvalidPublicKey(t *testing.T) {
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	r := gin.New()
 	r.GET("/api/sharedkeys", GetSharedKeysHandler(&mockSharedKeyReader{}, l))
 
@@ -90,7 +90,7 @@ func TestGetSharedKeys(t *testing.T) {
 	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
 	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
 	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, emKP)
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	pubB, _ := pub.Marshal()
 
 	r := gin.New()

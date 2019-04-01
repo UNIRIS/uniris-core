@@ -7,13 +7,18 @@ import (
 	"time"
 )
 
-//Loglevel describes the log level
-type Loglevel int
+//Level describes the log level
+type Level int
 
 const (
-	errorLogLevel Loglevel = iota
-	infoLogLevel
-	debugLogLevel
+	//ErrorLogLevel describe the error log level
+	ErrorLogLevel Level = iota
+
+	//InfoLogLevel describe the info log level
+	InfoLogLevel
+
+	//DebugLogLevel describe the debug log level
+	DebugLogLevel
 )
 
 //Logger describe a logger structure
@@ -22,11 +27,11 @@ type Logger struct {
 	log      *log.Logger
 	appID    string
 	hostID   net.IP
-	logLevel Loglevel
+	logLevel Level
 }
 
 //NewLogger create a new logger with the good parameteres
-func NewLogger(o string, l *log.Logger, appid string, hostid net.IP, level Loglevel) Logger {
+func NewLogger(o string, l *log.Logger, appid string, hostid net.IP, level Level) Logger {
 
 	return Logger{
 		ioType:   o,
@@ -39,7 +44,7 @@ func NewLogger(o string, l *log.Logger, appid string, hostid net.IP, level Logle
 }
 
 //Level Return the log level
-func (l *Logger) Level() Loglevel {
+func (l *Logger) Level() Level {
 	return l.logLevel
 }
 

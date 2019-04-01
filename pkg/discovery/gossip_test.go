@@ -19,7 +19,7 @@ Scenario: Spread a gossip round and discover peers
 	Then we get the new peers discovered
 */
 func TestStartRound(t *testing.T) {
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2")
 
 	p1 := NewDiscoveredPeer(
@@ -48,7 +48,7 @@ Scenario: Spread gossip but unreach the target peer during the SYN request
 */
 func TestStartRoundWithUnreachWhenSYN(t *testing.T) {
 
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
 	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2")
 
@@ -76,7 +76,7 @@ Scenario: Spread gossip but unreach the target peer during the SYN request
 */
 func TestStartRoundWithUnreachWhenACK(t *testing.T) {
 
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2")
 
 	p1 := NewDiscoveredPeer(
@@ -132,7 +132,7 @@ func TestRunCycle(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key3"),
 	}
 
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
 	discoveries, reachables, unreachables, err := startCycle(self, mockMessenger{l}, seeds, []Peer{kp1}, []PeerIdentity{kp1.Identity()}, []PeerIdentity{}, l)
 
@@ -165,7 +165,7 @@ func TestRunCycleGetUnreachable(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key3"),
 	}
 
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
 	_, _, unreachables, err := startCycle(self, mockMessengerWithSynFailure{l}, seeds, []Peer{kp1}, []PeerIdentity{kp1.Identity()}, []PeerIdentity{}, l)
 
@@ -192,7 +192,7 @@ func TestRunCycleWithUnreachable(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key3"),
 	}
 
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
 	_, reachables, unreachables, err := startCycle(self, mockMessenger{l}, seeds, []Peer{kp1}, []PeerIdentity{kp1.Identity()}, []PeerIdentity{ur1}, l)
 
@@ -302,7 +302,7 @@ func TestGossip(t *testing.T) {
 		NewPeerIdentity(net.ParseIP("10.0.0.1"), 3000, "key1"),
 	}
 
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.Loglevel(2))
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	err := Gossip(self, seeds, db, mockNetworkChecker{}, mockSystemReader{}, mockMessenger{l}, notif, l)
 	assert.Nil(t, err)
 	assert.Len(t, db.discoveredPeers, 2)

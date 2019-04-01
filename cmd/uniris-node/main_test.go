@@ -15,7 +15,7 @@ Scenario: Create file logger
 */
 func TestLoggerLevel(t *testing.T) {
 	logger := createLogger(miningAppID, "file", "/tmp", "debug", net.ParseIP("127.0.0.1"))
-	assert.Equal(t, logging.Loglevel(2), logger.Level())
+	assert.Equal(t, logging.DebugLogLevel, logger.Level())
 }
 
 /*

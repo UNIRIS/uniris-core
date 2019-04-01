@@ -38,7 +38,7 @@ import (
 const (
 	defaultConfigurationFile = "./conf.yaml"
 
-	discoveryLogFile = "Discoverie.log"
+	discoveryLogFile = "Discovery.log"
 	miningLogFile    = "Mining.log"
 
 	discoveryAppID = "Discovery"
@@ -508,13 +508,13 @@ func createLogger(appID string, ty string, dir string, level string, ip net.IP) 
 	}
 
 	//map Loglevel
-	var ll logging.Loglevel
+	var ll logging.Level
 	if level == "error" {
-		ll = logging.Loglevel(0)
+		ll = logging.ErrorLogLevel
 	} else if level == "info" {
-		ll = logging.Loglevel(1)
+		ll = logging.InfoLogLevel
 	} else {
-		ll = logging.Loglevel(2)
+		ll = logging.DebugLogLevel
 	}
 
 	if ty == "stdout" {
