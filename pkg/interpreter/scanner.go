@@ -48,9 +48,15 @@ func (sc *scanner) scanToken() error {
 		sc.addEmptyToken(tokenRightParenthesis)
 		break
 	case '{':
-		sc.addEmptyToken(tokenLeftBracket)
+		sc.addEmptyToken(tokenLeftBrace)
 		break
 	case '}':
+		sc.addEmptyToken(tokenRightBrace)
+		break
+	case '[':
+		sc.addEmptyToken(tokenLeftBracket)
+		break
+	case ']':
 		sc.addEmptyToken(tokenRightBracket)
 		break
 	case '+':
