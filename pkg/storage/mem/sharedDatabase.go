@@ -96,3 +96,15 @@ func (db *SharedDatabase) WriteAuthorizedNode(pub crypto.PublicKey) error {
 
 	return nil
 }
+
+//IsAuthorizedNode check if the public Key is on the authorized list
+func (db *SharedDatabase) IsAuthorizedNode(pub crypto.PublicKey) bool {
+	found := false
+	for _, k := range db.authNodePublicKeys {
+		if k.Equals(pub) {
+			found = true
+			break
+		}
+	}
+	return found
+}

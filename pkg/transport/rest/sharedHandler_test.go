@@ -150,3 +150,14 @@ func (r mockSharedKeyReader) CrossEmitterPublicKeys() (pubKeys []crypto.PublicKe
 func (r mockSharedKeyReader) FirstEmitterCrossKeypair() (shared.EmitterCrossKeyPair, error) {
 	return r.crossEmitterKeys[0], nil
 }
+
+func (r mockSharedKeyReader) IsAuthorizedNode(pub crypto.PublicKey) bool {
+	found := false
+	for _, k := range r.authKeys {
+		if k.Equals(pub) {
+			found = true
+			break
+		}
+	}
+	return found
+}

@@ -2,6 +2,7 @@ package amqp
 
 import (
 	"fmt"
+	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/logging"
 	"time"
 
@@ -35,12 +36,20 @@ func (n notifier) NotifyDiscovery(p discovery.Peer) error {
 	return n.notifyQueue(b, "application/json", queueNameDiscoveries)
 }
 
-func (n notifier) NotifyReachable(publicKey string) error {
-	return n.notifyQueue([]byte(publicKey), "text/plain", queueNameReachable)
+func (n notifier) NotifyReachable(publicKey crypto.PublicKey) error {
+	p, err := publicKey.Marshal()
+	if err != nil {
+		return err
+	}
+	return n.notifyQueue(p, "text/plain", queueNameReachable)
 }
 
-func (n notifier) NotifyUnreachable(publicKey string) error {
-	return n.notifyQueue([]byte(publicKey), "text/plain", queueNameUnreachable)
+func (n notifier) NotifyUnreachable(publicKey crypto.PublicKey) error {
+	p, err := publicKey.Marshal()
+	if err != nil {
+		return err
+	}
+	return n.notifyQueue(p, "text/plain", queueNameUnreachable)
 }
 
 func (n notifier) notifyQueue(data []byte, contentType string, queueName string) error {

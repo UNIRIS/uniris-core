@@ -41,7 +41,7 @@ type key interface {
 	//First byte identify the curve and the rest the key marshalling
 	Marshal() (VersionnedKey, error)
 
-	bytes() []byte
+	Bytes() []byte
 	curve() Curve
 }
 
@@ -97,6 +97,9 @@ func GenerateECKeyPair(c Curve, src io.Reader) (PrivateKey, PublicKey, error) {
 
 //ParsePublicKey converts a marshalled versionned public key into a PublicKey
 func ParsePublicKey(key VersionnedKey) (PublicKey, error) {
+	if len(key) == 0 {
+		return nil, errors.New("Cannot parse public key with empty slice")
+	}
 	switch key.Curve() {
 	case P256Curve:
 		pub, err := x509.ParsePKIXPublicKey(key.Marshalling())
@@ -107,6 +110,7 @@ func ParsePublicKey(key VersionnedKey) (PublicKey, error) {
 		return ecdsaPublicKey{ecdsaPub}, nil
 	case Ed25519Curve:
 		//TODO: need a way to check if it's valid
+
 		return ed25519PublicKey{key.Marshalling()}, nil
 	default:
 		return nil, errors.New("unsupported curve")

@@ -1,7 +1,9 @@
 package discovery
 
 import (
+	"crypto/rand"
 	"errors"
+	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/logging"
 	"log"
 	"net"
@@ -12,6 +14,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	_, pubx, _ = crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, puby, _ = crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+)
+
 /*
 Scenario: Spread a gossip round and discover peers
 	Given a initiator peer, a receiver peer and list of known peers
@@ -19,17 +26,21 @@ Scenario: Spread a gossip round and discover peers
 	Then we get the new peers discovered
 */
 func TestStartRound(t *testing.T) {
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub3, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
-	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2")
+	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, pub1)
 
 	p1 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key3"),
+		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, pub2),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", OkPeerStatus, 10.0, 20.0, "", 0, 1, 0),
 	)
 
 	p2 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("50.10.30.2"), 3000, "uKey1"),
+		NewPeerIdentity(net.ParseIP("50.10.30.2"), 3000, pub3),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", OkPeerStatus, 20.0, 19.4, "", 0, 1, 0),
 	)
@@ -37,29 +48,32 @@ func TestStartRound(t *testing.T) {
 	discoveries, err := startRound(target, []Peer{p1, p2}, mockMessenger{l}, l)
 	assert.Nil(t, err)
 	assert.Len(t, discoveries, 1)
-	assert.Equal(t, "dKey1", discoveries[0].Identity().PublicKey())
+	assert.True(t, discoveries[0].Identity().PublicKey().Equals(puby))
 }
 
 /*
 Scenario: Spread gossip but unreach the target peer during the SYN request
 	Given a initiator peer, a receiver peer and list of known peers
 	When are sending the SYN, the target cannot be reached
-	Then we get the unreached peer
+	Then we get the unreached peer error
 */
 func TestStartRoundWithUnreachWhenSYN(t *testing.T) {
 
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub3, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2")
+	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, pub1)
 
 	p1 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key3"),
+		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, pub2),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
 
 	p2 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("50.10.30.2"), 3000, "uKey1"),
+		NewPeerIdentity(net.ParseIP("50.10.30.2"), 3000, pub3),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
@@ -72,21 +86,25 @@ func TestStartRoundWithUnreachWhenSYN(t *testing.T) {
 Scenario: Spread gossip but unreach the target peer during the SYN request
 	Given a initiator peer, a receiver peer and list of known peers
 	When are sending the SYN, the target cannot be reached
-	Then we get the unreached peer
+	Then we get the unreached peer  error
 */
 func TestStartRoundWithUnreachWhenACK(t *testing.T) {
 
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
-	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, "key2")
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub3, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	target := NewPeerIdentity(net.ParseIP("20.100.4.120"), 3000, pub1)
 
 	p1 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key3"),
+		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, pub2),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
 
 	p2 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("50.10.30.2"), 3000, "uKey1"),
+		NewPeerIdentity(net.ParseIP("50.10.30.2"), 3000, pub3),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
@@ -102,9 +120,14 @@ Scenario: Get a random peers from a list
 	Then I get one
 */
 func TestRandomPeers(t *testing.T) {
-	p1 := PeerIdentity{ip: net.ParseIP("127.0.0.1"), port: 3000, publicKey: "key1"}
-	p2 := PeerIdentity{ip: net.ParseIP("127.0.0.2"), port: 4000, publicKey: "key2"}
-	p3 := PeerIdentity{ip: net.ParseIP("127.0.0.3"), port: 5000, publicKey: "key3"}
+
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub3, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	p1 := PeerIdentity{ip: net.ParseIP("127.0.0.1"), port: 3000, publicKey: pub1}
+	p2 := PeerIdentity{ip: net.ParseIP("127.0.0.2"), port: 4000, publicKey: pub2}
+	p3 := PeerIdentity{ip: net.ParseIP("127.0.0.3"), port: 5000, publicKey: pub3}
 
 	r1 := randomPeer([]PeerIdentity{p1, p2, p3})
 	r2 := randomPeer([]PeerIdentity{p1, p2, p3})
@@ -122,14 +145,18 @@ Scenario: Run a gossip cycle
 	Then we run it and get some discovered peers
 */
 func TestRunCycle(t *testing.T) {
-	self := NewSelfPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0)
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub3, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	self := NewSelfPeer(pub1, net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0)
 
 	kp1 := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key2"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub2),
 		NewPeerHeartbeatState(time.Now(), 0))
 
 	seeds := []PeerIdentity{
-		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key3"),
+		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, pub3),
 	}
 
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
@@ -142,10 +169,10 @@ func TestRunCycle(t *testing.T) {
 	assert.Empty(t, unreachables)
 
 	//Peer retrieved from the kp1
-	assert.Equal(t, "dKey1", discoveries[0].Identity().PublicKey())
+	assert.Equal(t, puby, discoveries[0].Identity().PublicKey())
 
 	//Peer retreived from the seed1
-	assert.Equal(t, "dKey1", discoveries[1].Identity().PublicKey())
+	assert.Equal(t, puby, discoveries[1].Identity().PublicKey())
 }
 
 /*
@@ -155,14 +182,17 @@ Scenario: Run a gossip cycle with gossip failure
 	Then we run it and get some discovered peers
 */
 func TestRunCycleGetUnreachable(t *testing.T) {
-	self := NewSelfPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0)
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub3, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	self := NewSelfPeer(pub1, net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0)
 
 	kp1 := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key2"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub2),
 		NewPeerHeartbeatState(time.Now(), 0))
 
 	seeds := []PeerIdentity{
-		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key3"),
+		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, pub3),
 	}
 
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
@@ -180,16 +210,21 @@ Scenario: Run a gossip cycle with unreachable peers
 	Then we get an unreachable peer
 */
 func TestRunCycleWithUnreachable(t *testing.T) {
-	self := NewSelfPeer("key", net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0)
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub3, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub4, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	self := NewSelfPeer(pub1, net.ParseIP("10.0.0.1"), 3000, "1.0", 30.0, 12.0)
 
 	kp1 := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key2"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub2),
 		NewPeerHeartbeatState(time.Now(), 0))
 
-	ur1 := NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key4")
+	ur1 := NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub4)
 
 	seeds := []PeerIdentity{
-		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, "key3"),
+		NewPeerIdentity(net.ParseIP("20.0.0.1"), 3000, pub3),
 	}
 
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
@@ -208,19 +243,20 @@ Scenario: Store and notifies cycle discovered peers
 	Then the store will included them and will be sent to the notifier
 */
 func TestAddDiscoveries(t *testing.T) {
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
 	store := &mockDatabase{}
 	notif := &mockNotifier{}
 
 	p1 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("192.168.1.1"), 3000, "key"),
+		NewPeerIdentity(net.ParseIP("192.168.1.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
 
 	err := addDiscoveries([]Peer{
 		NewDiscoveredPeer(
-			NewPeerIdentity(net.ParseIP("192.168.1.1"), 3000, "key"),
+			NewPeerIdentity(net.ParseIP("192.168.1.1"), 3000, pub1),
 			NewPeerHeartbeatState(time.Now(), 0),
 			NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 		),
@@ -228,21 +264,21 @@ func TestAddDiscoveries(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Len(t, store.discoveredPeers, 1)
-	assert.Equal(t, "key", store.discoveredPeers[0].identity.publicKey)
+	assert.Equal(t, pub1, store.discoveredPeers[0].identity.publicKey)
 	assert.Equal(t, 0, len(notif.discoveries))
 
 	err = addDiscoveries([]Peer{
 		NewDiscoveredPeer(
-			NewPeerIdentity(net.ParseIP("192.168.1.1"), 3000, "key"),
+			NewPeerIdentity(net.ParseIP("192.168.1.1"), 3000, pub1),
 			NewPeerHeartbeatState(time.Now(), 0),
 			NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 10, 10, 10),
 		),
 	}, []Peer{p1}, store, notif)
 	assert.Nil(t, err)
 	assert.Len(t, store.discoveredPeers, 1)
-	assert.Equal(t, "key", store.discoveredPeers[0].identity.publicKey)
+	assert.Equal(t, pub1, store.discoveredPeers[0].identity.publicKey)
 	assert.Equal(t, 1, len(notif.discoveries))
-	assert.Equal(t, "key", notif.discoveries[0].identity.publicKey)
+	assert.Equal(t, pub1, notif.discoveries[0].identity.publicKey)
 }
 
 /*
@@ -256,14 +292,20 @@ func TestAddUnreachable(t *testing.T) {
 	db := &mockDatabase{}
 	notif := &mockNotifier{}
 
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
 	err := addUnreaches([]PeerIdentity{
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 	}, nil, db, notif)
 	assert.Nil(t, err)
 
 	assert.Len(t, db.unreachablePeers, 1)
-	assert.Equal(t, "key", db.unreachablePeers[0].publicKey)
-	assert.Equal(t, "key", notif.unreaches[0])
+	assert.Equal(t, pub1, db.unreachablePeers[0].publicKey)
+
+	p, err := pub1.Marshal()
+	assert.Nil(t, err)
+
+	assert.Equal(t, string(p), notif.unreaches[0])
 
 }
 
@@ -278,13 +320,19 @@ func TestAddReachable(t *testing.T) {
 	db := &mockDatabase{}
 	notif := &mockNotifier{}
 
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
 	err := addReaches([]PeerIdentity{
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 	}, []PeerIdentity{
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 	}, db, notif)
 	assert.Nil(t, err)
-	assert.Equal(t, "key", notif.reaches[0])
+
+	p, err := pub1.Marshal()
+	assert.Nil(t, err)
+
+	assert.Equal(t, string(p), notif.reaches[0])
 }
 
 /*
@@ -294,12 +342,16 @@ Scenario: Process a gossip cycle
 	THen I get some peers stored and notified
 */
 func TestGossip(t *testing.T) {
+
 	db := &mockDatabase{}
 	notif := &mockNotifier{}
 
-	self := NewSelfPeer("key", net.ParseIP("127.0.0.1"), 3000, "", 30.0, 10.0)
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	self := NewSelfPeer(pub1, net.ParseIP("127.0.0.1"), 3000, "", 30.0, 10.0)
 	seeds := []PeerIdentity{
-		NewPeerIdentity(net.ParseIP("10.0.0.1"), 3000, "key1"),
+		NewPeerIdentity(net.ParseIP("10.0.0.1"), 3000, pub2),
 	}
 
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
@@ -307,8 +359,8 @@ func TestGossip(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Len(t, db.discoveredPeers, 2)
 	assert.Len(t, db.unreachablePeers, 0)
-	assert.Equal(t, "key", db.discoveredPeers[0].Identity().PublicKey())
-	assert.Equal(t, "dKey1", db.discoveredPeers[1].Identity().PublicKey())
+	assert.Equal(t, pub1, db.discoveredPeers[0].Identity().PublicKey())
+	assert.Equal(t, puby, db.discoveredPeers[1].Identity().PublicKey())
 	assert.Len(t, notif.discoveries, 1)
 	assert.Len(t, notif.reaches, 0)
 	assert.Len(t, notif.unreaches, 0)
@@ -321,19 +373,23 @@ Scenario: Compare peers with different key and get the unknown
 	Then I get the second peer
 */
 func TestCompareWithDifferentKey(t *testing.T) {
+
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
 	kp := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 1000),
 	)
 
 	comparee := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key2"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub2),
 		NewPeerHeartbeatState(time.Now(), 1000),
 	)
 
 	unknown := ComparePeers([]Peer{kp}, []Peer{comparee})
 	assert.Len(t, unknown, 1)
-	assert.Equal(t, "key2", unknown[0].Identity().PublicKey())
+	assert.Equal(t, pub2, unknown[0].Identity().PublicKey())
 }
 
 /*
@@ -343,13 +399,16 @@ Scenario: Compare 2 equal peers and get no one
 	Then I get no unknwown peers
 */
 func TestCompareWithSameGenerationTime(t *testing.T) {
+
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
 	kp := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 1000),
 	)
 
 	comparee := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 1000),
 	)
 
@@ -364,27 +423,31 @@ Scenario: Compare 2 set of peers with different time and get the recent one
 	Then I get the peer with the highest elapsed heartbeats
 */
 func TestCompareMoreRecent(t *testing.T) {
+
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
 	kp1 := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 1000),
 	)
 	kp2 := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key2"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub2),
 		NewPeerHeartbeatState(time.Now(), 1000),
 	)
 
 	comparee1 := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key2"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 1000),
 	)
 	comparee2 := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "key1"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub2),
 		NewPeerHeartbeatState(time.Now(), 1200),
 	)
 
 	unknown := ComparePeers([]Peer{kp1, kp2}, []Peer{comparee1, comparee2})
 	assert.Len(t, unknown, 1)
-	assert.Equal(t, "key1", unknown[0].Identity().PublicKey())
+	assert.Equal(t, true, pub2.Equals(unknown[0].Identity().PublicKey()))
 	assert.Equal(t, int64(1200), unknown[0].HeartbeatState().ElapsedHeartbeats())
 }
 
@@ -397,20 +460,22 @@ Scenario: Compare 2 version of a peer with a different appstate
 
 func TestComparePeerIDAndState(t *testing.T) {
 
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
 	p1 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key3"),
+		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
 
 	p2 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key3"),
+		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 2, 2, 2),
 	)
 
 	p3 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, "key3"),
+		NewPeerIdentity(net.ParseIP("50.20.100.2"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
@@ -419,13 +484,13 @@ func TestComparePeerIDAndState(t *testing.T) {
 	assert.True(t, comparePeerIDAndState(p1, p3))
 
 	p4 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("50.20.100.1"), 3000, "key3"),
+		NewPeerIdentity(net.ParseIP("50.20.100.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
 
 	p5 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("50.20.100.4"), 3000, "key3"),
+		NewPeerIdentity(net.ParseIP("50.20.100.4"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0),
 	)
@@ -445,7 +510,7 @@ func (db *mockDatabase) DiscoveredPeers() ([]Peer, error) {
 func (db *mockDatabase) WriteDiscoveredPeer(peer Peer) error {
 	if db.containsPeer(peer) {
 		for _, p := range db.discoveredPeers {
-			if p.Identity().PublicKey() == peer.Identity().PublicKey() {
+			if p.Identity().PublicKey().Equals(peer.Identity().PublicKey()) {
 				p = peer
 				break
 			}
@@ -466,17 +531,17 @@ func (db *mockDatabase) UnreachablePeers() ([]PeerIdentity, error) {
 	return pp, nil
 }
 
-func (db *mockDatabase) WriteUnreachablePeer(pk PeerIdentity) error {
-	if exist, _ := db.ContainsUnreachablePeer(pk); !exist {
-		db.unreachablePeers = append(db.unreachablePeers, pk)
+func (db *mockDatabase) WriteUnreachablePeer(pi PeerIdentity) error {
+	if exist, _ := db.ContainsUnreachablePeer(pi); !exist {
+		db.unreachablePeers = append(db.unreachablePeers, pi)
 	}
 	return nil
 }
 
-func (db *mockDatabase) RemoveUnreachablePeer(pk PeerIdentity) error {
-	if exist, _ := db.ContainsUnreachablePeer(pk); exist {
+func (db *mockDatabase) RemoveUnreachablePeer(pi PeerIdentity) error {
+	if exist, _ := db.ContainsUnreachablePeer(pi); exist {
 		for i := 0; i < len(db.unreachablePeers); i++ {
-			if db.unreachablePeers[i].publicKey == pk.publicKey {
+			if db.unreachablePeers[i].PublicKey().Equals(pi.PublicKey()) {
 				db.unreachablePeers = db.unreachablePeers[:i+copy(db.unreachablePeers[i:], db.unreachablePeers[i+1:])]
 			}
 		}
@@ -484,9 +549,9 @@ func (db *mockDatabase) RemoveUnreachablePeer(pk PeerIdentity) error {
 	return nil
 }
 
-func (db *mockDatabase) ContainsUnreachablePeer(pk PeerIdentity) (bool, error) {
+func (db *mockDatabase) ContainsUnreachablePeer(pi PeerIdentity) (bool, error) {
 	for _, up := range db.unreachablePeers {
-		if up.publicKey == pk.PublicKey() {
+		if up.PublicKey().Equals(pi.PublicKey()) {
 			return true, nil
 		}
 	}
@@ -496,10 +561,10 @@ func (db *mockDatabase) ContainsUnreachablePeer(pk PeerIdentity) (bool, error) {
 func (db *mockDatabase) containsPeer(p Peer) bool {
 	mdiscoveredPeers := make(map[string]Peer, 0)
 	for _, p := range db.discoveredPeers {
-		mdiscoveredPeers[p.Identity().PublicKey()] = p
+		mdiscoveredPeers[string(p.Identity().PublicKey().Bytes())] = p
 	}
 
-	_, exist := mdiscoveredPeers[p.Identity().PublicKey()]
+	_, exist := mdiscoveredPeers[string(p.Identity().PublicKey().Bytes())]
 	return exist
 }
 
@@ -509,12 +574,20 @@ type mockNotifier struct {
 	discoveries []Peer
 }
 
-func (n *mockNotifier) NotifyReachable(pk string) error {
-	n.reaches = append(n.reaches, pk)
+func (n *mockNotifier) NotifyReachable(pk crypto.PublicKey) error {
+	p, err := pk.Marshal()
+	if err != nil {
+		return err
+	}
+	n.reaches = append(n.reaches, string(p))
 	return nil
 }
-func (n *mockNotifier) NotifyUnreachable(pk string) error {
-	n.unreaches = append(n.unreaches, pk)
+func (n *mockNotifier) NotifyUnreachable(pk crypto.PublicKey) error {
+	p, err := pk.Marshal()
+	if err != nil {
+		return err
+	}
+	n.unreaches = append(n.unreaches, string(p))
 	return nil
 }
 
@@ -572,13 +645,13 @@ type mockMessengerWithAckFailure struct {
 }
 
 func (m mockMessengerWithAckFailure) SendSyn(target PeerIdentity, known []Peer) (requested []PeerIdentity, discoveries []Peer, err error) {
-	reqP := NewPeerIdentity(net.ParseIP("200.18.186.39"), 3000, "uKey1")
+	reqP := NewPeerIdentity(net.ParseIP("200.18.186.39"), 3000, pubx)
 
 	hb := NewPeerHeartbeatState(time.Now(), 0)
 	as := NewPeerAppState("1.0", OkPeerStatus, 30.0, 10.0, "", 0, 1, 0)
 
 	np1 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("35.200.100.2"), 3000, "dKey1"),
+		NewPeerIdentity(net.ParseIP("35.200.100.2"), 3000, puby),
 		hb, as,
 	)
 
@@ -606,10 +679,10 @@ type mockMessenger struct {
 }
 
 func (m mockMessenger) SendSyn(target PeerIdentity, known []Peer) (requested []PeerIdentity, discoveries []Peer, err error) {
-	reqP := NewPeerIdentity(net.ParseIP("200.18.186.39"), 3000, "uKey1")
+	reqP := NewPeerIdentity(net.ParseIP("200.18.186.39"), 3000, pubx)
 
 	np1 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("35.200.100.2"), 3000, "dKey1"),
+		NewPeerIdentity(net.ParseIP("35.200.100.2"), 3000, puby),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", OkPeerStatus, 50.1, 22.1, "", 0, 1, 0),
 	)

@@ -10,17 +10,24 @@ service DiscoveryService {
 message SynRequest {
     repeated PeerDigest known_peers = 1;
     int64 timestamp = 2;
+    bytes public_key = 3;
+    bytes signature = 4;
+
 }
 
 message SynResponse {
     repeated PeerDiscovered discovered_peers = 1;
     repeated PeerIdentity requested_peers = 2;
     int64 timestamp = 3;
+    bytes public_key = 4;
+    bytes signature = 5;
 }
 
 message AckRequest {
     repeated PeerDiscovered requested_peers = 1;
     int64 timestamp = 2;
+    bytes public_key = 3;
+    bytes signature = 4;
 }
 
 message AckResponse {
@@ -40,7 +47,7 @@ message PeerDiscovered {
 }
 
 message PeerIdentity {
-    string public_key = 1;
+    bytes public_key = 1;
     string ip = 2;
     int32 port = 3;
 }

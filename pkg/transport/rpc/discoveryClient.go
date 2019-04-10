@@ -3,24 +3,30 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"github.com/uniris/uniris-core/pkg/logging"
 	"time"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
+	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/discovery"
+	"github.com/uniris/uniris-core/pkg/logging"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type rndMsg struct {
-	logger logging.Logger
+	logger     logging.Logger
+	publickey  crypto.PublicKey
+	privatekey crypto.PrivateKey
 }
 
 //NewGossipRoundMessenger creates a new round messenger with GRPC
-func NewGossipRoundMessenger(l logging.Logger) discovery.Messenger {
+func NewGossipRoundMessenger(l logging.Logger, pubK crypto.PublicKey, privK crypto.PrivateKey) discovery.Messenger {
 	return rndMsg{
-		logger: l,
+		logger:     l,
+		publickey:  pubK,
+		privatekey: privK,
 	}
 }
 
@@ -34,13 +40,28 @@ func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (
 
 	kp := make([]*api.PeerDigest, 0)
 	for _, p := range known {
-		kp = append(kp, formatPeerDigestAPI(p))
+		fp, err := formatPeerDigestAPI(p)
+		if err != nil {
+			return nil, nil, err
+		}
+		kp = append(kp, fp)
+	}
+
+	pk, err := m.publickey.Marshal()
+	if err != nil {
+		return nil, nil, err
+	}
+	sig, err := m.privatekey.Sign(pk)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	client := api.NewDiscoveryServiceClient(conn)
 	res, err := client.Synchronize(context.Background(), &api.SynRequest{
 		KnownPeers: kp,
 		Timestamp:  time.Now().Unix(),
+		PublicKey:  pk,
+		Signature:  sig,
 	})
 	if err != nil {
 		//If the peer cannot be reached, we throw an ErrPeerUnreachable error
@@ -54,10 +75,18 @@ func (m rndMsg) SendSyn(target discovery.PeerIdentity, known []discovery.Peer) (
 	m.logger.Debug("SYN RESPONSE - " + time.Unix(res.Timestamp, 0).String())
 
 	for _, p := range res.DiscoveredPeers {
-		discoveredPeers = append(discoveredPeers, formatPeerDiscovered(p))
+		fp, err := formatPeerDiscovered(p)
+		if err != nil {
+			return nil, nil, err
+		}
+		discoveredPeers = append(discoveredPeers, fp)
 	}
 	for _, p := range res.RequestedPeers {
-		requestedPeers = append(requestedPeers, formatPeerIdentity(p))
+		fp, err := formatPeerIdentity(p)
+		if err != nil {
+			return nil, nil, err
+		}
+		requestedPeers = append(requestedPeers, fp)
 	}
 
 	return
@@ -76,11 +105,26 @@ func (m rndMsg) SendAck(target discovery.PeerIdentity, requested []discovery.Pee
 
 	reqP := make([]*api.PeerDiscovered, 0)
 	for _, p := range requested {
-		reqP = append(reqP, formatPeerDiscoveredAPI(p))
+		fp, err := formatPeerDiscoveredAPI(p)
+		if err != nil {
+			return err
+		}
+		reqP = append(reqP, fp)
+	}
+
+	pk, err := m.publickey.Marshal()
+	if err != nil {
+		return err
+	}
+	sig, err := m.privatekey.Sign(pk)
+	if err != nil {
+		return err
 	}
 
 	res, err := client.Acknowledge(context.Background(), &api.AckRequest{
 		RequestedPeers: reqP,
+		PublicKey:      pk,
+		Signature:      sig,
 	})
 	if err != nil {
 		//If the peer cannot be reached, we throw an ErrPeerUnreachable error

@@ -18,7 +18,7 @@ Scenario: Get bytes from a Ed25519 private key
 func TestGetBytesFromEd25519PrivateKey(t *testing.T) {
 	pv, _, _ := generateEd25519Keys(rand.Reader)
 
-	b := pv.bytes()
+	b := pv.Bytes()
 	assert.NotEmpty(t, b)
 	assert.Equal(t, len(b), ed25519.PrivateKeySize)
 }
@@ -135,7 +135,7 @@ Scenario: Extract the random public key from the cipher data
 */
 func TestExtractEd25519RandomPubKeyFromCipher(t *testing.T) {
 	_, pub, _ := generateEd25519Keys(rand.Reader)
-	b := pub.bytes()
+	b := pub.Bytes()
 	rPub, pos, err := ed25519ExtractRandomPublicKey(b)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, rPub)

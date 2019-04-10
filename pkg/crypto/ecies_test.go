@@ -48,7 +48,7 @@ func TestEncodeEncryptionWithEd25519(t *testing.T) {
 	c := newEncodedCipher(pub, []byte("cipher data"), []byte("tag MAC"))
 	assert.NotEmpty(t, c)
 
-	b := pub.bytes()
+	b := pub.Bytes()
 
 	assert.EqualValues(t, b, c[:len(b)])
 	assert.EqualValues(t, []byte("cipher data"), c[len(b):len(b)+len([]byte("cipher data"))])
@@ -66,7 +66,7 @@ func TestEncodeEncryptionWithEcdsa(t *testing.T) {
 	c := newEncodedCipher(pub, []byte("cipher data"), []byte("tag MAC"))
 	assert.NotEmpty(t, c)
 
-	b := pub.bytes()
+	b := pub.Bytes()
 
 	assert.EqualValues(t, b, c[:len(b)])
 	assert.EqualValues(t, []byte("cipher data"), c[len(b):len(b)+len([]byte("cipher data"))])

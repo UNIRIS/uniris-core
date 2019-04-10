@@ -30,7 +30,7 @@ func (c Cipher) decode(extPub extractPubKeyFunc) (PublicKey, []byte, []byte, err
 }
 
 func newEncodedCipher(rPub PublicKey, em []byte, tag []byte) Cipher {
-	rPubBytes := rPub.bytes()
+	rPubBytes := rPub.Bytes()
 	out := make(Cipher, len(rPubBytes)+len(em)+len(tag))
 	copy(out, rPubBytes)
 	copy(out[len(rPubBytes):], em)

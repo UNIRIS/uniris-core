@@ -2,6 +2,7 @@ package discovery
 
 import (
 	"errors"
+	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/logging"
 	"math/rand"
 	"reflect"
@@ -44,10 +45,10 @@ type dbRemover interface {
 type Notifier interface {
 
 	//NotifyReachable notifies the peer's public key which became reachable
-	NotifyReachable(publicKey string) error
+	NotifyReachable(publicKey crypto.PublicKey) error
 
 	//NotifyUnreachable notifies the peer's public key which became unreachable
-	NotifyUnreachable(publicKey string) error
+	NotifyUnreachable(publicKey crypto.PublicKey) error
 
 	//NotifyDiscovery notifies the peer's which has been discovered
 	NotifyDiscovery(Peer) error
@@ -110,7 +111,7 @@ func startCycle(self Peer, msg Messenger, seeds []PeerIdentity, peers []Peer, re
 	//Because the self peer is included inside the database, we need to filter it out to not gossip with ourself
 	reachFiltered := make([]PeerIdentity, 0)
 	for _, r := range reaches {
-		if r.publicKey != self.identity.publicKey {
+		if !r.publicKey.Equals(self.identity.publicKey) {
 			reachFiltered = append(reachFiltered, r)
 		}
 	}
@@ -176,7 +177,7 @@ func startRound(target PeerIdentity, peers []Peer, msg Messenger, l logging.Logg
 			var found bool
 			var j int
 			for !found && j < len(peers) {
-				if peers[j].identity.publicKey == reqPeers[i].publicKey {
+				if peers[j].identity.publicKey.Equals(reqPeers[i].publicKey) {
 					reqDetailed = append(reqDetailed, peers[j])
 					found = true
 				}
@@ -202,12 +203,14 @@ func addDiscoveries(cDiscoveries []Peer, peers []Peer, db dbWriter, n Notifier) 
 
 		oldFound = false
 
+		//TODO verify that the discovered peers are Authorized.
+		//TODO verify that the discovered peers info are Authentified
 		if err := db.WriteDiscoveredPeer(dp); err != nil {
 			return err
 		}
 
 		for _, p := range peers {
-			if p.identity.publicKey == dp.identity.publicKey {
+			if p.identity.publicKey.Equals(dp.identity.publicKey) {
 				comparee = p
 				oldFound = true
 				if !comparePeerIDAndState(dp, comparee) {
@@ -259,7 +262,7 @@ func addUnreaches(cUnreachables []PeerIdentity, unreaches []PeerIdentity, db dbW
 }
 
 //ComparePeers compares a source of peers with an other list of peers
-//and returns the peers that are not included inside the source or
+//and returns the peers that are not included inside the source
 func ComparePeers(source []Peer, comparees []Peer) []Peer {
 
 	diff := make([]Peer, 0)
@@ -270,7 +273,7 @@ func ComparePeers(source []Peer, comparees []Peer) []Peer {
 
 		for !found && j < len(source) {
 			//Add it to the list if the compared peer is include inside the source and if it's more recent
-			if source[j].identity.publicKey == comparees[i].identity.publicKey {
+			if source[j].identity.publicKey.Equals(comparees[i].identity.publicKey) {
 				if comparees[i].hbState.MoreRecentThan(source[j].hbState) {
 					diff = append(diff, comparees[i])
 					found = true
@@ -292,7 +295,7 @@ func ComparePeers(source []Peer, comparees []Peer) []Peer {
 func isUnreachable(p PeerIdentity, unreaches []PeerIdentity) (found bool) {
 	var i int
 	for !found && i < len(unreaches) {
-		if unreaches[i].publicKey == p.publicKey {
+		if unreaches[i].publicKey.Equals(p.publicKey) {
 			found = true
 		}
 		i++
@@ -315,7 +318,7 @@ func reachablePeers(unreachables []PeerIdentity, knownPeers []Peer) peerList {
 
 		//detect if the peers is unreachable
 		for _, u := range unreachables {
-			if u.publicKey == p.identity.publicKey {
+			if u.publicKey.Equals(p.identity.publicKey) {
 				found = true
 				break
 			}

@@ -16,10 +16,10 @@ Scenario: Version key by build a byte slice with the curve and the key marshalle
 */
 func TestVersionKey(t *testing.T) {
 	pv, _, _ := generateEd25519Keys(rand.Reader)
-	bytes := pv.bytes()
+	bytes := pv.Bytes()
 	key := versionKey(pv.curve(), bytes)
 	assert.Equal(t, Ed25519Curve, key.Curve())
-	assert.Equal(t, pv.bytes(), key.Marshalling())
+	assert.Equal(t, pv.Bytes(), key.Marshalling())
 }
 
 /*
@@ -34,7 +34,7 @@ func TestParseEcdsaPublicKey(t *testing.T) {
 	publicKey, err := ParsePublicKey(versionnedKey)
 	assert.Nil(t, err)
 	assert.Equal(t, publicKey.curve(), P256Curve)
-	assert.Equal(t, pub.bytes(), publicKey.bytes())
+	assert.Equal(t, pub.Bytes(), publicKey.Bytes())
 }
 
 /*
@@ -49,7 +49,7 @@ func TestParseEd25519PublicKey(t *testing.T) {
 	publicKey, err := ParsePublicKey(versionnedKey)
 	assert.Nil(t, err)
 	assert.Equal(t, publicKey.curve(), Ed25519Curve)
-	assert.Equal(t, pub.bytes(), publicKey.bytes())
+	assert.Equal(t, pub.Bytes(), publicKey.Bytes())
 }
 
 /*
@@ -64,7 +64,7 @@ func TestParseEcdsaPrivateKey(t *testing.T) {
 	privateKey, err := ParsePrivateKey(versionnedKey)
 	assert.Nil(t, err)
 	assert.Equal(t, privateKey.curve(), P256Curve)
-	assert.Equal(t, pv.bytes(), privateKey.bytes())
+	assert.Equal(t, pv.Bytes(), privateKey.Bytes())
 }
 
 /*
@@ -79,5 +79,5 @@ func TestParseEd25519PrivateKey(t *testing.T) {
 	privateKey, err := ParsePrivateKey(versionnedKey)
 	assert.Nil(t, err)
 	assert.Equal(t, privateKey.curve(), Ed25519Curve)
-	assert.Equal(t, pv.bytes(), privateKey.bytes())
+	assert.Equal(t, pv.Bytes(), privateKey.Bytes())
 }

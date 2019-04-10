@@ -29,7 +29,7 @@ func (ePriv ecdsaPrivateKey) Marshal() (VersionnedKey, error) {
 	return versionKey(ePriv.curve(), m), nil
 }
 
-func (ePriv ecdsaPrivateKey) bytes() []byte {
+func (ePriv ecdsaPrivateKey) Bytes() []byte {
 	return elliptic.Marshal(ePriv.priv.Curve, ePriv.priv.X, ePriv.priv.Y)
 }
 
@@ -55,7 +55,7 @@ type ecdsaPublicKey struct {
 	pub *ecdsa.PublicKey
 }
 
-func (ePub ecdsaPublicKey) bytes() []byte {
+func (ePub ecdsaPublicKey) Bytes() []byte {
 	return elliptic.Marshal(ePub.pub.Curve, ePub.pub.X, ePub.pub.Y)
 }
 
@@ -86,8 +86,8 @@ func (ePub ecdsaPublicKey) Verify(data []byte, sig []byte) bool {
 }
 
 func (ePub ecdsaPublicKey) Equals(otherPub PublicKey) bool {
-	otherBytes := otherPub.bytes()
-	pubBytes := ePub.bytes()
+	otherBytes := otherPub.Bytes()
+	pubBytes := ePub.Bytes()
 	return bytes.Equal(otherBytes, pubBytes)
 }
 

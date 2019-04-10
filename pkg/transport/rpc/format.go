@@ -14,45 +14,66 @@ import (
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
 )
 
-func formatPeerDigest(p *api.PeerDigest) discovery.Peer {
+func formatPeerDigest(p *api.PeerDigest) (peer discovery.Peer, err error) {
+	pk, err := crypto.ParsePublicKey(p.Identity.PublicKey)
+	if err != nil {
+		return peer, err
+	}
 	return discovery.NewPeerDigest(
-		discovery.NewPeerIdentity(net.ParseIP(p.Identity.Ip), int(p.Identity.Port), p.Identity.PublicKey),
+		discovery.NewPeerIdentity(net.ParseIP(p.Identity.Ip), int(p.Identity.Port), pk),
 		discovery.NewPeerHeartbeatState(time.Unix(p.HeartbeatState.GenerationTime, 0), p.HeartbeatState.ElapsedHeartbeats),
-	)
+	), nil
 }
 
-func formatPeerIdentity(p *api.PeerIdentity) discovery.PeerIdentity {
-	return discovery.NewPeerIdentity(net.ParseIP(p.Ip), int(p.Port), p.PublicKey)
+func formatPeerIdentity(p *api.PeerIdentity) (pi discovery.PeerIdentity, err error) {
+	pk, err := crypto.ParsePublicKey(p.PublicKey)
+	if err != nil {
+		return pi, err
+	}
+	return discovery.NewPeerIdentity(net.ParseIP(p.Ip), int(p.Port), pk), nil
 }
 
-func formatPeerDigestAPI(p discovery.Peer) *api.PeerDigest {
+func formatPeerDigestAPI(p discovery.Peer) (d *api.PeerDigest, err error) {
+	pk, err := p.Identity().PublicKey().Marshal()
+	if err != nil {
+		return d, err
+	}
 	return &api.PeerDigest{
 		Identity: &api.PeerIdentity{
 			Ip:        p.Identity().IP().String(),
 			Port:      int32(p.Identity().Port()),
-			PublicKey: p.Identity().PublicKey(),
+			PublicKey: pk,
 		},
 		HeartbeatState: &api.PeerHeartbeatState{
 			ElapsedHeartbeats: p.HeartbeatState().ElapsedHeartbeats(),
 			GenerationTime:    p.HeartbeatState().GenerationTime().Unix(),
 		},
-	}
+	}, nil
 }
 
-func formatPeerIdentityAPI(p discovery.Peer) *api.PeerIdentity {
+func formatPeerIdentityAPI(p discovery.Peer) (id *api.PeerIdentity, err error) {
+	pk, err := p.Identity().PublicKey().Marshal()
+	if err != nil {
+		return id, err
+	}
 	return &api.PeerIdentity{
 		Ip:        p.Identity().IP().String(),
 		Port:      int32(p.Identity().Port()),
-		PublicKey: p.Identity().PublicKey(),
-	}
+		PublicKey: pk,
+	}, nil
 }
 
-func formatPeerDiscoveredAPI(p discovery.Peer) *api.PeerDiscovered {
+func formatPeerDiscoveredAPI(p discovery.Peer) (d *api.PeerDiscovered, err error) {
+	pk, err := p.Identity().PublicKey().Marshal()
+	if err != nil {
+		return d, err
+	}
+
 	return &api.PeerDiscovered{
 		Identity: &api.PeerIdentity{
 			Ip:        p.Identity().IP().String(),
 			Port:      int32(p.Identity().Port()),
-			PublicKey: p.Identity().PublicKey(),
+			PublicKey: pk,
 		},
 		HeartbeatState: &api.PeerHeartbeatState{
 			ElapsedHeartbeats: p.HeartbeatState().ElapsedHeartbeats(),
@@ -70,15 +91,19 @@ func formatPeerDiscoveredAPI(p discovery.Peer) *api.PeerDiscovered {
 			Status:    api.PeerAppState_PeerStatus(p.AppState().Status()),
 			Version:   p.AppState().Version(),
 		},
-	}
+	}, nil
 }
 
-func formatPeerDiscovered(p *api.PeerDiscovered) discovery.Peer {
+func formatPeerDiscovered(p *api.PeerDiscovered) (peer discovery.Peer, err error) {
+	pk, err := crypto.ParsePublicKey(p.Identity.PublicKey)
+	if err != nil {
+		return peer, err
+	}
 	return discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(net.ParseIP(p.Identity.Ip), int(p.Identity.Port), p.Identity.PublicKey),
+		discovery.NewPeerIdentity(net.ParseIP(p.Identity.Ip), int(p.Identity.Port), pk),
 		discovery.NewPeerHeartbeatState(time.Unix(p.HeartbeatState.GenerationTime, 0), p.HeartbeatState.ElapsedHeartbeats),
 		discovery.NewPeerAppState(p.AppState.Version, discovery.PeerStatus(p.AppState.Status), float64(p.AppState.GeoPosition.Longitude), float64(p.AppState.GeoPosition.Longitude), p.AppState.CpuLoad, float64(p.AppState.FreeDiskSpace), int(p.AppState.P2PFactor), int(p.AppState.ReachablePeersNumber)),
-	)
+	), nil
 }
 
 func formatTransaction(tx *api.Transaction) (chain.Transaction, error) {
