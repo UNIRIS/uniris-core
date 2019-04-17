@@ -3,6 +3,7 @@ package discovery
 import (
 	"errors"
 	"fmt"
+	"github.com/uniris/uniris-core/pkg/crypto"
 	"net"
 	"time"
 )
@@ -14,11 +15,11 @@ var ErrChangeNotOwnedPeer = errors.New("Cannot change a peer that you don't own"
 type PeerIdentity struct {
 	ip        net.IP
 	port      int
-	publicKey string
+	publicKey crypto.PublicKey
 }
 
 //NewPeerIdentity creates a new peer identity
-func NewPeerIdentity(ip net.IP, port int, pbKey string) PeerIdentity {
+func NewPeerIdentity(ip net.IP, port int, pbKey crypto.PublicKey) PeerIdentity {
 	return PeerIdentity{
 		ip:        ip,
 		port:      port,
@@ -37,7 +38,7 @@ func (p PeerIdentity) Port() int {
 }
 
 //PublicKey returns the peer's public key
-func (p PeerIdentity) PublicKey() string {
+func (p PeerIdentity) PublicKey() crypto.PublicKey {
 	return p.publicKey
 }
 
@@ -55,7 +56,7 @@ type Peer struct {
 }
 
 //NewSelfPeer creates a new peer started on the node's machine (aka local peer)
-func NewSelfPeer(pbKey string, ip net.IP, port int, version string, lon float64, lat float64) Peer {
+func NewSelfPeer(pbKey crypto.PublicKey, ip net.IP, port int, version string, lon float64, lat float64) Peer {
 	return Peer{
 		identity: PeerIdentity{
 			ip:        ip,

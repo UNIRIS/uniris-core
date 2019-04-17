@@ -14,7 +14,7 @@ type node struct {
 type nodeIdentity struct {
 	IP        string `json:"ip"`
 	Port      int    `json:"port"`
-	PublicKey string `json:"public_key"`
+	PublicKey []byte `json:"public_key"`
 }
 
 type nodeAppState struct {
@@ -33,11 +33,15 @@ type peerPosition struct {
 }
 
 func marshalNode(p discovery.Peer) ([]byte, error) {
+	pk, err := p.Identity().PublicKey().Marshal()
+	if err != nil {
+		return nil, err
+	}
 	return json.Marshal(node{
 		Identity: nodeIdentity{
 			IP:        p.Identity().IP().String(),
 			Port:      p.Identity().Port(),
-			PublicKey: p.Identity().PublicKey(),
+			PublicKey: pk,
 		},
 		AppState: nodeAppState{
 			Version:       p.AppState().Version(),

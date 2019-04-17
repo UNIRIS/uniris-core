@@ -14,7 +14,7 @@ type ed25519PrivateKey struct {
 	priv ed25519.PrivateKey
 }
 
-func (edPriv ed25519PrivateKey) bytes() []byte {
+func (edPriv ed25519PrivateKey) Bytes() []byte {
 	return edPriv.priv
 }
 
@@ -45,7 +45,7 @@ type ed25519PublicKey struct {
 	pub ed25519.PublicKey
 }
 
-func (edPub ed25519PublicKey) bytes() []byte {
+func (edPub ed25519PublicKey) Bytes() []byte {
 	return edPub.pub
 }
 

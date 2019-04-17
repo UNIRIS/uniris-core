@@ -33,6 +33,9 @@ type KeyReader interface {
 
 	//AuthorizedNodesPublicKeys retrieves the list of public keys of the authorized nodes
 	AuthorizedNodesPublicKeys() ([]crypto.PublicKey, error)
+
+	//IsAuthorizedNode check if the public Key is on the authorized list
+	IsAuthorizedNode(crypto.PublicKey) bool
 }
 
 //KeyWriter performs persistance of the shared keys

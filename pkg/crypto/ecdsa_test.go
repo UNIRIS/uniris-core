@@ -21,7 +21,7 @@ Scenario: Get bytes from a ECDSA private key
 */
 func TestGetBytesFromEcdsaPrivateKey(t *testing.T) {
 	pv, _, _ := generateECDSAKeys(rand.Reader, elliptic.P256())
-	b := pv.bytes()
+	b := pv.Bytes()
 	assert.NotEmpty(t, b)
 
 	ecdsaKey := pv.(ecdsaPrivateKey)
@@ -180,7 +180,7 @@ Scenario: Extract the random public key from the cipher data
 */
 func TestExtractEcdsaRandomPubKeyFromCipher(t *testing.T) {
 	_, pub, _ := generateECDSAKeys(rand.Reader, elliptic.P256())
-	b := pub.bytes()
+	b := pub.Bytes()
 
 	rPub, pos, err := ecdsaExtractRandomPublicKey(elliptic.P256())(b)
 	assert.Nil(t, err)

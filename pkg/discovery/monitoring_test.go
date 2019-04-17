@@ -1,7 +1,9 @@
 package discovery
 
 import (
+	"crypto/rand"
 	"errors"
+	"github.com/uniris/uniris-core/pkg/crypto"
 	"log"
 	"net"
 	"os"
@@ -20,9 +22,10 @@ Scenario: Get peer status when no peer has been discovered yet by it
 	Then I get a boostraping status
 */
 func TestPeerStatusWithNoDiscoveries(t *testing.T) {
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	resettimerState()
 	p := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 0))
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	status, err := localStatus(p, 0, mockNetworkChecker{}, l)
@@ -37,9 +40,10 @@ Scenario: Gets peer status when no access to internet
 	Then we get a faulty status
 */
 func TestPeerStatusWithNotInternet(t *testing.T) {
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	resettimerState()
 	p := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 0))
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 	status, _ := localStatus(p, 1, mockFailInternetNetworker{}, l)
@@ -53,9 +57,10 @@ Scenario: Gets peer status when no access to internet and get the state after th
 	Then we get the good state depending on the timerState
 */
 func TestPeerStatusWithNotInternetWithTimerStateEnabled(t *testing.T) {
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	BootstrapingMinTime = 5
 	p := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 0))
 
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
@@ -78,9 +83,10 @@ Scenario: Gets peer status when no NTP synchro
 	Then we get a faulty status
 */
 func TestPeerStatusWithBadNTP(t *testing.T) {
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	resettimerState()
 	p := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 0))
 
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
@@ -95,9 +101,10 @@ Scenario: Gets peer status when no GRPC are reached
 	Then we get a faulty status
 */
 func TestPeerStatusWithNoGRPC(t *testing.T) {
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	resettimerState()
 	p := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 0))
 
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
@@ -112,9 +119,10 @@ Scenario: Gets peer status when the elapsed time lower than the bootstraping tim
 	Then I get a bootstraping status
 */
 func TestPeerStatusWithElapsedTimeLowerBootstrapingTime(t *testing.T) {
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	resettimerState()
 	p := NewPeerDigest(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 0))
 
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
@@ -129,9 +137,10 @@ Scenario: Gets peer status when the average of discoveries is greater than the p
 	Then I get a bootstraping status
 */
 func TestPeerStatusWithAvgDiscoveriesGreaterThanPeerDiscovery(t *testing.T) {
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	resettimerState()
 	p := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", BootstrapingPeer, 30.0, 10.0, "", 100, 1, 1))
 
@@ -147,9 +156,10 @@ Scenario: Gets peer status when the peer time it less than the boostraping and a
 	Then I get a OK status
 */
 func TestPeerStatusWithAvgDiscoveriesLessThanPeerDiscovery(t *testing.T) {
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	resettimerState()
 	p := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("1.0", BootstrapingPeer, 30.0, 10.0, "", 100, 1, 5))
 
@@ -165,9 +175,10 @@ Scenario: Gets peer status a peer live longer than the bootstraping time
 	Then I get a OK status
 */
 func TestPeerStatusWithLongTTL(t *testing.T) {
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 	resettimerState()
 	p := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, "test"),
+		NewPeerIdentity(net.ParseIP("127.0.0.1"), 3000, pub1),
 		NewPeerHeartbeatState(time.Now(), 5000),
 		NewPeerAppState("1.0", BootstrapingPeer, 30.0, 10.0, "", 100, 1, 5))
 
@@ -191,9 +202,13 @@ Scenario: Avergage number of discoveries with 3 seeds as the only known peers
 */
 func TestAvergageReachableWithOnlySeeds(t *testing.T) {
 
-	seed1 := NewPeerIdentity(net.ParseIP("10.0.0.1"), 3001, "key1")
-	seed2 := NewPeerIdentity(net.ParseIP("10.0.0.2"), 3002, "key2")
-	seed3 := NewPeerIdentity(net.ParseIP("10.0.0.3"), 3003, "key3")
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub3, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	seed1 := NewPeerIdentity(net.ParseIP("10.0.0.1"), 3001, pub1)
+	seed2 := NewPeerIdentity(net.ParseIP("10.0.0.2"), 3002, pub2)
+	seed3 := NewPeerIdentity(net.ParseIP("10.0.0.3"), 3003, pub3)
 
 	p1 := NewDiscoveredPeer(
 		seed1,
@@ -225,9 +240,14 @@ Scenario: Avergage discoveries peers including seeds and discovered peers
 */
 func TestAvergageDiscoveriesWithSeedAndDiscoveries(t *testing.T) {
 
-	seed1 := NewPeerIdentity(net.ParseIP("10.0.0.1"), 3001, "key1")
-	seed2 := NewPeerIdentity(net.ParseIP("10.0.0.2"), 3002, "key2")
-	seed3 := NewPeerIdentity(net.ParseIP("10.0.0.3"), 3003, "key3")
+	_, pub1, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub3, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub4, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	seed1 := NewPeerIdentity(net.ParseIP("10.0.0.1"), 3001, pub1)
+	seed2 := NewPeerIdentity(net.ParseIP("10.0.0.2"), 3002, pub2)
+	seed3 := NewPeerIdentity(net.ParseIP("10.0.0.3"), 3003, pub3)
 
 	p1 := NewDiscoveredPeer(
 		seed1,
@@ -248,7 +268,7 @@ func TestAvergageDiscoveriesWithSeedAndDiscoveries(t *testing.T) {
 	)
 
 	p4 := NewDiscoveredPeer(
-		NewPeerIdentity(net.ParseIP("185.123.4.9"), 4000, "key4"),
+		NewPeerIdentity(net.ParseIP("185.123.4.9"), 4000, pub4),
 		NewPeerHeartbeatState(time.Now(), 0),
 		NewPeerAppState("0.0", OkPeerStatus, 40.0, 3.0, "0.0.0", 0.0, 0, 5),
 	)

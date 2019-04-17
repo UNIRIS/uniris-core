@@ -115,7 +115,7 @@ func consumeDiscoveryHandler(nodeWriter consensus.NodeWriter, sharedKeyWriter sh
 
 	patch := consensus.ComputeGeoPatch(n.AppState.GeoPosition.Latitude, n.AppState.GeoPosition.Longitude)
 
-	pubBytes, err := hex.DecodeString(n.Identity.PublicKey)
+	pubBytes, err := hex.DecodeString(string(n.Identity.PublicKey))
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func consumeDiscoveryHandler(nodeWriter consensus.NodeWriter, sharedKeyWriter sh
 	if err := nodeWriter.WriteDiscoveredNode(node); err != nil {
 		return err
 	}
-	l.Info("Discovered node stored: " + n.Identity.PublicKey)
+	l.Info("Discovered node stored: " + string(n.Identity.PublicKey))
 
 	//TODO: remove sharedKeyWriter when the authorized key handling will be implemented
 	return sharedKeyWriter.WriteAuthorizedNode(publicKey)

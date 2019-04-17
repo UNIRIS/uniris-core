@@ -1,6 +1,7 @@
 package memtransport
 
 import (
+	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/discovery"
 	"github.com/uniris/uniris-core/pkg/logging"
 )
@@ -18,13 +19,21 @@ func (n DiscoveryNotifier) NotifyDiscovery(p discovery.Peer) error {
 }
 
 //NotifyReachable notifies the peer's public key which became reachable
-func (n DiscoveryNotifier) NotifyReachable(pk string) error {
-	n.Logger.Info("Peer reached " + pk)
+func (n DiscoveryNotifier) NotifyReachable(pk crypto.PublicKey) error {
+	p, err := pk.Marshal()
+	if err != nil {
+		return err
+	}
+	n.Logger.Info("Peer reached " + string(p))
 	return nil
 }
 
 //NotifyUnreachable notifies the peer's public key which became unreachable
-func (n DiscoveryNotifier) NotifyUnreachable(pk string) error {
-	n.Logger.Info("Peer unreached " + pk)
+func (n DiscoveryNotifier) NotifyUnreachable(pk crypto.PublicKey) error {
+	p, err := pk.Marshal()
+	if err != nil {
+		return err
+	}
+	n.Logger.Info("Peer unreached " + string(p))
 	return nil
 }

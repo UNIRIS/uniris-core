@@ -2,7 +2,7 @@ package rpc
 
 import (
 	"context"
-	"github.com/uniris/uniris-core/pkg/logging"
+	"crypto/rand"
 	"log"
 	"net"
 	"os"
@@ -12,7 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
+	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/discovery"
+	"github.com/uniris/uniris-core/pkg/logging"
+	"github.com/uniris/uniris-core/pkg/shared"
 )
 
 /*
@@ -23,9 +26,26 @@ Scenario: Receive a synchronize request without knowing any peers
 */
 func TestHandleSynchronizeRequestWithoutKnownPeers(t *testing.T) {
 	db := &mockDiscoveryDB{}
+	sharedDB := mochSharedDB{}
+
+	priv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	sharedDB.WriteAuthorizedNode(pub)
+	sharedDB.WriteAuthorizedNode(pub2)
+
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
-	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{}, l)
+	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{}, l, pub, priv, sharedDB)
+
+	p, err := pub.Marshal()
+	assert.Nil(t, err)
+
+	sig, err := priv.Sign(p)
+	assert.Nil(t, err)
+
+	p2, err := pub2.Marshal()
+	assert.Nil(t, err)
 
 	res, err := discoverySrv.Synchronize(context.TODO(), &api.SynRequest{
 		KnownPeers: []*api.PeerDigest{
@@ -37,14 +57,17 @@ func TestHandleSynchronizeRequestWithoutKnownPeers(t *testing.T) {
 				Identity: &api.PeerIdentity{
 					Ip:        "127.0.0.1",
 					Port:      3000,
-					PublicKey: "pubkey",
+					PublicKey: p2,
 				},
 			},
 		},
+		PublicKey: p,
+		Signature: sig,
 	})
+
 	assert.Nil(t, err)
 	assert.NotEmpty(t, res.RequestedPeers)
-	assert.Equal(t, "pubkey", res.RequestedPeers[0].PublicKey)
+	assert.Equal(t, p2, crypto.VersionnedKey(res.RequestedPeers[0].PublicKey))
 }
 
 /*
@@ -54,10 +77,26 @@ Scenario: Receive a synchronize request with knowing any peers
 	Then I when I make diff , I return the a peer the sender does not known
 */
 func TestHandleSynchronizeRequestByKnowingPeer(t *testing.T) {
+	priv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub3, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+
+	p2, err := pub2.Marshal()
+	assert.Nil(t, err)
+
+	p3, err := pub3.Marshal()
+	assert.Nil(t, err)
+
+	sharedDB := mochSharedDB{}
+
+	sharedDB.WriteAuthorizedNode(pub)
+	sharedDB.WriteAuthorizedNode(pub2)
+	sharedDB.WriteAuthorizedNode(pub3)
+
 	db := &mockDiscoveryDB{
 		discoveredPeers: []discovery.Peer{
 			discovery.NewDiscoveredPeer(
-				discovery.NewPeerIdentity(net.ParseIP("10.0.0.1"), 3000, "pubkey000"),
+				discovery.NewPeerIdentity(net.ParseIP("10.0.0.1"), 3000, pub2),
 				discovery.NewPeerHeartbeatState(time.Now(), 1000),
 				discovery.NewPeerAppState("1.0.1", discovery.OkPeerStatus, 10.0, 20.0, "", 300, 1, 100),
 			),
@@ -65,7 +104,13 @@ func TestHandleSynchronizeRequestByKnowingPeer(t *testing.T) {
 	}
 
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
-	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{}, l)
+	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{}, l, pub, priv, sharedDB)
+
+	p, err := pub.Marshal()
+	assert.Nil(t, err)
+
+	sig, err := priv.Sign(p)
+	assert.Nil(t, err)
 
 	res, err := discoverySrv.Synchronize(context.TODO(), &api.SynRequest{
 		KnownPeers: []*api.PeerDigest{
@@ -77,16 +122,18 @@ func TestHandleSynchronizeRequestByKnowingPeer(t *testing.T) {
 				Identity: &api.PeerIdentity{
 					Ip:        "127.0.0.1",
 					Port:      3000,
-					PublicKey: "pubkey",
+					PublicKey: p3,
 				},
 			},
 		},
+		PublicKey: p,
+		Signature: sig,
 	})
 	assert.Nil(t, err)
 	assert.NotEmpty(t, res.RequestedPeers)
-	assert.Equal(t, "pubkey", res.RequestedPeers[0].PublicKey)
+	assert.Equal(t, p3, crypto.VersionnedKey(res.RequestedPeers[0].PublicKey))
 	assert.NotEmpty(t, res.DiscoveredPeers)
-	assert.Equal(t, "pubkey000", res.DiscoveredPeers[0].Identity.PublicKey)
+	assert.Equal(t, p2, crypto.VersionnedKey(res.DiscoveredPeers[0].Identity.PublicKey))
 }
 
 /*
@@ -96,17 +143,35 @@ Scenario: Receive an acknowledgement request with the details for the requested 
 	Then I store inside the db the discovered peers
 */
 func TestHandleAcknowledgeRequest(t *testing.T) {
-	db := &mockDiscoveryDB{}
-	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
-	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{}, l)
+	priv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	_, pub2, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
 
-	_, err := discoverySrv.Acknowledge(context.TODO(), &api.AckRequest{
+	p2, err := pub2.Marshal()
+	assert.Nil(t, err)
+
+	sharedDB := mochSharedDB{}
+	sharedDB.WriteAuthorizedNode(pub)
+	sharedDB.WriteAuthorizedNode(pub2)
+
+	db := &mockDiscoveryDB{}
+
+	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
+
+	discoverySrv := NewDiscoveryServer(db, &mockDiscoveryNotifier{}, l, pub, priv, sharedDB)
+
+	p, err := pub.Marshal()
+	assert.Nil(t, err)
+
+	sig, err := priv.Sign(p)
+	assert.Nil(t, err)
+
+	_, err = discoverySrv.Acknowledge(context.TODO(), &api.AckRequest{
 		RequestedPeers: []*api.PeerDiscovered{
 			&api.PeerDiscovered{
 				Identity: &api.PeerIdentity{
 					Ip:        "127.0.0.1",
 					Port:      3000,
-					PublicKey: "pubkey",
+					PublicKey: p2,
 				},
 				HeartbeatState: &api.PeerHeartbeatState{
 					ElapsedHeartbeats: 1000,
@@ -126,11 +191,74 @@ func TestHandleAcknowledgeRequest(t *testing.T) {
 				},
 			},
 		},
+		PublicKey: p,
+		Signature: sig,
 	})
 
 	assert.Nil(t, err)
 	assert.Len(t, db.discoveredPeers, 1)
-	assert.Equal(t, "pubkey", db.discoveredPeers[0].Identity().PublicKey())
+	assert.Equal(t, pub2, db.discoveredPeers[0].Identity().PublicKey())
+}
+
+type mochSharedDB struct {
+	nodeCrossKeys      []shared.NodeCrossKeyPair
+	emitterCrossKeys   []shared.EmitterCrossKeyPair
+	authNodePublicKeys []crypto.PublicKey
+
+	shared.KeyReadWriter
+}
+
+//EmitterCrossKeypairs retrieve the list of the cross emitter keys
+func (db mochSharedDB) EmitterCrossKeypairs() ([]shared.EmitterCrossKeyPair, error) {
+	return db.emitterCrossKeys, nil
+}
+
+//FirstEmitterCrossKeypair retrieves the first public key
+func (db mochSharedDB) FirstEmitterCrossKeypair() (shared.EmitterCrossKeyPair, error) {
+	return db.emitterCrossKeys[0], nil
+}
+
+//FirstNodeCrossKeypair retrieve the first shared crosskeys for the nodes
+func (db mochSharedDB) FirstNodeCrossKeypair() (shared.NodeCrossKeyPair, error) {
+	return db.nodeCrossKeys[0], nil
+}
+
+//LastNodeCrossKeypair retrieve the last shared crosskeys for the nodes
+func (db mochSharedDB) LastNodeCrossKeypair() (shared.NodeCrossKeyPair, error) {
+	return db.nodeCrossKeys[len(db.nodeCrossKeys)-1], nil
+}
+
+//AuthorizedNodesPublicKeys retrieves the list of public keys of the authorized nodes
+func (db mochSharedDB) AuthorizedNodesPublicKeys() ([]crypto.PublicKey, error) {
+	return db.authNodePublicKeys, nil
+}
+
+//WriteAuthorizedNode inserts a new node public key as an authorized node
+func (db *mochSharedDB) WriteAuthorizedNode(pub crypto.PublicKey) error {
+	var found bool
+	for _, k := range db.authNodePublicKeys {
+		if k.Equals(pub) {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		db.authNodePublicKeys = append(db.authNodePublicKeys, pub)
+	}
+
+	return nil
+}
+
+func (db mochSharedDB) IsAuthorizedNode(pub crypto.PublicKey) bool {
+	found := false
+	for _, k := range db.authNodePublicKeys {
+		if k.Equals(pub) {
+			found = true
+			break
+		}
+	}
+	return found
 }
 
 type mockDiscoveryDB struct {
@@ -196,12 +324,20 @@ type mockDiscoveryNotifier struct {
 	discoveries []discovery.Peer
 }
 
-func (n *mockDiscoveryNotifier) NotifyReachable(pk string) error {
-	n.reaches = append(n.reaches, pk)
+func (n *mockDiscoveryNotifier) NotifyReachable(pk crypto.PublicKey) error {
+	p, err := pk.Marshal()
+	if err != nil {
+		return err
+	}
+	n.reaches = append(n.reaches, string(p))
 	return nil
 }
-func (n *mockDiscoveryNotifier) NotifyUnreachable(pk string) error {
-	n.unreaches = append(n.unreaches, pk)
+func (n *mockDiscoveryNotifier) NotifyUnreachable(pk crypto.PublicKey) error {
+	p, err := pk.Marshal()
+	if err != nil {
+		return err
+	}
+	n.unreaches = append(n.unreaches, string(p))
 	return nil
 }
 

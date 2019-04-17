@@ -372,9 +372,9 @@ func startGRPCServer(conf unirisConf, sharedKeyRW shared.KeyReadWriter, nodeRW c
 		}
 	}
 
-	api.RegisterDiscoveryServiceServer(grpcServer, rpc.NewDiscoveryServer(discoveryDB, notif, ld))
+	api.RegisterDiscoveryServiceServer(grpcServer, rpc.NewDiscoveryServer(discoveryDB, notif, ld, publicKey, privateKey, sharedKeyRW))
 
-	go startDiscovery(conf, discoveryDB, notif, ld)
+	go startDiscovery(conf, discoveryDB, notif, ld, publicKey, privateKey)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", conf.grpcPort))
 	if err != nil {
@@ -386,7 +386,16 @@ func startGRPCServer(conf unirisConf, sharedKeyRW shared.KeyReadWriter, nodeRW c
 	}
 }
 
-func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Notifier, logger logging.Logger) {
+func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Notifier, logger logging.Logger, publicKey crypto.PublicKey, privateKey crypto.PrivateKey) {
+
+	pub, err := hex.DecodeString(conf.publicKey)
+	if err != nil {
+		panic(err)
+	}
+	pubk, err := crypto.ParsePublicKey(pub)
+	if err != nil {
+		panic(err)
+	}
 
 	netCheck := system.NewNetworkChecker(conf.grpcPort)
 
@@ -397,7 +406,7 @@ func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Noti
 		systemReader = system.NewReader(false, "")
 	}
 
-	roundMessenger := rpc.NewGossipRoundMessenger(logger)
+	roundMessenger := rpc.NewGossipRoundMessenger(logger, publicKey, privateKey)
 
 	ip, err := systemReader.IP()
 	if err != nil {
@@ -408,7 +417,7 @@ func startDiscovery(conf unirisConf, db discovery.Database, notif discovery.Noti
 	if err != nil {
 		logger.Error(discovery.ErrGeoPosition.Error())
 	}
-	selfPeer := discovery.NewSelfPeer(conf.publicKey, ip, conf.grpcPort, conf.version, lon, lat)
+	selfPeer := discovery.NewSelfPeer(pubk, ip, conf.grpcPort, conf.version, lon, lat)
 
 	seeds := getSeeds(conf)
 
@@ -442,7 +451,15 @@ func getSeeds(conf unirisConf) (seeds []discovery.PeerIdentity) {
 			ip := net.ParseIP(seedProps[0])
 			port, _ := strconv.Atoi(seedProps[1])
 			key := seedProps[2]
-			seeds = append(seeds, discovery.NewPeerIdentity(ip, port, key))
+			pub, err := hex.DecodeString(key)
+			if err != nil {
+				panic(err)
+			}
+			pubk, err := crypto.ParsePublicKey(pub)
+			if err != nil {
+				panic(err)
+			}
+			seeds = append(seeds, discovery.NewPeerIdentity(ip, port, pubk))
 		}
 	}
 	return

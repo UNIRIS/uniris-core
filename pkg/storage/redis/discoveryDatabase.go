@@ -1,12 +1,14 @@
 package redis
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/discovery"
 
 	"github.com/go-redis/redis"
@@ -15,6 +17,16 @@ import (
 const (
 	unreachablesKey = "unreachabled-peers"
 	discoveriesKey  = "discovered-peer"
+)
+
+var (
+	errorPubKeyParsePeerToHash             = errors.New("Unable to format peer to a hash, due to a problem on the public key")
+	errorPubKeyParsePeerIDentityToHash     = errors.New("Unable to format peer Identity to a hash, due to a problem on the public key")
+	errorPubKeyParseHashToPeer             = errors.New("Unable to format hash to a peer, due to a problem on the public key")
+	errorPubKeyParseHashToPeerIdentity     = errors.New("Unable to format hash to a peer Identity, due to a problem on the public key")
+	errorPubKeyWriteDiscoveredPeerToDB     = errors.New("Unable to write peer on db, due to a problem on the public key")
+	errorPubKeyWriteUnreachablePeerToDB    = errors.New("Unable to write unreacheable peer on db, due to a problem on the public key")
+	errorPubKeyRemoveUnreachablePeerFromDB = errors.New("Unable to Remove unreacheable peer from db, due to a problem on the public key")
 )
 
 type discoveryDb struct {
@@ -48,16 +60,29 @@ func (r discoveryDb) DiscoveredPeers() ([]discovery.Peer, error) {
 
 	peers := make([]discovery.Peer, 0)
 	for _, p := range list {
-		peer := formatHashToPeer(p)
-		peers = append(peers, peer)
+		fpeer, err := formatHashToPeer(p)
+		if err != nil {
+			return nil, err
+		}
+		peers = append(peers, fpeer)
 	}
 
 	return peers, nil
 }
 
 func (r discoveryDb) WriteDiscoveredPeer(p discovery.Peer) error {
-	id := fmt.Sprintf("%s:%s", discoveriesKey, p.Identity().PublicKey())
-	cmd := r.client.HMSet(id, formatPeerToHash(p))
+	pk, err := p.Identity().PublicKey().Marshal()
+	if err != nil {
+		return errorPubKeyWriteDiscoveredPeerToDB
+	}
+	id := fmt.Sprintf("%s:%s", discoveriesKey, string(pk))
+
+	fp, err := formatPeerToHash(p)
+	if err != nil {
+		return err
+	}
+
+	cmd := r.client.HMSet(id, fp)
 	if cmd.Err() != nil {
 		return cmd.Err()
 	}
@@ -65,8 +90,17 @@ func (r discoveryDb) WriteDiscoveredPeer(p discovery.Peer) error {
 }
 
 func (r discoveryDb) WriteUnreachablePeer(pID discovery.PeerIdentity) error {
-	id := fmt.Sprintf("%s:%s", unreachablesKey, pID.PublicKey())
-	cmd := r.client.HMSet(id, formatPeerIdentityToHash(pID))
+	pk, err := pID.PublicKey().Marshal()
+	if err != nil {
+		return errorPubKeyWriteUnreachablePeerToDB
+	}
+	id := fmt.Sprintf("%s:%s", unreachablesKey, string(pk))
+
+	fpid, err := formatPeerIdentityToHash(pID)
+	if err != nil {
+		return err
+	}
+	cmd := r.client.HMSet(id, fpid)
 	if cmd.Err() != nil {
 		return cmd.Err()
 	}
@@ -82,14 +116,21 @@ func (r discoveryDb) UnreachablePeers() ([]discovery.PeerIdentity, error) {
 
 	peers := make([]discovery.PeerIdentity, 0)
 	for _, unr := range list {
-		pID := formatHashToPeerIdentity(unr)
-		peers = append(peers, pID)
+		funr, err := formatHashToPeerIdentity(unr)
+		if err != nil {
+			return nil, err
+		}
+		peers = append(peers, funr)
 	}
 	return peers, nil
 }
 
 func (r discoveryDb) RemoveUnreachablePeer(pID discovery.PeerIdentity) error {
-	id := fmt.Sprintf("%s:%s", unreachablesKey, pID.PublicKey())
+	pk, err := pID.PublicKey().Marshal()
+	if err != nil {
+		return errorPubKeyRemoveUnreachablePeerFromDB
+	}
+	id := fmt.Sprintf("%s:%s", unreachablesKey, string(pk))
 
 	cmd := r.client.Del(id)
 	if cmd.Err() != nil {
@@ -123,9 +164,14 @@ func (r discoveryDb) fetchList(key string) ([]map[string]string, error) {
 	return list, nil
 }
 
-func formatPeerToHash(p discovery.Peer) map[string]interface{} {
+func formatPeerToHash(p discovery.Peer) (map[string]interface{}, error) {
+	pk, err := p.Identity().PublicKey().Marshal()
+	if err != nil {
+		return nil, errorPubKeyParsePeerToHash
+	}
+
 	return map[string]interface{}{
-		"publicKey":            p.Identity().PublicKey(),
+		"publicKey":            string(pk),
 		"port":                 strconv.Itoa(p.Identity().Port()),
 		"ip":                   p.Identity().IP().String(),
 		"generationTime":       strconv.Itoa(int(p.HeartbeatState().GenerationTime().Unix())),
@@ -137,26 +183,35 @@ func formatPeerToHash(p discovery.Peer) map[string]interface{} {
 		"geoPosition":          fmt.Sprintf("%f;%f", p.AppState().GeoPosition().Latitude(), p.AppState().GeoPosition().Longitude()),
 		"p2pFactor":            string(p.AppState().P2PFactor()),
 		"reachablePeersNumber": fmt.Sprintf("%d", p.AppState().ReachablePeersNumber()),
-	}
+	}, nil
 }
 
-func formatPeerIdentityToHash(pID discovery.PeerIdentity) map[string]interface{} {
+func formatPeerIdentityToHash(pID discovery.PeerIdentity) (map[string]interface{}, error) {
+	pk, err := pID.PublicKey().Marshal()
+	if err != nil {
+		return nil, errorPubKeyParsePeerIDentityToHash
+	}
 	return map[string]interface{}{
-		"publicKey": pID.PublicKey(),
+		"publicKey": string(pk),
 		"port":      strconv.Itoa(pID.Port()),
 		"ip":        pID.IP().String(),
-	}
+	}, nil
 }
 
-func formatHashToPeerIdentity(hash map[string]string) discovery.PeerIdentity {
+func formatHashToPeerIdentity(hash map[string]string) (pid discovery.PeerIdentity, err error) {
 	pbKey := hash["publicKey"]
 	port, _ := strconv.Atoi(hash["port"])
 	ip := net.ParseIP(hash["ip"])
 
-	return discovery.NewPeerIdentity(ip, port, pbKey)
+	pk, err := crypto.ParsePublicKey([]byte(pbKey))
+	if err != nil {
+		return pid, errorPubKeyParseHashToPeerIdentity
+	}
+
+	return discovery.NewPeerIdentity(ip, port, pk), nil
 }
 
-func formatHashToPeer(hash map[string]string) discovery.Peer {
+func formatHashToPeer(hash map[string]string) (peer discovery.Peer, err error) {
 
 	pbKey := hash["publicKey"]
 	port, _ := strconv.Atoi(hash["port"])
@@ -182,10 +237,15 @@ func formatHashToPeer(hash map[string]string) discovery.Peer {
 
 	rpn, _ := strconv.Atoi(hash["reachablePeersNumber"])
 
-	p := discovery.NewDiscoveredPeer(
-		discovery.NewPeerIdentity(ip, port, pbKey),
+	pk, err := crypto.ParsePublicKey([]byte(pbKey))
+	if err != nil {
+		return peer, errorPubKeyParseHashToPeer
+	}
+
+	peer = discovery.NewDiscoveredPeer(
+		discovery.NewPeerIdentity(ip, port, pk),
 		discovery.NewPeerHeartbeatState(generationTime, elpased),
 		discovery.NewPeerAppState(version, status, lat, lon, cpuLoad, freeDiskSpace, p2pFactor, rpn),
 	)
-	return p
+	return peer, nil
 }

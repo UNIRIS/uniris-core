@@ -277,6 +277,10 @@ func (r mockSharedKeyReader) FirstEmitterCrossKeypair() (shared.EmitterCrossKeyP
 	return r.crossEmitterKeys[0], nil
 }
 
+func (db mockSharedKeyReader) IsAuthorizedNode(publicKey crypto.PublicKey) bool {
+	return true
+}
+
 type mockNodeReader struct {
 	nodes []Node
 }
