@@ -29,6 +29,8 @@ const (
 	// Single-character tokens.
 	tokenLeftParenthesis  tokenType = "LEFT_PARENTHESIS"
 	tokenRightParenthesis tokenType = "RIGHT_PARENTHESIS"
+	tokenLeftBrace        tokenType = "LEFT_BRACE"
+	tokenRightBrace       tokenType = "RIGHT_BRACE"
 	tokenLeftBracket      tokenType = "LEFT_BRACKET"
 	tokenRightBracket     tokenType = "RIGHT_BRACKET"
 	tokenPlus             tokenType = "PLUS"

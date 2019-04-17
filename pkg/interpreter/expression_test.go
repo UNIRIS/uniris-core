@@ -369,3 +369,91 @@ type testFuncCallable struct{}
 func (f testFuncCallable) call(sc *Scope, args ...interface{}) (res interface{}, err error) {
 	return args[0], nil
 }
+
+func TestCollectionExpression(t *testing.T) {
+
+	env := NewScope(nil)
+
+	a := map[int]int{
+		0: 1,
+		1: 2,
+		2: 3,
+	}
+	env.SetValue("a", a)
+	e := collectionExpression{
+		op: token{
+			Lexeme: "a",
+		},
+		index: token{Literal: 2},
+	}
+	val, err := e.evaluate(env)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, val)
+
+	b := map[string]string{
+		"hello": "world",
+	}
+
+	env.SetValue("b", b)
+	e = collectionExpression{
+		op: token{
+			Lexeme: "b",
+		},
+		index: token{Literal: "hello"},
+	}
+
+	val, err = e.evaluate(env)
+	assert.Nil(t, err)
+	assert.Equal(t, "world", val)
+
+	env.SetValue("c", func() {})
+	e = collectionExpression{
+		op: token{
+			Lexeme: "c",
+		},
+		index: token{Literal: func() {}},
+	}
+
+	_, err = e.evaluate(env)
+	assert.EqualError(t, err, "c has not the map type - required for the collections")
+}
+
+func TestAssignCollectionExpression(t *testing.T) {
+	env := NewScope(nil)
+
+	a := map[string]string{
+		"hello": "world",
+	}
+	env.SetValue("a", a)
+	e := collectionExpression{
+		op: token{
+			Lexeme: "a",
+		},
+		index: token{Literal: "hello"},
+	}
+
+	val, err := e.evaluate(env)
+	assert.Nil(t, err)
+	assert.Equal(t, "world", val)
+
+	assign := collectionAssignmentExpression{
+		op: token{
+			Lexeme: "a",
+		},
+		index: token{Literal: "hello"},
+		val:   literalExpression{value: "john"},
+	}
+
+	_, err = assign.evaluate(env)
+	assert.Nil(t, err)
+
+	e = collectionExpression{
+		op: token{
+			Lexeme: "a",
+		},
+		index: token{Literal: "hello"},
+	}
+	val, err = e.evaluate(env)
+	assert.Nil(t, err)
+	assert.Equal(t, "john", val)
+}

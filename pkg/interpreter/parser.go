@@ -40,7 +40,7 @@ func (p *parser) statement() (statement, error) {
 	if p.match(tokenWhile) {
 		return p.whileStatement()
 	}
-	if p.match(tokenLeftBracket) {
+	if p.match(tokenLeftBrace) {
 		return p.blockStatements()
 	}
 	return p.expressionStatement()
@@ -80,7 +80,7 @@ func (p *parser) functionStatement() (statement, error) {
 	if _, err := p.consume(tokenRightParenthesis, "Expect ')' after parameters"); err != nil {
 		return nil, err
 	}
-	if _, err := p.consume(tokenLeftBracket, "Expect '{' before function body"); err != nil {
+	if _, err := p.consume(tokenLeftBrace, "Expect '{' before function body"); err != nil {
 		return nil, err
 	}
 
@@ -213,14 +213,14 @@ func (p *parser) ifStatement() (statement, error) {
 
 func (p *parser) blockStatements() (statement, error) {
 	statements := make([]statement, 0)
-	for !p.check(tokenRightBracket) && !p.isAtEnd() {
+	for !p.check(tokenRightBrace) && !p.isAtEnd() {
 		stmt, err := p.statement()
 		if err != nil {
 			return nil, err
 		}
 		statements = append(statements, stmt)
 	}
-	if _, err := p.consume(tokenRightBracket, "Expect } after block"); err != nil {
+	if _, err := p.consume(tokenRightBrace, "Expect } after block"); err != nil {
 		return nil, err
 	}
 	return blockStmt{
@@ -461,8 +461,39 @@ func (p *parser) primary() (expression, error) {
 	if p.match(tokenNumber, tokenString) {
 		return literalExpression{value: p.previous().Literal}, nil
 	}
+	if p.match(tokenLeftBracket) && p.match(tokenRightBracket) {
+		return literalExpression{value: make(map[interface{}]interface{})}, nil
+	}
 	if p.match(tokenIdentifier) {
 		op := p.previous()
+
+		//Collection
+		if p.match(tokenLeftBracket) {
+			var index token
+			if p.match(tokenNumber, tokenString) {
+				index = p.previous()
+			}
+			if _, err := p.consume(tokenRightBracket, "missing right bracket"); err != nil {
+				return nil, err
+			}
+
+			if p.match(tokenEqual) {
+				exp, err := p.expression()
+				if err != nil {
+					return nil, err
+				}
+				return collectionAssignmentExpression{
+					op:    op,
+					index: index,
+					val:   exp,
+				}, nil
+			}
+			return collectionExpression{
+				index: index,
+				op:    op,
+			}, nil
+		}
+
 		if p.match(tokenEqual) {
 			exp, err := p.expression()
 			if err != nil {
