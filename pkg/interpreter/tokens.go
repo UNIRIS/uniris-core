@@ -10,27 +10,29 @@ type token struct {
 type tokenType string
 
 var keywords = map[string]tokenType{
-	"if":          tokenIf,
-	"else":        tokenElse,
-	"while":       tokenWhile,
-	"for":         tokenFor,
-	"or":          tokenOr,
-	"and":         tokenAnd,
-	"true":        tokenTrue,
-	"false":       tokenFalse,
-	"function":    tokenFunction,
-	"print":       tokenPrint,
-	"return":      tokenReturn,
-	"transaction": tokenTransaction,
-	"contract":    tokenContract,
+	"if":         tokenIf,
+	"else":       tokenElse,
+	"or":         tokenOr,
+	"and":        tokenAnd,
+	"true":       tokenTrue,
+	"false":      tokenFalse,
+	"with":       tokenWith,
+	"then":       tokenThen,
+	"end":        tokenEnd,
+	"contract":   tokenContract,
+	"conditions": tokenConditions,
+	"answer":     tokenAnswerConditions,
+	"fees":       tokenFeeConditions,
+	"is":         tokenIs,
+	"actions":    tokenActions,
+	"triggers":   tokenTriggers,
+	"time":       tokenTriggerTime,
 }
 
 const (
 	// Single-character tokens.
 	tokenLeftParenthesis  tokenType = "LEFT_PARENTHESIS"
 	tokenRightParenthesis tokenType = "RIGHT_PARENTHESIS"
-	tokenLeftBrace        tokenType = "LEFT_BRACE"
-	tokenRightBrace       tokenType = "RIGHT_BRACE"
 	tokenLeftBracket      tokenType = "LEFT_BRACKET"
 	tokenRightBracket     tokenType = "RIGHT_BRACKET"
 	tokenPlus             tokenType = "PLUS"
@@ -40,6 +42,7 @@ const (
 	tokenDot              tokenType = "DOT"
 	tokenComma            tokenType = "COMMA"
 	tokenSemiColon        tokenType = "SEMICOLON"
+	tokenColon            tokenType = "COLON"
 
 	//One or two character tokens
 	tokenBang         tokenType = "BANG"
@@ -57,18 +60,22 @@ const (
 	tokenNumber     tokenType = "NUMBER"
 
 	//Keywords
-	tokenPrint       tokenType = "PRINT"
-	tokenIf          tokenType = "IF"
-	tokenElse        tokenType = "ELSE"
-	tokenAnd         tokenType = "AND"
-	tokenOr          tokenType = "OR"
-	tokenWhile       tokenType = "WHILE"
-	tokenFor         tokenType = "FOR"
-	tokenEndOfFile   tokenType = "EOF"
-	tokenTrue        tokenType = "TRUE"
-	tokenFalse       tokenType = "FALSE"
-	tokenFunction    tokenType = "FUNC"
-	tokenReturn      tokenType = "RETURN"
-	tokenTransaction tokenType = "TRANSACTION"
-	tokenContract    tokenType = "CONTRACT"
+	tokenContract         tokenType = "CONTRACT"
+	tokenIf               tokenType = "IF"
+	tokenElse             tokenType = "ELSE"
+	tokenAnd              tokenType = "AND"
+	tokenOr               tokenType = "OR"
+	tokenWith             tokenType = "WITH"
+	tokenEndOfFile        tokenType = "EOF"
+	tokenTrue             tokenType = "TRUE"
+	tokenFalse            tokenType = "FALSE"
+	tokenConditions       tokenType = "CONDITIONS"
+	tokenAnswerConditions tokenType = "ANSWER"
+	tokenFeeConditions    tokenType = "FEES"
+	tokenIs               tokenType = "IS"
+	tokenActions          tokenType = "ACTIONS"
+	tokenTriggers         tokenType = "TRIGGERS"
+	tokenTriggerTime      tokenType = "TRIGGER_TIME"
+	tokenThen             tokenType = "THEN"
+	tokenEnd              tokenType = "END"
 )

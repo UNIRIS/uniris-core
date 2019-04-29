@@ -9,179 +9,79 @@ type parser struct {
 	current int
 }
 
-func (p *parser) parse() ([]statement, error) {
-	statements := make([]statement, 0)
+func (p *parser) parse() (c Contract, err error) {
+
+	if p.match(tokenTriggers) {
+		if _, err := p.consume(tokenColon, "expected `:` after triggers"); err != nil {
+			return c, err
+		}
+		c.Triggers = make([]Trigger, 0)
+		if p.match(tokenTriggerTime) {
+			if _, err := p.consume(tokenColon, "expected `:` after time"); err != nil {
+				return c, err
+			}
+			val := p.peek().Literal
+			c.Triggers = append(c.Triggers, Trigger{
+				kind: timeTrigger,
+				val:  val,
+			})
+			p.advance()
+		}
+	}
+
+	if p.match(tokenConditions) {
+		if _, err := p.consume(tokenColon, "expected `:` after conditions"); err != nil {
+			return c, err
+		}
+		if p.match(tokenFeeConditions) {
+			if _, err := p.consume(tokenColon, "expected `:` after fee conditions"); err != nil {
+				return c, err
+			}
+			val, err := p.expression()
+			if err != nil {
+				return c, err
+			}
+			c.conditions.fee = val
+		}
+		if p.match(tokenAnswerConditions) {
+			if _, err := p.consume(tokenColon, "expected `:` after answer conditions"); err != nil {
+				return c, err
+			}
+			val, err := p.expression()
+			if err != nil {
+				return c, err
+			}
+			c.conditions.answer = val
+		}
+	}
+
+	if _, err := p.consume(tokenActions, "expected `actions` in the contract code"); err != nil {
+		return c, err
+	}
+	if _, err := p.consume(tokenColon, "expected `:` after actions"); err != nil {
+		return c, err
+	}
+
 	for !p.isAtEnd() {
 		stmt, err := p.statement()
 		if err != nil {
-			return nil, err
+			return c, err
 		}
-		statements = append(statements, stmt)
+		c.actions = append(c.actions, stmt)
 	}
-	return statements, nil
+
+	return c, nil
 }
 
 func (p *parser) statement() (statement, error) {
-	if p.match(tokenFunction) {
-		return p.functionStatement()
-	}
-	if p.match(tokenFor) {
-		return p.forStatement()
-	}
+
 	if p.match(tokenIf) {
 		return p.ifStatement()
 	}
-	if p.match(tokenPrint) {
-		return p.printStatement()
-	}
-	if p.match(tokenReturn) {
-		return p.returnStatement()
-	}
-	if p.match(tokenWhile) {
-		return p.whileStatement()
-	}
-	if p.match(tokenLeftBrace) {
+	if p.match(tokenThen) {
 		return p.blockStatements()
 	}
 	return p.expressionStatement()
-}
-
-func (p *parser) returnStatement() (statement, error) {
-	value, err := p.expression()
-	if err != nil {
-		return nil, err
-	}
-	return returnStatement{
-		value: value,
-	}, nil
-}
-
-func (p *parser) functionStatement() (statement, error) {
-	name, err := p.consume(tokenIdentifier, "Expect function name")
-	if err != nil {
-		return nil, err
-	}
-	if _, err := p.consume(tokenLeftParenthesis, "Expect '(' after function name"); err != nil {
-		return nil, err
-	}
-	params := make([]token, 0)
-	if !p.check(tokenRightParenthesis) {
-		for {
-			token, err := p.consume(tokenIdentifier, "Expect parameter name")
-			if err != nil {
-				return nil, err
-			}
-			params = append(params, token)
-			if !p.match(tokenComma) {
-				break
-			}
-		}
-	}
-	if _, err := p.consume(tokenRightParenthesis, "Expect ')' after parameters"); err != nil {
-		return nil, err
-	}
-	if _, err := p.consume(tokenLeftBrace, "Expect '{' before function body"); err != nil {
-		return nil, err
-	}
-
-	body, err := p.blockStatements()
-	if err != nil {
-		return nil, err
-	}
-	return funcStatement{
-		body:   body.(blockStmt),
-		name:   name,
-		params: params,
-	}, nil
-}
-
-func (p *parser) forStatement() (statement, error) {
-
-	var init statement
-	if p.check(tokenSemiColon) {
-		init = nil
-	} else if p.check(tokenIdentifier) {
-		exp, err := p.assignement()
-		if err != nil {
-			return nil, err
-		}
-		init = exp
-	} else {
-		exp, err := p.expressionStatement()
-		if err != nil {
-			return nil, err
-		}
-		init = exp
-	}
-
-	p.advance()
-
-	var cond expression
-	if !p.check(tokenSemiColon) {
-		exp, err := p.expression()
-		if err != nil {
-			return nil, err
-		}
-		cond = exp
-	}
-
-	if _, err := p.consume(tokenSemiColon, "Expected ; after loop condition"); err != nil {
-		return nil, err
-	}
-
-	increment, err := p.expression()
-	if err != nil {
-		return nil, err
-	}
-	body, err := p.statement()
-	if err != nil {
-		return nil, err
-	}
-	if increment != nil {
-		body = blockStmt{
-			statements: []statement{
-				body,
-				expressionStmt{
-					exp: increment,
-				},
-			},
-		}
-	}
-
-	if cond == nil {
-		cond = literalExpression{
-			value: true,
-		}
-	}
-	body = whileStatement{body: body, cond: cond}
-
-	if init != nil {
-		body = blockStmt{
-			statements: []statement{
-				init,
-				body,
-			},
-		}
-	}
-
-	return body, nil
-
-}
-
-func (p *parser) whileStatement() (statement, error) {
-	cond, err := p.expression()
-	if err != nil {
-		return nil, err
-	}
-	body, err := p.statement()
-	if err != nil {
-		return nil, err
-	}
-
-	return whileStatement{
-		cond: cond,
-		body: body,
-	}, nil
 }
 
 func (p *parser) ifStatement() (statement, error) {
@@ -213,27 +113,19 @@ func (p *parser) ifStatement() (statement, error) {
 
 func (p *parser) blockStatements() (statement, error) {
 	statements := make([]statement, 0)
-	for !p.check(tokenRightBrace) && !p.isAtEnd() {
+	for !p.check(tokenEnd) && !p.isAtEnd() {
 		stmt, err := p.statement()
 		if err != nil {
 			return nil, err
 		}
 		statements = append(statements, stmt)
 	}
-	if _, err := p.consume(tokenRightBrace, "Expect } after block"); err != nil {
+	if _, err := p.consume(tokenEnd, "Expect 'end' after block"); err != nil {
 		return nil, err
 	}
 	return blockStmt{
 		statements: statements,
 	}, nil
-}
-
-func (p *parser) printStatement() (statement, error) {
-	val, err := p.expression()
-	if err != nil {
-		return nil, err
-	}
-	return printStmt{exp: val}, nil
 }
 
 func (p *parser) expressionStatement() (statement, error) {
@@ -461,38 +353,8 @@ func (p *parser) primary() (expression, error) {
 	if p.match(tokenNumber, tokenString) {
 		return literalExpression{value: p.previous().Literal}, nil
 	}
-	if p.match(tokenLeftBracket) && p.match(tokenRightBracket) {
-		return literalExpression{value: make(map[interface{}]interface{})}, nil
-	}
 	if p.match(tokenIdentifier) {
 		op := p.previous()
-
-		//Collection
-		if p.match(tokenLeftBracket) {
-			var index token
-			if p.match(tokenNumber, tokenString) {
-				index = p.previous()
-			}
-			if _, err := p.consume(tokenRightBracket, "missing right bracket"); err != nil {
-				return nil, err
-			}
-
-			if p.match(tokenEqual) {
-				exp, err := p.expression()
-				if err != nil {
-					return nil, err
-				}
-				return collectionAssignmentExpression{
-					op:    op,
-					index: index,
-					val:   exp,
-				}, nil
-			}
-			return collectionExpression{
-				index: index,
-				op:    op,
-			}, nil
-		}
 
 		if p.match(tokenEqual) {
 			exp, err := p.expression()

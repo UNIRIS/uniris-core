@@ -47,12 +47,6 @@ func (sc *scanner) scanToken() error {
 	case ')':
 		sc.addEmptyToken(tokenRightParenthesis)
 		break
-	case '{':
-		sc.addEmptyToken(tokenLeftBrace)
-		break
-	case '}':
-		sc.addEmptyToken(tokenRightBrace)
-		break
 	case '[':
 		sc.addEmptyToken(tokenLeftBracket)
 		break
@@ -73,6 +67,9 @@ func (sc *scanner) scanToken() error {
 		break
 	case ',':
 		sc.addEmptyToken(tokenComma)
+		break
+	case ':':
+		sc.addEmptyToken(tokenColon)
 		break
 	case ';':
 		sc.addEmptyToken(tokenSemiColon)

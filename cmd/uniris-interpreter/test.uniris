@@ -1,0 +1,7 @@
+triggers: 
+    time: 1556544968
+conditions:
+    answer: timestamp() > 1556544968
+actions:
+    1+1
+    hash256(153)

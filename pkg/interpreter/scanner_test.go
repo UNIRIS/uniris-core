@@ -104,18 +104,6 @@ func TestScanTokenParenthesis(t *testing.T) {
 
 }
 
-func TestScanTokenBraces(t *testing.T) {
-	s := newScanner("{")
-	s.scanToken()
-	assert.Len(t, s.tokens, 1)
-	assert.Equal(t, tokenLeftBrace, s.tokens[0].Type)
-
-	s = newScanner("}")
-	s.scanToken()
-	assert.Len(t, s.tokens, 1)
-	assert.Equal(t, tokenRightBrace, s.tokens[0].Type)
-}
-
 func TestScanTokenBracket(t *testing.T) {
 	s := newScanner("[")
 	s.scanToken()
@@ -283,7 +271,6 @@ func TestScanMultipleTokens(t *testing.T) {
 	tokens, err := s.scanTokens()
 	assert.Nil(t, err)
 	assert.Len(t, tokens, 5)
-	assert.Equal(t, tokenPrint, tokens[0].Type)
 	assert.Equal(t, tokenNumber, tokens[1].Type)
 	assert.Equal(t, float64(2), tokens[1].Literal)
 	assert.Equal(t, tokenPlus, tokens[2].Type)

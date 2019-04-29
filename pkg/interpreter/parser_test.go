@@ -493,27 +493,13 @@ func TestParserExpressionStatement(t *testing.T) {
 
 }
 
-func TestParserPrintStatement(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenNumber, Literal: 10},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	stmt, err := p.printStatement()
-	assert.Nil(t, err)
-	assert.Equal(t, printStmt{
-		exp: literalExpression{value: 10},
-	}, stmt)
-}
-
 func TestParserBlockStatement(t *testing.T) {
 	p := parser{
 		tokens: []token{
-			token{Type: tokenPrint},
 			token{Type: tokenNumber, Literal: 10},
-			token{Type: tokenRightBrace},
+			token{Type: tokenPlus},
+			token{Type: tokenNumber, Literal: 10},
+			token{Type: tokenEnd},
 			token{Type: tokenEndOfFile},
 		},
 	}
@@ -522,8 +508,12 @@ func TestParserBlockStatement(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, blockStmt{
 		statements: []statement{
-			printStmt{
-				exp: literalExpression{value: 10},
+			expressionStmt{
+				binaryExpression{
+					left:  literalExpression{value: 10},
+					right: literalExpression{value: 10},
+					op:    token{Type: tokenPlus},
+				},
 			},
 		},
 	}, stmt)
@@ -549,298 +539,13 @@ func TestParserIfStatement(t *testing.T) {
 	}, stmt)
 }
 
-func TestParserWhileStatement(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenTrue},
-			token{Type: tokenNumber},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	stmt, err := p.whileStatement()
-	assert.Nil(t, err)
-	assert.Equal(t, whileStatement{
-		cond: literalExpression{value: true},
-		body: expressionStmt{exp: literalExpression{}},
-	}, stmt)
-}
-
-func TestParserForStatement(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenIdentifier, Lexeme: "i"},
-			token{Type: tokenEqual},
-			token{Type: tokenNumber, Literal: 0},
-			token{Type: tokenSemiColon},
-			token{Type: tokenIdentifier, Lexeme: "i"},
-			token{Type: tokenLess},
-			token{Type: tokenNumber, Literal: 10},
-			token{Type: tokenSemiColon},
-			token{Type: tokenIdentifier, Lexeme: "i"},
-			token{Type: tokenEqual},
-			token{Type: tokenIdentifier, Lexeme: "i"},
-			token{Type: tokenPlus},
-			token{Type: tokenNumber, Literal: 1},
-			token{Type: tokenPrint},
-			token{Type: tokenIdentifier, Lexeme: "i"},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	stmt, err := p.forStatement()
-	assert.Nil(t, err)
-	assert.Equal(t, blockStmt{
-		statements: []statement{
-			assignExpression{
-				op:  token{Type: tokenIdentifier, Lexeme: "i"},
-				exp: literalExpression{value: 0},
-			},
-			whileStatement{
-				body: blockStmt{
-					statements: []statement{
-						printStmt{exp: variableExpression{op: token{Type: tokenIdentifier, Lexeme: "i"}}},
-						expressionStmt{
-							exp: assignExpression{
-								op: token{Type: tokenIdentifier, Lexeme: "i"},
-								exp: binaryExpression{
-									left: variableExpression{
-										op: token{Type: tokenIdentifier, Lexeme: "i"},
-									},
-									right: literalExpression{
-										value: 1,
-									},
-									op: token{Type: tokenPlus},
-								},
-							},
-						},
-					},
-				},
-				cond: binaryExpression{
-					left:  variableExpression{op: token{Type: tokenIdentifier, Lexeme: "i"}},
-					op:    token{Type: tokenLess},
-					right: literalExpression{value: 10},
-				},
-			},
-		},
-	}, stmt)
-}
-
-func TestParserFunctionStatement(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenIdentifier, Lexeme: "myFunc"},
-			token{Type: tokenLeftParenthesis},
-			token{Type: tokenRightParenthesis},
-			token{Type: tokenLeftBrace},
-			token{Type: tokenPrint},
-			token{Type: tokenNumber, Literal: 1},
-			token{Type: tokenRightBrace},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	stmt, err := p.functionStatement()
-	assert.Nil(t, err)
-	assert.Equal(t, funcStatement{
-		name:   token{Type: tokenIdentifier, Lexeme: "myFunc"},
-		params: []token{},
-		body: blockStmt{
-			statements: []statement{
-				printStmt{
-					exp: literalExpression{value: 1},
-				},
-			},
-		},
-	}, stmt)
-}
-
-func TestParserFunctionStatementWithoutName(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	_, err := p.functionStatement()
-	assert.Contains(t, err.Error(), "Expect function name")
-}
-
-func TestParserFunctionStatementWithoutLeftParenthesis(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenIdentifier, Lexeme: "myFunc"},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	_, err := p.functionStatement()
-	assert.Contains(t, err.Error(), "Expect '(' after function name")
-}
-
-func TestParserFunctionStatementWithoutRightParenthesis(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenIdentifier, Lexeme: "myFunc"},
-			token{Type: tokenLeftParenthesis},
-			token{Type: tokenIdentifier, Lexeme: "text"},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	_, err := p.functionStatement()
-	assert.Contains(t, err.Error(), "Expect ')' after parameters")
-}
-
-func TestParserFunctionStatementWithoutParameters(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenIdentifier, Lexeme: "myFunc"},
-			token{Type: tokenLeftParenthesis},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	_, err := p.functionStatement()
-	assert.Contains(t, err.Error(), "Expect parameter name")
-}
-
-func TestParserFunctionStatementWithoutLeftBraceBody(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenIdentifier, Lexeme: "myFunc"},
-			token{Type: tokenLeftParenthesis},
-			token{Type: tokenRightParenthesis},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	_, err := p.functionStatement()
-	assert.Contains(t, err.Error(), "Expect '{' before function body")
-}
-
-func TestParserFunctionStatementWithoutRightBraceBody(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenIdentifier, Lexeme: "myFunc"},
-			token{Type: tokenLeftParenthesis},
-			token{Type: tokenRightParenthesis},
-			token{Type: tokenLeftBrace},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	_, err := p.functionStatement()
-	assert.Contains(t, err.Error(), "Expect } after block")
-}
-
-func TestParserReturnStatement(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenNumber, Literal: 1},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	stmt, err := p.returnStatement()
-	assert.Nil(t, err)
-	assert.Equal(t, returnStatement{
-		value: literalExpression{value: 1},
-	}, stmt)
-}
-
-func TestParserStatementWhenMatchesFunc(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenFunction},
-			token{Type: tokenIdentifier, Lexeme: "myFunc"},
-			token{Type: tokenLeftParenthesis},
-			token{Type: tokenRightParenthesis},
-			token{Type: tokenLeftBrace},
-			token{Type: tokenRightBrace},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	stmt, err := p.statement()
-	assert.Nil(t, err)
-	assert.Equal(t, funcStatement{
-		name:   token{Type: tokenIdentifier, Lexeme: "myFunc"},
-		params: []token{},
-		body: blockStmt{
-			statements: []statement{},
-		},
-	}, stmt)
-}
-
-func TestParserStatementWhenMatchesFor(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenFor},
-			token{Type: tokenIdentifier, Lexeme: "i"},
-			token{Type: tokenEqual},
-			token{Type: tokenNumber, Literal: 0},
-			token{Type: tokenSemiColon},
-			token{Type: tokenIdentifier, Lexeme: "i"},
-			token{Type: tokenLess},
-			token{Type: tokenNumber, Literal: 10},
-			token{Type: tokenSemiColon},
-			token{Type: tokenIdentifier, Lexeme: "i"},
-			token{Type: tokenEqual},
-			token{Type: tokenIdentifier, Lexeme: "i"},
-			token{Type: tokenPlus},
-			token{Type: tokenNumber, Literal: 1},
-			token{Type: tokenPrint},
-			token{Type: tokenIdentifier, Lexeme: "i"},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	stmt, err := p.statement()
-	assert.Nil(t, err)
-	assert.Equal(t, blockStmt{
-		statements: []statement{
-			assignExpression{
-				op:  token{Type: tokenIdentifier, Lexeme: "i"},
-				exp: literalExpression{value: 0},
-			},
-			whileStatement{
-				body: blockStmt{
-					statements: []statement{
-						printStmt{exp: variableExpression{op: token{Type: tokenIdentifier, Lexeme: "i"}}},
-						expressionStmt{
-							exp: assignExpression{
-								op: token{Type: tokenIdentifier, Lexeme: "i"},
-								exp: binaryExpression{
-									left: variableExpression{
-										op: token{Type: tokenIdentifier, Lexeme: "i"},
-									},
-									right: literalExpression{
-										value: 1,
-									},
-									op: token{Type: tokenPlus},
-								},
-							},
-						},
-					},
-				},
-				cond: binaryExpression{
-					left:  variableExpression{op: token{Type: tokenIdentifier, Lexeme: "i"}},
-					op:    token{Type: tokenLess},
-					right: literalExpression{value: 10},
-				},
-			},
-		},
-	}, stmt)
-}
-
 func TestParserStatementWhenMatchesIf(t *testing.T) {
 	p := parser{
 		tokens: []token{
 			token{Type: tokenIf},
 			token{Type: tokenTrue},
-			token{Type: tokenLeftBrace},
-			token{Type: tokenRightBrace},
+			token{Type: tokenThen},
+			token{Type: tokenEnd},
 			token{Type: tokenEndOfFile},
 		},
 	}
@@ -856,61 +561,11 @@ func TestParserStatementWhenMatchesIf(t *testing.T) {
 	}, stmt)
 }
 
-func TestParserStatementWhenMatchesPrint(t *testing.T) {
+func TestParserStatementWhenMatchesThenBrace(t *testing.T) {
 	p := parser{
 		tokens: []token{
-			token{Type: tokenPrint},
-			token{Type: tokenNumber, Literal: 3},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	stmt, err := p.statement()
-	assert.Nil(t, err)
-	assert.Equal(t, printStmt{
-		exp: literalExpression{value: 3},
-	}, stmt)
-}
-
-func TestParserStatementWhenMatchesReturn(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenReturn},
-			token{Type: tokenNumber, Literal: 3},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	stmt, err := p.statement()
-	assert.Nil(t, err)
-	assert.Equal(t, returnStatement{
-		value: literalExpression{value: 3},
-	}, stmt)
-}
-
-func TestParserStatementWhenMatchesWhile(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenWhile},
-			token{Type: tokenTrue},
-			token{Type: tokenNumber},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	stmt, err := p.statement()
-	assert.Nil(t, err)
-	assert.Equal(t, whileStatement{
-		cond: literalExpression{value: true},
-		body: expressionStmt{exp: literalExpression{}},
-	}, stmt)
-}
-
-func TestParserStatementWhenMatchesLeftBrace(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenLeftBrace},
-			token{Type: tokenRightBrace},
+			token{Type: tokenThen},
+			token{Type: tokenEnd},
 			token{Type: tokenEndOfFile},
 		},
 	}
@@ -925,7 +580,8 @@ func TestParserStatementWhenMatchesLeftBrace(t *testing.T) {
 func TestParse(t *testing.T) {
 	p := parser{
 		tokens: []token{
-			token{Type: tokenPrint},
+			token{Type: tokenNumber, Literal: 3},
+			token{Type: tokenPlus},
 			token{Type: tokenNumber, Literal: 3},
 			token{Type: tokenEndOfFile},
 		},
@@ -933,82 +589,10 @@ func TestParse(t *testing.T) {
 	stmt, err := p.parse()
 	assert.Nil(t, err)
 	assert.Equal(t, []statement{
-		printStmt{
-			exp: literalExpression{value: 3},
+		binaryExpression{
+			left:  literalExpression{value: 3},
+			right: literalExpression{value: 3},
+			op:    token{Type: tokenPlus},
 		},
 	}, stmt)
-}
-
-func TestParserPrimaryCollectionExpression(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenIdentifier, Lexeme: "a"},
-			token{Type: tokenLeftBracket},
-			token{Type: tokenNumber, Literal: 1},
-			token{Type: tokenRightBracket},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	exp, err := p.primary()
-	assert.Nil(t, err)
-	assert.Equal(t, collectionExpression{
-		index: token{Literal: 1, Type: tokenNumber},
-		op:    token{Type: tokenIdentifier, Lexeme: "a"},
-	}, exp)
-}
-
-func TestParserPrimaryCollectionMissingRightBracket(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenIdentifier, Lexeme: "a"},
-			token{Type: tokenLeftBracket},
-			token{Type: tokenNumber, Literal: 1},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	_, err := p.primary()
-	assert.Contains(t, err.Error(), "missing right bracket")
-}
-
-func TestParserPrimaryCollectionAssignement(t *testing.T) {
-	p := parser{
-		tokens: []token{
-			token{Type: tokenIdentifier, Lexeme: "a"},
-			token{Type: tokenEqual},
-			token{Type: tokenLeftBracket},
-			token{Type: tokenRightBracket},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	val, err := p.primary()
-	assert.Nil(t, err)
-	assert.Equal(t, val, assignExpression{
-		exp: literalExpression{
-			value: make(map[interface{}]interface{}),
-		},
-		op: token{Type: tokenIdentifier, Lexeme: "a"},
-	})
-
-	p = parser{
-		tokens: []token{
-			token{Type: tokenIdentifier, Lexeme: "a"},
-			token{Type: tokenLeftBracket},
-			token{Type: tokenString, Literal: "hello"},
-			token{Type: tokenRightBracket},
-			token{Type: tokenEqual},
-			token{Type: tokenString, Literal: "world"},
-			token{Type: tokenEndOfFile},
-		},
-	}
-
-	val, err = p.primary()
-	assert.Nil(t, err)
-	assert.Equal(t, collectionAssignmentExpression{
-		index: token{Literal: "hello", Type: tokenString},
-		op:    token{Type: tokenIdentifier, Lexeme: "a"},
-		val:   literalExpression{value: "world"},
-	}, val)
 }
