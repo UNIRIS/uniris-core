@@ -2,12 +2,21 @@ package interpreter
 
 import (
 	"fmt"
+
+	"github.com/uniris/uniris-core/pkg/crypto"
+
+	"github.com/uniris/uniris-core/pkg/chain"
 )
 
 //Scope defines the interpreter scope including variables and parent(linked) scope
 type Scope struct {
-	parent    *Scope
-	variables map[string]interface{}
+	parent          *Scope
+	contract        Contract
+	incoming        Contract
+	response        chain.Transaction
+	sharedNodePvKey crypto.PrivateKey
+	originPvKey     crypto.PrivateKey
+	variables       map[string]interface{}
 }
 
 //NewScope creates a new interpreter context

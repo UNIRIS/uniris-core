@@ -144,30 +144,29 @@ func (e logicalExpression) evaluate(sc *Scope) (interface{}, error) {
 	return e.right.evaluate(sc)
 }
 
-type callExpression struct {
+type stdCallExpression struct {
 	callee expression
-	paren  token
-	args   []expression
+	args   map[string]expression
 }
 
-func (e callExpression) evaluate(sc *Scope) (interface{}, error) {
-	callee, err := e.callee.evaluate(sc)
+func (e stdCallExpression) evaluate(sc *Scope) (interface{}, error) {
+	call, err := e.callee.evaluate(sc)
 	if err != nil {
 		return nil, err
 	}
-	switch callee.(type) {
-	case callable:
-		args := make([]interface{}, 0)
-		for _, arg := range e.args {
-			val, err := arg.evaluate(sc)
-			if err != nil {
-				return nil, err
-			}
-			args = append(args, val)
-		}
-		f := callee.(callable)
-		return f.call(sc, args...)
-	default:
+
+	f, ok := call.(func(*Scope, map[string]interface{}) (interface{}, error))
+	if !ok {
 		return nil, errors.New("Can only call functions")
 	}
+
+	args := make(map[string]interface{}, 0)
+	for k, arg := range e.args {
+		val, err := arg.evaluate(sc)
+		if err != nil {
+			return nil, err
+		}
+		args[k] = val
+	}
+	return f(sc, args)
 }

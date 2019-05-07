@@ -33,25 +33,47 @@ func (p *parser) parse() (c Contract, err error) {
 		if _, err := p.consume(tokenColon, "expected `:` after conditions"); err != nil {
 			return c, err
 		}
-		if p.match(tokenFeeConditions) {
-			if _, err := p.consume(tokenColon, "expected `:` after fee conditions"); err != nil {
+
+		if p.match(tokenOriginFamily) {
+			if _, err := p.consume(tokenColon, "expected `:` after originFamily conditions"); err != nil {
 				return c, err
 			}
 			val, err := p.expression()
 			if err != nil {
 				return c, err
 			}
-			c.conditions.fee = val
+			c.Conditions.OriginFamily = val
 		}
-		if p.match(tokenAnswerConditions) {
-			if _, err := p.consume(tokenColon, "expected `:` after answer conditions"); err != nil {
+
+		if p.match(tokenPostPaidFeeConditions) {
+			if _, err := p.consume(tokenColon, "expected `:` after postPaidFee conditions"); err != nil {
 				return c, err
 			}
 			val, err := p.expression()
 			if err != nil {
 				return c, err
 			}
-			c.conditions.answer = val
+			c.Conditions.PostPaidFee = val
+		}
+		if p.match(tokenResponseConditions) {
+			if _, err := p.consume(tokenColon, "expected `:` after response conditions"); err != nil {
+				return c, err
+			}
+			val, err := p.expression()
+			if err != nil {
+				return c, err
+			}
+			c.Conditions.Response = val
+		}
+		if p.match(tokenInheritConditions) {
+			if _, err := p.consume(tokenColon, "expected `:` after inherit conditions"); err != nil {
+				return c, err
+			}
+			val, err := p.expression()
+			if err != nil {
+				return c, err
+			}
+			c.Conditions.Inherit = val
 		}
 	}
 
@@ -295,17 +317,24 @@ func (p *parser) unary() (expression, error) {
 		}, nil
 	}
 
-	return p.call()
+	return p.stdCall()
 }
 
-func (p *parser) call() (expression, error) {
+func (p *parser) stdCall() (expression, error) {
 	exp, err := p.primary()
 	if err != nil {
 		return nil, err
 	}
 	for true {
 		if p.match(tokenLeftParenthesis) {
-			exp, err = p.finishCall(exp)
+			switch exp.(type) {
+			case variableExpression:
+				v := exp.(variableExpression)
+				if _, exist := stdFunctions[v.op.Lexeme]; !exist {
+					return nil, fmt.Errorf("function '%s' undefined", v.op.Lexeme)
+				}
+			}
+			exp, err = p.finishStdCall(exp)
 			if err != nil {
 				return nil, err
 			}
@@ -317,29 +346,37 @@ func (p *parser) call() (expression, error) {
 	return exp, nil
 }
 
-func (p *parser) finishCall(callee expression) (expression, error) {
-	args := make([]expression, 0)
+func (p *parser) finishStdCall(callee expression) (expression, error) {
+	args := make(map[string]expression, 0)
 	if !p.check(tokenRightParenthesis) {
 		for {
-			exp, err := p.expression()
-			if err != nil {
-				return nil, err
+
+			argKey := p.advance()
+			if argKey.Type == tokenIdentifier {
+				if _, err := p.consume(tokenColon, "Expected ':' after the argument"); err != nil {
+					return nil, err
+				}
+
+				exp, err := p.expression()
+				if err != nil {
+					return nil, err
+				}
+				args[argKey.Lexeme] = exp
 			}
-			args = append(args, exp)
+
 			if !p.match(tokenComma) {
 				break
 			}
 		}
 	}
 
-	paren, err := p.consume(tokenRightParenthesis, "Expected ')' after arguments")
+	_, err := p.consume(tokenRightParenthesis, "Expected ')' after arguments")
 	if err != nil {
 		return nil, err
 	}
-	return callExpression{
+	return stdCallExpression{
 		args:   args,
 		callee: callee,
-		paren:  paren,
 	}, nil
 }
 

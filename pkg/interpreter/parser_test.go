@@ -219,21 +219,20 @@ func TestParserPrimaryGroupingExpression(t *testing.T) {
 func TestParserFinishCall(t *testing.T) {
 	p := parser{
 		tokens: []token{
+			token{Type: tokenIdentifier, Lexeme: "val"},
+			token{Type: tokenColon},
 			token{Type: tokenNumber, Literal: 10},
 			token{Type: tokenRightParenthesis},
 			token{Type: tokenEndOfFile},
 		},
 	}
-	exp, err := p.finishCall(testFuncExpression{})
+	exp, err := p.finishStdCall(testFuncExpression{})
 	assert.Nil(t, err)
-	assert.Equal(t, callExpression{
-		args: []expression{
-			literalExpression{
+	assert.Equal(t, stdCallExpression{
+		args: map[string]expression{
+			"val": literalExpression{
 				value: 10,
 			},
-		},
-		paren: token{
-			Type: tokenRightParenthesis,
 		},
 		callee: testFuncExpression{},
 	}, exp)
@@ -249,14 +248,13 @@ func TestParserCall(t *testing.T) {
 		},
 	}
 
-	exp, err := p.call()
+	exp, err := p.stdCall()
 	assert.Nil(t, err)
-	assert.Equal(t, callExpression{
-		args: []expression{},
+	assert.Equal(t, stdCallExpression{
+		args: map[string]expression{},
 		callee: variableExpression{
 			op: token{Type: tokenIdentifier},
 		},
-		paren: token{Type: tokenRightParenthesis},
 	}, exp)
 }
 
@@ -580,19 +578,23 @@ func TestParserStatementWhenMatchesThenBrace(t *testing.T) {
 func TestParse(t *testing.T) {
 	p := parser{
 		tokens: []token{
-			token{Type: tokenNumber, Literal: 3},
+			token{Type: tokenActions},
+			token{Type: tokenColon},
+			token{Type: tokenNumber, Literal: 10},
 			token{Type: tokenPlus},
-			token{Type: tokenNumber, Literal: 3},
+			token{Type: tokenNumber, Literal: 2},
 			token{Type: tokenEndOfFile},
 		},
 	}
-	stmt, err := p.parse()
+	contract, err := p.parse()
 	assert.Nil(t, err)
 	assert.Equal(t, []statement{
-		binaryExpression{
-			left:  literalExpression{value: 3},
-			right: literalExpression{value: 3},
-			op:    token{Type: tokenPlus},
+		expressionStmt{
+			binaryExpression{
+				left:  literalExpression{value: 10},
+				right: literalExpression{value: 2},
+				op:    token{Type: tokenPlus},
+			},
 		},
-	}, stmt)
+	}, contract.actions)
 }

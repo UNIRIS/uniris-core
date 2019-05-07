@@ -64,21 +64,35 @@ func TestScanIdentifier(t *testing.T) {
 	assert.Equal(t, tokenIf, s.tokens[0].Type)
 }
 
-func TestScanString(t *testing.T) {
+func TestScanStringDoubleQuotes(t *testing.T) {
 	s := newScanner("\"hello\"")
 	s.advance()
-	s.string()
+	s.stringDoubleQuotes()
 	assert.Equal(t, tokenString, s.tokens[0].Type)
 	assert.Equal(t, "hello", s.tokens[0].Literal)
 	assert.Equal(t, "\"hello\"", s.tokens[0].Lexeme)
 
 	s = newScanner("\"hello")
 	s.advance()
-	assert.Panics(t, s.string)
+	assert.Error(t, s.stringDoubleQuotes())
 
 	s = newScanner("\"hello\nWorld\"")
 	s.advance()
-	s.string()
+	s.stringDoubleQuotes()
+	assert.Equal(t, 2, s.line)
+}
+
+func TestScanStringSingleQuotes(t *testing.T) {
+	s := newScanner("'hello'")
+	s.advance()
+	s.stringSingleQuotes()
+	assert.Equal(t, tokenString, s.tokens[0].Type)
+	assert.Equal(t, "hello", s.tokens[0].Literal)
+	assert.Equal(t, "'hello'", s.tokens[0].Lexeme)
+
+	s = newScanner("'hello\nWorld'")
+	s.advance()
+	s.stringDoubleQuotes()
 	assert.Equal(t, 2, s.line)
 }
 

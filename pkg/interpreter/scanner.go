@@ -121,7 +121,14 @@ func (sc *scanner) scanToken() error {
 		sc.line++
 		break
 	case '"':
-		sc.string()
+		if err := sc.stringDoubleQuotes(); err != nil {
+			return err
+		}
+		break
+	case '\'':
+		if err := sc.stringSingleQuotes(); err != nil {
+			return err
+		}
 		break
 	default:
 		if sc.isDigit(c) {
@@ -228,19 +235,18 @@ func (sc *scanner) advance() rune {
 	return c
 }
 
-func (sc *scanner) string() {
+func (sc *scanner) stringDoubleQuotes() error {
 
 	for sc.peek() != '"' && !sc.isAtEnd() {
 		if sc.peek() == '\n' {
 			sc.line++
 		}
 		sc.advance()
-
 	}
 
 	// Unterminated string.
 	if sc.isAtEnd() {
-		panic(fmt.Sprintf("ERROR: Line: %d, Unterminated string.", sc.line))
+		return fmt.Errorf("line: %d, Unterminated string", sc.line)
 	}
 
 	// The closing ".
@@ -249,4 +255,28 @@ func (sc *scanner) string() {
 	// Trim the surrounding quotes.
 	value := sc.source[sc.start+1 : sc.current-1]
 	sc.addToken(tokenString, string(value))
+	return nil
+}
+
+func (sc *scanner) stringSingleQuotes() error {
+
+	for sc.peek() != '\'' && !sc.isAtEnd() {
+		if sc.peek() == '\n' {
+			sc.line++
+		}
+		sc.advance()
+	}
+
+	// Unterminated string.
+	if sc.isAtEnd() {
+		return fmt.Errorf("line: %d, Unterminated string", sc.line)
+	}
+
+	// The closing ".
+	sc.advance()
+
+	// Trim the surrounding quotes.
+	value := sc.source[sc.start+1 : sc.current-1]
+	sc.addToken(tokenString, string(value))
+	return nil
 }

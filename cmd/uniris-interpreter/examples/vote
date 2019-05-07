@@ -1,0 +1,133 @@
+//Vote smart contract for 2020 election
+//------------------------------------
+//End date: 10 aout 2020 00:00:00 ==> 1597017600000
+//------------------------------------
+
+triggers: 
+
+    //Nodes will register this trigger and execute the contract when the date will be reached
+    time: 1597017600000 
+
+conditions:
+
+    //Only biometric device can generate origin signature
+    originFamily: "biometric" 
+
+    //Fee will be paid later by this address
+    postPaidFee: currentAddress()
+
+    //Acceptance criterias to interact with the contract
+    response:
+
+        //Check if the votee public key is an authorized one
+        contains(from: currentKeys(select: "authorized-voters"), value: responsePublicKey())
+
+        //Check the content matches acknowledgement proof
+        and matchRegex(pattern: hash256(data: currentCode()) + "([0-9]{10}).[Mr.X|Mrs.Y|No one]+", text: responseContent())
+        
+        //Check the votee can at least try to vote 3 times
+        and responseRetries() < 3 
+
+        //Cannot access responses before 10 minutes from the closing votes
+        and now() < (1597017600000 - 36000) 
+
+    //Prevents miners or owners to use the private keys in other ways 
+    //by deny all and authorizes only some changes
+    inherit:
+
+            //Allows the inheritance only before the end of the vote (+ 1 minute)
+            now() < (1597017600000 - 36000)
+
+            //Verifies the text of the content
+            and matchRegex(
+                pattern: "([Number of votes:]{1,}[0-9]+)[\r\sn]{1}([Number of votes for Mr.X:]{1,}[0-9]+)[\r\n]{1}([Number of votes for Mrs.Y:]{1,}[0-9]+)[\r\n]{1}([Number of votes for No one:]{1,}[0-9]+)",
+                text: incomingContent()
+            )
+
+            and 
+            (
+                //Allows this public key to change contract without the following rules
+                checkMultisig(publicKey: "3059301306072a8648ce3d020106082a8648ce3d0301070342000465f9cf211b796262573b3d7c9cffc1773b26454520c88301e6c6a81d0aa3bd2f5d299ad17ed87ff3ecb291c2c02ef40be971ee92af88dd5f5a57565c574f8553")
+
+                //Allow to verify the next post paid conditions before the end of the contract and check its content
+                or incomingPostPaidFeeConditions() == hash256(data: 
+                    publicKey(from: derivateKey(seed:  currentKeys(select: "seed"), offset: chainLength() + 1)))   
+
+
+                //Verifies the UCO ledger for the 10000 splits (before the end of the contract - 300 seconds)
+                or incomingUCOLedger() == newUCOLedger(
+                    fee: countResponses() + 100, 
+                    restTo: hash256(data: currentPublicKey()))
+                
+            )
+
+actions:
+
+    //Splits the smart contract in multiple to help the storage scaling
+    if countResponses() > 10000 and now() < (1597017600000 - 300) then
+
+        //Decrypts the owner seed with the node shared key to be able to create a new transaction on behalf of the owner
+        seed = decrypt(data: currentKeys(select: "seed"))
+
+        //Compute the previous key to be able to sign the transaction
+        prevKeys = derivateKey(seed: seed, offset: chainLength())
+
+        //Generates the next two keys
+        newKeys = derivateKey(seed: seed, offset: chainLength() + 1)
+        nextKeys = derivateKey(seed: seed, offset: chainLength() + 2)
+
+        //Chains a new smart contract based on the previous one with some changes
+        newContract(
+            address: hash256(data: publicKey(from: newKeys)),
+            timestamp: now(),
+            ucoLedger: newUCOLedger(
+                fee: countResponses() + 100, 
+                restTo: hash256(data: publicKey(from: newKeys))
+            ),
+            smartcontract: '
+                //Vote smart contract for 2020 election
+                //------------------------------------
+                //End date: 10 aout 2020 00:00:00 ==> 1597017600000
+                //------------------------------------
+                triggers: ' + currentTriggers() + '
+                conditions:
+
+                    //Fee will be paid later by this address
+                    postPaidFee: "' + hash256(data: publicKey(from: nextKeys)) + '"
+
+                    //Acceptance criterias to interact with the contract
+                    response: ' + currentResponseConditions() + '
+
+                    //Prevents miners or owners to use the private keys in other ways 
+                    //by deny all and authorized some parts
+                    inherit: ' + currentInheritConditions() + '
+
+                actions: ' + currentActions(),
+            keys: currentKeys(),
+            content:
+                "Number of votes: " + countResponses() + 
+                "\n Number of votes for Mr.X: " + countResponses(contentRegex: "[Mr.X]") +
+                "\n Number of votes for Mrs.Y: " + countResponses(contentRegex: "[Mrs.Y]") +
+                "\n Number of votes for No one: " + countResponses(contentRegex: "[No one]"),
+            previousKey: privateKey(from: prevKeys)
+        )
+    end
+
+    //Closes the votes
+    if now() > 1597017600000 then
+
+        //Compute the previous key to be able to sign the transaction
+        prevKeys = derivateKey(seed: currentKeys(select: "seed"), offset: chainLength())
+
+        //Chain the last contract without inherit authorizations
+        newContract(
+            address: hash256(data: publicKey(from: newPubKey)),
+            timestamp: now(),
+            ucoLedger: newUCOLedger(
+                fee: countResponses() + 100, 
+                restTo: "65040f19af2ca48d63952b762a3afe8b0c22caf707f15fdd564ad19fc030d19a"
+            ),
+            content: currentContent(),
+            previousKey: privateKey(from: prevKeys)
+        )
+    end

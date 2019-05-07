@@ -10,23 +10,23 @@ type token struct {
 type tokenType string
 
 var keywords = map[string]tokenType{
-	"if":         tokenIf,
-	"else":       tokenElse,
-	"or":         tokenOr,
-	"and":        tokenAnd,
-	"true":       tokenTrue,
-	"false":      tokenFalse,
-	"with":       tokenWith,
-	"then":       tokenThen,
-	"end":        tokenEnd,
-	"contract":   tokenContract,
-	"conditions": tokenConditions,
-	"answer":     tokenAnswerConditions,
-	"fees":       tokenFeeConditions,
-	"is":         tokenIs,
-	"actions":    tokenActions,
-	"triggers":   tokenTriggers,
-	"time":       tokenTriggerTime,
+	"triggers":     tokenTriggers,
+	"time":         tokenTriggerTime,
+	"conditions":   tokenConditions,
+	"originFamily": tokenOriginFamily,
+	"response":     tokenResponseConditions,
+	"postPaidFee":  tokenPostPaidFeeConditions,
+	"inherit":      tokenInheritConditions,
+	"actions":      tokenActions,
+
+	"if":    tokenIf,
+	"else":  tokenElse,
+	"or":    tokenOr,
+	"and":   tokenAnd,
+	"true":  tokenTrue,
+	"false": tokenFalse,
+	"then":  tokenThen,
+	"end":   tokenEnd,
 }
 
 const (
@@ -59,23 +59,30 @@ const (
 	tokenString     tokenType = "STRING"
 	tokenNumber     tokenType = "NUMBER"
 
+	//----------
 	//Keywords
-	tokenContract         tokenType = "CONTRACT"
-	tokenIf               tokenType = "IF"
-	tokenElse             tokenType = "ELSE"
-	tokenAnd              tokenType = "AND"
-	tokenOr               tokenType = "OR"
-	tokenWith             tokenType = "WITH"
-	tokenEndOfFile        tokenType = "EOF"
-	tokenTrue             tokenType = "TRUE"
-	tokenFalse            tokenType = "FALSE"
-	tokenConditions       tokenType = "CONDITIONS"
-	tokenAnswerConditions tokenType = "ANSWER"
-	tokenFeeConditions    tokenType = "FEES"
-	tokenIs               tokenType = "IS"
-	tokenActions          tokenType = "ACTIONS"
-	tokenTriggers         tokenType = "TRIGGERS"
-	tokenTriggerTime      tokenType = "TRIGGER_TIME"
-	tokenThen             tokenType = "THEN"
-	tokenEnd              tokenType = "END"
+	//----------------
+
+	//Triggers
+	tokenTriggers    tokenType = "TRIGGERS"
+	tokenTriggerTime tokenType = "TRIGGER_TIME"
+
+	//Conditions
+	tokenConditions            tokenType = "CONDITIONS"
+	tokenResponseConditions    tokenType = "RESPONSE"
+	tokenOriginFamily          tokenType = "ORIGIN_FAMILY"
+	tokenPostPaidFeeConditions tokenType = "POST_PAID_FEE"
+	tokenInheritConditions     tokenType = "INHERIT"
+
+	tokenActions tokenType = "ACTIONS"
+
+	tokenIf        tokenType = "IF"
+	tokenElse      tokenType = "ELSE"
+	tokenAnd       tokenType = "AND"
+	tokenOr        tokenType = "OR"
+	tokenEndOfFile tokenType = "EOF"
+	tokenTrue      tokenType = "TRUE"
+	tokenFalse     tokenType = "FALSE"
+	tokenThen      tokenType = "THEN"
+	tokenEnd       tokenType = "END"
 )

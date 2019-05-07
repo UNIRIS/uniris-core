@@ -7,9 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTimestampFunction(t *testing.T) {
-	f := timestampFunc{}
-	res, err := f.call(nil, nil)
+func TestNowFunc(t *testing.T) {
+	res, err := nowFunc(nil, nil)
 	assert.Nil(t, err)
-	assert.Equal(t, time.Now().Unix(), res)
+	assert.Equal(t, float64(time.Now().Unix()), res)
 }

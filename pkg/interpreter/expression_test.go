@@ -333,10 +333,10 @@ func TestLogicalORExpression(t *testing.T) {
 	assert.Equal(t, 10, val)
 }
 
-func TestCallExpression(t *testing.T) {
-	e := callExpression{
-		args: []expression{
-			literalExpression{
+func TestStdCallExpression(t *testing.T) {
+	e := stdCallExpression{
+		args: map[string]expression{
+			"val": literalExpression{
 				value: 10,
 			},
 		},
@@ -348,8 +348,8 @@ func TestCallExpression(t *testing.T) {
 	assert.Equal(t, 10, val)
 }
 
-func TestCallNotCallableExpression(t *testing.T) {
-	e := callExpression{
+func TestStdCallNotCallableExpression(t *testing.T) {
+	e := stdCallExpression{
 		callee: literalExpression{},
 	}
 
@@ -361,11 +361,9 @@ type testFuncExpression struct {
 }
 
 func (f testFuncExpression) evaluate(sc *Scope) (interface{}, error) {
-	return testFuncCallable{}, nil
+	return testFuncCallable, nil
 }
 
-type testFuncCallable struct{}
-
-func (f testFuncCallable) call(sc *Scope, args ...interface{}) (res interface{}, err error) {
-	return args[0], nil
+func testFuncCallable(sc *Scope, args map[string]interface{}) (interface{}, error) {
+	return args["val"], nil
 }

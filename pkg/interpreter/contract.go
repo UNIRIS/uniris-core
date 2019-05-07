@@ -3,6 +3,8 @@ package interpreter
 import (
 	"errors"
 	"fmt"
+
+	"github.com/uniris/uniris-core/pkg/chain"
 )
 
 type Trigger struct {
@@ -35,13 +37,16 @@ const (
 )
 
 type Conditions struct {
-	fee    expression
-	answer expression
+	OriginFamily expression
+	PostPaidFee  expression
+	Response     expression
+	Inherit      expression
 }
 
 type Contract struct {
+	tx         chain.Transaction
 	Triggers   []Trigger
-	conditions Conditions
+	Conditions Conditions
 	actions    []statement
 }
 
@@ -53,8 +58,8 @@ func (c Contract) analyze() error {
 
 func (c Contract) execute(sc *Scope) (interface{}, error) {
 	out := make([]interface{}, 0)
-	if c.conditions.answer != nil {
-		ok, err := c.conditions.answer.evaluate(sc)
+	if c.Conditions.Response != nil {
+		ok, err := c.Conditions.Response.evaluate(sc)
 		if err != nil {
 			return nil, err
 		}

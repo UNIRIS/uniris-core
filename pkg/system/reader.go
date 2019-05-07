@@ -1,7 +1,6 @@
 package system
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -31,7 +30,7 @@ type position struct {
 }
 
 func (i sysReader) GeoPosition() (lon float64, lat float64, err error) {
-	resp, err := http.Get("http://ip-api.com/json")
+	/*resp, err := http.Get("http://ip-api.com/json")
 	if err != nil {
 		return
 	}
@@ -43,6 +42,8 @@ func (i sysReader) GeoPosition() (lon float64, lat float64, err error) {
 		return
 	}
 	return pos.Longitude, pos.Latitude, nil
+	*/
+	return 30.0, 10.0, nil
 }
 
 func (i sysReader) CPULoad() (string, error) {
