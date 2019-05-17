@@ -23,7 +23,7 @@ func TestNewTransactionValidationStamp(t *testing.T) {
 
 	pubK := mockPublicKey{bytes: pub, curve: 0}
 
-	b, _ := json.Marshal(validationStamp{
+	b, _ := json.Marshal(vStamp{
 		nodePubk:  pubK,
 		status:    ValidationOK,
 		timestamp: time.Now(),
@@ -34,10 +34,10 @@ func TestNewTransactionValidationStamp(t *testing.T) {
 
 	v, err := NewValidationStamp(ValidationOK, time.Now(), pubK, sig)
 	assert.Nil(t, err)
-	assert.Equal(t, ValidationOK, v.(ValidationStamp).Status())
-	assert.Equal(t, time.Now().Unix(), v.(ValidationStamp).Timestamp().Unix())
-	assert.Equal(t, pubK, v.(ValidationStamp).NodePublicKey())
-	assert.Equal(t, sig, v.(ValidationStamp).NodeSignature())
+	assert.Equal(t, ValidationOK, v.(validationStamp).Status())
+	assert.Equal(t, time.Now().Unix(), v.(validationStamp).Timestamp().Unix())
+	assert.Equal(t, pubK, v.(validationStamp).NodePublicKey())
+	assert.Equal(t, sig, v.(validationStamp).NodeSignature())
 }
 
 /*

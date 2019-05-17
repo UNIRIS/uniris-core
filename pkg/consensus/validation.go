@@ -1,11 +1,10 @@
 package consensus
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/uniris/uniris-core/pkg/logging"
-	"time"
 
 	"github.com/uniris/uniris-core/pkg/shared"
 
@@ -198,46 +197,6 @@ func requestValidations(tx chain.Transaction, masterValid chain.MasterValidation
 	}
 
 	return validations, nil
-}
-
-//ConfirmTransactionValidation approve the transaction validation by master and ensure its integrity
-func ConfirmTransactionValidation(tx chain.Transaction, masterV chain.MasterValidation, pub crypto.PublicKey, pv crypto.PrivateKey, l logging.Logger) (chain.Validation, error) {
-
-	var status chain.ValidationStatus
-
-	if _, err := tx.IsValid(); err != nil {
-		l.Error("Transaction validation confirmation failed: " + err.Error())
-		status = chain.ValidationKO
-	} else if _, err := masterV.IsValid(); err != nil {
-		l.Error("Transaction master validation confirmation failed: " + err.Error())
-		status = chain.ValidationKO
-	} else {
-		status = chain.ValidationOK
-	}
-
-	return buildValidation(status, pub, pv)
-}
-
-func buildValidation(s chain.ValidationStatus, pub crypto.PublicKey, pv crypto.PrivateKey) (chain.Validation, error) {
-	pubBytes, err := pub.Marshal()
-	if err != nil {
-		return chain.Validation{}, err
-	}
-
-	vBytes, err := json.Marshal(map[string]interface{}{
-		"status":     s,
-		"timestamp":  time.Now().Unix(),
-		"public_key": pubBytes,
-	})
-	if err != nil {
-		return chain.Validation{}, err
-	}
-
-	vSig, err := pv.Sign(vBytes)
-	if err != nil {
-		return chain.Validation{}, err
-	}
-	return chain.NewValidation(s, time.Now(), pub, vSig)
 }
 
 //RequiredValidationNumber returns the need number of validations for a transaction either based on the network topology or the transaction fees

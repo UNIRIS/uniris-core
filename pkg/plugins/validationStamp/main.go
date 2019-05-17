@@ -15,16 +15,14 @@ var (
 	ValidationOK = 1
 )
 
-//ValidationStamp represents a Transaction validation stamp
-type ValidationStamp interface {
+type validationStamp interface {
 	Status() int
 	Timestamp() time.Time
 	NodePublicKey() interface{}
 	NodeSignature() []byte
-	IsValid() (bool, string)
 }
 
-type validationStamp struct {
+type vStamp struct {
 	status    int
 	timestamp time.Time
 	nodePubk  interface{}
@@ -39,60 +37,65 @@ type publicKey interface {
 //NewValidationStamp creates a new validation stamp
 func NewValidationStamp(status int, t time.Time, nodePubk interface{}, nodeSig []byte) (interface{}, error) {
 
-	v := validationStamp{
+	v := vStamp{
 		status:    status,
 		timestamp: t,
 		nodePubk:  nodePubk,
 		nodeSig:   nodeSig,
 	}
 
-	if ok, reason := v.IsValid(); !ok {
+	if ok, reason := IsValidStamp(v); !ok {
 		return nil, errors.New(reason)
 	}
 	return v, nil
 }
 
 //Status return the validation status
-func (v validationStamp) Status() int {
+func (v vStamp) Status() int {
 	return v.status
 }
 
 //Timestamp return the validation timestamp
-func (v validationStamp) Timestamp() time.Time {
+func (v vStamp) Timestamp() time.Time {
 	return v.timestamp
 }
 
 //PublicKey return the node's public key performed this validation
-func (v validationStamp) NodePublicKey() interface{} {
+func (v vStamp) NodePublicKey() interface{} {
 	return v.nodePubk
 }
 
 //Signature return the node's signature which performed this validation
-func (v validationStamp) NodeSignature() []byte {
+func (v vStamp) NodeSignature() []byte {
 	return v.nodeSig
 }
 
-//IsValid checks if the node validation is valid
-func (v validationStamp) IsValid() (bool, string) {
+//IsValidStamp checks if the validation stamp is valid
+func IsValidStamp(v interface{}) (bool, string) {
 
-	if v.nodePubk == nil {
+	stamp, ok := v.(validationStamp)
+	if !ok {
+		return false, "validation stamp: is not valid"
+	}
+
+	if stamp.NodePublicKey() == nil {
 		return false, "validation stamp: public key is missing"
 	}
 
-	nodePub, ok := v.nodePubk.(publicKey)
+	nodePub, ok := stamp.NodePublicKey().(publicKey)
 	if !ok {
 		return false, "validation stamp: public key is not valid"
 	}
 
-	if len(v.nodeSig) == 0 {
+	if len(stamp.NodeSignature()) == 0 {
 		return false, "validation stamp: signature is missing"
 	}
 
-	if v.timestamp.Unix() > time.Now().Unix() {
+	if stamp.Timestamp().Unix() > time.Now().Unix() {
 		return false, "validation stamp: timestamp must be anterior or equal to now"
 	}
 
-	switch v.status {
+	switch stamp.Status() {
 	case ValidationKO:
 	case ValidationOK:
 	default:
@@ -104,7 +107,7 @@ func (v validationStamp) IsValid() (bool, string) {
 		return false, err.Error()
 	}
 
-	if ok, err := nodePub.Verify(vBytes, v.nodeSig); err != nil {
+	if ok, err := nodePub.Verify(vBytes, stamp.NodeSignature()); err != nil {
 		return false, err.Error()
 	} else if !ok {
 		return false, "validation stamp: signature is not valid"
@@ -114,7 +117,7 @@ func (v validationStamp) IsValid() (bool, string) {
 }
 
 //MarshalJSON serializes as JSON a validation stamp
-func (v validationStamp) MarshalJSON() ([]byte, error) {
+func (v vStamp) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"status":     v.status,
 		"public_key": v.nodePubk.(publicKey).Marshal(),

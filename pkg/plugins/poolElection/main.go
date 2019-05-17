@@ -383,13 +383,57 @@ func FindValidationPool(txHash []byte, minValidations int, masterNodeKey []byte,
 }
 
 //FindStoragePool searches a storage pool for the given address
-func FindStoragePool(address []byte, r interface{}) (pool interface{}, err error) {
-	//Because of the entropy of the master election and without the sharding implementation
-	//We cannot be sure to retrieve the data
-	//So in waiting the sharding implementation, we need to select one of the master peers elected to retrieve data
-	//TODO: implement storage pool election
+func FindStoragePool(address []byte, nodePv interface{}, nodePub interface{}, r interface{}) (interface{}, error) {
 
-	return
+	nPv, ok := nodePv.(privateKey)
+	if !ok {
+		return nil, errors.New("find storage pool: invalid node private key")
+	}
+
+	nPb, ok := nodePub.(publicKey)
+	if !ok {
+		return nil, errors.New("find storage pool: invalid node public key")
+	}
+
+	nReader, ok := r.(nodeReader)
+	if !ok {
+		return nil, errors.New("find storage pool: invalid node reader type")
+	}
+
+	nodes, err := nReader.Reachables()
+	if err != nil {
+		return nil, fmt.Errorf("find storage pool: %s", err.Error())
+	}
+
+	pool := make([]interface{}, 0)
+
+	//TODO: implement storage pool election
+	for _, n := range nodes {
+
+		//Add the node to the pool
+		electedNode, err := NewElectedNode(n.PublicKey(), !n.IsReachable(), false, n.Patch().ID(), n.Status() == 0)
+		if err != nil {
+			return nil, err
+		}
+		pool = append(pool, electedNode)
+	}
+
+	//Sign the elected node list
+	poolJSON, err := json.Marshal(pool)
+	if err != nil {
+		return nil, err
+	}
+
+	sig, err := nPv.Sign(poolJSON)
+	if err != nil {
+		return nil, fmt.Errorf("find storage pool: %s", err.Error())
+	}
+
+	l, err := NewElectedNodeList(pool, nPb, sig)
+	if err != nil {
+		return nil, fmt.Errorf("find storage pool: %s", err.Error())
+	}
+	return l, nil
 }
 
 //RequiredNumberOfCoordinators returns the number of coordinator based on the network capacity

@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"plugin"
 )
 
 type publicKey interface {
 	Verify(data []byte, sig []byte) (bool, error)
-}
-
-type validationStamp interface {
-	IsValid() (bool, error)
 }
 
 type electedNode interface {
@@ -24,8 +23,7 @@ type electedNodeList interface {
 	CreatorSignature() []byte
 }
 
-//CoordinatorStamp represents a coordinator's stamp
-type CoordinatorStamp interface {
+type coordinatorStamp interface {
 	PreviousCrossValidators() [][]byte
 	ProofOfWork() interface{}
 	ValidationStamp() interface{}
@@ -33,11 +31,10 @@ type CoordinatorStamp interface {
 	ElectedCoordinatorNodes() interface{}
 	ElectedCrossValidationNodes() interface{}
 	ElectedStorageNodes() interface{}
-	IsValid() (bool, string)
 }
 
-//CoordinatorStamp describe the Transaction validation made by the coordinator
-type coordinatorStamp struct {
+//coordStmp describe the Transaction validation made by the coordinator
+type coordStmp struct {
 	prevCrossV      [][]byte
 	pow             interface{}
 	validStamp      interface{}
@@ -50,7 +47,7 @@ type coordinatorStamp struct {
 //NewCoordinatorStamp creates a new coordinator stamp
 func NewCoordinatorStamp(prevCrossV [][]byte, pow interface{}, validStamp interface{}, txHash []byte, elecCoordNodes interface{}, elecCrossVNodes interface{}, elecStorNodes interface{}) (interface{}, error) {
 
-	cs := coordinatorStamp{
+	cs := coordStmp{
 		prevCrossV:      prevCrossV,
 		pow:             pow,
 		validStamp:      validStamp,
@@ -60,69 +57,80 @@ func NewCoordinatorStamp(prevCrossV [][]byte, pow interface{}, validStamp interf
 		elecStorNodes:   elecStorNodes,
 	}
 
-	if ok, reason := cs.IsValid(); !ok {
+	if ok, reason := IsCoordinatorStampValid(cs); !ok {
 		return nil, errors.New(reason)
 	}
 
 	return cs, nil
 }
 
-func (c coordinatorStamp) PreviousCrossValidators() [][]byte {
+func (c coordStmp) PreviousCrossValidators() [][]byte {
 	return c.prevCrossV
 }
 
-func (c coordinatorStamp) ProofOfWork() interface{} {
+func (c coordStmp) ProofOfWork() interface{} {
 	return c.pow
 }
 
-func (c coordinatorStamp) ValidationStamp() interface{} {
+func (c coordStmp) ValidationStamp() interface{} {
 	return c.validStamp
 }
 
-func (c coordinatorStamp) TransactionHash() []byte {
+func (c coordStmp) TransactionHash() []byte {
 	return c.txHash
 }
 
-func (c coordinatorStamp) ElectedCoordinatorNodes() interface{} {
+func (c coordStmp) ElectedCoordinatorNodes() interface{} {
 	return c.elecCoordNodes
 }
 
-func (c coordinatorStamp) ElectedCrossValidationNodes() interface{} {
+func (c coordStmp) ElectedCrossValidationNodes() interface{} {
 	return c.elecCrossVNodes
 }
 
-func (c coordinatorStamp) ElectedStorageNodes() interface{} {
+func (c coordStmp) ElectedStorageNodes() interface{} {
 	return c.elecStorNodes
 }
 
-func (c coordinatorStamp) IsValid() (bool, string) {
+//IsCoordinatorStampValid checks if the coordinator stamp is valid
+func IsCoordinatorStampValid(c interface{}) (bool, string) {
 
-	if c.pow == nil {
+	cs, ok := c.(coordinatorStamp)
+	if !ok {
+		return false, "coordinator stamp: not valid"
+	}
+
+	if cs.ProofOfWork() == nil {
 		return false, "coordinator stamp: proof of work is missing"
 	}
 
-	if _, ok := c.pow.(publicKey); !ok {
+	if _, ok := cs.ProofOfWork().(publicKey); !ok {
 		return false, "coordinator stamp: proof of work is not a valid public key"
 	}
 
-	vStamp, ok := c.validStamp.(validationStamp)
-	if !ok {
-		return false, "coordinator stamp: invalid validation stamp"
+	p, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "validationStamp/plugin.so"))
+	if err != nil {
+		return false, fmt.Sprintf("coordinator stamp: %s", err.Error())
+	}
+	sym, err := p.Lookup("IsValidStamp")
+	if err != nil {
+		return false, fmt.Sprintf("coordinator stamp: %s", err.Error())
+	}
+	isValidF := sym.(func(interface{}) (bool, string))
+
+	if ok, reason := isValidF(cs.ValidationStamp()); !ok {
+		return false, fmt.Sprintf("coordinator stamp: invalid validation stamp: %s", reason)
 	}
 
-	if _, err := vStamp.IsValid(); err != nil {
-		return false, fmt.Sprintf("coordinator stamp: invalid validations stamp: %s", err.Error())
-	}
-
-	if c.txHash == nil {
+	if cs.TransactionHash() == nil {
 		return false, "coordinator stamp: missing transaction hash"
 	}
 
-	if c.elecCoordNodes == nil {
+	if cs.ElectedCoordinatorNodes() == nil {
 		return false, "coordinator stamp: missing elected coordinator nodes"
 	}
 
-	elecCoordN, ok := c.elecCoordNodes.(electedNodeList)
+	elecCoordN, ok := cs.ElectedCoordinatorNodes().(electedNodeList)
 	if !ok {
 		return false, "coordinator stamp: invalid elected coordinator nodes"
 	}
@@ -147,11 +155,11 @@ func (c coordinatorStamp) IsValid() (bool, string) {
 		return false, "coordinator stamp: invalid elected coordinate node signature"
 	}
 
-	if c.elecCrossVNodes == nil {
+	if cs.ElectedCrossValidationNodes() == nil {
 		return false, "coordinator stamp: missing elected cross validation nodes"
 	}
 
-	elecValidN, ok := c.elecCrossVNodes.(electedNodeList)
+	elecValidN, ok := cs.ElectedCrossValidationNodes().(electedNodeList)
 	if !ok {
 		return false, "coordinator stamp: invalid elected cross validation nodes"
 	}
@@ -176,11 +184,11 @@ func (c coordinatorStamp) IsValid() (bool, string) {
 		return false, "coordinator stamp: invalid elected cross validation node signature"
 	}
 
-	if c.elecStorNodes == nil {
+	if cs.ElectedStorageNodes() == nil {
 		return false, "coordinator stamp: missing elected storage nodes"
 	}
 
-	elecStrN, ok := c.elecStorNodes.(electedNodeList)
+	elecStrN, ok := cs.ElectedStorageNodes().(electedNodeList)
 	if !ok {
 		return false, "coordinator stamp: invalid elected storage nodes"
 	}

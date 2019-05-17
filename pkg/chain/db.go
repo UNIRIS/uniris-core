@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/uniris/uniris-core/pkg/crypto"
+	"github.com/uniris/uniris-cli/pkg/crypto"
 )
 
 //Database wrap chain database reader and writer

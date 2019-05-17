@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"plugin"
@@ -29,8 +28,7 @@ var (
 	SystemTransactionType = 4
 )
 
-//Transaction describe a root tx
-type Transaction interface {
+type transaction interface {
 	Address() []byte
 	Type() int
 	Data() map[string]interface{}
@@ -40,7 +38,8 @@ type Transaction interface {
 	OriginSignature() []byte
 	CoordinatorStamp() interface{}
 	CrossValidations() []interface{}
-	IsCoordinatorStampValid() (bool, string)
+	MarshalBeforeOriginSignature() ([]byte, error)
+	MarshalRoot() ([]byte, error)
 }
 
 type publicKey interface {
@@ -50,13 +49,7 @@ type publicKey interface {
 
 type coordinatorStamp interface {
 	ProofOfWork() interface{}
-	ValidationStamp() validationStamp
 	TransactionHash() []byte
-	IsValid() (bool, string)
-}
-
-type validationStamp interface {
-	IsValid() (bool, string)
 }
 
 type tx struct {
@@ -64,113 +57,30 @@ type tx struct {
 	txType        int
 	data          map[string]interface{}
 	timestamp     time.Time
-	pubKey        publicKey
+	pubKey        interface{}
 	sig           []byte
 	originSig     []byte
-	coordStmp     coordinatorStamp
-	confirmValids []validationStamp
+	coordStmp     interface{}
+	confirmValids []interface{}
 }
 
 //NewTransaction creates a new transaction and checks its integrity as well as the validation stamps
 func NewTransaction(addr []byte, txType int, data map[string]interface{}, timestamp time.Time, pubK interface{}, sig []byte, originSig []byte, coordS interface{}, crossV []interface{}) (interface{}, error) {
 
-	if len(addr) == 0 {
-		return nil, errors.New("transaction: address is missing")
-	}
-
-	p, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "hash/plugin.so"))
-	if err != nil {
-		return nil, fmt.Errorf("transaction: %s", err.Error())
-	}
-	sym, err := p.Lookup("IsValidHash")
-	if err != nil {
-		return nil, fmt.Errorf("transaction: %s", err.Error())
-	}
-	if !sym.(func([]byte) bool)(addr) {
-		return nil, errors.New("transaction: address is an invalid hash")
-	}
-
-	if pubK == nil {
-		return nil, errors.New("transaction: public key is missing")
-	}
-	pubKey, ok := pubK.(publicKey)
-	if !ok {
-		return nil, errors.New("transaction: public key type is invalid")
-	}
-
-	if len(sig) == 0 {
-		return nil, errors.New("transaction: signature is missing")
-	}
-
-	if len(originSig) == 0 {
-		return nil, errors.New("transaction: origin signature is missing")
-	}
-
-	if len(data) == 0 {
-		return nil, errors.New("transaction: data is missing")
-	}
-
-	if timestamp.Unix() > time.Now().Unix() {
-		return nil, errors.New("transaction: invalid timestamp")
-	}
-
-	switch txType {
-	case KeychainTransactionType:
-	case IDTransactionType:
-	case ContractTransactionType:
-	case SystemTransactionType:
-	default:
-		return nil, errors.New("transaction: invalid type")
-	}
-
 	t := tx{
-		addr:      addr,
-		txType:    txType,
-		data:      data,
-		timestamp: timestamp,
-		pubKey:    pubKey,
-		sig:       sig,
-		originSig: originSig,
+		addr:          addr,
+		txType:        txType,
+		data:          data,
+		timestamp:     timestamp,
+		pubKey:        pubK,
+		sig:           sig,
+		originSig:     originSig,
+		coordStmp:     coordS,
+		confirmValids: crossV,
 	}
 
-	tJSON, err := t.marshalBeforeSignature()
-	if err != nil {
-		return nil, fmt.Errorf("transaction: %s", err.Error())
-	}
-	if ok, err := pubKey.Verify(tJSON, t.sig); err != nil {
-		return nil, fmt.Errorf("transaction: %s", err.Error())
-	} else if !ok {
-		return nil, errors.New("transaction: invalid signature")
-	}
-
-	//Check the coordinator stamp
-	if coordS != nil {
-		coordStmp, ok := coordS.(coordinatorStamp)
-		log.Print(coordS)
-		if !ok {
-			return nil, errors.New("transaction: coordinator stamp type is invalid")
-		}
-		t.coordStmp = coordStmp
-		if ok, reason := t.IsCoordinatorStampValid(); !ok {
-			return nil, fmt.Errorf("transaction: %s", reason)
-		}
-
-	}
-
-	//Check the cross validation stamps
-	if crossV != nil && len(crossV) > 0 {
-		cv := make([]validationStamp, 0)
-		for _, v := range crossV {
-			vstmp, ok := v.(validationStamp)
-			if !ok {
-				return nil, errors.New("transaction: cross validation type is invalid")
-			}
-			if ok, reason := vstmp.IsValid(); !ok {
-				return nil, fmt.Errorf("transaction: %s", reason)
-			}
-			cv = append(cv, vstmp)
-		}
-		t.confirmValids = cv
+	if ok, reason := IsTransactionValid(t); !ok {
+		return nil, errors.New(reason)
 	}
 
 	return t, nil
@@ -215,41 +125,162 @@ func (t tx) CrossValidations() []interface{} {
 	return vv
 }
 
-func (t tx) IsCoordinatorStampValid() (bool, string) {
+func (t tx) MarshalBeforeOriginSignature() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"addr":       t.addr,
+		"data":       t.data,
+		"timestamp":  t.timestamp.Unix(),
+		"type":       t.txType,
+		"public_key": t.pubKey.(publicKey).Marshal(),
+		"signature":  t.sig,
+	})
+}
 
-	if ok, reason := t.coordStmp.IsValid(); !ok {
-		return false, reason
+func (t tx) MarshalRoot() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"addr":             t.addr,
+		"data":             t.data,
+		"timestamp":        t.timestamp.Unix(),
+		"type":             t.txType,
+		"public_key":       t.pubKey.(publicKey).Marshal(),
+		"signature":        t.sig,
+		"origin_signature": t.originSig,
+	})
+}
+
+//IsTransactionValid checks if a transaction is valid
+//starting by the root then if coordinator stamp is here it will be validated (calling coordinatorStamp plugin)
+//following by the cross validation (calling validationStamp plugin as well)
+func IsTransactionValid(tx interface{}) (bool, string) {
+	t, ok := tx.(transaction)
+	if !ok {
+		return false, "transaction: invalid type"
 	}
 
-	tJSON, err := t.marshal()
-	if err != nil {
-		return false, err.Error()
+	if ok, reason := checkTransactionRoot(t); !ok {
+		return true, fmt.Sprintf("transaction: %s", reason)
+	}
+
+	if t.CoordinatorStamp() != nil {
+		if ok, reason := checkCoordinatorStamp(t); !ok {
+			return false, fmt.Sprintf("transaction: %s", reason)
+		}
+	}
+	if t.CrossValidations() != nil && len(t.CrossValidations()) > 0 {
+		if ok, reason := checkCrossValidations(t); !ok {
+			return false, fmt.Sprintf("transaction: %s", reason)
+		}
+	}
+	return true, ""
+}
+
+func checkTransactionRoot(t transaction) (bool, string) {
+	if t.Address() == nil || len(t.Address()) == 0 {
+		return false, "transaction: address is missing"
 	}
 
 	p, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "hash/plugin.so"))
 	if err != nil {
-		return false, err.Error()
+		return false, fmt.Sprintf("transaction: %s", err.Error())
+	}
+	sym, err := p.Lookup("IsValidHash")
+	if err != nil {
+		return false, fmt.Sprintf("transaction: %s", err.Error())
+	}
+	if !sym.(func([]byte) bool)(t.Address()) {
+		return false, "transaction: address is an invalid hash"
 	}
 
-	hashSym, err := p.Lookup("Hash")
+	if t.PreviousPublicKey() == nil {
+		return false, "transaction: public key is missing"
+	}
+	pubKey, ok := t.PreviousPublicKey().(publicKey)
+	if !ok {
+		return false, "transaction: public key type is invalid"
+	}
+
+	if t.Signature() == nil || len(t.Signature()) == 0 {
+		return false, "transaction: signature is missing"
+	}
+
+	if t.OriginSignature() == nil || len(t.OriginSignature()) == 0 {
+		return false, "transaction: origin signature is missing"
+	}
+
+	if t.Data() == nil || len(t.Data()) == 0 {
+		return false, "transaction: data is missing"
+	}
+
+	if t.Timestamp().Unix() > time.Now().Unix() {
+		return false, "transaction: invalid timestamp"
+	}
+
+	switch t.Type() {
+	case KeychainTransactionType:
+	case IDTransactionType:
+	case ContractTransactionType:
+	case SystemTransactionType:
+	default:
+		return false, "transaction: invalid type"
+	}
+
+	tJSON, err := marshalBeforeSignature(t)
+	if err != nil {
+		return false, fmt.Sprintf("transaction: %s", err.Error())
+	}
+	if ok, err := pubKey.Verify(tJSON, t.Signature()); err != nil {
+		return false, fmt.Sprintf("transaction: %s", err.Error())
+	} else if !ok {
+		return false, "transaction: invalid signature"
+	}
+
+	return true, ""
+}
+
+func checkCoordinatorStamp(t transaction) (bool, string) {
+
+	coorPlug, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "coordinatorStamp/plugin.so"))
+	if err != nil {
+		return false, err.Error()
+	}
+	isValidCoordSym, err := coorPlug.Lookup("IsCoordinatorStampValid")
+	if err != nil {
+		return false, err.Error()
+	}
+	isValidCoordF := isValidCoordSym.(func(interface{}) (bool, string))
+	if ok, reason := isValidCoordF(t.CoordinatorStamp()); !ok {
+		return false, reason
+	}
+
+	tJSON, err := marshalTransaction(t)
 	if err != nil {
 		return false, err.Error()
 	}
 
-	f := hashSym.(func([]byte) []byte)
-	txHash := f(tJSON)
+	hashPlug, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "hash/plugin.so"))
+	if err != nil {
+		return false, err.Error()
+	}
 
-	if !bytes.Equal(txHash, t.coordStmp.TransactionHash()) {
+	hashSym, err := hashPlug.Lookup("Hash")
+	if err != nil {
+		return false, err.Error()
+	}
+
+	hashF := hashSym.(func([]byte) []byte)
+	txHash := hashF(tJSON)
+
+	if !bytes.Equal(txHash, t.CoordinatorStamp().(coordinatorStamp).TransactionHash()) {
 		return false, "integrity hash is invalid"
 	}
 
-	tJSON, err = t.marshalBeforeOriginSignature()
+	tJSON, err = t.MarshalBeforeOriginSignature()
 	if err != nil {
 		return false, err.Error()
 	}
 
-	pow := t.coordStmp.ProofOfWork().(publicKey)
-	if ok, err := pow.Verify(tJSON, t.originSig); err != nil {
+	pow := t.CoordinatorStamp().(coordinatorStamp).ProofOfWork().(publicKey)
+	if ok, err := pow.Verify(tJSON, t.OriginSignature()); err != nil {
 		return false, err.Error()
 	} else if !ok {
 		return false, "proof of work is invalid"
@@ -258,35 +289,48 @@ func (t tx) IsCoordinatorStampValid() (bool, string) {
 	return true, ""
 }
 
-func (t tx) marshalBeforeSignature() ([]byte, error) {
+func checkCrossValidations(t transaction) (bool, string) {
+
+	if t.CrossValidations() != nil && len(t.CrossValidations()) > 0 {
+		vPlugin, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "validationStamp/plugin.so"))
+		if err != nil {
+			return false, err.Error()
+		}
+		validStampSym, err := vPlugin.Lookup("IsValidStamp")
+		if err != nil {
+			return false, err.Error()
+		}
+		isValidStamp := validStampSym.(func(interface{}) (bool, string))
+		cv := make([]interface{}, 0)
+		for _, v := range t.CrossValidations() {
+			if ok, reason := isValidStamp(v); !ok {
+				return false, reason
+			}
+			cv = append(cv, v)
+		}
+	}
+
+	return true, ""
+}
+
+func marshalTransaction(t transaction) ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
-		"addr":       t.addr,
-		"data":       t.data,
-		"timestamp":  t.timestamp.Unix(),
-		"type":       t.txType,
-		"public_key": t.pubKey.Marshal(),
+		"addr":             t.Address(),
+		"data":             t.Data(),
+		"timestamp":        t.Timestamp().Unix(),
+		"type":             t.Type(),
+		"public_key":       t.PreviousPublicKey().(publicKey).Marshal(),
+		"signature":        t.Signature(),
+		"origin_signature": t.OriginSignature(),
 	})
 }
 
-func (t tx) marshalBeforeOriginSignature() ([]byte, error) {
+func marshalBeforeSignature(t transaction) ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
-		"addr":       t.addr,
-		"data":       t.data,
-		"timestamp":  t.timestamp.Unix(),
-		"type":       t.txType,
-		"public_key": t.pubKey.Marshal(),
-		"signature":  t.sig,
-	})
-}
-
-func (t tx) marshal() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"addr":             t.addr,
-		"data":             t.data,
-		"timestamp":        t.timestamp.Unix(),
-		"type":             t.txType,
-		"public_key":       t.pubKey.Marshal(),
-		"signature":        t.sig,
-		"origin_signature": t.originSig,
+		"addr":       t.Address(),
+		"data":       t.Data(),
+		"timestamp":  t.Timestamp().Unix(),
+		"type":       t.Type(),
+		"public_key": t.PreviousPublicKey().(publicKey).Marshal(),
 	})
 }

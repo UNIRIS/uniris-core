@@ -53,12 +53,12 @@ func TestNewTransaction(t *testing.T) {
 
 	tx, err := NewTransaction(addr, KeychainTransactionType, data, time.Now(), mockPublicKey{bytes: pub}, sig, sig, nil, nil)
 	assert.Nil(t, err)
-	assert.Equal(t, addr, tx.(Transaction).Address())
-	assert.Equal(t, data, tx.(Transaction).Data())
-	assert.Equal(t, KeychainTransactionType, tx.(Transaction).Type())
-	assert.Equal(t, mockPublicKey{bytes: pub}, tx.(Transaction).PreviousPublicKey())
-	assert.Equal(t, sig, tx.(Transaction).Signature())
-	assert.Equal(t, sig, tx.(Transaction).OriginSignature())
+	assert.Equal(t, addr, tx.(transaction).Address())
+	assert.Equal(t, data, tx.(transaction).Data())
+	assert.Equal(t, KeychainTransactionType, tx.(transaction).Type())
+	assert.Equal(t, mockPublicKey{bytes: pub}, tx.(transaction).PreviousPublicKey())
+	assert.Equal(t, sig, tx.(transaction).Signature())
+	assert.Equal(t, sig, tx.(transaction).OriginSignature())
 }
 
 /*
@@ -90,12 +90,9 @@ func TestNewTransactionWithInvalidPublicKey(t *testing.T) {
 	addr[0] = byte(int(crypto.SHA256))
 	copy(addr[1:], hOut)
 
-	_, err := NewTransaction(addr, KeychainTransactionType, nil, time.Now(), nil, nil, nil, nil, nil)
-	assert.EqualError(t, err, "transaction: public key is missing")
-
 	fake := struct{}{}
-	_, err = NewTransaction(addr, KeychainTransactionType, nil, time.Now(), fake, nil, nil, nil, nil)
-	assert.EqualError(t, err, "transaction: public key type is invalid")
+	_, err := NewTransaction(addr, KeychainTransactionType, nil, time.Now(), fake, nil, nil, nil, nil)
+	assert.EqualError(t, err, "transaction: invalid public key")
 }
 
 /*
@@ -266,16 +263,16 @@ func TestNewTransactionWithInvalidCoordinatorStampType(t *testing.T) {
 
 	fake := struct{}{}
 	_, err := NewTransaction(addr, KeychainTransactionType, data, time.Now(), mockPublicKey{bytes: pub}, sig, sig, fake, nil)
-	assert.EqualError(t, err, "transaction: coordinator stamp type is invalid")
+	assert.EqualError(t, err, "transaction: invalid coordinator stamp")
 }
 
 /*
-Scenario: Create a new transaction with invalid coordinator stamp
-	Given a transaction with an invalid coordinator stamp values
+Scenario: Create a new transaction with invalid cross valdiation stamp
+	Given a transaction with an invalid cross valdiation stamp
 	When I want to create the transaction
 	Then I get an error
 */
-func TestNewTransactionWithInvalidCoordinatorStampValues(t *testing.T) {
+func TestNewTransactionWithInvalidCrossValidatorStamp(t *testing.T) {
 
 	pub, pv, _ := ed25519.GenerateKey(rand.Reader)
 
@@ -332,7 +329,7 @@ func TestNewTransactionWithInvalidCoordinatorStampValues(t *testing.T) {
 	}
 	fake := []interface{}{struct{}{}}
 	_, err := NewTransaction(addr, KeychainTransactionType, data, time.Now(), mockPublicKey{bytes: pub}, sig, sig, cs, fake)
-	assert.Equal(t, err, "transaction: cross validation type is invalid")
+	assert.EqualError(t, err, "transaction: cross validation type is invalid")
 }
 
 type mockPublicKey struct {
@@ -359,15 +356,24 @@ func (pv mockPrivateKey) Sign(data []byte) ([]byte, error) {
 	return ed25519.Sign(pv.bytes, data), nil
 }
 
-type mockValidation struct {
-	pubKey publicKey
-	sig    []byte
-	ts     time.Time
-	status int
+type mockValidationStamp struct {
+	status    int
+	timestamp time.Time
+	pubKey    mockPublicKey
+	sig       []byte
 }
 
-func (v mockValidation) IsValid() (bool, string) {
-	return true, ""
+func (v mockValidationStamp) Status() int {
+	return v.status
+}
+func (v mockValidationStamp) Timestamp() time.Time {
+	return v.timestamp
+}
+func (v mockValidationStamp) NodePublicKey() interface{} {
+	return v.pubKey
+}
+func (v mockValidationStamp) NodeSignature() []byte {
+	return v.sig
 }
 
 type mockCoordinatorStamp struct {
@@ -380,10 +386,4 @@ func (ct mockCoordinatorStamp) ProofOfWork() interface{} {
 }
 func (ct mockCoordinatorStamp) TransactionHash() []byte {
 	return ct.txHash
-}
-func (ct mockCoordinatorStamp) ValidationStamp() validationStamp {
-	return mockValidation{}
-}
-func (ct mockCoordinatorStamp) IsValid() (bool, string) {
-	return true, ""
 }

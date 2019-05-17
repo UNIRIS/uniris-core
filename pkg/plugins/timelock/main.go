@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/uniris/uniris-core/pkg/crypto"
 )
 
 var timeLockCountdown = 60 * time.Second
@@ -63,7 +61,7 @@ func ContainsTransactionTimeLock(txHash []byte, txAddr []byte) bool {
 	return found
 }
 
-func findTimelock(txHash, txAddr crypto.VersionnedHash) (tl timeLocker, found bool, index int) {
+func findTimelock(txHash, txAddr []byte) (tl timeLocker, found bool, index int) {
 	for index, l := range timeLockers {
 		if bytes.Equal(l.txHash, txHash) && bytes.Equal(l.txAddress, txAddr) {
 			return l, true, index
@@ -72,7 +70,7 @@ func findTimelock(txHash, txAddr crypto.VersionnedHash) (tl timeLocker, found bo
 	return
 }
 
-func transactionHashTimeLocked(txHash crypto.VersionnedHash) bool {
+func transactionHashTimeLocked(txHash []byte) bool {
 	for _, l := range timeLockers {
 		if bytes.Equal(l.txHash, txHash) {
 			return true
@@ -81,7 +79,7 @@ func transactionHashTimeLocked(txHash crypto.VersionnedHash) bool {
 	return false
 }
 
-func removeTimeLock(txHash crypto.VersionnedHash, txAddr crypto.VersionnedHash) {
+func removeTimeLock(txHash []byte, txAddr []byte) {
 	tl, found, index := findTimelock(txHash, txAddr)
 	if !found {
 		return

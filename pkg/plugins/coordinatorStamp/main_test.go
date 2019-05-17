@@ -3,6 +3,8 @@ package main
 import (
 	"crypto/rand"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -10,6 +12,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestMain(m *testing.M) {
+	dir, _ := os.Getwd()
+	os.Setenv("PLUGINS_DIR", filepath.Join(dir, "../"))
+	m.Run()
+}
 
 /*
 Scenario: Create a new coordinator stamp
@@ -22,10 +30,10 @@ func TestNewCoordinatorStamp(t *testing.T) {
 
 	pubK := mockPublicKey{bytes: pub}
 	pvK := mockPrivateKey{bytes: pv}
-	v := mockValidation{
-		pubKey: pubK,
-		status: 1,
-		ts:     time.Now(),
+	v := mockValidationStamp{
+		pubKey:    pubK,
+		status:    1,
+		timestamp: time.Now(),
 	}
 	b, _ := json.Marshal(v)
 	sig, _ := pvK.Sign(b)
@@ -56,9 +64,9 @@ func TestNewCoordinatorStamp(t *testing.T) {
 
 	coorStmp, err := NewCoordinatorStamp(nil, pubK, v, []byte("hash"), coordN, crossVN, storN)
 	assert.Nil(t, err)
-	assert.EqualValues(t, pubK, coorStmp.(CoordinatorStamp).ProofOfWork().(publicKey))
-	assert.Equal(t, v, coorStmp.(CoordinatorStamp).ValidationStamp())
-	assert.Empty(t, coorStmp.(CoordinatorStamp).PreviousCrossValidators())
+	assert.EqualValues(t, pubK, coorStmp.(coordinatorStamp).ProofOfWork().(publicKey))
+	assert.Equal(t, v, coorStmp.(coordinatorStamp).ValidationStamp())
+	assert.Empty(t, coorStmp.(coordinatorStamp).PreviousCrossValidators())
 }
 
 /*
@@ -80,17 +88,6 @@ func TestCreateCoordinatorStampWithInvalidPOW(t *testing.T) {
 //TODO: add tests to handle the check of the coordinator nodes
 //TODO: add tests to handle the check of the cross validation nodes
 //TODO: add tests to handle the check of the storage nodes
-
-type mockValidation struct {
-	pubKey publicKey
-	sig    []byte
-	ts     time.Time
-	status int
-}
-
-func (v mockValidation) IsValid() (bool, error) {
-	return true, nil
-}
 
 type mockPublicKey struct {
 	bytes []byte
@@ -150,4 +147,24 @@ func (e mockElectedNodeList) CreatorPublicKey() publicKey {
 
 func (e mockElectedNodeList) CreatorSignature() []byte {
 	return e.creatorSignature
+}
+
+type mockValidationStamp struct {
+	status    int
+	timestamp time.Time
+	pubKey    mockPublicKey
+	sig       []byte
+}
+
+func (v mockValidationStamp) Status() int {
+	return v.status
+}
+func (v mockValidationStamp) Timestamp() time.Time {
+	return v.timestamp
+}
+func (v mockValidationStamp) NodePublicKey() interface{} {
+	return v.pubKey
+}
+func (v mockValidationStamp) NodeSignature() []byte {
+	return v.sig
 }
