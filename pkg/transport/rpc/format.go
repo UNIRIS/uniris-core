@@ -1,13 +1,14 @@
 package rpc
 
 import (
-	"errors"
+	"encoding/json"
 	"net"
+	"os"
+	"path/filepath"
+	"plugin"
 	"time"
 
-	"github.com/uniris/uniris-core/pkg/chain"
-	"github.com/uniris/uniris-core/pkg/crypto"
-	"github.com/uniris/uniris-core/pkg/shared"
+	"github.com/golang/protobuf/ptypes/any"
 
 	"github.com/uniris/uniris-core/pkg/discovery"
 
@@ -81,269 +82,355 @@ func formatPeerDiscovered(p *api.PeerDiscovered) discovery.Peer {
 	)
 }
 
-func formatTransaction(tx *api.Transaction) (chain.Transaction, error) {
+func formatTransaction(tx *api.Transaction) (transaction, error) {
 
-	propPubKey, err := crypto.ParsePublicKey(tx.SharedKeysEmitterProposal.PublicKey)
-	if err != nil {
-		return chain.Transaction{}, nil
-	}
-	propSharedKeys, err := shared.NewEmitterCrossKeyPair(tx.SharedKeysEmitterProposal.EncryptedPrivateKey, propPubKey)
-	if err != nil {
-		return chain.Transaction{}, err
-	}
-
-	data := make(map[string][]byte, 0)
+	data := make(map[string]interface{}, 0)
 	for k, v := range tx.Data {
 		data[k] = v
 	}
 
-	txPubKey, err := crypto.ParsePublicKey(tx.PublicKey)
-	if err != nil {
-		return chain.Transaction{}, errors.New("invalid public key")
-	}
-
-	return chain.NewTransaction(tx.Address, chain.TransactionType(tx.Type), data,
-		time.Unix(tx.Timestamp, 0),
-		txPubKey,
-		propSharedKeys,
-		tx.Signature,
-		tx.EmitterSignature,
-		tx.TransactionHash)
-}
-
-func formatMinedTransaction(t *api.Transaction, mv *api.MasterValidation, valids []*api.Validation) (chain.Transaction, error) {
-
-	masterValid, err := formatMasterValidation(mv)
-	if err != nil {
-		return chain.Transaction{}, err
-	}
-
-	confValids := make([]chain.Validation, 0)
-	for _, v := range valids {
-		txValid, err := formatValidation(v)
-		if err != nil {
-			return chain.Transaction{}, err
-		}
-		confValids = append(confValids, txValid)
-	}
-
-	txRoot, err := formatTransaction(t)
-	if err != nil {
-		return chain.Transaction{}, err
-	}
-	tx, err := chain.NewTransaction(txRoot.Address(), txRoot.TransactionType(), txRoot.Data(), txRoot.Timestamp(), txRoot.PublicKey(), txRoot.EmitterSharedKeyProposal(), txRoot.Signature(), txRoot.EmitterSignature(), txRoot.TransactionHash())
-	if err != nil {
-		return chain.Transaction{}, err
-	}
-
-	if err := tx.Mined(masterValid, confValids); err != nil {
-		return chain.Transaction{}, err
-	}
-
-	return tx, nil
-}
-
-func formatMasterValidation(mv *api.MasterValidation) (chain.MasterValidation, error) {
-	preValid, err := formatValidation(mv.PreValidation)
-	if err != nil {
-		return chain.MasterValidation{}, err
-	}
-
-	wHeaders, err := formatWelcomeNodeHeaders(mv.WelcomeHeaders)
-	if err != nil {
-		return chain.MasterValidation{}, err
-	}
-	vHeaders, err := formatNodeHeaders(mv.ValidationHeaders)
-	if err != nil {
-		return chain.MasterValidation{}, err
-	}
-	sHeaders, err := formatNodeHeaders(mv.StorageHeaders)
-	if err != nil {
-		return chain.MasterValidation{}, err
-	}
-	powKey, err := crypto.ParsePublicKey(mv.ProofOfWork)
-	if err != nil {
-		return chain.MasterValidation{}, errors.New("invalid proof of work public key")
-	}
-
-	previousNodeKeys := make([]crypto.PublicKey, 0)
-	for _, prevNodeKey := range mv.PreviousValidationNodes {
-		nodePubKey, err := crypto.ParsePublicKey(prevNodeKey)
-		if err != nil {
-			return chain.MasterValidation{}, errors.New("invalid previous transaction node public key")
-		}
-		previousNodeKeys = append(previousNodeKeys, nodePubKey)
-	}
-
-	masterValidation, err := chain.NewMasterValidation(previousNodeKeys, powKey, preValid, wHeaders, vHeaders, sHeaders)
-	return masterValidation, err
-}
-
-func formatAPIValidation(v chain.Validation) (*api.Validation, error) {
-
-	nodeKey, err := v.PublicKey().Marshal()
+	p, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "transaction/plugin.so"))
 	if err != nil {
 		return nil, err
 	}
 
-	return &api.Validation{
-		PublicKey: nodeKey,
-		Signature: v.Signature(),
-		Status:    api.Validation_ValidationStatus(v.Status()),
+	sym, err := p.Lookup("NewTransaction")
+	if err != nil {
+		return nil, err
+	}
+
+	pc, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "key/plugin.so"))
+	if err != nil {
+		return nil, err
+	}
+
+	pcSym, err := pc.Lookup("ParsePublicKey")
+	if err != nil {
+		return nil, err
+	}
+	parsePubF := pcSym.(func(k []byte) (interface{}, error))
+	txpub, err := parsePubF(tx.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	f := sym.(func(addr []byte, txType int, data map[string]interface{}, timestamp time.Time, pubK interface{}, sig []byte, originSig []byte, coordS interface{}, crossV []interface{}) (interface{}, error))
+
+	t, err := f(tx.Address, int(tx.Type), data, time.Unix(tx.Timestamp, 0), txpub, tx.Signature, tx.OriginSignature, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return t.(transaction), nil
+}
+
+func formatMinedTransaction(t *api.Transaction, mv *api.CoordinatorStamp, valids []*api.ValidationStamp) (transaction, error) {
+
+	coordS, err := formatCoordinatorStamp(mv)
+	if err != nil {
+		return nil, err
+	}
+
+	crossV := make([]interface{}, 0)
+	for _, v := range valids {
+		txValid, err := formatValidationStamp(v)
+		if err != nil {
+			return nil, err
+		}
+		crossV = append(crossV, txValid)
+	}
+
+	pTx, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "transaction/plugin.so"))
+	if err != nil {
+		return nil, err
+	}
+
+	pTxSym, err := pTx.Lookup("NewTransaction")
+	if err != nil {
+		return nil, err
+	}
+
+	data := make(map[string]interface{}, 0)
+	for k, v := range t.Data {
+		data[k] = v
+	}
+
+	newTF := pTxSym.(func(addr []byte, txType int, data map[string]interface{}, timestamp time.Time, pubK interface{}, sig []byte, originSig []byte, coordS interface{}, crossV []interface{}) (interface{}, error))
+
+	pK, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "key/plugin.so"))
+	if err != nil {
+		return nil, err
+	}
+
+	pKSym, err := pK.Lookup("ParsePublicKey")
+	if err != nil {
+		return nil, err
+	}
+
+	parsePub := pKSym.(func([]byte) (interface{}, error))
+	pubK, err := parsePub(t.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := newTF(t.Address, int(t.Type), data, time.Unix(t.Timestamp, 0), pubK, t.Signature, t.OriginSignature, coordS, crossV)
+	if err != nil {
+		return nil, err
+	}
+	return tx.(transaction), nil
+}
+
+func formatCoordinatorStamp(cs *api.CoordinatorStamp) (coordinatorStamp, error) {
+	preValid, err := formatValidationStamp(cs.ValidationStamp)
+	if err != nil {
+		return nil, err
+	}
+
+	coordN, err := formatElectedNodeList(cs.ElectedCoordinatorNodes)
+	if err != nil {
+		return nil, err
+	}
+
+	crossV, err := formatElectedNodeList(cs.ElectedCrossValidationNodes)
+	if err != nil {
+		return nil, err
+	}
+
+	storeN, err := formatElectedNodeList(cs.ElectedStorageNodes)
+	if err != nil {
+		return nil, err
+	}
+
+	pc, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "key/plugin.so"))
+	if err != nil {
+		return nil, err
+	}
+
+	pcSym, err := pc.Lookup("ParsePublicKey")
+	if err != nil {
+		return nil, err
+	}
+	parsePubF := pcSym.(func(k []byte) (interface{}, error))
+
+	pow, err := parsePubF(cs.ProofOfWork)
+	if err != nil {
+		return nil, err
+	}
+
+	previousNodeKeys := make([][]byte, 0)
+	for _, prevNodeKey := range cs.PreviousCrossValidators {
+		previousNodeKeys = append(previousNodeKeys, prevNodeKey)
+	}
+
+	pC, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "coordinatorStamp/plugin.so"))
+	if err != nil {
+		return nil, err
+	}
+	pCSym, err := pC.Lookup("NewCoordinatorStamp")
+	if err != nil {
+		return nil, err
+	}
+
+	f := pCSym.(func(prevCrossV [][]byte, pow interface{}, validStamp interface{}, txHash []byte, elecCoordNodes interface{}, elecCrossVNodes interface{}, elecStorNodes interface{}) (interface{}, error))
+
+	coordS, err := f(previousNodeKeys, pow, preValid, []byte("hash"), coordN, crossV, storeN)
+	if err != nil {
+		return nil, err
+	}
+	return coordS.(coordinatorStamp), nil
+}
+
+func formatAPIValidation(v validationStamp) (*api.ValidationStamp, error) {
+
+	return &api.ValidationStamp{
+		PublicKey: v.NodePublicKey().(publicKey).Marshal(),
+		Signature: v.NodeSignature(),
+		Status:    api.ValidationStamp_ValidationStatus(v.Status()),
 		Timestamp: v.Timestamp().Unix(),
 	}, nil
 }
 
-func formatValidation(v *api.Validation) (chain.Validation, error) {
-	nodeKey, err := crypto.ParsePublicKey(v.PublicKey)
+func formatValidationStamp(v *api.ValidationStamp) (validationStamp, error) {
+
+	pc, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "key/plugin.so"))
 	if err != nil {
-		return chain.Validation{}, errors.New("validation public key is invalid")
+		return nil, err
 	}
 
-	return chain.NewValidation(chain.ValidationStatus(v.Status), time.Unix(v.Timestamp, 0), nodeKey, v.Signature)
+	pcSym, err := pc.Lookup("ParsePublicKey")
+	if err != nil {
+		return nil, err
+	}
+	parsePubF := pcSym.(func(k []byte) (interface{}, error))
+
+	nodeKey, err := parsePubF(v.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	pV, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "validationStamp/plugin.so"))
+	if err != nil {
+		return nil, err
+	}
+
+	pvSym, err := pV.Lookup("NewValidationStamp")
+	if err != nil {
+		return nil, err
+	}
+
+	f := pvSym.(func(status int, t time.Time, nodePubk interface{}, nodeSig []byte) (interface{}, error))
+
+	vStamp, err := f(int(v.Status), time.Unix(v.Timestamp, 0), nodeKey, v.Signature)
+	if err != nil {
+		return nil, err
+	}
+	return vStamp.(validationStamp), nil
 }
 
-func formatAPITransaction(tx chain.Transaction) (*api.Transaction, error) {
+func formatAPITransaction(tx transaction) (*api.Transaction, error) {
 
-	txPub, err := tx.PublicKey().Marshal()
-	if err != nil {
-		return nil, err
-	}
-
-	propPub, err := tx.EmitterSharedKeyProposal().PublicKey().Marshal()
-	if err != nil {
-		return nil, err
+	data := make(map[string]*any.Any, len(tx.Data()))
+	for k, v := range tx.Data() {
+		b, err := json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+		data[k] = &any.Any{Value: b}
 	}
 
 	return &api.Transaction{
-		Address:          tx.Address(),
-		Data:             tx.Data(),
-		Type:             api.TransactionType(tx.TransactionType()),
-		PublicKey:        txPub,
-		Signature:        tx.Signature(),
-		EmitterSignature: tx.EmitterSignature(),
-		Timestamp:        tx.Timestamp().Unix(),
-		TransactionHash:  tx.TransactionHash(),
-		SharedKeysEmitterProposal: &api.SharedKeyPair{
-			EncryptedPrivateKey: tx.EmitterSharedKeyProposal().EncryptedPrivateKey(),
-			PublicKey:           propPub,
-		},
+		Address:         tx.Address(),
+		Timestamp:       tx.Timestamp().Unix(),
+		Type:            api.TransactionType(tx.Type()),
+		Data:            data,
+		PublicKey:       tx.PreviousPublicKey().(publicKey).Marshal(),
+		Signature:       tx.Signature(),
+		OriginSignature: tx.OriginSignature(),
 	}, nil
 }
 
-func formatAPIMasterValidation(masterValid chain.MasterValidation) (*api.MasterValidation, error) {
-
-	powKey, err := masterValid.ProofOfWork().Marshal()
-	if err != nil {
-		return nil, err
-	}
-
+func formatAPICoordinatorStamp(coordStamp coordinatorStamp) (*api.CoordinatorStamp, error) {
+	powKey := coordStamp.ProofOfWork().Marshal()
 	prevNodeKeys := make([][]byte, 0)
-	for _, k := range masterValid.PreviousValidationNodes() {
-		nodeKey, err := k.Marshal()
-		if err != nil {
-			return nil, err
-		}
-		prevNodeKeys = append(prevNodeKeys, nodeKey)
+	for _, k := range coordStamp.PreviousCrossValidators() {
+		prevNodeKeys = append(prevNodeKeys, k)
 	}
 
-	v, err := formatAPIValidation(masterValid.Validation())
+	v, err := formatAPIValidation(coordStamp.ValidationStamp())
 	if err != nil {
 		return nil, err
 	}
 
-	wHeaders, err := formatWelcomeNodeHeadersAPI(masterValid.WelcomeHeaders())
-	if err != nil {
-		return nil, err
-	}
-	vHeaders, err := formatNodeHeadersAPI(masterValid.ValidationHeaders())
-	if err != nil {
-		return nil, err
-	}
-	sHeaders, err := formatNodeHeadersAPI(masterValid.StorageHeaders())
-	if err != nil {
-		return nil, err
-	}
+	coordNodes := formatElectedNodeListAPI(coordStamp.ElectedCoordinatorNodes())
+	crossVNodes := formatElectedNodeListAPI(coordStamp.ElectedCrossValidationNodes())
+	storNodes := formatElectedNodeListAPI(coordStamp.ElectedStorageNodes())
 
-	return &api.MasterValidation{
-		ProofOfWork:             powKey,
-		PreviousValidationNodes: prevNodeKeys,
-		PreValidation:           v,
-		WelcomeHeaders:          wHeaders,
-		ValidationHeaders:       vHeaders,
-		StorageHeaders:          sHeaders,
+	return &api.CoordinatorStamp{
+		ProofOfWork:                 powKey,
+		PreviousCrossValidators:     prevNodeKeys,
+		ValidationStamp:             v,
+		TransactionHash:             coordStamp.TransactionHash(),
+		ElectedCoordinatorNodes:     coordNodes,
+		ElectedCrossValidationNodes: crossVNodes,
+		ElectedStorageNodes:         storNodes,
 	}, nil
 }
 
-func formatNodeHeadersAPI(headers []chain.NodeHeader) (apiHeaders []*api.NodeHeader, err error) {
-	for _, h := range headers {
-		pubKey, err := h.PublicKey().Marshal()
+func formatElectedNodeList(l *api.ElectedNodeList) (electedNodeList, error) {
+
+	nodes := make([]interface{}, len(l.Nodes))
+	for i, n := range l.Nodes {
+		el, err := formatElectedNode(n)
 		if err != nil {
 			return nil, err
 		}
-		apiHeaders = append(apiHeaders, &api.NodeHeader{
-			IsMaster:      h.IsMaster(),
-			IsUnreachable: h.IsUnreachable(),
-			PublicKey:     pubKey,
-			PatchNumber:   int32(h.PatchNumber()),
-			IsOK:          h.IsOk(),
-		})
+		nodes[i] = el
 	}
-	return
-}
 
-func formatWelcomeNodeHeadersAPI(wheaders chain.WelcomeNodeHeader) (*api.WelcomeNodeHeader, error) {
+	pKey, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "key/plugin.so"))
+	if err != nil {
+		return nil, err
+	}
+	pParsePubSym, err := pKey.Lookup("ParsePublicKey")
+	if err != nil {
+		return nil, err
+	}
+	parsePub := pParsePubSym.(func([]byte) (interface{}, error))
 
-	masterlist := make([]*api.NodeHeader, 0)
-
-	wnpubk, err := wheaders.PublicKey().Marshal()
+	pubk, err := parsePub(l.PublicKey)
 	if err != nil {
 		return nil, err
 	}
 
-	masterlist, err = formatNodeHeadersAPI(wheaders.NodeHeaders())
+	pElec, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "poolElection/plugin.so"))
+	if err != nil {
+		return nil, err
+	}
+	pNewESym, err := pElec.Lookup("NewElectedNodeList")
 	if err != nil {
 		return nil, err
 	}
 
-	return &api.WelcomeNodeHeader{
-		PublicKey:   wnpubk,
-		MastersList: masterlist,
-		Signature:   wheaders.Sig(),
-	}, nil
+	f := pNewESym.(func(nodes []interface{}, pubk interface{}, sig []byte) (interface{}, error))
+
+	list, err := f(nodes, pubk, l.Signature)
+	if err != nil {
+		return nil, err
+	}
+	return list.(electedNodeList), nil
 }
 
-func formatNodeHeaders(apiHeaders []*api.NodeHeader) (headers []chain.NodeHeader, err error) {
-	for _, h := range apiHeaders {
-		pubKey, err := crypto.ParsePublicKey(h.PublicKey)
-		if err != nil {
-			return nil, err
-		}
-		headers = append(headers, chain.NewNodeHeader(
-			pubKey,
-			h.IsUnreachable,
-			h.IsMaster,
-			int(h.PatchNumber),
-			h.IsOK,
-		))
+func formatElectedNodeListAPI(l electedNodeList) *api.ElectedNodeList {
+	nodes := make([]*api.ElectedNode, len(l.Nodes()))
+	for i, n := range l.Nodes() {
+		nodes[i] = formatElectedNodeAPI(n)
 	}
-	return
+
+	return &api.ElectedNodeList{
+		Nodes:     nodes,
+		PublicKey: l.CreatorPublicKey().Marshal(),
+		Signature: l.CreatorSignature(),
+	}
 }
 
-func formatWelcomeNodeHeaders(apiwHeaders *api.WelcomeNodeHeader) (chain.WelcomeNodeHeader, error) {
+func formatElectedNode(n *api.ElectedNode) (electedNode, error) {
 
-	masterlist := make([]chain.NodeHeader, 0)
-	wnh := chain.WelcomeNodeHeader{}
-
-	wpubk, err := crypto.ParsePublicKey(apiwHeaders.PublicKey)
+	pElec, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "poolElection/plugin.so"))
 	if err != nil {
-		return wnh, err
+		return nil, err
+	}
+	pNewESym, err := pElec.Lookup("NewElectedNode")
+	if err != nil {
+		return nil, err
+	}
+	newElectNodeF := pNewESym.(func(pb interface{}, isUnreach bool, isCoord bool, patchNb int, isOK bool) (interface{}, error))
+
+	pKey, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "key/plugin.so"))
+	if err != nil {
+		return nil, err
+	}
+	pParsePubSym, err := pKey.Lookup("ParsePublicKey")
+	if err != nil {
+		return nil, err
+	}
+	parsePub := pParsePubSym.(func([]byte) (interface{}, error))
+
+	pubk, err := parsePub(n.PublicKey)
+	if err != nil {
+		return nil, err
 	}
 
-	masterlist, err = formatNodeHeaders(apiwHeaders.MastersList)
+	el, err := newElectNodeF(pubk, n.IsUnreachable, n.IsMaster, int(n.PatchNumber), n.IsOK)
 	if err != nil {
-		return wnh, err
+		return nil, err
 	}
+	return el.(electedNode), nil
+}
 
-	return chain.NewWelcomeNodeHeader(wpubk, masterlist, apiwHeaders.Signature), nil
+func formatElectedNodeAPI(n electedNode) *api.ElectedNode {
+	return &api.ElectedNode{
+		IsMaster:    n.IsCoordinator(),
+		IsOK:        n.IsOK(),
+		PatchNumber: int32(n.PatchNumber()),
+		PublicKey:   n.PublicKey().Marshal(),
+	}
 }

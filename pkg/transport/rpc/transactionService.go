@@ -3,40 +3,39 @@ package rpc
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"plugin"
 	"time"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
-	"github.com/uniris/uniris-core/pkg/chain"
-	"github.com/uniris/uniris-core/pkg/consensus"
-	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/logging"
-	"github.com/uniris/uniris-core/pkg/shared"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type txSrv struct {
-	chainDB         chain.Database
-	sharedKeyReader shared.KeyReader
-	nodeReader      consensus.NodeReader
-	poolR           consensus.PoolRequester
-	nodePublicKey   crypto.PublicKey
-	nodePrivateKey  crypto.PrivateKey
+	chainDB         chainDB
+	sharedKeyReader sharedKeyReader
+	nodeReader      nodeReader
+	poolR           poolRequester
+	nodePublicKey   publicKey
+	nodePrivateKey  privateKey
 	logger          logging.Logger
 }
 
 //NewTransactionService creates service handler for the GRPC Transaction service
-func NewTransactionService(cDB chain.Database, skr shared.KeyReader, nr consensus.NodeReader, pR consensus.PoolRequester, pubk crypto.PublicKey, pvk crypto.PrivateKey, l logging.Logger) api.TransactionServiceServer {
-	return txSrv{
-		chainDB:         cDB,
-		sharedKeyReader: skr,
-		nodeReader:      nr,
-		poolR:           pR,
-		nodePublicKey:   pubk,
-		nodePrivateKey:  pvk,
-		logger:          l,
-	}
-}
+// func NewTransactionService(cDB chain.Database, skr shared.KeyReader, nr consensus.NodeReader, pR consensus.PoolRequester, pubk publicKey, pvk privateKey, l logging.Logger) api.TransactionServiceServer {
+// 	return txSrv{
+// 		chainDB:         cDB,
+// 		sharedKeyReader: skr,
+// 		nodeReader:      nr,
+// 		poolR:           pR,
+// 		nodePublicKey:   pubk,
+// 		nodePrivateKey:  pvk,
+// 		logger:          l,
+// 	}
+// }
 
 func (s txSrv) GetLastTransaction(ctx context.Context, req *api.GetLastTransactionRequest) (*api.GetLastTransactionResponse, error) {
 	s.logger.Debug("GET LAST TRANSACTION REQUEST - " + time.Unix(req.Timestamp, 0).String())
@@ -50,16 +49,16 @@ func (s txSrv) GetLastTransaction(ctx context.Context, req *api.GetLastTransacti
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	nodeLastKeys, err := s.sharedKeyReader.LastNodeCrossKeypair()
+	lastPub, lastPv, err := s.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	if !nodeLastKeys.PublicKey().Verify(reqBytes, req.SignatureRequest) {
+	if ok, err := lastPub.Verify(reqBytes, req.SignatureRequest); !ok || err != nil {
 		return nil, status.New(codes.InvalidArgument, "invalid signature").Err()
 	}
 
-	tx, err := chain.LastTransaction(s.chainDB, req.TransactionAddress, chain.TransactionType(req.Type))
+	tx, err := s.chainDB.LastTransaction(req.TransactionAddress, int(req.Type))
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -67,9 +66,9 @@ func (s txSrv) GetLastTransaction(ctx context.Context, req *api.GetLastTransacti
 		return nil, status.New(codes.NotFound, "transaction does not exist").Err()
 	}
 
-	tvf, err := formatAPITransaction(*tx)
+	tvf, err := formatAPITransaction(tx)
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 	res := &api.GetLastTransactionResponse{
 		Timestamp:   time.Now().Unix(),
@@ -80,7 +79,7 @@ func (s txSrv) GetLastTransaction(ctx context.Context, req *api.GetLastTransacti
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	sig, err := nodeLastKeys.PrivateKey().Sign(resBytes)
+	sig, err := lastPv.Sign(resBytes)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -99,15 +98,15 @@ func (s txSrv) GetTransactionStatus(ctx context.Context, req *api.GetTransaction
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
-	nodeLastKeys, err := s.sharedKeyReader.LastNodeCrossKeypair()
+	lastPub, lastPv, err := s.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	if !nodeLastKeys.PublicKey().Verify(reqBytes, req.SignatureRequest) {
+	if ok, err := lastPub.Verify(reqBytes, req.SignatureRequest); !ok || err != nil {
 		return nil, status.New(codes.InvalidArgument, "invalid signature").Err()
 	}
 
-	txStatus, err := chain.GetTransactionStatus(s.chainDB, req.TransactionHash)
+	txStatus, err := s.chainDB.GetTransactionStatus(req.TransactionHash)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -120,7 +119,7 @@ func (s txSrv) GetTransactionStatus(ctx context.Context, req *api.GetTransaction
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := nodeLastKeys.PrivateKey().Sign(resBytes)
+	sig, err := lastPv.Sign(resBytes)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -136,24 +135,30 @@ func (s txSrv) StoreTransaction(ctx context.Context, req *api.StoreTransactionRe
 		MinedTransaction: req.MinedTransaction,
 		Timestamp:        req.Timestamp,
 	})
-	nodeLastKeys, err := s.sharedKeyReader.LastNodeCrossKeypair()
+	lastPub, lastPv, err := s.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	if !nodeLastKeys.PublicKey().Verify(reqBytes, req.SignatureRequest) {
+	if ok, err := lastPub.Verify(reqBytes, req.SignatureRequest); !ok || err != nil {
 		return nil, status.New(codes.InvalidArgument, "invalid signature").Err()
 	}
 
-	tx, err := formatMinedTransaction(req.MinedTransaction.Transaction, req.MinedTransaction.MasterValidation, req.MinedTransaction.ConfirmValidations)
+	tx, err := formatMinedTransaction(req.MinedTransaction.Transaction, req.MinedTransaction.CoordinatorStamp, req.MinedTransaction.CrossValidations)
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	if !consensus.IsAuthorizedToStoreTx(tx) {
-		return nil, status.New(codes.PermissionDenied, "not authorized to store this data").Err()
+	p, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "chain/plugin.so"))
+	if err != nil {
+		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
+	sym, err := p.Lookup("StoreTransaction")
+	if err != nil {
+		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
+	}
+	f := sym.(func(tx interface{}, minV int, chainWriter interface{}) error)
 
-	if err := chain.WriteTransaction(s.chainDB, tx, int(req.MinimumValidations)); err != nil {
+	if err := f(tx, int(req.MinimumValidations), s.chainDB); err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
@@ -164,7 +169,7 @@ func (s txSrv) StoreTransaction(ctx context.Context, req *api.StoreTransactionRe
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := nodeLastKeys.PrivateKey().Sign(resBytes)
+	sig, err := lastPv.Sign(resBytes)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -175,26 +180,45 @@ func (s txSrv) StoreTransaction(ctx context.Context, req *api.StoreTransactionRe
 func (s txSrv) TimeLockTransaction(ctx context.Context, req *api.TimeLockTransactionRequest) (*api.TimeLockTransactionResponse, error) {
 	s.logger.Debug("TIMELOCK TRANSACTION REQUEST - " + time.Unix(req.Timestamp, 0).String())
 
+	p, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "key/plugin.so"))
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	sym, err := p.Lookup("ParsePublicKey")
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	parsePub := sym.(func([]byte) (interface{}, error))
+
 	reqBytes, err := json.Marshal(&api.TimeLockTransactionRequest{
 		TransactionHash:     req.TransactionHash,
 		Address:             req.Address,
 		MasterNodePublicKey: req.MasterNodePublicKey,
 		Timestamp:           req.Timestamp,
 	})
-	nodeLastKeys, err := s.sharedKeyReader.LastNodeCrossKeypair()
+	lastPub, lastPv, err := s.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	if !nodeLastKeys.PublicKey().Verify(reqBytes, req.SignatureRequest) {
+	if ok, err := lastPub.Verify(reqBytes, req.SignatureRequest); !ok || err != nil {
 		return nil, status.New(codes.InvalidArgument, "invalid signature").Err()
 	}
 
-	masterKey, err := crypto.ParsePublicKey(req.MasterNodePublicKey)
+	masterKey, err := parsePub(req.MasterNodePublicKey)
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, "invalid master public key").Err()
 	}
 
-	if err := chain.TimeLockTransaction(req.TransactionHash, req.Address, masterKey); err != nil {
+	pTimelock, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "timelock/plugin.so"))
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	pTimelockSym, err := pTimelock.Lookup("TimeLockTransaction")
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+
+	if err := pTimelockSym.(func([]byte, []byte, []byte) error)(req.TransactionHash, req.Address, masterKey.(publicKey).Marshal()); err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
@@ -205,7 +229,7 @@ func (s txSrv) TimeLockTransaction(ctx context.Context, req *api.TimeLockTransac
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := nodeLastKeys.PrivateKey().Sign(resBytes)
+	sig, err := lastPv.Sign(resBytes)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -213,20 +237,20 @@ func (s txSrv) TimeLockTransaction(ctx context.Context, req *api.TimeLockTransac
 	return res, nil
 }
 
-func (s txSrv) LeadTransactionMining(ctx context.Context, req *api.LeadTransactionMiningRequest) (*api.LeadTransactionMiningResponse, error) {
+func (s txSrv) CoordinateTransaction(ctx context.Context, req *api.CoordinateTransactionRequest) (*api.CoordinateTransactionResponse, error) {
 	s.logger.Debug("LEAD TRANSACTION MINING REQUEST - " + time.Unix(req.Timestamp, 0).String())
 
-	reqBytes, err := json.Marshal(&api.LeadTransactionMiningRequest{
-		Transaction:        req.Transaction,
-		MinimumValidations: req.MinimumValidations,
-		Timestamp:          req.Timestamp,
-		WelcomeHeaders:     req.WelcomeHeaders,
+	reqBytes, err := json.Marshal(&api.CoordinateTransactionRequest{
+		Transaction:             req.Transaction,
+		MinimumValidations:      req.MinimumValidations,
+		Timestamp:               req.Timestamp,
+		ElectedCoordinatorNodes: req.ElectedCoordinatorNodes,
 	})
-	nodeLastKeys, err := s.sharedKeyReader.LastNodeCrossKeypair()
+	lastPub, lastPv, err := s.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	if !nodeLastKeys.PublicKey().Verify(reqBytes, req.SignatureRequest) {
+	if ok, err := lastPub.Verify(reqBytes, req.SignatureRequest); !ok || err != nil {
 		return nil, status.New(codes.InvalidArgument, "invalid signature").Err()
 	}
 
@@ -235,23 +259,42 @@ func (s txSrv) LeadTransactionMining(ctx context.Context, req *api.LeadTransacti
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	wHeaders, err := formatWelcomeNodeHeaders(req.WelcomeHeaders)
+	wHeaders, err := formatElectedNodeList(req.ElectedCoordinatorNodes)
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	if err := consensus.LeadMining(tx, int(req.MinimumValidations), wHeaders, s.poolR, s.nodePublicKey, s.nodePrivateKey, s.sharedKeyReader, s.nodeReader, s.logger); err != nil {
+	p, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "mining/plugin.so"))
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	coordVSym, err := p.Lookup("CoordinateTransactionProcessing")
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	coordVF := coordVSym.(func(tx interface{}, nbValidations int, coordList interface{}, nodePv interface{}, nodePub interface{}, nodeReader interface{}, originPublicKeys []interface{}, poolReq interface{}) error)
+
+	authKey, err := s.sharedKeyReader.AuthorizedNodesPublicKeys()
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	authKeys := make([]interface{}, len(authKey))
+	for i, k := range authKey {
+		authKeys[i] = k
+	}
+
+	if err := coordVF(tx, int(req.MinimumValidations), wHeaders, s.nodePrivateKey, s.nodePublicKey, s.nodeReader, authKeys, s.poolR); err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	res := &api.LeadTransactionMiningResponse{
+	res := &api.CoordinateTransactionResponse{
 		Timestamp: time.Now().Unix(),
 	}
 	resBytes, err := json.Marshal(res)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := nodeLastKeys.PrivateKey().Sign(resBytes)
+	sig, err := lastPv.Sign(resBytes)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -259,23 +302,23 @@ func (s txSrv) LeadTransactionMining(ctx context.Context, req *api.LeadTransacti
 	return res, nil
 }
 
-func (s txSrv) ConfirmTransactionValidation(ctx context.Context, req *api.ConfirmTransactionValidationRequest) (*api.ConfirmTransactionValidationResponse, error) {
+func (s txSrv) CrossValidateTransaction(ctx context.Context, req *api.CrossValidateTransactionRequest) (*api.CrossValidateTransactionResponse, error) {
 	s.logger.Debug("CONFIRM VALIDATION TRANSACTION REQUEST - " + time.Unix(req.Timestamp, 0).String())
 
-	reqBytes, err := json.Marshal(&api.ConfirmTransactionValidationRequest{
+	reqBytes, err := json.Marshal(&api.CrossValidateTransactionRequest{
 		Transaction:      req.Transaction,
-		MasterValidation: req.MasterValidation,
+		CoordinatorStamp: req.CoordinatorStamp,
 		Timestamp:        req.Timestamp,
 	})
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
 
-	nodeLastKeys, err := s.sharedKeyReader.LastNodeCrossKeypair()
+	lastPub, lastPv, err := s.sharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
-		return nil, err
+		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	if !nodeLastKeys.PublicKey().Verify(reqBytes, req.SignatureRequest) {
+	if ok, err := lastPub.Verify(reqBytes, req.SignatureRequest); !ok || err != nil {
 		return nil, status.New(codes.InvalidArgument, "invalid signature").Err()
 	}
 
@@ -283,20 +326,44 @@ func (s txSrv) ConfirmTransactionValidation(ctx context.Context, req *api.Confir
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
-	masterValid, err := formatMasterValidation(req.MasterValidation)
+	coordStamp, err := formatCoordinatorStamp(req.CoordinatorStamp)
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, err.Error()).Err()
 	}
-	valid, err := consensus.ConfirmTransactionValidation(tx, masterValid, s.nodePublicKey, s.nodePrivateKey, s.logger)
+	tPlugin, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "transaction/plugin.so"))
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	txSym, err := tPlugin.Lookup("NewTransaction")
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	txF := txSym.(func(addr []byte, txType int, data map[string]interface{}, timestamp time.Time, pubK interface{}, sig []byte, originSig []byte, coordS interface{}, crossV []interface{}) (interface{}, error))
+	minedTx, err := txF(tx.Address(), tx.Type(), tx.Data(), tx.Timestamp(), tx.PreviousPublicKey(), tx.Signature(), tx.OriginSignature(), coordStamp, nil)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	v, err := formatAPIValidation(valid)
+	p, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "mining/plugin.so"))
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	res := &api.ConfirmTransactionValidationResponse{
+	vSym, err := p.Lookup("CrossValidateTransaction")
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	vF := vSym.(func(tx interface{}, nodePub interface{}, nodePv interface{}) (interface{}, error))
+
+	valid, err := vF(minedTx, s.nodePublicKey, s.nodePrivateKey)
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+
+	v, err := formatAPIValidation(valid.(validationStamp))
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	res := &api.CrossValidateTransactionResponse{
 		Validation: v,
 		Timestamp:  time.Now().Unix(),
 	}
@@ -304,7 +371,7 @@ func (s txSrv) ConfirmTransactionValidation(ctx context.Context, req *api.Confir
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
-	sig, err := nodeLastKeys.PrivateKey().Sign(resBytes)
+	sig, err := lastPv.Sign(resBytes)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
