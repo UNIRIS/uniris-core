@@ -16,26 +16,28 @@ import (
 
 type txSrv struct {
 	chainDB         chainDB
+	indexDB         indexDB
 	sharedKeyReader sharedKeyReader
 	nodeReader      nodeReader
-	poolR           poolRequester
+	poolR           PoolRequester
 	nodePublicKey   publicKey
 	nodePrivateKey  privateKey
 	logger          logging.Logger
 }
 
-//NewTransactionService creates service handler for the GRPC Transaction service
-// func NewTransactionService(cDB chain.Database, skr shared.KeyReader, nr consensus.NodeReader, pR consensus.PoolRequester, pubk publicKey, pvk privateKey, l logging.Logger) api.TransactionServiceServer {
-// 	return txSrv{
-// 		chainDB:         cDB,
-// 		sharedKeyReader: skr,
-// 		nodeReader:      nr,
-// 		poolR:           pR,
-// 		nodePublicKey:   pubk,
-// 		nodePrivateKey:  pvk,
-// 		logger:          l,
-// 	}
-// }
+// NewTransactionService creates service handler for the GRPC Transaction service
+func NewTransactionService(cDB chainDB, iDB indexDB, skr sharedKeyReader, nr nodeReader, pR PoolRequester, pubk publicKey, pvk privateKey, l logging.Logger) api.TransactionServiceServer {
+	return txSrv{
+		chainDB:         cDB,
+		indexDB:         iDB,
+		sharedKeyReader: skr,
+		nodeReader:      nr,
+		poolR:           pR,
+		nodePublicKey:   pubk,
+		nodePrivateKey:  pvk,
+		logger:          l,
+	}
+}
 
 func (s txSrv) GetLastTransaction(ctx context.Context, req *api.GetLastTransactionRequest) (*api.GetLastTransactionResponse, error) {
 	s.logger.Debug("GET LAST TRANSACTION REQUEST - " + time.Unix(req.Timestamp, 0).String())
@@ -58,7 +60,15 @@ func (s txSrv) GetLastTransaction(ctx context.Context, req *api.GetLastTransacti
 		return nil, status.New(codes.InvalidArgument, "invalid signature").Err()
 	}
 
-	tx, err := s.chainDB.LastTransaction(req.TransactionAddress, int(req.Type))
+	p, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "chain/plugin.so"))
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	sym, err := p.Lookup("GetLastTransaction")
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	tx, err := sym.(func([]byte, interface{}, interface{}) (interface{}, error))(req.TransactionAddress, s.chainDB, s.indexDB)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -66,13 +76,32 @@ func (s txSrv) GetLastTransaction(ctx context.Context, req *api.GetLastTransacti
 		return nil, status.New(codes.NotFound, "transaction does not exist").Err()
 	}
 
-	tvf, err := formatAPITransaction(tx)
+	tvf, err := formatAPITransaction(tx.(transaction))
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}
+
+	coordStmp, err := formatAPICoordinatorStamp(tx.(transaction).CoordinatorStamp().(coordinatorStamp))
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+
+	crossV := make([]*api.ValidationStamp, 0)
+	for _, v := range tx.(transaction).CrossValidations() {
+		vStamp, err := formatAPIValidation(v.(validationStamp))
+		if err != nil {
+			return nil, status.New(codes.Internal, err.Error()).Err()
+		}
+		crossV = append(crossV, vStamp)
+	}
+
 	res := &api.GetLastTransactionResponse{
-		Timestamp:   time.Now().Unix(),
-		Transaction: tvf,
+		Timestamp: time.Now().Unix(),
+		Transaction: &api.MinedTransaction{
+			Transaction:      tvf,
+			CoordinatorStamp: coordStmp,
+			CrossValidations: crossV,
+		},
 	}
 	resBytes, err := json.Marshal(res)
 	if err != nil {
@@ -106,7 +135,16 @@ func (s txSrv) GetTransactionStatus(ctx context.Context, req *api.GetTransaction
 		return nil, status.New(codes.InvalidArgument, "invalid signature").Err()
 	}
 
-	txStatus, err := s.chainDB.GetTransactionStatus(req.TransactionHash)
+	p, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "chain/plugin.so"))
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+	sym, err := p.Lookup("GetTransactionStatus")
+	if err != nil {
+		return nil, status.New(codes.Internal, err.Error()).Err()
+	}
+
+	txStatus, err := sym.(func([]byte) (int, error))(req.TransactionHash)
 	if err != nil {
 		return nil, status.New(codes.Internal, err.Error()).Err()
 	}

@@ -30,24 +30,24 @@ type privateKey interface {
 
 type coordinatorStamp interface {
 	PreviousCrossValidators() [][]byte
-	ProofOfWork() publicKey
-	ValidationStamp() validationStamp
+	ProofOfWork() interface{}
+	ValidationStamp() interface{}
 	TransactionHash() []byte
-	ElectedCoordinatorNodes() electedNodeList
-	ElectedCrossValidationNodes() electedNodeList
-	ElectedStorageNodes() electedNodeList
+	ElectedCoordinatorNodes() interface{}
+	ElectedCrossValidationNodes() interface{}
+	ElectedStorageNodes() interface{}
 }
 
 type electedNodeList interface {
-	Nodes() []electedNode
-	CreatorPublicKey() publicKey
+	Nodes() []interface{}
+	CreatorPublicKey() interface{}
 	CreatorSignature() []byte
 }
 
 type validationStamp interface {
 	Status() int
 	Timestamp() time.Time
-	NodePublicKey() publicKey
+	NodePublicKey() interface{}
 	NodeSignature() []byte
 }
 
@@ -57,7 +57,7 @@ type electedNode interface {
 	IsCoordinator() bool
 	IsOK() bool
 	PatchNumber() int
-	PublicKey() publicKey
+	PublicKey() interface{}
 }
 
 type sharedKeyReader interface {
@@ -86,14 +86,6 @@ type emitterCrossKeyPair interface {
 	EncryptedPrivateKey() []byte
 }
 
-type chainDB interface {
-	WriteKOTransaction(t transaction) error
-	WriteTransaction(t transaction) error
-	GetTransactionByHash(txHash []byte) (transaction, error)
-	LastTransaction(genesis []byte, txType int) (transaction, error)
-	GetTransactionStatus(txHash []byte) (int, error)
-}
-
 type nodeReader interface {
 	CountReachables() (int, error)
 	Reachables() ([]node, error)
@@ -106,4 +98,22 @@ type node interface {
 	Port() int
 	PatchNumber() int
 	PublicKey() publicKey
+	IsReachable() bool
+}
+
+type chainDB interface {
+	WriteKeychain(tx interface{}) error
+	WriteID(tx interface{}) error
+	WriteKO(tx interface{}) error
+
+	FindKeychainByAddr(addr []byte) (interface{}, error)
+	FindKeychainByHash(txHash []byte) (interface{}, error)
+	FindIDByHash(txHash []byte) (interface{}, error)
+	FindIDByAddr(addr []byte) (interface{}, error)
+	FindKOByHash(txHash []byte) (interface{}, error)
+	FindKOByAddr(addr []byte) (interface{}, error)
+}
+
+type indexDB interface {
+	FindLastTransactionAddr(genesis []byte) ([]byte, error)
 }

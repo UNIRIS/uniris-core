@@ -18,8 +18,8 @@ type electedNode interface {
 }
 
 type electedNodeList interface {
-	Nodes() []electedNode
-	CreatorPublicKey() publicKey
+	Nodes() []interface{}
+	CreatorPublicKey() interface{}
 	CreatorSignature() []byte
 }
 

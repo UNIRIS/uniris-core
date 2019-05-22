@@ -189,7 +189,6 @@ func formatCoordinatorStamp(cs *api.CoordinatorStamp) (coordinatorStamp, error) 
 	if err != nil {
 		return nil, err
 	}
-
 	crossV, err := formatElectedNodeList(cs.ElectedCrossValidationNodes)
 	if err != nil {
 		return nil, err
@@ -309,20 +308,20 @@ func formatAPITransaction(tx transaction) (*api.Transaction, error) {
 }
 
 func formatAPICoordinatorStamp(coordStamp coordinatorStamp) (*api.CoordinatorStamp, error) {
-	powKey := coordStamp.ProofOfWork().Marshal()
+	powKey := coordStamp.ProofOfWork().(publicKey).Marshal()
 	prevNodeKeys := make([][]byte, 0)
 	for _, k := range coordStamp.PreviousCrossValidators() {
 		prevNodeKeys = append(prevNodeKeys, k)
 	}
 
-	v, err := formatAPIValidation(coordStamp.ValidationStamp())
+	v, err := formatAPIValidation(coordStamp.ValidationStamp().(validationStamp))
 	if err != nil {
 		return nil, err
 	}
 
-	coordNodes := formatElectedNodeListAPI(coordStamp.ElectedCoordinatorNodes())
-	crossVNodes := formatElectedNodeListAPI(coordStamp.ElectedCrossValidationNodes())
-	storNodes := formatElectedNodeListAPI(coordStamp.ElectedStorageNodes())
+	coordNodes := formatElectedNodeListAPI(coordStamp.ElectedCoordinatorNodes().(electedNodeList))
+	crossVNodes := formatElectedNodeListAPI(coordStamp.ElectedCrossValidationNodes().(electedNodeList))
+	storNodes := formatElectedNodeListAPI(coordStamp.ElectedStorageNodes().(electedNodeList))
 
 	return &api.CoordinatorStamp{
 		ProofOfWork:                 powKey,
@@ -382,12 +381,12 @@ func formatElectedNodeList(l *api.ElectedNodeList) (electedNodeList, error) {
 func formatElectedNodeListAPI(l electedNodeList) *api.ElectedNodeList {
 	nodes := make([]*api.ElectedNode, len(l.Nodes()))
 	for i, n := range l.Nodes() {
-		nodes[i] = formatElectedNodeAPI(n)
+		nodes[i] = formatElectedNodeAPI(n.(electedNode))
 	}
 
 	return &api.ElectedNodeList{
 		Nodes:     nodes,
-		PublicKey: l.CreatorPublicKey().Marshal(),
+		PublicKey: l.CreatorPublicKey().(publicKey).Marshal(),
 		Signature: l.CreatorSignature(),
 	}
 }
@@ -431,6 +430,6 @@ func formatElectedNodeAPI(n electedNode) *api.ElectedNode {
 		IsMaster:    n.IsCoordinator(),
 		IsOK:        n.IsOK(),
 		PatchNumber: int32(n.PatchNumber()),
-		PublicKey:   n.PublicKey().Marshal(),
+		PublicKey:   n.PublicKey().(publicKey).Marshal(),
 	}
 }

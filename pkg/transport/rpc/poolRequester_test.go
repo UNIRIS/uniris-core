@@ -7,22 +7,24 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/uniris/uniris-core/pkg/chain"
-
-	"github.com/uniris/uniris-core/pkg/consensus"
-
-	"github.com/uniris/uniris-core/pkg/shared"
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 
 	api "github.com/uniris/uniris-core/api/protobuf-spec"
-	"github.com/uniris/uniris-core/pkg/crypto"
 	"github.com/uniris/uniris-core/pkg/logging"
 )
+
+func TestMain(m *testing.M) {
+	dir, _ := os.Getwd()
+	os.Setenv("PLUGINS_DIR", filepath.Join(dir, "../../plugins"))
+	m.Run()
+}
 
 /*
 Scenario: Request transction lock on a pool
@@ -32,24 +34,38 @@ Scenario: Request transction lock on a pool
 */
 func TestRequestTransactionLock(t *testing.T) {
 
-	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
+	pub, pv, _ := ed25519.GenerateKey(rand.Reader)
 
-	sharedKeyReader := &mockSharedKeyReader{}
-	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
-	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{
+		crossNodePubKeys: []publicKey{
+			mockPublicKey{bytes: pub},
+		},
+		crossNodePvKeys: []privateKey{
+			mockPrivateKey{bytes: pv},
+		},
+	}
 
 	nodeReader := &mockNodeReader{
-		nodes: []consensus.Node{
-			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		nodes: []node{
+			mockNode{
+				ip:        net.ParseIP("127.0.0.1"),
+				port:      5000,
+				publicKey: mockPublicKey{bytes: pub},
+				patchNb:   1,
+			},
 		},
 	}
 
 	chainDB := &mockChainDB{}
 
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
-	pr := NewPoolRequester(sharedKeyReader, l)
+	pr := PoolRequester{
+		Logger:          l,
+		SharedKeyReader: sharedKeyReader,
+		nodeReader:      nodeReader,
+	}
 
-	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l)
+	txSrv := NewTransactionService(chainDB, nil, sharedKeyReader, nodeReader, pr, mockPublicKey{bytes: pub}, mockPrivateKey{bytes: pv}, l)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -57,9 +73,15 @@ func TestRequestTransactionLock(t *testing.T) {
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
-	pool, _ := consensus.FindStoragePool([]byte("addr"), nodeReader)
-	assert.Nil(t, pr.RequestTransactionTimeLock(pool, crypto.Hash([]byte("tx")), crypto.Hash([]byte("addr")), pub))
-	assert.True(t, chain.ContainsTimeLock(crypto.Hash([]byte("tx")), crypto.Hash([]byte("addr"))))
+	pool := mockElectedNodeList{
+		nodes: []interface{}{
+			mockElectedNode{
+				publicKey: mockPublicKey{bytes: pub},
+			},
+		},
+	}
+
+	assert.Nil(t, pr.RequestTransactionTimeLock(pool, []byte("tx hash"), []byte("addr"), mockPublicKey{bytes: pub}))
 }
 
 /*
@@ -70,28 +92,37 @@ Scenario: Request transaction validation confirmation
 */
 func TestRequestConfirmValidation(t *testing.T) {
 
-	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
-	pubB, _ := pub.Marshal()
+	pub, pv, _ := ed25519.GenerateKey(rand.Reader)
 
-	kp, _ := shared.NewEmitterCrossKeyPair(([]byte("pvkey")), pub)
-
-	sharedKeyReader := &mockSharedKeyReader{}
-	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, kp)
-	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
-	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
-	sharedKeyReader.authKeys = append(sharedKeyReader.authKeys, pub)
+	sharedKeyReader := &mockSharedKeyReader{
+		crossNodePubKeys: []publicKey{
+			mockPublicKey{bytes: pub},
+		},
+		crossNodePvKeys: []privateKey{
+			mockPrivateKey{bytes: pv},
+		},
+	}
 
 	nodeReader := &mockNodeReader{
-		nodes: []consensus.Node{
-			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		nodes: []node{
+			mockNode{
+				ip:        net.ParseIP("127.0.0.1"),
+				port:      5000,
+				publicKey: mockPublicKey{bytes: pub},
+				patchNb:   1,
+			},
 		},
 	}
 
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
-	pr := NewPoolRequester(sharedKeyReader, l)
+	pr := PoolRequester{
+		SharedKeyReader: sharedKeyReader,
+		Logger:          l,
+		nodeReader:      nodeReader,
+	}
 
-	miningSrv := NewTransactionService(nil, sharedKeyReader, nodeReader, pr, pub, pv, l)
+	miningSrv := NewTransactionService(nil, nil, sharedKeyReader, nodeReader, pr, mockPublicKey{bytes: pub}, mockPrivateKey{bytes: pv}, l)
 
 	lis, err := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -99,58 +130,115 @@ func TestRequestConfirmValidation(t *testing.T) {
 	api.RegisterTransactionServiceServer(grpcServer, miningSrv)
 	go grpcServer.Serve(lis)
 
-	data := map[string][]byte{
-		"encrypted_address_by_node": []byte("addr"),
-		"encrypted_wallet":          []byte("wallet"),
-	}
-	prop := kp
 	txRaw := map[string]interface{}{
-		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
-		"data": map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		"addr": []byte("addr"),
+		"data": map[string]interface{}{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
+			"em_shared_keys_proposal": map[string]interface{}{
+				"encrypted_private_key": []byte("pvkey"),
+				"public_key":            pub,
+			},
 		},
 		"timestamp":  time.Now().Unix(),
-		"type":       chain.KeychainTransactionType,
-		"public_key": hex.EncodeToString(pubB),
-		"em_shared_keys_proposal": map[string]string{
-			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
-			"public_key":            hex.EncodeToString(pubB),
-		},
+		"type":       0,
+		"public_key": pub,
 	}
 	txBytes, _ := json.Marshal(txRaw)
-	sig, _ := pv.Sign(txBytes)
+	sig := ed25519.Sign(pv, txBytes)
 	txRaw["signature"] = hex.EncodeToString(sig)
 	txByteWithSig, _ := json.Marshal(txRaw)
-	emSig, _ := pv.Sign(txByteWithSig)
+	emSig := ed25519.Sign(pv, txByteWithSig)
 	txRaw["em_signature"] = hex.EncodeToString(emSig)
 	txBytes, _ = json.Marshal(txRaw)
 
-	tx, _ := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash(txBytes))
+	tx := mockTransaction{
+		addr:   []byte("addr"),
+		txType: 0,
+		data: map[string]interface{}{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
+			"em_shared_keys_proposal": map[string]interface{}{
+				"encrypted_private_key": []byte("pvkey"),
+				"public_key":            pub,
+			},
+		},
+		timestamp: time.Now(),
+		pubKey:    mockPublicKey{bytes: pub},
+		sig:       sig,
+		originSig: emSig,
+	}
 
+	v := mockValidationStamp{
+		nodePub:   mockPublicKey{bytes: pub},
+		status:    1,
+		timestamp: time.Now(),
+	}
 	vBytes, _ := json.Marshal(map[string]interface{}{
-		"status":     chain.ValidationOK,
-		"public_key": pubB,
-		"timestamp":  time.Now().Unix(),
+		"status":     1,
+		"public_key": v.nodePub.Marshal(),
+		"timestamp":  v.timestamp.Unix(),
 	})
-	vSig, _ := pv.Sign(vBytes)
-	v, err := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
+	vSig := ed25519.Sign(pv, vBytes)
+	v.sig = vSig
 
-	wHeaders := chain.NewWelcomeNodeHeader(pub, []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
-	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
-	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
-	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
+	coordN := mockElectedNodeList{
+		nodes: []interface{}{
+			mockElectedNode{
+				publicKey: mockPublicKey{bytes: pub},
+			},
+		},
+		pubK: mockPublicKey{bytes: pub},
+	}
+	coorNB, _ := json.Marshal(coordN.nodes)
+	coordN.sig = ed25519.Sign(pv, coorNB)
 
-	pool, _ := consensus.FindValidationPool(tx.Address(), 1, pub, nodeReader, sharedKeyReader)
-	valids, err := pr.RequestTransactionValidations(pool, tx, 1, mv)
+	crossN := mockElectedNodeList{
+		nodes: []interface{}{
+			mockElectedNode{
+				publicKey: mockPublicKey{bytes: pub},
+			},
+		},
+		pubK: mockPublicKey{bytes: pub},
+	}
+	crossNB, _ := json.Marshal(crossN.nodes)
+	crossN.sig = ed25519.Sign(pv, crossNB)
+
+	storN := mockElectedNodeList{
+		nodes: []interface{}{
+			mockElectedNode{
+				publicKey: mockPublicKey{bytes: pub},
+			},
+		},
+		pubK: mockPublicKey{bytes: pub},
+	}
+	storNB, _ := json.Marshal(storN.nodes)
+	storN.sig = ed25519.Sign(pv, storNB)
+
+	coordStmp := mockCoordinatorStamp{
+		coordN:     coordN,
+		crossVN:    crossN,
+		storN:      storN,
+		pow:        mockPublicKey{bytes: pub},
+		stmp:       v,
+		txHash:     []byte("hash"),
+		prevCrossV: nil,
+	}
+
+	pool := mockElectedNodeList{
+		nodes: []interface{}{
+			mockElectedNode{
+				publicKey: mockPublicKey{bytes: pub},
+			},
+		},
+	}
+
+	valids, err := pr.RequestTransactionValidations(pool, tx, 1, coordStmp)
 	assert.Nil(t, err)
 
 	assert.Len(t, valids, 1)
-	assert.Equal(t, pub, valids[0].PublicKey())
-	assert.Equal(t, chain.ValidationOK, valids[0].Status())
-	ok, err := valids[0].IsValid()
-	assert.Nil(t, err)
-	assert.True(t, ok)
+	assert.Equal(t, pub, valids[0].NodePublicKey().(publicKey).Marshal())
+	assert.Equal(t, 1, valids[0].Status())
 }
 
 /*
@@ -161,28 +249,39 @@ Scenario: Request transaction store
 */
 func TestRequestStorage(t *testing.T) {
 
-	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
-	kp, _ := shared.NewEmitterCrossKeyPair([]byte("pvkey"), pub)
-	pubB, _ := pub.Marshal()
+	pub, pv, _ := ed25519.GenerateKey(rand.Reader)
 
-	chainDB := &mockChainDB{}
-	sharedKeyReader := &mockSharedKeyReader{}
-	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
-	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
-
-	nodeReader := &mockNodeReader{
-		nodes: []consensus.Node{
-			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+	sharedKeyReader := &mockSharedKeyReader{
+		crossNodePubKeys: []publicKey{
+			mockPublicKey{bytes: pub},
+		},
+		crossNodePvKeys: []privateKey{
+			mockPrivateKey{bytes: pv},
 		},
 	}
 
-	sharedKeyReader.crossEmitterKeys = append(sharedKeyReader.crossEmitterKeys, kp)
+	nodeReader := &mockNodeReader{
+		nodes: []node{
+			mockNode{
+				ip:        net.ParseIP("127.0.0.1"),
+				port:      5000,
+				publicKey: mockPublicKey{bytes: pub},
+				patchNb:   1,
+			},
+		},
+	}
 
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
-	pr := NewPoolRequester(sharedKeyReader, l)
+	pr := PoolRequester{
+		SharedKeyReader: sharedKeyReader,
+		Logger:          l,
+		nodeReader:      nodeReader,
+	}
 
-	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l)
+	chainDB := &mockChainDB{}
+
+	txSrv := NewTransactionService(chainDB, nil, sharedKeyReader, nodeReader, pr, mockPublicKey{bytes: pub}, mockPrivateKey{bytes: pv}, l)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -190,51 +289,113 @@ func TestRequestStorage(t *testing.T) {
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
-	data := map[string][]byte{
-		"encrypted_address_by_node": []byte("addr"),
-		"encrypted_wallet":          []byte("wallet"),
+	v := mockValidationStamp{
+		nodePub:   mockPublicKey{bytes: pub},
+		status:    1,
+		timestamp: time.Now(),
 	}
-	prop := kp
+	vBytes, _ := json.Marshal(map[string]interface{}{
+		"status":     1,
+		"public_key": v.nodePub.Marshal(),
+		"timestamp":  v.timestamp.Unix(),
+	})
+	vSig := ed25519.Sign(pv, vBytes)
+	v.sig = vSig
+
+	coordN := mockElectedNodeList{
+		nodes: []interface{}{
+			mockElectedNode{
+				publicKey: mockPublicKey{bytes: pub},
+			},
+		},
+		pubK: mockPublicKey{bytes: pub},
+	}
+	coorNB, _ := json.Marshal(coordN.nodes)
+	coordN.sig = ed25519.Sign(pv, coorNB)
+
+	crossN := mockElectedNodeList{
+		nodes: []interface{}{
+			mockElectedNode{
+				publicKey: mockPublicKey{bytes: pub},
+			},
+		},
+		pubK: mockPublicKey{bytes: pub},
+	}
+	crossNB, _ := json.Marshal(crossN.nodes)
+	crossN.sig = ed25519.Sign(pv, crossNB)
+
+	storN := mockElectedNodeList{
+		nodes: []interface{}{
+			mockElectedNode{
+				publicKey: mockPublicKey{bytes: pub},
+			},
+		},
+		pubK: mockPublicKey{bytes: pub},
+	}
+	storNB, _ := json.Marshal(storN.nodes)
+	storN.sig = ed25519.Sign(pv, storNB)
+
+	coordStmp := mockCoordinatorStamp{
+		coordN:     coordN,
+		crossVN:    crossN,
+		storN:      storN,
+		pow:        mockPublicKey{bytes: pub},
+		stmp:       v,
+		txHash:     []byte("hash"),
+		prevCrossV: nil,
+	}
+
 	txRaw := map[string]interface{}{
-		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
-		"data": map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		"addr": []byte("addr"),
+		"data": map[string]interface{}{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
+			"em_shared_keys_proposal": map[string]interface{}{
+				"encrypted_private_key": []byte("pvkey"),
+				"public_key":            pub,
+			},
 		},
 		"timestamp":  time.Now().Unix(),
-		"type":       chain.KeychainTransactionType,
-		"public_key": hex.EncodeToString(pubB),
-		"em_shared_keys_proposal": map[string]string{
-			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
-			"public_key":            hex.EncodeToString(pubB),
-		},
+		"type":       0,
+		"public_key": pub,
 	}
 	txBytes, _ := json.Marshal(txRaw)
-	sig, _ := pv.Sign(txBytes)
-	txRaw["signature"] = hex.EncodeToString(sig)
+	sig := ed25519.Sign(pv, txBytes)
+	txRaw["signature"] = sig
 	txByteWithSig, _ := json.Marshal(txRaw)
-	emSig, _ := pv.Sign(txByteWithSig)
-	txRaw["em_signature"] = hex.EncodeToString(emSig)
+	emSig := ed25519.Sign(pv, txByteWithSig)
+	txRaw["em_signature"] = emSig
 	txBytes, _ = json.Marshal(txRaw)
 
-	tx, _ := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, emSig, crypto.Hash(txBytes))
-	vBytes, _ := json.Marshal(map[string]interface{}{
-		"status":     chain.ValidationOK,
-		"public_key": pubB,
-		"timestamp":  time.Now().Unix(),
-	})
-	vSig, _ := pv.Sign(vBytes)
-	v, _ := chain.NewValidation(chain.ValidationOK, time.Now(), pub, vSig)
-	wHeaders := chain.NewWelcomeNodeHeader(pub, []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}, []byte("sig"))
-	vHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
-	sHeaders := []chain.NodeHeader{chain.NewNodeHeader(pub, false, false, 0, true)}
-	mv, _ := chain.NewMasterValidation([]crypto.PublicKey{}, pub, v, wHeaders, vHeaders, sHeaders)
-	pool, _ := consensus.FindStoragePool([]byte("addr"), nodeReader)
-	tx.Mined(mv, []chain.Validation{v})
+	tx := mockTransaction{
+		addr: []byte("addr"),
+		data: map[string]interface{}{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
+			"em_shared_keys_proposal": map[string]interface{}{
+				"encrypted_private_key": []byte("pvkey"),
+				"public_key":            pub,
+			},
+		},
+		timestamp: time.Now(),
+		txType:    0,
+		pubKey:    mockPublicKey{bytes: pub},
+		coordStmp: coordStmp,
+		crossB:    []interface{}{v},
+	}
+
+	pool := mockElectedNodeList{
+		nodes: []interface{}{
+			mockElectedNode{
+				publicKey: mockPublicKey{bytes: pub},
+			},
+		},
+	}
+
 	assert.Nil(t, pr.RequestTransactionStorage(pool, 1, tx))
 
 	assert.Len(t, chainDB.keychains, 1)
-	assert.EqualValues(t, crypto.Hash(txBytes), chainDB.keychains[0].TransactionHash())
+	assert.EqualValues(t, txBytes, chainDB.keychains[0].CoordinatorStamp().(coordinatorStamp).TransactionHash())
 }
 
 /*
@@ -244,26 +405,42 @@ Scenario: Send request to get last transaction
 	Then I get the last transaction
 */
 func TestSendGetLastTransaction(t *testing.T) {
+	pub, pv, _ := ed25519.GenerateKey(rand.Reader)
 
-	pv, pub, _ := crypto.GenerateECKeyPair(crypto.Ed25519Curve, rand.Reader)
-	pubB, _ := pub.Marshal()
-
-	chainDB := &mockChainDB{}
-	sharedKeyReader := &mockSharedKeyReader{}
-	nodeKey, _ := shared.NewNodeCrossKeyPair(pub, pv)
-	sharedKeyReader.crossNodeKeys = append(sharedKeyReader.crossNodeKeys, nodeKey)
+	sharedKeyReader := &mockSharedKeyReader{
+		crossNodePubKeys: []publicKey{
+			mockPublicKey{bytes: pub},
+		},
+		crossNodePvKeys: []privateKey{
+			mockPrivateKey{bytes: pv},
+		},
+	}
 
 	nodeReader := &mockNodeReader{
-		nodes: []consensus.Node{
-			consensus.NewNode(net.ParseIP("127.0.0.1"), 5000, pub, consensus.NodeOK, "", 300, "1.0", 0, 1, 30.0, -10.0, consensus.GeoPatch{}, true),
+		nodes: []node{
+			mockNode{
+				ip:        net.ParseIP("127.0.0.1"),
+				port:      5000,
+				publicKey: mockPublicKey{bytes: pub},
+				patchNb:   1,
+			},
 		},
 	}
 
 	l := logging.NewLogger("stdout", log.New(os.Stdout, "", 0), "test", net.ParseIP("127.0.0.1"), logging.ErrorLogLevel)
 
-	pr := NewPoolRequester(sharedKeyReader, l)
+	pr := PoolRequester{
+		SharedKeyReader: sharedKeyReader,
+		Logger:          l,
+		nodeReader:      nodeReader,
+	}
 
-	txSrv := NewTransactionService(chainDB, sharedKeyReader, nodeReader, pr, pub, pv, l)
+	chainDB := &mockChainDB{}
+	indexDB := &mockIndexDB{
+		rows: make(map[string][]byte, 0),
+	}
+
+	txSrv := NewTransactionService(chainDB, indexDB, sharedKeyReader, nodeReader, pr, mockPublicKey{bytes: pub}, mockPrivateKey{bytes: pv}, l)
 
 	lis, _ := net.Listen("tcp", ":5000")
 	defer lis.Close()
@@ -271,42 +448,162 @@ func TestSendGetLastTransaction(t *testing.T) {
 	api.RegisterTransactionServiceServer(grpcServer, txSrv)
 	go grpcServer.Serve(lis)
 
-	data := map[string][]byte{
-		"encrypted_address_by_node": []byte("addr"),
-		"encrypted_wallet":          []byte("wallet"),
+	v := mockValidationStamp{
+		nodePub:   mockPublicKey{bytes: pub},
+		status:    1,
+		timestamp: time.Now(),
+	}
+	vBytes, _ := json.Marshal(map[string]interface{}{
+		"status":     1,
+		"public_key": v.nodePub.Marshal(),
+		"timestamp":  v.timestamp.Unix(),
+	})
+	vSig := ed25519.Sign(pv, vBytes)
+	v.sig = vSig
+
+	coordN := mockElectedNodeList{
+		nodes: []interface{}{
+			mockElectedNode{
+				publicKey: mockPublicKey{bytes: pub},
+			},
+		},
+		pubK: mockPublicKey{bytes: pub},
+	}
+	coorNB, _ := json.Marshal(coordN.nodes)
+	coordN.sig = ed25519.Sign(pv, coorNB)
+
+	crossN := mockElectedNodeList{
+		nodes: []interface{}{
+			mockElectedNode{
+				publicKey: mockPublicKey{bytes: pub},
+			},
+		},
+		pubK: mockPublicKey{bytes: pub},
+	}
+	crossNB, _ := json.Marshal(crossN.nodes)
+	crossN.sig = ed25519.Sign(pv, crossNB)
+
+	storN := mockElectedNodeList{
+		nodes: []interface{}{
+			mockElectedNode{
+				publicKey: mockPublicKey{bytes: pub},
+			},
+		},
+		pubK: mockPublicKey{bytes: pub},
+	}
+	storNB, _ := json.Marshal(storN.nodes)
+	storN.sig = ed25519.Sign(pv, storNB)
+
+	coordStmp := mockCoordinatorStamp{
+		coordN:     coordN,
+		crossVN:    crossN,
+		storN:      storN,
+		pow:        mockPublicKey{bytes: pub},
+		stmp:       v,
+		txHash:     []byte("hash"),
+		prevCrossV: nil,
 	}
 
-	prop, _ := shared.NewEmitterCrossKeyPair([]byte("encPV"), pub)
 	txRaw := map[string]interface{}{
-		"addr": hex.EncodeToString(crypto.Hash([]byte("addr"))),
-		"data": map[string]string{
-			"encrypted_address_by_node": hex.EncodeToString([]byte("addr")),
-			"encrypted_wallet":          hex.EncodeToString([]byte("wallet")),
+		"addr": []byte("addr"),
+		"data": map[string]interface{}{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
+			"em_shared_keys_proposal": map[string]interface{}{
+				"encrypted_private_key": []byte("pvkey"),
+				"public_key":            pub,
+			},
 		},
 		"timestamp":  time.Now().Unix(),
-		"type":       chain.KeychainTransactionType,
-		"public_key": hex.EncodeToString(pubB),
-		"em_shared_keys_proposal": map[string]string{
-			"encrypted_private_key": hex.EncodeToString([]byte("pvkey")),
-			"public_key":            hex.EncodeToString(pubB),
-		},
+		"type":       0,
+		"public_key": pub,
 	}
 	txBytes, _ := json.Marshal(txRaw)
-	sig, _ := pv.Sign(txBytes)
-	txRaw["signature"] = hex.EncodeToString(sig)
+	sig := ed25519.Sign(pv, txBytes)
+	txRaw["signature"] = sig
 	txByteWithSig, _ := json.Marshal(txRaw)
-	emSig, _ := pv.Sign(txByteWithSig)
-	txRaw["em_signature"] = hex.EncodeToString(emSig)
+	emSig := ed25519.Sign(pv, txByteWithSig)
+	txRaw["em_signature"] = emSig
 	txBytes, _ = json.Marshal(txRaw)
 
-	tx, _ := chain.NewTransaction(crypto.Hash([]byte("addr")), chain.KeychainTransactionType, data, time.Now(), pub, prop, sig, sig, crypto.Hash(txBytes))
-	keychain, _ := chain.NewKeychain(tx)
-	chainDB.keychains = append(chainDB.keychains, keychain)
+	tx := mockTransaction{
+		addr: []byte("addr"),
+		data: map[string]interface{}{
+			"encrypted_address_by_node": []byte("addr"),
+			"encrypted_wallet":          []byte("wallet"),
+			"em_shared_keys_proposal": map[string]interface{}{
+				"encrypted_private_key": []byte("pvkey"),
+				"public_key":            pub,
+			},
+		},
+		timestamp: time.Now(),
+		txType:    0,
+		pubKey:    mockPublicKey{bytes: pub},
+		coordStmp: coordStmp,
+		crossB:    []interface{}{v},
+	}
+	chainDB.WriteKeychain(tx)
+	indexDB.rows[hex.EncodeToString([]byte("addr"))] = []byte("addr")
 
-	pool, _ := consensus.FindStoragePool([]byte("address"), nodeReader)
+	pool := mockElectedNodeList{
+		nodes: []interface{}{
+			mockElectedNode{
+				publicKey: mockPublicKey{bytes: pub},
+			},
+		},
+	}
 
-	txRes, err := pr.RequestLastTransaction(pool, crypto.Hash([]byte("addr")), chain.KeychainTransactionType)
+	txRes, err := pr.RequestLastTransaction(pool, []byte("addr"), 1)
 	assert.Nil(t, err)
-	assert.Equal(t, chain.KeychainTransactionType, txRes.TransactionType())
-	assert.Equal(t, crypto.Hash(txBytes), txRes.TransactionHash())
+	assert.Equal(t, 0, txRes.Type())
+	assert.Equal(t, txBytes, txRes.CoordinatorStamp().(coordinatorStamp).TransactionHash())
+}
+
+type mockElectedNodeList struct {
+	nodes []interface{}
+	pubK  interface{}
+	sig   []byte
+}
+
+func (l mockElectedNodeList) Nodes() []interface{} {
+	return l.nodes
+}
+func (l mockElectedNodeList) CreatorPublicKey() interface{} {
+	return l.pubK
+}
+func (l mockElectedNodeList) CreatorSignature() []byte {
+	return l.sig
+}
+
+type mockElectedNode struct {
+	publicKey     interface{}
+	isUnreachable bool
+	isCoord       bool
+	patchNb       int
+	isOk          bool
+}
+
+func (n mockElectedNode) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"publicKey":     n.publicKey.(publicKey).Marshal(),
+		"isUnreachable": n.isUnreachable,
+		"isCoordinator": n.isCoord,
+		"patchNumber":   n.patchNb,
+		"isOk":          n.isOk,
+	})
+}
+func (n mockElectedNode) IsUnreachable() bool {
+	return n.isUnreachable
+}
+func (n mockElectedNode) IsCoordinator() bool {
+	return n.isCoord
+}
+func (n mockElectedNode) IsOK() bool {
+	return n.isOk
+}
+func (n mockElectedNode) PatchNumber() int {
+	return n.patchNb
+}
+func (n mockElectedNode) PublicKey() interface{} {
+	return n.publicKey
 }

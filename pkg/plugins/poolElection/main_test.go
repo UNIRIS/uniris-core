@@ -89,7 +89,7 @@ func TestFindcoordinatorPool(t *testing.T) {
 
 	var nbReachables int
 	for _, n := range coordinatorNodes.(ElectedNodeList).Nodes() {
-		if !n.IsUnreachable() {
+		if !n.(electedNode).IsUnreachable() {
 			nbReachables++
 		}
 	}
@@ -152,13 +152,13 @@ func TestFindValidationPool(t *testing.T) {
 	for _, h := range pool.(ElectedNodeList).Nodes() {
 		var found bool
 		for _, p := range distinctPatches {
-			if p == h.PatchNumber() {
+			if p == h.(electedNode).PatchNumber() {
 				found = true
 				break
 			}
 		}
 		if !found {
-			distinctPatches = append(distinctPatches, h.PatchNumber())
+			distinctPatches = append(distinctPatches, h.(electedNode).PatchNumber())
 		}
 	}
 

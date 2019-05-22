@@ -21,13 +21,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-type poolRequester struct {
+type PoolRequester struct {
 	SharedKeyReader sharedKeyReader
 	nodeReader      nodeReader
 	Logger          logging.Logger
 }
 
-func (pr poolRequester) RequestLastTransaction(pool electedNodeList, txAddr []byte, txType int) (transaction, error) {
+func (pr PoolRequester) RequestLastTransaction(pool electedNodeList, txAddr []byte, txType int) (transaction, error) {
 
 	lastPub, lastPv, err := pr.SharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
@@ -60,7 +60,7 @@ func (pr poolRequester) RequestLastTransaction(pool electedNodeList, txAddr []by
 	for _, p := range pool.Nodes() {
 		go func(p electedNode) {
 
-			n, err := pr.nodeReader.FindByPublicKey(p.PublicKey())
+			n, err := pr.nodeReader.FindByPublicKey(p.PublicKey().(publicKey).(publicKey))
 			if err != nil {
 				ackChan <- false
 				return
@@ -105,8 +105,8 @@ func (pr poolRequester) RequestLastTransaction(pool electedNodeList, txAddr []by
 				return
 			}
 
-			if res.Transaction != nil {
-				tx, err := formatTransaction(res.Transaction)
+			if (res.Transaction != &api.MinedTransaction{}) {
+				tx, err := formatMinedTransaction(res.Transaction.Transaction, res.Transaction.CoordinatorStamp, res.Transaction.CrossValidations)
 				if err != nil {
 					pr.Logger.Error("GET LAST TRANSACTION RESPONSE - ERROR: " + err.Error())
 					ackChan <- false
@@ -115,7 +115,7 @@ func (pr poolRequester) RequestLastTransaction(pool electedNodeList, txAddr []by
 				txRes = append(txRes, tx)
 			}
 			ackChan <- true
-		}(p)
+		}(p.(electedNode))
 	}
 
 	for ack := range ackChan {
@@ -145,7 +145,7 @@ func (pr poolRequester) RequestLastTransaction(pool electedNodeList, txAddr []by
 	return txRes[0], nil
 }
 
-func (pr poolRequester) RequestTransactionTimeLock(pool electedNodeList, txHash []byte, txAddress []byte, masterPublicKey publicKey) error {
+func (pr PoolRequester) RequestTransactionTimeLock(pool electedNodeList, txHash []byte, txAddress []byte, masterPublicKey publicKey) error {
 
 	lastPub, lastPv, err := pr.SharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
@@ -178,7 +178,7 @@ func (pr poolRequester) RequestTransactionTimeLock(pool electedNodeList, txHash 
 	for _, p := range pool.Nodes() {
 		go func(p electedNode) {
 
-			n, err := pr.nodeReader.FindByPublicKey(p.PublicKey())
+			n, err := pr.nodeReader.FindByPublicKey(p.PublicKey().(publicKey))
 			if err != nil {
 				ackChan <- false
 				return
@@ -219,7 +219,7 @@ func (pr poolRequester) RequestTransactionTimeLock(pool electedNodeList, txHash 
 			}
 
 			ackChan <- true
-		}(p)
+		}(p.(electedNode))
 	}
 
 	for ack := range ackChan {
@@ -244,7 +244,7 @@ func (pr poolRequester) RequestTransactionTimeLock(pool electedNodeList, txHash 
 	return nil
 }
 
-func (pr poolRequester) RequestTransactionValidations(pool electedNodeList, tx transaction, minValids int, masterValid coordinatorStamp) ([]validationStamp, error) {
+func (pr PoolRequester) RequestTransactionValidations(pool electedNodeList, tx transaction, minValids int, masterValid coordinatorStamp) ([]validationStamp, error) {
 
 	p, err := plugin.Open(filepath.Join(os.Getenv("PLUGINS_DIR"), "key/plugin.so"))
 	if err != nil {
@@ -306,7 +306,7 @@ func (pr poolRequester) RequestTransactionValidations(pool electedNodeList, tx t
 
 		go func(p electedNode) {
 
-			n, err := pr.nodeReader.FindByPublicKey(p.PublicKey())
+			n, err := pr.nodeReader.FindByPublicKey(p.PublicKey().(publicKey))
 			if err != nil {
 				ackChan <- false
 				return
@@ -361,7 +361,7 @@ func (pr poolRequester) RequestTransactionValidations(pool electedNodeList, tx t
 			}
 			validations = append(validations, v.(validationStamp))
 			ackChan <- true
-		}(p)
+		}(p.(electedNode))
 	}
 
 	for ack := range ackChan {
@@ -386,7 +386,7 @@ func (pr poolRequester) RequestTransactionValidations(pool electedNodeList, tx t
 	return validations, nil
 }
 
-func (pr poolRequester) RequestTransactionStorage(pool electedNodeList, minStorage int, tx transaction) error {
+func (pr PoolRequester) RequestTransactionStorage(pool electedNodeList, minStorage int, tx transaction) error {
 
 	lastPub, lastPv, err := pr.SharedKeyReader.LastNodeCrossKeypair()
 	if err != nil {
@@ -440,7 +440,7 @@ func (pr poolRequester) RequestTransactionStorage(pool electedNodeList, minStora
 	for _, p := range pool.Nodes() {
 		go func(p electedNode) {
 
-			n, err := pr.nodeReader.FindByPublicKey(p.PublicKey())
+			n, err := pr.nodeReader.FindByPublicKey(p.PublicKey().(publicKey))
 			if err != nil {
 				ackChan <- false
 				return
@@ -481,7 +481,7 @@ func (pr poolRequester) RequestTransactionStorage(pool electedNodeList, minStora
 			}
 
 			ackChan <- true
-		}(p)
+		}(p.(electedNode))
 	}
 
 	for ack := range ackChan {

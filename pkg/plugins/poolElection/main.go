@@ -34,7 +34,6 @@ type electedNode struct {
 	isCoord       bool
 	patchNumber   int
 	isOK          bool
-	ElectedNode
 }
 
 //NewElectedNode create a new elected node
@@ -85,14 +84,14 @@ func (e electedNode) MarshalJSON() ([]byte, error) {
 
 //ElectedNodeList represents a list of elected node within signature and public key
 type ElectedNodeList interface {
-	Nodes() []ElectedNode
-	CreatorPublicKey() publicKey
+	Nodes() []interface{}
+	CreatorPublicKey() interface{}
 	CreatorSignature() []byte
 }
 
 type electedNodeList struct {
-	nodes            []ElectedNode
-	creatorPublicKey publicKey
+	nodes            []interface{}
+	creatorPublicKey interface{}
 	creatorSignature []byte
 
 	ElectedNodeList
@@ -105,7 +104,7 @@ func NewElectedNodeList(nodes []interface{}, pubk interface{}, sig []byte) (inte
 		return nil, errors.New("elected node list: missing elected nodes")
 	}
 
-	en := make([]ElectedNode, 0)
+	en := make([]interface{}, 0)
 	for _, n := range nodes {
 		if _, ok := n.(ElectedNode); !ok {
 			return nil, errors.New("elected node list: invalid node type")
@@ -143,11 +142,11 @@ func NewElectedNodeList(nodes []interface{}, pubk interface{}, sig []byte) (inte
 	}, nil
 }
 
-func (e electedNodeList) Nodes() []ElectedNode {
+func (e electedNodeList) Nodes() []interface{} {
 	return e.nodes
 }
 
-func (e electedNodeList) CreatorPublicKey() publicKey {
+func (e electedNodeList) CreatorPublicKey() interface{} {
 	return e.creatorPublicKey
 }
 
